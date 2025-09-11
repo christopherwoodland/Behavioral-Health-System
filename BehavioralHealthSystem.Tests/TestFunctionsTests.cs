@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BehavioralHealthSystem.Functions;
 using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;
+using BehavioralHealthSystem.Services;
 using Moq;
 
 namespace BehavioralHealthSystem.Tests
@@ -15,9 +16,10 @@ namespace BehavioralHealthSystem.Tests
             // Arrange
             var loggerMock = new Mock<ILogger<TestFunctions>>();
             var apiServiceMock = new Mock<IKintsugiApiService>();
+            var sessionStorageServiceMock = new Mock<ISessionStorageService>();
             
             // Act
-            var function = new TestFunctions(loggerMock.Object, apiServiceMock.Object);
+            var function = new TestFunctions(loggerMock.Object, apiServiceMock.Object, sessionStorageServiceMock.Object);
             
             // Assert
             Assert.IsNotNull(function);
@@ -28,10 +30,11 @@ namespace BehavioralHealthSystem.Tests
         {
             // Arrange
             var apiServiceMock = new Mock<IKintsugiApiService>();
+            var sessionStorageServiceMock = new Mock<ISessionStorageService>();
             
             // Act & Assert
             Assert.ThrowsException<ArgumentNullException>(() => 
-                new TestFunctions(null!, apiServiceMock.Object));
+                new TestFunctions(null!, apiServiceMock.Object, sessionStorageServiceMock.Object));
         }
 
         [TestMethod]
@@ -39,10 +42,23 @@ namespace BehavioralHealthSystem.Tests
         {
             // Arrange
             var loggerMock = new Mock<ILogger<TestFunctions>>();
+            var sessionStorageServiceMock = new Mock<ISessionStorageService>();
             
             // Act & Assert
             Assert.ThrowsException<ArgumentNullException>(() => 
-                new TestFunctions(loggerMock.Object, null!));
+                new TestFunctions(loggerMock.Object, null!, sessionStorageServiceMock.Object));
+        }
+
+        [TestMethod]
+        public void TestFunctions_Constructor_ThrowsArgumentNullException_WhenSessionStorageServiceIsNull()
+        {
+            // Arrange
+            var loggerMock = new Mock<ILogger<TestFunctions>>();
+            var apiServiceMock = new Mock<IKintsugiApiService>();
+            
+            // Act & Assert
+            Assert.ThrowsException<ArgumentNullException>(() => 
+                new TestFunctions(loggerMock.Object, apiServiceMock.Object, null!));
         }
     }
 }

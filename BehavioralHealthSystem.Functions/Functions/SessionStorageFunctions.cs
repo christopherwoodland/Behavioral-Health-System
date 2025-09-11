@@ -1,11 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using BehavioralHealthSystem.Models;
-using BehavioralHealthSystem.Services;
-using System.Net;
-using System.Text.Json;
-
 namespace BehavioralHealthSystem.Functions;
 
 public class SessionStorageFunctions
@@ -18,8 +10,8 @@ public class SessionStorageFunctions
         ILogger<SessionStorageFunctions> logger,
         ISessionStorageService sessionStorageService)
     {
-        _logger = logger;
-        _sessionStorageService = sessionStorageService;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _sessionStorageService = sessionStorageService ?? throw new ArgumentNullException(nameof(sessionStorageService));
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

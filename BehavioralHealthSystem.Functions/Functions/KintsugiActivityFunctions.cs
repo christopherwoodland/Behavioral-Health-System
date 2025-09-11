@@ -1,5 +1,3 @@
-using BehavioralHealthSystem.Models;
-using BehavioralHealthSystem.Services.Interfaces;
 using Microsoft.DurableTask;
 
 namespace BehavioralHealthSystem.Functions;

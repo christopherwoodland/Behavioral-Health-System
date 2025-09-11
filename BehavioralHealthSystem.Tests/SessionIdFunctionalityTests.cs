@@ -1,7 +1,5 @@
-// NOTE: These tests are for activity functions that were used in the orchestrator architecture.
-// The simplified architecture uses KintsugiWorkflowFunction directly with IKintsugiApiService.
-// These tests validate functionality that is still available through the service layer
-// but are no longer used through activity functions.
+// NOTE: These tests validate functionality that is available through the service layer
+// and validate interface contracts and model properties.
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -9,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;
 using BehavioralHealthSystem.Functions;
 using BehavioralHealthSystem.Models;
+using BehavioralHealthSystem.Services;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker;
 using System.Text.Json;
@@ -20,82 +19,16 @@ namespace BehavioralHealthSystem.Tests
     {
         private Mock<ILogger<TestFunctions>> _mockLogger = null!;
         private Mock<IKintsugiApiService> _mockKintsugiApiService = null!;
-        private Mock<ILogger<KintsugiActivityFunctions>> _mockActivityLogger = null!;
+        private Mock<ISessionStorageService> _mockSessionStorageService = null!;
         private TestFunctions _testFunctions = null!;
-        private KintsugiActivityFunctions _activityFunctions = null!;
 
         [TestInitialize]
         public void Setup()
         {
             _mockLogger = new Mock<ILogger<TestFunctions>>();
             _mockKintsugiApiService = new Mock<IKintsugiApiService>();
-            _mockActivityLogger = new Mock<ILogger<KintsugiActivityFunctions>>();
-            _testFunctions = new TestFunctions(_mockLogger.Object, _mockKintsugiApiService.Object);
-            _activityFunctions = new KintsugiActivityFunctions(_mockActivityLogger.Object, _mockKintsugiApiService.Object);
-        }
-
-        [TestMethod]
-        [Ignore("Activity functions are deprecated - functionality moved to KintsugiWorkflowFunction")]
-        public async Task GetPredictionResultBySessionIdActivity_ValidSessionId_ReturnsResult()
-        {
-            // Arrange
-            var sessionId = "test-session-123";
-            var expectedResult = new SessionPredictionResult
-            {
-                Status = "completed",
-                PredictedScore = "0.75",
-                CreatedAt = "2023-01-01T00:00:00Z"
-            };
-
-            _mockKintsugiApiService
-                .Setup(s => s.GetPredictionResultBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(expectedResult);
-
-            // Act
-            var result = await _activityFunctions.GetPredictionResultBySessionIdActivity(sessionId);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.AreEqual("completed", result.Status);
-            Assert.AreEqual("0.75", result.PredictedScore);
-        }
-
-        [TestMethod]
-        [Ignore("Activity functions are deprecated - functionality moved to KintsugiWorkflowFunction")]
-        public async Task GetPredictionResultBySessionIdActivity_InvalidSessionId_ReturnsNull()
-        {
-            // Arrange
-            var sessionId = "invalid-session-123";
-
-            _mockKintsugiApiService
-                .Setup(s => s.GetPredictionResultBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync((SessionPredictionResult?)null);
-
-            // Act
-            var result = await _activityFunctions.GetPredictionResultBySessionIdActivity(sessionId);
-
-            // Assert
-            Assert.IsNull(result);
-        }
-
-        [TestMethod]
-        [Ignore("Activity functions are deprecated - functionality moved to KintsugiWorkflowFunction")]
-        public async Task GetPredictionResultBySessionIdActivity_ServiceThrowsException_PropagatesException()
-        {
-            // Arrange
-            var sessionId = "error-session-123";
-            var expectedException = new HttpRequestException("API error", null, System.Net.HttpStatusCode.InternalServerError);
-
-            _mockKintsugiApiService
-                .Setup(s => s.GetPredictionResultBySessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
-                .ThrowsAsync(expectedException);
-
-            // Act & Assert
-            var exception = await Assert.ThrowsExceptionAsync<HttpRequestException>(
-                () => _activityFunctions.GetPredictionResultBySessionIdActivity(sessionId)
-            );
-
-            Assert.AreEqual("API error", exception.Message);
+            _mockSessionStorageService = new Mock<ISessionStorageService>();
+            _testFunctions = new TestFunctions(_mockLogger.Object, _mockKintsugiApiService.Object, _mockSessionStorageService.Object);
         }
 
         [TestMethod]

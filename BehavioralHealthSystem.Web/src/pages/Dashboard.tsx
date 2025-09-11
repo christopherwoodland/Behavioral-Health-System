@@ -92,36 +92,6 @@ export const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* System status */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
-          System Status
-        </h2>
-        {isHealthLoading ? (
-          <div className="flex items-center space-x-2">
-            <div className="spinner w-4 h-4"></div>
-            <span className="text-text-secondary-light dark:text-text-secondary-dark">
-              Checking system health...
-            </span>
-          </div>
-        ) : healthError ? (
-          <div className="flex items-center space-x-2 text-error-600 dark:text-error-400">
-            <span role="img" aria-label="Error">⚠️</span>
-            <span>System health check failed</span>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-2 text-success-600 dark:text-success-400">
-            <span role="img" aria-label="Healthy">✅</span>
-            <span>All systems operational</span>
-            {healthStatus?.checks && (
-              <span className="text-text-muted-light dark:text-text-muted-dark">
-                ({Object.keys(healthStatus.checks).length} services checked)
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
       {/* Quick actions */}
       <div>
         <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-6">
@@ -213,6 +183,36 @@ export const Dashboard: React.FC = () => {
                   View all {sessionsResponse.sessions.length} sessions →
                 </Link>
               </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* System status */}
+      <div className="card">
+        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
+          System Status
+        </h2>
+        {isHealthLoading ? (
+          <div className="flex items-center space-x-2">
+            <div className="spinner w-4 h-4"></div>
+            <span className="text-text-secondary-light dark:text-text-secondary-dark">
+              Checking system health...
+            </span>
+          </div>
+        ) : healthError ? (
+          <div className="flex items-center space-x-2 text-error-600 dark:text-error-400">
+            <span role="img" aria-label="Error">⚠️</span>
+            <span>System health check failed</span>
+          </div>
+        ) : (
+          <div className="flex items-center space-x-2 text-success-600 dark:text-success-400">
+            <span role="img" aria-label="Healthy">✅</span>
+            <span>All systems operational</span>
+            {healthStatus?.checks && (
+              <span className="text-text-muted-light dark:text-text-muted-dark">
+                ({Object.keys(healthStatus.checks).length} services checked)
+              </span>
             )}
           </div>
         )}

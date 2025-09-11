@@ -8,7 +8,8 @@ A **production-ready** Azure Functions application that integrates with the Kint
 - ✅ **Direct HTTP Function Endpoints** - Simple, reliable HTTP functions for session management
 - ✅ **Dependency Injection & Configuration** - Proper service registration with typed configurations
 - ✅ **Interface-Based Design** - SOLID principles with testable architecture
-- ✅ **Global Usings** - Clean, maintainable code structure
+- ✅ **Global Usings** - Clean, maintainable code structure with centralized namespace management
+- ✅ **Clean Architecture** - Organized project structure with proper separation of concerns
 
 ### **Resilience & Reliability**
 - ✅ **Polly Retry Policies** - Exponential backoff and circuit breaker patterns
@@ -24,25 +25,21 @@ A **production-ready** Azure Functions application that integrates with the Kint
 
 ## 📁 Project Structure
 
-```
+```text
 BehavioralHealthSystem/
 ├── 📁 BehavioralHealthSystem.Functions/         # Azure Functions project
 │   ├── 📁 Functions/                            # Function endpoints
-│   │   ├── KintsugiWorkflowFunction.cs            # Main workflow function
-│   │   ├── SubmitPrediction.cs                   # Submit prediction endpoint
-│   │   ├── TestFunctions.cs                      # Testing endpoints
-│   │   └── HealthCheckFunction.cs                # Health monitoring
-│   ├── 📁 Activities/                           # Activity functions
-│   │   └── SubmitPredictionActivity.cs           # Prediction processing activity
-│   ├── 📁 Models/                               # Request/Response models
-│   │   ├── Requests/
-│   │   │   └── SubmitPredictionRequest.cs         # Prediction request model
-│   │   └── Responses/
-│   │       └── SubmitPredictionResponse.cs        # Prediction response model
-│   ├── GlobalUsings.cs                          # Global using directives
+│   │   ├── HealthCheckFunction.cs                # Health monitoring endpoint
+│   │   ├── KintsugiActivityFunctions.cs          # Deprecated: Activity functions (Durable Functions)
+│   │   ├── RiskAssessmentFunctions.cs            # Risk assessment endpoints
+│   │   ├── SessionStorageFunctions.cs            # Session data management endpoints
+│   │   └── TestFunctions.cs                      # Testing and utility endpoints
+│   ├── 📁 Models/                               # Function-specific models
+│   │   └── WorkflowStages.cs                     # Workflow stage enumeration
+│   ├── GlobalUsings.cs                          # Global using directives for cleaner code
 │   ├── Program.cs                               # Function host configuration
 │   ├── host.json                                # Azure Functions configuration
-│   └── local.settings.json.template             # Local development settings
+│   └── local.settings.json.template             # Local development settings template
 ├── 📁 BehavioralHealthSystem.Helpers/          # Shared library project
 │   ├── 📁 Configuration/                        # Typed configuration and retry policies
 │   │   ├── KintsugiApiOptions.cs
@@ -77,10 +74,11 @@ BehavioralHealthSystem/
 ├── 📁 BehavioralHealthSystem.Tests/            # Unit test project
 │   ├── 📁 Functions/                            # Function tests
 │   │   ├── HealthCheckFunctionTests.cs
-│   │   ├── KintsugiActivityFunctionsTests.cs
-│   │   ├── KintsugiWorkflowFunctionTests.cs
+│   │   ├── KintsugiActivityFunctionsTests.cs    # Deprecated function tests
+│   │   ├── RiskAssessmentFunctionsTests.cs      # Risk assessment tests
+│   │   ├── SessionStorageFunctionsTests.cs      # Session storage tests
 │   │   ├── TestFunctionsTests.cs
-│   │   └── SubmitPredictionTests.cs
+│   │   └── SessionIdFunctionalityTests.cs       # Interface validation tests
 │   ├── 📁 Models/                               # Model tests
 │   │   ├── ActualScoreTests.cs
 │   │   ├── ApiErrorResponseTests.cs
@@ -112,6 +110,7 @@ BehavioralHealthSystem/
 ## 🖥️ Local Development
 
 ### Quick Start
+
 1. **📦 Setup local environment:**
    ```bash
    cd BehavioralHealthSystem.Functions
@@ -119,7 +118,14 @@ BehavioralHealthSystem/
    # Edit local.settings.json with your Kintsugi API key (Application Insights is optional)
    ```
 
-2. **🏃‍♂️ Run locally:**
+2. **🏃‍♂️ Run locally (Option 1 - Using convenience script):**
+   ```bash
+   # From the solution root directory
+   .\local-run.ps1
+   # This script builds the Functions project and starts both the Azure Functions host and frontend dev server
+   ```
+
+3. **🏃‍♂️ Run locally (Option 2 - Manual approach):**
    ```bash
    cd ..
    dotnet build BehavioralHealthSystem.sln
@@ -127,7 +133,7 @@ BehavioralHealthSystem/
    func start
    ```
 
-3. **🧪 Test endpoints:**
+4. **🧪 Test endpoints:**
    - Health Check: `http://localhost:7071/api/health`
    - Use `BehavioralHealthSystem.Tests/test-requests.http` for comprehensive testing
 
@@ -656,13 +662,17 @@ dotnet watch test
 ```
 
 ### **Test Coverage**
-- ✅ **Function Tests** - Constructor validation for all function classes with dependency injection
-- ✅ **Model Tests** - Basic constructor tests for all model classes
-- ✅ **Service Tests** - Business logic and API integration tests
+- ✅ **Function Tests** - Complete constructor validation for all function classes with dependency injection
+  - HealthCheckFunction, TestFunctions, RiskAssessmentFunctions, SessionStorageFunctions
+  - KintsugiActivityFunctions (deprecated but tested for backward compatibility)
+- ✅ **Model Tests** - Constructor validation for all model classes
+- ✅ **Service Tests** - Business logic and API integration tests  
 - ✅ **Validator Tests** - FluentValidation rule verification
-- ✅ **Mocking Framework** - Moq integration for testing dependencies
-- ✅ **Dependency Injection** - Proper mocking of ILogger, services, and validators
-- ✅ **Data Integrity** - Audio data and metadata consistency
+- ✅ **Interface Tests** - Service contract validation and method signature verification
+- ✅ **Mocking Framework** - Moq integration for comprehensive dependency testing
+- ✅ **Dependency Injection** - Proper null validation and service injection testing
+- ✅ **Data Integrity** - Audio data and metadata consistency validation
+- ✅ **42 Total Tests** - All passing with comprehensive coverage
 
 ### **Manual API Testing**
 
@@ -824,6 +834,22 @@ Set up Azure Monitor alerts for:
 - 📊 [Application Performance Monitoring](https://docs.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview)
 
 ### **Development Tools**
+
+#### **Code Organization**
+- ✅ **GlobalUsings.cs** - Centralized namespace management for cleaner code
+  - System namespaces (Collections.Generic, ComponentModel.DataAnnotations, Text.Json)
+  - Microsoft namespaces (Azure.Functions.Worker, Extensions.DependencyInjection, Logging)
+  - Project namespaces (BehavioralHealthSystem.Models, Services, Interfaces)
+  - Eliminates redundant using statements across all function files
+
+#### **Local Development Script**
+- ✅ **local-run.ps1** - Automated development startup script
+  - Builds Azure Functions project with error checking
+  - Starts Azure Functions Core Tools runtime
+  - Launches Web development server (npm run dev)
+  - Handles process management and error reporting
+
+#### **Azure Tools**
 - 🛠️ [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
 - 🎯 [VS Code Azure Functions Extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
 - 📱 [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/)

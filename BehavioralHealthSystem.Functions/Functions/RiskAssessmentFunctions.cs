@@ -1,11 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using BehavioralHealthSystem.Services.Interfaces;
-using BehavioralHealthSystem.Services;
-using System.Net;
-using System.Text.Json;
-
 namespace BehavioralHealthSystem.Functions;
 
 public class RiskAssessmentFunctions
@@ -20,9 +12,9 @@ public class RiskAssessmentFunctions
         IRiskAssessmentService riskAssessmentService,
         ISessionStorageService sessionStorageService)
     {
-        _logger = logger;
-        _riskAssessmentService = riskAssessmentService;
-        _sessionStorageService = sessionStorageService;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _riskAssessmentService = riskAssessmentService ?? throw new ArgumentNullException(nameof(riskAssessmentService));
+        _sessionStorageService = sessionStorageService ?? throw new ArgumentNullException(nameof(sessionStorageService));
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

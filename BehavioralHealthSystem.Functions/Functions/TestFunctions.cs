@@ -1,7 +1,3 @@
-using BehavioralHealthSystem.Models;
-using BehavioralHealthSystem.Services.Interfaces;
-using BehavioralHealthSystem.Services;
-
 namespace BehavioralHealthSystem.Functions;
 
 public class TestFunctions

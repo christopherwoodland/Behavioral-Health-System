@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Header } from './Header';
 import { useSkipToContent } from '@/hooks/accessibility';
 import { A11Y } from '@/config/constants';
+import { MicrosoftLogo } from '@/components/icons';
 
 interface LayoutProps {
   children: ReactNode;
@@ -48,13 +49,24 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
       {/* Footer */}
       <footer className="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-sm text-text-muted-light dark:text-text-muted-dark">
-            <p>
-              Behavioral Health System &copy; {new Date().getFullYear()}
-            </p>
-            <p className="mt-1">
-              WCAG 2.2 AA Compliant • Section 508 Compliant
-            </p>
+          <div className="flex flex-col items-center space-y-4">
+            {/* Microsoft Logo */}
+            <div className="flex items-center space-x-2">
+              <MicrosoftLogo size={24} className="opacity-80" />
+              <span className="text-sm text-text-muted-light dark:text-text-muted-dark font-medium">
+                Powered by Microsoft
+              </span>
+            </div>
+            
+            {/* Copyright and Compliance */}
+            <div className="text-center text-sm text-text-muted-light dark:text-text-muted-dark">
+              <p>
+                Behavioral Health System &copy; {new Date().getFullYear()}
+              </p>
+              <p className="mt-1">
+                WCAG 2.2 AA Compliant • Section 508 Compliant
+              </p>
+            </div>
           </div>
         </div>
       </footer>

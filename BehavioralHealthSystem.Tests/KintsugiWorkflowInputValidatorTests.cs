@@ -8,7 +8,7 @@ namespace BehavioralHealthSystem.Tests
     [TestClass]
     public class KintsugiWorkflowInputValidatorTests
     {
-        private KintsugiWorkflowInputValidator _validator;
+        private KintsugiWorkflowInputValidator _validator = null!;
 
         [TestInitialize]
         public void Setup()

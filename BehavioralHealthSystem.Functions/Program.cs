@@ -1,8 +1,5 @@
 using Microsoft.Extensions.Hosting;
-using FluentValidation;
-using BehavioralHealthSystem.Services;
 using BehavioralHealthSystem.Validators;
-using BehavioralHealthSystem.Services.Interfaces;
 using BehavioralHealthSystem.Configuration;
 using System.Net.Http.Headers;
 using Azure.Storage.Blobs;

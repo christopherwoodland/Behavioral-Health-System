@@ -28,3 +28,8 @@ global using FluentValidation;
 global using Polly;
 global using Polly.Extensions.Http;
 global using Polly.Timeout;
+
+// Project-specific namespaces
+global using BehavioralHealthSystem.Models;
+global using BehavioralHealthSystem.Services;
+global using BehavioralHealthSystem.Services.Interfaces;

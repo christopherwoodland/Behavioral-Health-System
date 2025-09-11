@@ -1,0 +1,1 @@
+export { MicrosoftLogo } from './MicrosoftLogo';

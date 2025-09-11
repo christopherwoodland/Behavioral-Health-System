@@ -1,0 +1,71 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# C# files
+[*.cs]
+indent_size = 4
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# TypeScript and JavaScript files
+[*.{ts,tsx,js,jsx}]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+indent_size = 2
+
+# YAML files
+[*.{yml,yaml}]
+indent_size = 2
+
+# XML and HTML files
+[*.{xml,html,htm}]
+indent_size = 2
+
+# CSS and SCSS files
+[*.{css,scss,sass}]
+indent_size = 2
+
+# Configuration files
+[*.{config,conf}]
+indent_size = 2
+
+# PowerShell files
+[*.ps1]
+indent_size = 4
+
+# Batch files
+[*.{bat,cmd}]
+indent_size = 2
+end_of_line = crlf
+
+# Dockerfile
+[Dockerfile*]
+indent_size = 2
+
+# Package files
+[package.json]
+indent_size = 2
+
+# MSBuild files
+[*.{csproj,vbproj,vcxproj,proj,targets,props}]
+indent_size = 2
+
+# Solution files
+[*.sln]
+indent_style = tab

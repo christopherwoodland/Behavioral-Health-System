@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "KINTSUGI_API_KEY": "your-kintsugi-api-key-here",
+    "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2"
+  },
+  "ConnectionStrings": {},
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*",
+    "CORSCredentials": false
+  }
+}

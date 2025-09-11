@@ -1,0 +1,56 @@
+{
+  "version": "2.0",
+  "functionTimeout": "00:05:00",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request"
+      },
+      "enableLiveMetricsFilters": true
+    },
+    "logLevel": {
+      "default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "extensions": {
+    "durableTask": {
+      "hubName": "KintsugiHealthHub",
+      "storageProvider": {
+        "maxQueuePollingInterval": "00:00:10",
+        "partitionCount": 4
+      },
+      "maxConcurrentActivityFunctions": 16,
+      "maxConcurrentOrchestratorFunctions": 10,
+      "useGracefulShutdown": true
+    },
+    "http": {
+      "routePrefix": "api",
+      "maxOutstandingRequests": 200,
+      "maxConcurrentRequests": 100,
+      "dynamicThrottlesEnabled": true
+    }
+  },
+  "retry": {
+    "strategy": "exponentialBackoff",
+    "maxRetryCount": 3,
+    "minimumInterval": "00:00:02",
+    "maximumInterval": "00:00:30"
+  },
+  "healthMonitor": {
+    "enabled": true,
+    "healthCheckInterval": "00:00:10",
+    "healthCheckWindow": "00:02:00",
+    "healthCheckThreshold": 6,
+    "counterThreshold": 0.80
+  },
+  "singleton": {
+    "lockPeriod": "00:00:15",
+    "listenerLockPeriod": "00:01:00",
+    "listenerLockRecoveryPollingInterval": "00:01:00",
+    "lockAcquisitionTimeout": "00:01:00",
+    "lockAcquisitionPollingInterval": "00:00:05"
+  }
+}

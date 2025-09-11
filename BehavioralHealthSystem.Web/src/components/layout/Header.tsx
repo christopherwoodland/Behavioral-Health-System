@@ -112,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
               "
               aria-label={isMobileMenuOpen ? "Close mobile menu" : "Open mobile menu"}
               type="button"
-              aria-expanded={isMobileMenuOpen ? "true" : "false"}
+              aria-expanded={isMobileMenuOpen.toString()}
             >
               <span className="text-xl" role="img" aria-hidden="true">
                 {isMobileMenuOpen ? '✕' : '☰'}

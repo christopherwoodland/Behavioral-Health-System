@@ -5,6 +5,7 @@ A **production-ready** Azure Functions application that integrates with the Kint
 ## 🚀 Key Features
 
 ### **Enterprise Architecture**
+
 - ✅ **Direct HTTP Function Endpoints** - Simple, reliable HTTP functions for session management
 - ✅ **Dependency Injection & Configuration** - Proper service registration with typed configurations
 - ✅ **Interface-Based Design** - SOLID principles with testable architecture
@@ -12,12 +13,14 @@ A **production-ready** Azure Functions application that integrates with the Kint
 - ✅ **Clean Architecture** - Organized project structure with proper separation of concerns
 
 ### **Resilience & Reliability**
+
 - ✅ **Polly Retry Policies** - Exponential backoff and circuit breaker patterns
 - ✅ **Comprehensive Error Handling** - Proper HTTP status codes and error recovery
 - ✅ **FluentValidation** - Input validation with detailed error messages
 - ✅ **Health Checks** - Automated monitoring and diagnostics
 
 ### **Observability**
+
 - ✅ **Application Insights Integration** - Comprehensive telemetry and monitoring
 - ✅ **Structured Logging** - Correlation IDs and performance tracking
 - ✅ **Unit Testing** - Comprehensive tests with excellent coverage
@@ -112,6 +115,7 @@ BehavioralHealthSystem/
 ### Quick Start
 
 1. **📦 Setup local environment:**
+
    ```bash
    cd BehavioralHealthSystem.Functions
    copy local.settings.json.template local.settings.json
@@ -119,6 +123,7 @@ BehavioralHealthSystem/
    ```
 
 2. **🏃‍♂️ Run locally (Option 1 - Using convenience script):**
+
    ```bash
    # From the solution root directory
    .\local-run.ps1
@@ -126,6 +131,7 @@ BehavioralHealthSystem/
    ```
 
 3. **🏃‍♂️ Run locally (Option 2 - Manual approach):**
+
    ```bash
    cd ..
    dotnet build BehavioralHealthSystem.sln
@@ -160,6 +166,7 @@ Create a `local.settings.json` file from the template:
 ### Development Tools
 
 For the best development experience:
+
 - **🎯 VS Code** with Azure Functions extension
 - **🔍 REST Client** extension for testing HTTP requests
 - **📊 Azure Storage Explorer** for local storage debugging
@@ -170,6 +177,7 @@ For the best development experience:
 The application implements a streamlined HTTP function architecture with the following key components:
 
 ### **1. Input Validation**
+
 ```csharp
 // Automatic validation using FluentValidation
 var validationResult = await _validator.ValidateAsync(input);
@@ -180,6 +188,7 @@ if (!validationResult.IsValid)
 ```
 
 ### **2. Resilient API Calls**
+
 ```csharp
 // Automatic retry with exponential backoff and constants
 services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
@@ -190,29 +199,35 @@ services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
 ### **3. Main Workflow Process**
 
 The `KintsugiWorkflow` function performs:
+
 1. **Session Initiation** - Creates a new session with user metadata
 2. **Prediction Submission** - Uploads audio data for analysis using either:
    - **URL-based approach** - Downloads audio from Azure Blob Storage URLs
    - **Byte array approach** - Direct upload of base64-encoded audio data  
 3. **Immediate Response** - Returns session ID for client tracking
 
-### **4. Result Polling** 
+### **4. Result Polling**
+
 Clients can poll for results using separate endpoints:
+
 - `/api/predictions/sessions/{sessionId}` - Get specific session results
 - `/api/predictions/{userId}` - Get all user predictions
 
 ### **5. Structured Logging**
+
 ```csharp
 _logger.LogInformation("Session initiated successfully with ID: {SessionId} for user: {UserId}", 
     sessionId, userId);
 ```
 
 ### **6. Multi-Project Solution Structure**
+
 - **BehavioralHealthSystem.Functions** - Azure Functions host with endpoints
 - **BehavioralHealthSystem.Helpers** - Shared library with models, services, and configuration
 - **BehavioralHealthSystem.Tests** - Unit tests with Moq for dependency mocking
 
 ### **7. Dependency Injection Container**
+
 ```csharp
 // Program.cs in Functions project - Full DI configuration
 services.Configure<KintsugiApiOptions>(configuration.GetSection("Values"));
@@ -247,8 +262,9 @@ Add these settings to your Azure Function App configuration:
 ### Configuration Options
 
 #### Kintsugi API Settings
+
 - **KINTSUGI_API_KEY**: Your Kintsugi Health API key (required)
-- **KINTSUGI_BASE_URL**: API base URL (default: https://api.kintsugihealth.com/v2)
+- **KINTSUGI_BASE_URL**: API base URL (default: <https://api.kintsugihealth.com/v2>)
 - **KINTSUGI_TIMEOUT_SECONDS**: API request timeout in seconds (default: 300)
 - **KINTSUGI_MAX_RETRY_ATTEMPTS**: Maximum retry attempts for API calls (default: 3)
 - **KINTSUGI_RETRY_DELAY_MS**: Delay between retry attempts in milliseconds (default: 1000)
@@ -256,18 +272,22 @@ Add these settings to your Azure Function App configuration:
 ## 📡 API Endpoints
 
 ### **Main Workflow**
+
 - **POST** `/api/KintsugiWorkflow` - Submit session and prediction data
 - **POST** `/api/predictions/submit` - Submit prediction with session ID and audio URL
 
 ### **Health & Monitoring**
+
 - **GET** `/api/health` - Health check endpoint with detailed status
 - **POST** `/api/TestKintsugiConnection` - API connectivity test
 
 ### **Prediction Results**
+
 - **GET** `/api/predictions/{userId}` - Get all predictions for a user
 - **GET** `/api/predictions/sessions/{sessionId}` - Get specific prediction by session ID
 
 ### **Health Check Response**
+
 ```json
 {
   "status": "Healthy",
@@ -294,6 +314,7 @@ Perfect for demos, testing, and rapid prototyping:
 ```
 
 This will:
+
 - ✅ Build your complete solution
 - ✅ Create resource group: `rg-your-unique-app-name`
 - ✅ Deploy to East US region
@@ -328,12 +349,14 @@ Deploy just the Azure infrastructure without building the solution:
 ### Option 5: Automated Deployment with GitHub Actions
 
 1. **Setup GitHub Repository Secrets:**
-   ```
+
+   ```text
    AZURE_FUNCTIONAPP_PUBLISH_PROFILE
    ```
 
 2. **Setup GitHub Repository Variables:**
-   ```
+
+   ```text
    AZURE_FUNCTIONAPP_NAME
    ```
 
@@ -345,11 +368,13 @@ Deploy just the Azure infrastructure without building the solution:
 ### Option 6: Manual Deployment with Azure CLI
 
 1. **Create Resource Group:**
+
    ```bash
    az group create --name myResourceGroup --location "East US"
    ```
 
 2. **Deploy ARM Template:**
+
    ```bash
    az deployment group create \
      --resource-group myResourceGroup \
@@ -359,6 +384,7 @@ Deploy just the Azure infrastructure without building the solution:
    ```
 
 3. **Deploy Function Code:**
+
    ```bash
    func azure functionapp publish myFunctionApp
    ```
@@ -368,12 +394,14 @@ Deploy just the Azure infrastructure without building the solution:
 After any deployment method:
 
 1. **🚀 Deploy Function Code:**
+
    ```bash
    cd BehavioralHealthSystem.Functions
    func azure functionapp publish your-function-app-name
    ```
 
 2. **✅ Verify Deployment:**
+
    ```bash
    # Test health endpoint
    curl https://your-function-app-name.azurewebsites.net/api/health
@@ -387,12 +415,14 @@ After any deployment method:
 The application includes comprehensive telemetry:
 
 ### Automatic Tracking
+
 - **🌐 HTTP Requests**: All incoming requests to function endpoints
 - **🔗 Dependencies**: External API calls to Kintsugi Health API
 - **⚠️ Exceptions**: Unhandled exceptions with full stack traces
 - **📈 Performance Counters**: CPU, memory, and other system metrics
 
 ### Custom Telemetry
+
 - **📋 Custom Events**: Workflow progress and business logic milestones
 - **📊 Custom Metrics**: API response times and success rates
 - **🔗 Correlation**: End-to-end request tracking across function calls
@@ -402,6 +432,7 @@ The application includes comprehensive telemetry:
 Access Application Insights and use these Kusto queries:
 
 **Function Execution Overview:**
+
 ```kusto
 requests
 | where cloud_RoleName contains "BehavioralHealthSystem"
@@ -410,6 +441,7 @@ requests
 ```
 
 **Kintsugi API Dependency Tracking:**
+
 ```kusto
 dependencies
 | where target contains "kintsugihealth.com"
@@ -418,6 +450,7 @@ dependencies
 ```
 
 **Error Analysis:**
+
 ```kusto
 exceptions
 | where cloud_RoleName contains "BehavioralHealthSystem"
@@ -426,6 +459,7 @@ exceptions
 ```
 
 **Performance Monitoring:**
+
 ```kusto
 requests
 | where cloud_RoleName contains "BehavioralHealthSystem"
@@ -494,6 +528,7 @@ The API supports two approaches for audio file submission:
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -510,6 +545,7 @@ Use the session ID to check prediction status:
 **GET** `/api/predictions/sessions/{sessionId}`
 
 **Response:**
+
 ```json
 {
   "sessionId": "95afd12a-37bd-4002-82b8-00bf79e473b4",
@@ -531,6 +567,7 @@ Use the session ID to check prediction status:
 **GET** `/api/health`
 
 **Response:**
+
 ```json
 {
   "status": "Healthy",
@@ -549,6 +586,7 @@ Use the session ID to check prediction status:
 **GET** `/api/predictions/{userId}`
 
 **Response:**
+
 ```json
 [
   {
@@ -572,6 +610,7 @@ Use the session ID to check prediction status:
 **GET** `/api/predictions/sessions/{sessionId}`
 
 **Response:**
+
 ```json
 {
   "sessionId": "abc123-def456-ghi789", 
@@ -620,6 +659,7 @@ When API errors occur (especially 417 errors), the system provides detailed erro
 ### Converting Audio to Base64
 
 #### PowerShell
+
 ```powershell
 $audioBytes = [System.IO.File]::ReadAllBytes("path\to\your\audio.wav")
 $base64Audio = [System.Convert]::ToBase64String($audioBytes)
@@ -627,6 +667,7 @@ Write-Output $base64Audio
 ```
 
 #### Node.js
+
 ```javascript
 const fs = require('fs');
 const audioBuffer = fs.readFileSync('path/to/your/audio.wav');
@@ -635,6 +676,7 @@ console.log(base64Audio);
 ```
 
 #### Python
+
 ```python
 import base64
 
@@ -662,6 +704,7 @@ dotnet watch test
 ```
 
 ### **Test Coverage**
+
 - ✅ **Function Tests** - Complete constructor validation for all function classes with dependency injection
   - HealthCheckFunction, TestFunctions, RiskAssessmentFunctions, SessionStorageFunctions
   - KintsugiActivityFunctions (deprecated but tested for backward compatibility)
@@ -677,16 +720,19 @@ dotnet watch test
 ### **Manual API Testing**
 
 1. **🏥 Health Check:**
+
    ```bash
    curl http://localhost:7071/api/health
    ```
 
 2. **🔌 Connection Test:**
+
    ```bash
    curl -X POST http://localhost:7071/api/TestKintsugiConnection
    ```
 
 3. **🚀 Start Workflow:**
+
    ```bash
    curl -X POST http://localhost:7071/api/KintsugiWorkflow \
      -H "Content-Type: application/json" \
@@ -706,6 +752,7 @@ dotnet watch test
    ```
 
 4. **📤 Submit Prediction:**
+
    ```bash
    curl -X POST http://localhost:7071/api/predictions/submit \
      -H "Content-Type: application/json" \
@@ -782,6 +829,7 @@ Enable detailed logging by adding to local.settings.json:
 ### Monitoring and Alerting
 
 Set up Azure Monitor alerts for:
+
 - 🚨 Function execution failures
 - ⏱️ High API response times
 - 📈 Increased error rates
@@ -790,30 +838,35 @@ Set up Azure Monitor alerts for:
 ## 🔒 Security & Best Practices
 
 ### **Configuration Security**
+
 - ✅ Environment variable-based configuration
 - ✅ No hardcoded secrets in codebase
 - ✅ Proper API key validation and handling
 - ✅ Secure storage of connection strings
 
 ### **Input Validation**
+
 - ✅ Comprehensive FluentValidation rules
 - ✅ Sanitization and bounds checking
 - ✅ Audio file size and format validation
 - ✅ XSS protection for all inputs
 
 ### **Error Handling**
+
 - ✅ No sensitive data in error responses
 - ✅ Proper HTTP status codes
 - ✅ Correlation IDs for troubleshooting
 - ✅ Structured error logging
 
 ### **Performance Optimizations**
+
 - ✅ HttpClient lifetime management with connection pooling
 - ✅ Cancellation token support throughout
 - ✅ Memory-efficient JSON serialization
 - ✅ Async/await best practices with ConfigureAwait(false)
 
 ### **Infrastructure Security**
+
 - ✅ HTTPS only communication
 - ✅ TLS 1.2 minimum requirement
 - ✅ Storage account security hardening
@@ -822,6 +875,7 @@ Set up Azure Monitor alerts for:
 ## 📚 Additional Resources
 
 ### **Documentation**
+
 - 📖 [Azure Durable Functions Documentation](https://docs.microsoft.com/en-us/azure/azure-functions/durable/)
 - 📊 [Application Insights for Azure Functions](https://docs.microsoft.com/en-us/azure/azure-monitor/app/azure-functions-supported-features)
 - 🔗 [Kintsugi Health API Documentation](https://api.kintsugihealth.com/docs)
@@ -829,6 +883,7 @@ Set up Azure Monitor alerts for:
 - 🔄 [Polly Resilience Framework](https://github.com/App-vNext/Polly)
 
 ### **Best Practices Guides**
+
 - 🏗️ [Azure Functions Best Practices](https://docs.microsoft.com/en-us/azure/azure-functions/functions-best-practices)
 - 🔒 [Azure Security Best Practices](https://docs.microsoft.com/en-us/azure/security/fundamentals/best-practices-and-patterns)
 - 📊 [Application Performance Monitoring](https://docs.microsoft.com/en-us/azure/azure-monitor/app/app-insights-overview)
@@ -836,6 +891,7 @@ Set up Azure Monitor alerts for:
 ### **Development Tools**
 
 #### **Code Organization**
+
 - ✅ **GlobalUsings.cs** - Centralized namespace management for cleaner code
   - System namespaces (Collections.Generic, ComponentModel.DataAnnotations, Text.Json)
   - Microsoft namespaces (Azure.Functions.Worker, Extensions.DependencyInjection, Logging)
@@ -843,6 +899,7 @@ Set up Azure Monitor alerts for:
   - Eliminates redundant using statements across all function files
 
 #### **Local Development Script**
+
 - ✅ **local-run.ps1** - Automated development startup script
   - Builds Azure Functions project with error checking
   - Starts Azure Functions Core Tools runtime
@@ -850,6 +907,7 @@ Set up Azure Monitor alerts for:
   - Handles process management and error reporting
 
 #### **Azure Tools**
+
 - 🛠️ [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
 - 🎯 [VS Code Azure Functions Extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
 - 📱 [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/)
@@ -865,6 +923,7 @@ Set up Azure Monitor alerts for:
 7. **📤 Submit a pull request** with detailed description
 
 ### **Development Guidelines**
+
 - Follow the existing code style and patterns
 - Add unit tests for all new functionality
 - Update README.md for any new features or configuration
@@ -872,6 +931,7 @@ Set up Azure Monitor alerts for:
 - Use meaningful commit messages
 
 ### **Code Review Process**
+
 - All PRs require review before merging
 - Automated tests must pass
 - Code coverage should be maintained or improved
@@ -884,6 +944,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Support
 
 For support and questions:
+
 - 📧 **Issues**: Create an issue in this repository
 - 📚 **Documentation**: Refer to the sections above
 - 🔗 **API Questions**: Contact Kintsugi Health support

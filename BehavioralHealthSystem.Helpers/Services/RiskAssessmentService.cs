@@ -40,13 +40,13 @@ public class RiskAssessmentService : IRiskAssessmentService
         {
             if (!_openAIOptions.Enabled)
             {
-                _logger.LogWarning("Azure OpenAI is disabled. Skipping risk assessment generation.");
+                _logger.LogWarning("[{MethodName}] Azure OpenAI is disabled. Skipping risk assessment generation.", nameof(GenerateRiskAssessmentAsync));
                 return null;
             }
 
             if (string.IsNullOrEmpty(_openAIOptions.Endpoint) || string.IsNullOrEmpty(_openAIOptions.ApiKey))
             {
-                _logger.LogError("Azure OpenAI configuration is incomplete.");
+                _logger.LogError("[{MethodName}] Azure OpenAI configuration is incomplete.", nameof(GenerateRiskAssessmentAsync));
                 return null;
             }
 
@@ -56,7 +56,7 @@ public class RiskAssessmentService : IRiskAssessmentService
             if (openAIResponse != null)
             {
                 var riskAssessment = ParseRiskAssessmentResponse(openAIResponse);
-                _logger.LogInformation("Risk assessment generated successfully for session {SessionId}", sessionData.SessionId);
+                _logger.LogInformation("[{MethodName}] Risk assessment generated successfully for session {SessionId}", nameof(GenerateRiskAssessmentAsync), sessionData.SessionId);
                 return riskAssessment;
             }
             
@@ -64,7 +64,7 @@ public class RiskAssessmentService : IRiskAssessmentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating risk assessment for session {SessionId}", sessionData.SessionId);
+            _logger.LogError(ex, "[{MethodName}] Error generating risk assessment for session {SessionId}", nameof(GenerateRiskAssessmentAsync), sessionData.SessionId);
             return null;
         }
     }
@@ -76,7 +76,7 @@ public class RiskAssessmentService : IRiskAssessmentService
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
             {
-                _logger.LogWarning("Session {SessionId} not found for risk assessment update", sessionId);
+                _logger.LogWarning("[{MethodName}] Session {SessionId} not found for risk assessment update", nameof(UpdateSessionWithRiskAssessmentAsync), sessionId);
                 return false;
             }
 
@@ -92,7 +92,7 @@ public class RiskAssessmentService : IRiskAssessmentService
                     
                     if (success)
                     {
-                        _logger.LogInformation("Session {SessionId} updated with risk assessment", sessionId);
+                        _logger.LogInformation("[{MethodName}] Session {SessionId} updated with risk assessment", nameof(UpdateSessionWithRiskAssessmentAsync), sessionId);
                         return true;
                     }
                 }
@@ -102,7 +102,7 @@ public class RiskAssessmentService : IRiskAssessmentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating session {SessionId} with risk assessment", sessionId);
+            _logger.LogError(ex, "[{MethodName}] Error updating session {SessionId} with risk assessment", nameof(UpdateSessionWithRiskAssessmentAsync), sessionId);
             return false;
         }
     }
@@ -245,12 +245,12 @@ public class RiskAssessmentService : IRiskAssessmentService
             if (response?.Value?.Content?.Count > 0)
             {
                 var content = response.Value.Content[0].Text;
-                _logger.LogInformation("Azure OpenAI API call successful. Model: {Model}, Response length: {Length}", 
-                    isGpt5Model ? "GPT-5" : "Non-GPT-5", content?.Length ?? 0);
+                _logger.LogInformation("[{MethodName}] Azure OpenAI API call successful. Model: {Model}, Response length: {Length}", 
+                    nameof(CallAzureOpenAIAsync), isGpt5Model ? "GPT-5" : "Non-GPT-5", content?.Length ?? 0);
                 
                 if (string.IsNullOrWhiteSpace(content))
                 {
-                    _logger.LogWarning("Azure OpenAI returned successful response but content is null or empty");
+                    _logger.LogWarning("[{MethodName}] Azure OpenAI returned successful response but content is null or empty", nameof(CallAzureOpenAIAsync));
                     return null;
                 }
                 
@@ -258,19 +258,19 @@ public class RiskAssessmentService : IRiskAssessmentService
             }
             else
             {
-                _logger.LogWarning("Azure OpenAI API returned empty response. Response is null: {IsNull}, Content count: {Count}", 
-                    response?.Value == null, response?.Value?.Content?.Count ?? 0);
+                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Content count: {Count}", 
+                    nameof(CallAzureOpenAIAsync), response?.Value == null, response?.Value?.Content?.Count ?? 0);
                 return null;
             }
         }
         catch (OperationCanceledException)
         {
-            _logger.LogError("Azure OpenAI API call timed out after 30 seconds");
+            _logger.LogError("[{MethodName}] Azure OpenAI API call timed out after 30 seconds", nameof(CallAzureOpenAIAsync));
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling Azure OpenAI API");
+            _logger.LogError(ex, "[{MethodName}] Error calling Azure OpenAI API", nameof(CallAzureOpenAIAsync));
             return null;
         }
     }
@@ -280,11 +280,11 @@ public class RiskAssessmentService : IRiskAssessmentService
         try
         {
             // Log the raw response for debugging
-            _logger.LogDebug("Raw OpenAI response: {Response}", response);
+            _logger.LogDebug("[{MethodName}] Raw OpenAI response: {Response}", nameof(ParseRiskAssessmentResponse), response);
             
             if (string.IsNullOrWhiteSpace(response))
             {
-                _logger.LogWarning("Received empty or whitespace response from OpenAI");
+                _logger.LogWarning("[{MethodName}] Received empty or whitespace response from OpenAI", nameof(ParseRiskAssessmentResponse));
                 return null;
             }
 
@@ -300,11 +300,11 @@ public class RiskAssessmentService : IRiskAssessmentService
             }
             cleanResponse = cleanResponse.Trim();
 
-            _logger.LogDebug("Cleaned response for JSON parsing: {CleanedResponse}", cleanResponse);
+            _logger.LogDebug("[{MethodName}] Cleaned response for JSON parsing: {CleanedResponse}", nameof(ParseRiskAssessmentResponse), cleanResponse);
 
             if (string.IsNullOrWhiteSpace(cleanResponse))
             {
-                _logger.LogWarning("Response became empty after cleaning markdown formatting");
+                _logger.LogWarning("[{MethodName}] Response became empty after cleaning markdown formatting", nameof(ParseRiskAssessmentResponse));
                 return null;
             }
 
@@ -329,8 +329,8 @@ public class RiskAssessmentService : IRiskAssessmentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error parsing risk assessment response. Response length: {Length}, Response: {Response}", 
-                response?.Length ?? 0, response);
+            _logger.LogError(ex, "[{MethodName}] Error parsing risk assessment response. Response length: {Length}, Response: {Response}", 
+                nameof(ParseRiskAssessmentResponse), response?.Length ?? 0, response);
             return null;
         }
     }

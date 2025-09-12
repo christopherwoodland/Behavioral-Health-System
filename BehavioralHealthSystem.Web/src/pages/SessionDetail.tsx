@@ -102,8 +102,7 @@ const SessionDetail: React.FC = () => {
       setAudioPlaying(false);
       announceToScreenReader('Audio paused');
     } else {
-      audioRef.current.play().catch(error => {
-        console.error('Failed to play audio:', error);
+      audioRef.current.play().catch(() => {
         announceToScreenReader('Failed to play audio');
       });
       setAudioPlaying(true);
@@ -390,8 +389,7 @@ const SessionDetail: React.FC = () => {
                   onPlay={() => setAudioPlaying(true)}
                   onPause={() => setAudioPlaying(false)}
                   onEnded={() => setAudioPlaying(false)}
-                  onError={(e) => {
-                    console.error('Audio playback error:', e);
+                  onError={() => {
                     setAudioPlaying(false);
                     announceToScreenReader('Audio playback failed - file may not be accessible');
                   }}

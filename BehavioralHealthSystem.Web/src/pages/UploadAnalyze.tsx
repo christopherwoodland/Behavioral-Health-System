@@ -196,7 +196,6 @@ const UploadAnalyze: React.FC = () => {
       // Refresh the page to use the new user ID
       window.location.reload();
     } catch (error) {
-      console.error('Error setting User ID:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to set User ID';
       setUserIdError(errorMessage);
     }
@@ -288,7 +287,6 @@ const UploadAnalyze: React.FC = () => {
       
       // Accept file if either MIME type OR extension is valid (some browsers don't set MIME types correctly)
       if (!hasValidMimeType && !hasValidExtension) {
-        console.log(`File validation failed for ${file.name}: MIME type="${file.type}", Extension check failed`);
         setError(`Unsupported file type for ${file.name}. Please select supported audio files (WAV, MP3, M4A, AAC, or FLAC)`);
         addToast('error', 'Unsupported File', `${file.name} is not a supported audio file format`);
         announceToScreenReader(`Error: Unsupported file format selected for ${file.name}`);
@@ -512,8 +510,8 @@ const UploadAnalyze: React.FC = () => {
       try {
         await apiService.saveSessionData(initialSessionData);
       } catch (error) {
-        console.warn('Failed to save initial session data:', error);
         // Continue with the process even if saving fails
+        // Error is handled silently as this is not critical for the main workflow
       }
 
       setProcessingProgress(prev => ({
@@ -655,7 +653,6 @@ const UploadAnalyze: React.FC = () => {
       });
 
     } catch (err) {
-      console.error(`Processing error for file ${fileId}:`, err);
       setProcessingProgress(prev => ({
         ...prev,
         [fileId]: { stage: 'error', progress: 0, message: 'Processing failed' }
@@ -702,7 +699,6 @@ const UploadAnalyze: React.FC = () => {
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
           addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
         } catch (error) {
-          console.error(`Error processing ${audioFile.file.name}:`, error);
           const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
           addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
           
@@ -718,7 +714,6 @@ const UploadAnalyze: React.FC = () => {
       addToast('success', 'Batch Complete', `Processed ${completedFiles} file${completedFiles !== 1 ? 's' : ''}`);
       announceToScreenReader(`Batch processing complete. ${completedFiles} files processed.`);
     } catch (err) {
-      console.error('Batch processing error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
       addToast('error', 'Batch Failed', errorMessage);
@@ -814,8 +809,8 @@ const UploadAnalyze: React.FC = () => {
       try {
         await apiService.saveSessionData(initialSessionData);
       } catch (error) {
-        console.warn('Failed to save initial session data:', error);
         // Continue with the process even if saving fails
+        // Error is handled silently as this is not critical for the main workflow
       }
 
       setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });

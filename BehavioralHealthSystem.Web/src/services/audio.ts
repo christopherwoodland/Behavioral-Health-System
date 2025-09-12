@@ -221,7 +221,6 @@ export const convertAudioOnServer = async (
 ): Promise<File> => {
   // This would be implemented as a backend endpoint
   // For now, return the original file as fallback
-  console.warn('FFmpeg.wasm not supported, returning original file');
   return file;
 };
 

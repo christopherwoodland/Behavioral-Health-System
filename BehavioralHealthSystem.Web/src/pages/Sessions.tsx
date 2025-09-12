@@ -93,13 +93,6 @@ const Sessions: React.FC = () => {
       const userId = getUserId();
       const response = await apiService.getUserSessions(userId);
       
-      // Debug: Log the raw response to understand data structure
-      console.log('Raw sessions response:', response);
-      if (response.sessions && response.sessions.length > 0) {
-        console.log('First session prediction:', response.sessions[0]?.prediction);
-        console.log('First session analysisResults:', response.sessions[0]?.analysisResults);
-      }
-      
       // Transform session data to include computed UI fields
       const transformedSessions: SessionWithUI[] = response.sessions.map(session => {
         // Handle both camelCase and snake_case property names from API

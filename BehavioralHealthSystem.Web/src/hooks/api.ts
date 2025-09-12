@@ -34,8 +34,8 @@ export const useInitiateSession = () => {
   return useMutation({
     mutationFn: (request: SessionInitiateRequest) => 
       apiService.initiateSession(request),
-    onError: (error: AppError) => {
-      console.error('Session initiation failed:', error);
+    onError: () => {
+      // Error is handled by the UI components
     },
   });
 };
@@ -58,8 +58,8 @@ export const useSubmitPrediction = () => {
         queryKey: QUERY_KEYS.userPredictions(userId),
       });
     },
-    onError: (error: AppError) => {
-      console.error('Prediction submission failed:', error);
+    onError: () => {
+      // Error is handled by the UI components
     },
   });
 };
@@ -157,8 +157,8 @@ export const usePredictionPolling = () => {
 export const useTestConnection = () => {
   return useMutation({
     mutationFn: () => apiService.testConnection(),
-    onError: (error: AppError) => {
-      console.error('Connection test failed:', error);
+    onError: () => {
+      // Error is handled by the UI components
     },
   });
 };

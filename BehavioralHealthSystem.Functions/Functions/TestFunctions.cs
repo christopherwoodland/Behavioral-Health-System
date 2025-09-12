@@ -26,7 +26,7 @@ public class TestFunctions
     {
         try
         {
-            _logger.LogInformation("Testing Kintsugi API connection");
+            _logger.LogInformation("[{FunctionName}] Testing Kintsugi API connection", nameof(TestKintsugiConnection));
 
             // Create a test initiate request
             var testRequest = new InitiateRequest
@@ -76,7 +76,7 @@ public class TestFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error testing Kintsugi API connection");
+            _logger.LogError(ex, "[{FunctionName}] Error testing Kintsugi API connection", nameof(TestKintsugiConnection));
             
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             var errorResult = new
@@ -100,7 +100,7 @@ public class TestFunctions
             var requestBody = await req.ReadAsStringAsync();
             if (string.IsNullOrEmpty(requestBody))
             {
-                _logger.LogWarning("Empty request body received");
+                _logger.LogWarning("[{FunctionName}] Empty request body received", nameof(InitiateSession));
                 var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 var badRequestResult = new
                 {
@@ -114,7 +114,7 @@ public class TestFunctions
             var initiateRequest = JsonSerializer.Deserialize<InitiateRequest>(requestBody, _jsonOptions);
             if (initiateRequest == null)
             {
-                _logger.LogWarning("Failed to deserialize request body");
+                _logger.LogWarning("[{FunctionName}] Failed to deserialize request body", nameof(InitiateSession));
                 var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 var badRequestResult = new
                 {
@@ -125,7 +125,7 @@ public class TestFunctions
                 return badRequestResponse;
             }
 
-            _logger.LogInformation("Initiating session for user: {UserId}", initiateRequest.UserId);
+            _logger.LogInformation("[{FunctionName}] Initiating session for user: {UserId}", nameof(InitiateSession), initiateRequest.UserId);
 
             var sessionResponse = await _kintsugiApiService.InitiateSessionAsync(initiateRequest);
 
@@ -159,7 +159,7 @@ public class TestFunctions
         }
         catch (HttpRequestException httpEx) when (httpEx.Data.Contains("StatusCode"))
         {
-            _logger.LogError(httpEx, "HTTP error initiating session");
+            _logger.LogError(httpEx, "[{FunctionName}] HTTP error initiating session", nameof(InitiateSession));
             
             var statusCode = (System.Net.HttpStatusCode)(httpEx.Data["StatusCode"] ?? System.Net.HttpStatusCode.InternalServerError);
             var errorResponse = req.CreateResponse(statusCode);
@@ -178,7 +178,7 @@ public class TestFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating session");
+            _logger.LogError(ex, "[{FunctionName}] Error initiating session", nameof(InitiateSession));
             
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             var errorResult = new
@@ -200,7 +200,7 @@ public class TestFunctions
     {
         try
         {
-            _logger.LogInformation("Getting predictions for user: {UserId}", userId);
+            _logger.LogInformation("[{FunctionName}] Getting predictions for user: {UserId}", nameof(GetUserPredictions), userId);
 
             var results = await _kintsugiApiService.GetPredictionResultsAsync(userId);
 
@@ -211,7 +211,7 @@ public class TestFunctions
         }
         catch (HttpRequestException httpEx) when (httpEx.Data.Contains("StatusCode"))
         {
-            _logger.LogError(httpEx, "HTTP error getting predictions for user: {UserId}", userId);
+            _logger.LogError(httpEx, "[{FunctionName}] HTTP error getting predictions for user: {UserId}", nameof(GetUserPredictions), userId);
             
             var statusCode = (System.Net.HttpStatusCode)(httpEx.Data["StatusCode"] ?? System.Net.HttpStatusCode.InternalServerError);
             var errorResponse = req.CreateResponse(statusCode);
@@ -230,7 +230,7 @@ public class TestFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting predictions for user: {UserId}", userId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting predictions for user: {UserId}", nameof(GetUserPredictions), userId);
             
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             var errorResult = new
@@ -252,7 +252,7 @@ public class TestFunctions
     {
         try
         {
-            _logger.LogInformation("Getting prediction result for session: {SessionId}", sessionId);
+            _logger.LogInformation("[{FunctionName}] Getting prediction result for session: {SessionId}", nameof(GetPredictionBySessionId), sessionId);
 
             var result = await _kintsugiApiService.GetPredictionResultBySessionIdAsync(sessionId);
 
@@ -316,17 +316,17 @@ public class TestFunctions
                         var updateSuccess = await _sessionStorageService.UpdateSessionDataAsync(existingSessionData);
                         if (updateSuccess)
                         {
-                            _logger.LogInformation("Updated session data in blob storage for session: {SessionId}", sessionId);
+                            _logger.LogInformation("[{FunctionName}] Updated session data in blob storage for session: {SessionId}", nameof(GetPredictionBySessionId), sessionId);
                         }
                         else
                         {
-                            _logger.LogWarning("Failed to update session data in blob storage for session: {SessionId}", sessionId);
+                            _logger.LogWarning("[{FunctionName}] Failed to update session data in blob storage for session: {SessionId}", nameof(GetPredictionBySessionId), sessionId);
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error updating session data in blob storage for session: {SessionId}", sessionId);
+                    _logger.LogError(ex, "[{FunctionName}] Error updating session data in blob storage for session: {SessionId}", nameof(GetPredictionBySessionId), sessionId);
                     // Don't fail the entire request if blob storage update fails
                 }
 
@@ -348,7 +348,7 @@ public class TestFunctions
         }
         catch (HttpRequestException httpEx) when (httpEx.Data.Contains("StatusCode"))
         {
-            _logger.LogError(httpEx, "HTTP error getting prediction for session: {SessionId}", sessionId);
+            _logger.LogError(httpEx, "[{FunctionName}] HTTP error getting prediction for session: {SessionId}", nameof(GetPredictionBySessionId), sessionId);
             
             var statusCode = (System.Net.HttpStatusCode)(httpEx.Data["StatusCode"] ?? System.Net.HttpStatusCode.InternalServerError);
             var errorResponse = req.CreateResponse(statusCode);
@@ -367,7 +367,7 @@ public class TestFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting prediction for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting prediction for session: {SessionId}", nameof(GetPredictionBySessionId), sessionId);
             
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             var errorResult = new
@@ -391,7 +391,7 @@ public class TestFunctions
             var requestBody = await req.ReadAsStringAsync();
             if (string.IsNullOrEmpty(requestBody))
             {
-                _logger.LogWarning("Empty request body received for prediction submission");
+                _logger.LogWarning("[{FunctionName}] Empty request body received for prediction submission", nameof(SubmitPrediction));
                 var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 var badRequestResult = new
                 {
@@ -405,7 +405,7 @@ public class TestFunctions
             var predictionRequest = JsonSerializer.Deserialize<PredictionRequest>(requestBody, _jsonOptions);
             if (predictionRequest == null)
             {
-                _logger.LogWarning("Failed to deserialize prediction request body");
+                _logger.LogWarning("[{FunctionName}] Failed to deserialize prediction request body", nameof(SubmitPrediction));
                 var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 var badRequestResult = new
                 {
@@ -418,7 +418,7 @@ public class TestFunctions
 
             if (string.IsNullOrEmpty(predictionRequest.SessionId))
             {
-                _logger.LogWarning("SessionId is required for prediction submission");
+                _logger.LogWarning("[{FunctionName}] SessionId is required for prediction submission", nameof(SubmitPrediction));
                 var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 var badRequestResult = new
                 {
@@ -429,21 +429,21 @@ public class TestFunctions
                 return badRequestResponse;
             }
 
-            _logger.LogInformation("Submitting prediction for session: {SessionId}", predictionRequest.SessionId);
+            _logger.LogInformation("[{FunctionName}] Submitting prediction for session: {SessionId}", nameof(SubmitPrediction), predictionRequest.SessionId);
 
             PredictionResponse? predictionResponse = null;
 
             // Check if we have audio data (byte array) or file URL
             if (predictionRequest.AudioData != null && predictionRequest.AudioData.Length > 0)
             {
-                _logger.LogInformation("Submitting prediction with audio data ({DataSize} bytes)", predictionRequest.AudioData.Length);
+                _logger.LogInformation("[{FunctionName}] Submitting prediction with audio data ({DataSize} bytes)", nameof(SubmitPrediction), predictionRequest.AudioData.Length);
                 predictionResponse = await _kintsugiApiService.SubmitPredictionAsync(
                     predictionRequest.SessionId, 
                     predictionRequest.AudioData);
             }
             else if (!string.IsNullOrEmpty(predictionRequest.AudioFileUrl))
             {
-                _logger.LogInformation("Submitting prediction with audio file URL: {AudioFileUrl}", predictionRequest.AudioFileUrl);
+                _logger.LogInformation("[{FunctionName}] Submitting prediction with audio file URL: {AudioFileUrl}", nameof(SubmitPrediction), predictionRequest.AudioFileUrl);
                 predictionResponse = await _kintsugiApiService.SubmitPredictionAsync(
                     predictionRequest.SessionId, 
                     predictionRequest.AudioFileUrl, 
@@ -451,7 +451,7 @@ public class TestFunctions
             }
             else
             {
-                _logger.LogWarning("Either AudioData or AudioFileUrl must be provided");
+                _logger.LogWarning("[{FunctionName}] Either AudioData or AudioFileUrl must be provided", nameof(SubmitPrediction));
                 var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 var badRequestResult = new
                 {
@@ -492,7 +492,7 @@ public class TestFunctions
         }
         catch (HttpRequestException httpEx) when (httpEx.Data.Contains("StatusCode"))
         {
-            _logger.LogError(httpEx, "HTTP error submitting prediction");
+            _logger.LogError(httpEx, "[{FunctionName}] HTTP error submitting prediction", nameof(SubmitPrediction));
             
             var statusCode = (System.Net.HttpStatusCode)(httpEx.Data["StatusCode"] ?? System.Net.HttpStatusCode.InternalServerError);
             var errorResponse = req.CreateResponse(statusCode);
@@ -511,7 +511,7 @@ public class TestFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error submitting prediction");
+            _logger.LogError(ex, "[{FunctionName}] Error submitting prediction", nameof(SubmitPrediction));
             
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             var errorResult = new

@@ -39,7 +39,6 @@ export const SystemHealth: React.FC = () => {
         second: '2-digit'
       });
     } catch (error) {
-      console.warn('Failed to parse timestamp:', timestamp, error);
       return 'Just now';
     }
   };

@@ -28,7 +28,7 @@ public class HealthCheckFunction
     {
         try
         {
-            _logger.LogInformation("Health check requested");
+            _logger.LogInformation("[{FunctionName}] Health check requested", nameof(HealthCheck));
 
             var healthReport = await _healthCheckService.CheckHealthAsync();
 
@@ -56,7 +56,7 @@ public class HealthCheckFunction
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during health check");
+            _logger.LogError(ex, "[{FunctionName}] Error during health check", nameof(HealthCheck));
             
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             var errorResult = new

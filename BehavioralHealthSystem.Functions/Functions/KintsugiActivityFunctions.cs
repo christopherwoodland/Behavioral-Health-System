@@ -17,7 +17,7 @@ public class KintsugiActivityFunctions
     [Function(nameof(NoOpActivity))]
     public string NoOpActivity([ActivityTrigger] object? input)
     {
-        _logger.LogDebug("NoOpActivity invoked to force checkpoint");
+        _logger.LogDebug("[{FunctionName}] NoOpActivity invoked to force checkpoint", nameof(NoOpActivity));
         return "ok";
     }
 
@@ -26,24 +26,24 @@ public class KintsugiActivityFunctions
     {
         try
         {
-            _logger.LogInformation("Initiating session for user: {UserId}", request.UserId);
+            _logger.LogInformation("[{FunctionName}] Initiating session for user: {UserId}", nameof(InitiateSessionActivity), request.UserId);
             
             var response = await _kintsugiApiService.InitiateSessionAsync(request);
             
             if (response != null)
             {
-                _logger.LogInformation("Session initiated successfully with ID: {SessionId}", response.SessionId);
+                _logger.LogInformation("[{FunctionName}] Session initiated successfully with ID: {SessionId}", nameof(InitiateSessionActivity), response.SessionId);
             }
             else
             {
-                _logger.LogWarning("Failed to initiate session for user: {UserId}", request.UserId);
+                _logger.LogWarning("[{FunctionName}] Failed to initiate session for user: {UserId}", nameof(InitiateSessionActivity), request.UserId);
             }
             
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating session for user: {UserId}", request.UserId);
+            _logger.LogError(ex, "[{FunctionName}] Error initiating session for user: {UserId}", nameof(InitiateSessionActivity), request.UserId);
             throw;
         }
     }
@@ -53,46 +53,46 @@ public class KintsugiActivityFunctions
     {
         try
         {
-            _logger.LogInformation("Submitting prediction for session: {SessionId}", request.SessionId);
+            _logger.LogInformation("[{FunctionName}] Submitting prediction for session: {SessionId}", nameof(SubmitPredictionActivity), request.SessionId);
             
             PredictionResponse? response;
             
             // Use the new URL-based method if URL and filename are provided
             if (!string.IsNullOrEmpty(request.AudioFileUrl) && !string.IsNullOrEmpty(request.AudioFileName))
             {
-                _logger.LogInformation("Using URL-based prediction submission for session: {SessionId}, URL: {AudioFileUrl}", 
-                    request.SessionId, request.AudioFileUrl);
+                _logger.LogInformation("[{FunctionName}] Using URL-based prediction submission for session: {SessionId}, URL: {AudioFileUrl}", 
+                    nameof(SubmitPredictionActivity), request.SessionId, request.AudioFileUrl);
                 response = await _kintsugiApiService.SubmitPredictionAsync(request.SessionId, request.AudioFileUrl, request.AudioFileName);
             }
             // Fall back to byte array method if URL is not available
             else if (request.AudioData != null && request.AudioData.Length > 0)
             {
-                _logger.LogInformation("Using byte array prediction submission for session: {SessionId}, Size: {AudioSize} bytes", 
-                    request.SessionId, request.AudioData.Length);
+                _logger.LogInformation("[{FunctionName}] Using byte array prediction submission for session: {SessionId}, Size: {AudioSize} bytes", 
+                    nameof(SubmitPredictionActivity), request.SessionId, request.AudioData.Length);
                 response = await _kintsugiApiService.SubmitPredictionAsync(request.SessionId, request.AudioData);
             }
             else
             {
-                _logger.LogError("No audio data provided for session: {SessionId}. Neither AudioFileUrl nor AudioData are available.", 
-                    request.SessionId);
+                _logger.LogError("[{FunctionName}] No audio data provided for session: {SessionId}. Neither AudioFileUrl nor AudioData are available.", 
+                    nameof(SubmitPredictionActivity), request.SessionId);
                 throw new ArgumentException("No audio data provided. Either AudioFileUrl/AudioFileName or AudioData must be specified.");
             }
             
             if (response != null)
             {
-                _logger.LogInformation("Prediction submitted successfully for session: {SessionId}, Status: {Status}", 
-                    request.SessionId, response.Status);
+                _logger.LogInformation("[{FunctionName}] Prediction submitted successfully for session: {SessionId}, Status: {Status}", 
+                    nameof(SubmitPredictionActivity), request.SessionId, response.Status);
             }
             else
             {
-                _logger.LogWarning("Failed to submit prediction for session: {SessionId}", request.SessionId);
+                _logger.LogWarning("[{FunctionName}] Failed to submit prediction for session: {SessionId}", nameof(SubmitPredictionActivity), request.SessionId);
             }
             
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error submitting prediction for session: {SessionId}", request.SessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error submitting prediction for session: {SessionId}", nameof(SubmitPredictionActivity), request.SessionId);
             throw;
         }
     }
@@ -105,17 +105,17 @@ public class KintsugiActivityFunctions
             // Clean userId of any JSON serialization artifacts (remove surrounding quotes if present)
             var cleanUserId = userId?.Trim('"') ?? string.Empty;
             
-            _logger.LogInformation("Getting prediction results for user: {UserId} (cleaned from: {OriginalUserId})", cleanUserId, userId);
+            _logger.LogInformation("[{FunctionName}] Getting prediction results for user: {UserId} (cleaned from: {OriginalUserId})", nameof(GetPredictionResultsActivity), cleanUserId, userId);
             
             var results = await _kintsugiApiService.GetPredictionResultsAsync(cleanUserId);
             
-            _logger.LogInformation("Retrieved {Count} prediction results for user: {UserId}", results.Count, cleanUserId);
+            _logger.LogInformation("[{FunctionName}] Retrieved {Count} prediction results for user: {UserId}", nameof(GetPredictionResultsActivity), results.Count, cleanUserId);
             
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting prediction results for user: {UserId}", userId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting prediction results for user: {UserId}", nameof(GetPredictionResultsActivity), userId);
             throw;
         }
     }
@@ -128,25 +128,25 @@ public class KintsugiActivityFunctions
             // Clean sessionId of any JSON serialization artifacts (remove surrounding quotes if present)
             var cleanSessionId = sessionId?.Trim('"') ?? string.Empty;
             
-            _logger.LogInformation("Getting prediction result for session: {SessionId} (cleaned from: {OriginalSessionId})", cleanSessionId, sessionId);
+            _logger.LogInformation("[{FunctionName}] Getting prediction result for session: {SessionId} (cleaned from: {OriginalSessionId})", nameof(GetPredictionResultBySessionIdActivity), cleanSessionId, sessionId);
             
             var result = await _kintsugiApiService.GetPredictionResultBySessionIdAsync(cleanSessionId);
             
             if (result != null)
             {
-                _logger.LogInformation("Retrieved prediction result for session: {SessionId}, Status: {Status}", 
-                    cleanSessionId, result.Status);
+                _logger.LogInformation("[{FunctionName}] Retrieved prediction result for session: {SessionId}, Status: {Status}", 
+                    nameof(GetPredictionResultBySessionIdActivity), cleanSessionId, result.Status);
             }
             else
             {
-                _logger.LogWarning("No prediction result found for session: {SessionId}", cleanSessionId);
+                _logger.LogWarning("[{FunctionName}] No prediction result found for session: {SessionId}", nameof(GetPredictionResultBySessionIdActivity), cleanSessionId);
             }
             
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting prediction result for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting prediction result for session: {SessionId}", nameof(GetPredictionResultBySessionIdActivity), sessionId);
             throw;
         }
     }

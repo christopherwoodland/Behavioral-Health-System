@@ -78,24 +78,17 @@ const Predictions: React.FC = () => {
       setError(null);
       
       const userId = getUserId();
-      console.log('Loading predictions for user:', userId);
-      
       const response = await apiService.getUserSessions(userId);
-      console.log('Raw sessions response:', response);
       
       // Filter sessions that have analysis results or predictions
       const sessionsWithPredictions = response.sessions.filter(session => {
-        console.log('Session:', session.sessionId, 'has prediction:', !!session.prediction, 'has analysisResults:', !!session.analysisResults);
         return session.analysisResults || session.prediction;
       });
-      
-      console.log('Filtered sessions with predictions:', sessionsWithPredictions);
       
       setSessions(sessionsWithPredictions);
       announceToScreenReader(`${sessionsWithPredictions.length} prediction sessions loaded`);
     } catch (err) {
       const appError = err as AppError;
-      console.error('Error loading predictions:', appError);
       setError(appError);
       announceToScreenReader(`Error loading predictions: ${appError.message}`);
     } finally {

@@ -25,7 +25,7 @@ public class SessionStorageFunctions
     {
         try
         {
-            _logger.LogInformation("Saving session data");
+            _logger.LogInformation("[{FunctionName}] Saving session data", nameof(SaveSessionData));
 
             var requestBody = await req.ReadAsStringAsync();
             if (string.IsNullOrEmpty(requestBody))
@@ -73,7 +73,7 @@ public class SessionStorageFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving session data");
+            _logger.LogError(ex, "[{FunctionName}] Error saving session data", nameof(SaveSessionData));
             
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
@@ -92,7 +92,7 @@ public class SessionStorageFunctions
     {
         try
         {
-            _logger.LogInformation("Getting session data for session: {SessionId}", sessionId);
+            _logger.LogInformation("[{FunctionName}] Getting session data for session: {SessionId}", nameof(GetSessionData), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             
@@ -114,7 +114,7 @@ public class SessionStorageFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting session data for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting session data for session: {SessionId}", nameof(GetSessionData), sessionId);
             
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
@@ -133,7 +133,7 @@ public class SessionStorageFunctions
     {
         try
         {
-            _logger.LogInformation("Getting sessions for user: {UserId}", userId);
+            _logger.LogInformation("[{FunctionName}] Getting sessions for user: {UserId}", nameof(GetUserSessions), userId);
 
             var sessions = await _sessionStorageService.GetUserSessionsAsync(userId);
             
@@ -147,7 +147,7 @@ public class SessionStorageFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting sessions for user: {UserId}", userId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting sessions for user: {UserId}", nameof(GetUserSessions), userId);
             
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
@@ -166,7 +166,7 @@ public class SessionStorageFunctions
     {
         try
         {
-            _logger.LogInformation("Updating session data for session: {SessionId}", sessionId);
+            _logger.LogInformation("[{FunctionName}] Updating session data for session: {SessionId}", nameof(UpdateSessionData), sessionId);
 
             var requestBody = await req.ReadAsStringAsync();
             if (string.IsNullOrEmpty(requestBody))
@@ -213,7 +213,7 @@ public class SessionStorageFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating session data for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error updating session data for session: {SessionId}", nameof(UpdateSessionData), sessionId);
             
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
@@ -232,7 +232,7 @@ public class SessionStorageFunctions
     {
         try
         {
-            _logger.LogInformation("Deleting session data for session: {SessionId}", sessionId);
+            _logger.LogInformation("[{FunctionName}] Deleting session data for session: {SessionId}", nameof(DeleteSessionData), sessionId);
 
             var success = await _sessionStorageService.DeleteSessionDataAsync(sessionId);
             
@@ -257,7 +257,7 @@ public class SessionStorageFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting session data for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error deleting session data for session: {SessionId}", nameof(DeleteSessionData), sessionId);
             
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 

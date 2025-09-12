@@ -19,17 +19,17 @@ public class KintsugiApiService : IKintsugiApiService
         // Validate and configure HttpClient if not already configured
         if (_httpClient.BaseAddress == null)
         {
-            _logger.LogInformation("HttpClient BaseAddress is null, configuring from options");
+            _logger.LogInformation("[{ClassName}] HttpClient BaseAddress is null, configuring from options", nameof(KintsugiApiService));
             
             if (string.IsNullOrEmpty(_options.KintsugiApiKey))
             {
-                _logger.LogError("KINTSUGI_API_KEY is not configured");
+                _logger.LogError("[{ClassName}] KINTSUGI_API_KEY is not configured", nameof(KintsugiApiService));
                 throw new InvalidOperationException("KINTSUGI_API_KEY is not configured");
             }
 
             if (string.IsNullOrEmpty(_options.KintsugiBaseUrl))
             {
-                _logger.LogError("KINTSUGI_BASE_URL is not configured");
+                _logger.LogError("[{ClassName}] KINTSUGI_BASE_URL is not configured", nameof(KintsugiApiService));
                 throw new InvalidOperationException("KINTSUGI_BASE_URL is not configured");
             }
 
@@ -41,11 +41,11 @@ public class KintsugiApiService : IKintsugiApiService
             _httpClient.DefaultRequestHeaders.Add("X-API-Key", _options.KintsugiApiKey);
             _httpClient.Timeout = TimeSpan.FromMinutes(5);
             
-            _logger.LogInformation("HttpClient configured in constructor with BaseAddress: {BaseAddress}", _httpClient.BaseAddress);
+            _logger.LogInformation("[{ClassName}] HttpClient configured in constructor with BaseAddress: {BaseAddress}", nameof(KintsugiApiService), _httpClient.BaseAddress);
         }
         else
         {
-            _logger.LogInformation("HttpClient already has BaseAddress: {BaseAddress}", _httpClient.BaseAddress);
+            _logger.LogInformation("[{ClassName}] HttpClient already has BaseAddress: {BaseAddress}", nameof(KintsugiApiService), _httpClient.BaseAddress);
         }
         
         _jsonOptions = new JsonSerializerOptions
@@ -60,12 +60,12 @@ public class KintsugiApiService : IKintsugiApiService
         
         try
         {
-            _logger.LogInformation("Initiating session for user: {UserId}", request.UserId);
+            _logger.LogInformation("[{MethodName}] Initiating session for user: {UserId}", nameof(InitiateSessionAsync), request.UserId);
             
             // Additional validation and logging
             if (string.IsNullOrWhiteSpace(request.UserId))
             {
-                _logger.LogError("InitiateRequest.UserId is null, empty, or whitespace: '{UserId}'", request.UserId);
+                _logger.LogError("[{MethodName}] InitiateRequest.UserId is null, empty, or whitespace: '{UserId}'", nameof(InitiateSessionAsync), request.UserId);
                 throw new ArgumentException("UserId cannot be null, empty, or whitespace", nameof(request));
             }
             
@@ -74,15 +74,15 @@ public class KintsugiApiService : IKintsugiApiService
             // To avoid breaking existing callers, map explicitly to the wire contract here instead of
             // changing data annotations on the shared model.
             object payload;
-            _logger.LogDebug("AutoProvideConsent option value: {AutoProvideConsent}", _options.AutoProvideConsent);
+            _logger.LogDebug("[{MethodName}] AutoProvideConsent option value: {AutoProvideConsent}", nameof(InitiateSessionAsync), _options.AutoProvideConsent);
             
             // Check if metadata has any actual values
             bool hasMetadata = request.Metadata != null && HasAnyMetadataValues(request.Metadata);
-            _logger.LogDebug("Metadata provided: {HasMetadata}", hasMetadata);
+            _logger.LogDebug("[{MethodName}] Metadata provided: {HasMetadata}", nameof(InitiateSessionAsync), hasMetadata);
             
             if (_options.AutoProvideConsent)
             {
-                _logger.LogDebug("Including consent fields in initiate payload");
+                _logger.LogDebug("[{MethodName}] Including consent fields in initiate payload", nameof(InitiateSessionAsync));
                 if (hasMetadata)
                 {
                     payload = new
@@ -107,7 +107,7 @@ public class KintsugiApiService : IKintsugiApiService
             }
             else
             {
-                _logger.LogDebug("Not including consent fields (AutoProvideConsent disabled)");
+                _logger.LogDebug("[{MethodName}] Not including consent fields (AutoProvideConsent disabled)", nameof(InitiateSessionAsync));
                 if (hasMetadata)
                 {
                     payload = new
@@ -128,7 +128,7 @@ public class KintsugiApiService : IKintsugiApiService
             }
 
             var json = JsonSerializer.Serialize(payload, _jsonOptions);
-            _logger.LogInformation("Sending InitiateRequest JSON to Kintsugi API (mapped payload): {RequestJson}", json);
+            _logger.LogInformation("[{MethodName}] Sending InitiateRequest JSON to Kintsugi API (mapped payload): {RequestJson}", nameof(InitiateSessionAsync), json);
             
             using var content = new StringContent(json, Encoding.UTF8, "application/json");
             
@@ -139,7 +139,7 @@ public class KintsugiApiService : IKintsugiApiService
                 var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 var result = JsonSerializer.Deserialize<InitiateResponse>(responseContent, _jsonOptions);
                 
-                _logger.LogInformation("Session initiated successfully with ID: {SessionId}", result?.SessionId);
+                _logger.LogInformation("[{MethodName}] Session initiated successfully with ID: {SessionId}", nameof(InitiateSessionAsync), result?.SessionId);
                 return result;
             }
             
@@ -148,12 +148,12 @@ public class KintsugiApiService : IKintsugiApiService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Session initiation was cancelled for user: {UserId}", request.UserId);
+            _logger.LogWarning("[{MethodName}] Session initiation was cancelled for user: {UserId}", nameof(InitiateSessionAsync), request.UserId);
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error initiating session for user: {UserId}", request.UserId);
+            _logger.LogError(ex, "[{MethodName}] Error initiating session for user: {UserId}", nameof(InitiateSessionAsync), request.UserId);
             throw;
         }
     }
@@ -165,8 +165,8 @@ public class KintsugiApiService : IKintsugiApiService
         
         try
         {
-            _logger.LogInformation("Submitting prediction for session: {SessionId}, Audio size: {AudioSize} bytes", 
-                sessionId, audioData.Length);
+            _logger.LogInformation("[{MethodName}] Submitting prediction for session: {SessionId}, Audio size: {AudioSize} bytes", 
+                nameof(SubmitPredictionAsync), sessionId, audioData.Length);
             
             using var form = new MultipartFormDataContent();
             
@@ -185,8 +185,8 @@ public class KintsugiApiService : IKintsugiApiService
                 var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 var result = JsonSerializer.Deserialize<PredictionResponse>(responseContent, _jsonOptions);
                 
-                _logger.LogInformation("Prediction submitted successfully for session: {SessionId}, Status: {Status}", 
-                    sessionId, result?.Status);
+                _logger.LogInformation("[{MethodName}] Prediction submitted successfully for session: {SessionId}, Status: {Status}", 
+                    nameof(SubmitPredictionAsync), sessionId, result?.Status);
                 return result;
             }
             
@@ -195,12 +195,12 @@ public class KintsugiApiService : IKintsugiApiService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Prediction submission was cancelled for session: {SessionId}", sessionId);
+            _logger.LogWarning("[{MethodName}] Prediction submission was cancelled for session: {SessionId}", nameof(SubmitPredictionAsync), sessionId);
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error submitting prediction for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{MethodName}] Error submitting prediction for session: {SessionId}", nameof(SubmitPredictionAsync), sessionId);
             throw;
         }
     }
@@ -213,8 +213,8 @@ public class KintsugiApiService : IKintsugiApiService
         
         try
         {
-            _logger.LogInformation("Downloading audio file from URL for session: {SessionId}, URL: {AudioFileUrl}, FileName: {AudioFileName}", 
-                sessionId, audioFileUrl, audioFileName);
+            _logger.LogInformation("[{MethodName}] Downloading audio file from URL for session: {SessionId}, URL: {AudioFileUrl}, FileName: {AudioFileName}", 
+                nameof(SubmitPredictionAsync), sessionId, audioFileUrl, audioFileName);
             
             // Download the audio file from the provided URL using a separate HttpClient
             byte[] audioData;
@@ -227,12 +227,12 @@ public class KintsugiApiService : IKintsugiApiService
                 if (!downloadResponse.IsSuccessStatusCode)
                 {
                     var errorMessage = $"Failed to download audio file from {audioFileUrl}. Status: {downloadResponse.StatusCode}";
-                    _logger.LogError(errorMessage);
+                    _logger.LogError("[{MethodName}] {ErrorMessage}", nameof(SubmitPredictionAsync), errorMessage);
                     throw new HttpRequestException(errorMessage, null, downloadResponse.StatusCode);
                 }
                 
                 audioData = await downloadResponse.Content.ReadAsByteArrayAsync(cancellationToken);
-                _logger.LogInformation("Successfully downloaded audio file: {FileSize} bytes", audioData.Length);
+                _logger.LogInformation("[{MethodName}] Successfully downloaded audio file: {FileSize} bytes", nameof(SubmitPredictionAsync), audioData.Length);
             }
             
             // Call the existing method with the downloaded audio data
@@ -240,13 +240,13 @@ public class KintsugiApiService : IKintsugiApiService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Audio file download and prediction submission was cancelled for session: {SessionId}", sessionId);
+            _logger.LogWarning("[{MethodName}] Audio file download and prediction submission was cancelled for session: {SessionId}", nameof(SubmitPredictionAsync), sessionId);
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error downloading audio file and submitting prediction for session: {SessionId}, URL: {AudioFileUrl}", 
-                sessionId, audioFileUrl);
+            _logger.LogError(ex, "[{MethodName}] Error downloading audio file and submitting prediction for session: {SessionId}, URL: {AudioFileUrl}", 
+                nameof(SubmitPredictionAsync), sessionId, audioFileUrl);
             throw;
         }
     }
@@ -257,7 +257,7 @@ public class KintsugiApiService : IKintsugiApiService
         
         try
         {
-            _logger.LogInformation("Getting prediction results for user: {UserId}", userId);
+            _logger.LogInformation("[{MethodName}] Getting prediction results for user: {UserId}", nameof(GetPredictionResultsAsync), userId);
             
             using var response = await _httpClient.GetAsync($"predict/users/{userId}", cancellationToken);
             
@@ -266,8 +266,8 @@ public class KintsugiApiService : IKintsugiApiService
                 var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 var results = JsonSerializer.Deserialize<List<PredictionResult>>(responseContent, _jsonOptions);
                 
-                _logger.LogInformation("Retrieved {Count} prediction results for user: {UserId}", 
-                    results?.Count ?? 0, userId);
+                _logger.LogInformation("[{MethodName}] Retrieved {Count} prediction results for user: {UserId}", 
+                    nameof(GetPredictionResultsAsync), results?.Count ?? 0, userId);
                 return results ?? [];
             }
             
@@ -276,12 +276,12 @@ public class KintsugiApiService : IKintsugiApiService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Getting prediction results was cancelled for user: {UserId}", userId);
+            _logger.LogWarning("[{MethodName}] Getting prediction results was cancelled for user: {UserId}", nameof(GetPredictionResultsAsync), userId);
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting prediction results for user: {UserId}", userId);
+            _logger.LogError(ex, "[{MethodName}] Error getting prediction results for user: {UserId}", nameof(GetPredictionResultsAsync), userId);
             throw;
         }
     }
@@ -292,7 +292,7 @@ public class KintsugiApiService : IKintsugiApiService
         
         try
         {
-            _logger.LogInformation("Getting prediction result for session: {SessionId}", sessionId);
+            _logger.LogInformation("[{MethodName}] Getting prediction result for session: {SessionId}", nameof(GetPredictionResultBySessionIdAsync), sessionId);
             
             using var response = await _httpClient.GetAsync($"predict/sessions/{sessionId}", cancellationToken);
             
@@ -301,8 +301,8 @@ public class KintsugiApiService : IKintsugiApiService
                 var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
                 var result = JsonSerializer.Deserialize<SessionPredictionResult>(responseContent, _jsonOptions);
                 
-                _logger.LogInformation("Retrieved prediction result for session: {SessionId}, Status: {Status}", 
-                    sessionId, result?.Status ?? "Unknown");
+                _logger.LogInformation("[{MethodName}] Retrieved prediction result for session: {SessionId}, Status: {Status}", 
+                    nameof(GetPredictionResultBySessionIdAsync), sessionId, result?.Status ?? "Unknown");
                 return result;
             }
             
@@ -311,12 +311,12 @@ public class KintsugiApiService : IKintsugiApiService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Getting prediction result was cancelled for session: {SessionId}", sessionId);
+            _logger.LogWarning("[{MethodName}] Getting prediction result was cancelled for session: {SessionId}", nameof(GetPredictionResultBySessionIdAsync), sessionId);
             throw;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting prediction result for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{MethodName}] Error getting prediction result for session: {SessionId}", nameof(GetPredictionResultBySessionIdAsync), sessionId);
             throw;
         }
     }
@@ -333,7 +333,7 @@ public class KintsugiApiService : IKintsugiApiService
         catch (JsonException)
         {
             // If we can't parse the error response, use the raw content
-            _logger.LogWarning("Could not parse error response as JSON: {ErrorContent}", errorContent);
+            _logger.LogWarning("[{MethodName}] Could not parse error response as JSON: {ErrorContent}", nameof(HandleErrorResponseAsync), errorContent);
         }
 
         var errorMessage = response.StatusCode switch
@@ -349,8 +349,8 @@ public class KintsugiApiService : IKintsugiApiService
             _ => $"API error ({response.StatusCode}): {errorResponse?.Message ?? errorContent}"
         };
         
-        _logger.LogError("Kintsugi API error: {StatusCode} - {ErrorMessage}, Raw Response: {RawResponse}", 
-            response.StatusCode, errorMessage, errorContent);
+        _logger.LogError("[{MethodName}] Kintsugi API error: {StatusCode} - {ErrorMessage}, Raw Response: {RawResponse}", 
+            nameof(HandleErrorResponseAsync), response.StatusCode, errorMessage, errorContent);
 
         // For 417 errors, create a more detailed exception with all error information
         if (response.StatusCode == (System.Net.HttpStatusCode)417)

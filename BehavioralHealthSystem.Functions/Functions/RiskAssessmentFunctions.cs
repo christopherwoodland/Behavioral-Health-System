@@ -29,7 +29,8 @@ public class RiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("Generating risk assessment for session: {SessionId}", sessionId);
+            _logger.LogInformation("[{FunctionName}] Generating risk assessment for session: {SessionId}", 
+                nameof(GenerateRiskAssessment), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
@@ -74,7 +75,8 @@ public class RiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating risk assessment for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error generating risk assessment for session: {SessionId}", 
+                nameof(GenerateRiskAssessment), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
@@ -94,7 +96,8 @@ public class RiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("Getting risk assessment for session: {SessionId}", sessionId);
+                    _logger.LogInformation("[{FunctionName}] Starting risk assessment for session: {SessionId}", 
+            nameof(GetRiskAssessment), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
@@ -131,7 +134,8 @@ public class RiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting risk assessment for session: {SessionId}", sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error getting risk assessment for session: {SessionId}", 
+                nameof(GetRiskAssessment), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new

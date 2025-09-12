@@ -35,7 +35,7 @@ public class KintsugiApiHealthCheck : IHealthCheck
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Health check failed for Kintsugi API");
+            _logger.LogError(ex, "[{MethodName}] Health check failed for Kintsugi API", nameof(CheckHealthAsync));
             return Task.FromResult(HealthCheckResult.Unhealthy("Kintsugi API health check failed", ex));
         }
     }

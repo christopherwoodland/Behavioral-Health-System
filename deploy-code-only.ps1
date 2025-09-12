@@ -39,96 +39,96 @@ Set-StrictMode -Version Latest
 
 # Script directory and project paths
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$SolutionDir = Split-Path -Parent $ScriptDir
+$SolutionDir = $ScriptDir  # Script is in the solution root directory
 $FunctionProjectDir = Join-Path $SolutionDir "BehavioralHealthSystem.Functions"
 
-Write-Host "╔══════════════════════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║                    🚀 FUNCTION APP CODE DEPLOYMENT 🚀                      ║" -ForegroundColor Cyan  
-Write-Host "║                     Behavioral Health System                                 ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "================================================================================" -ForegroundColor Cyan
+Write-Host "                    FUNCTION APP CODE DEPLOYMENT                               " -ForegroundColor Cyan  
+Write-Host "                     Behavioral Health System                                  " -ForegroundColor Cyan
+Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "⚡ CODE DEPLOYMENT CONFIGURATION:" -ForegroundColor Yellow
-Write-Host "   • Function App: $FunctionAppName" -ForegroundColor Green
-Write-Host "   • Resource Group: $ResourceGroupName" -ForegroundColor Green
-Write-Host "   • Project Directory: $FunctionProjectDir" -ForegroundColor Green
+Write-Host "CODE DEPLOYMENT CONFIGURATION:" -ForegroundColor Yellow
+Write-Host "   Function App: $FunctionAppName" -ForegroundColor Green
+Write-Host "   Resource Group: $ResourceGroupName" -ForegroundColor Green
+Write-Host "   Project Directory: $FunctionProjectDir" -ForegroundColor Green
 if ($KintsugiApiKey) {
-    Write-Host "   • API Key: ***$(($KintsugiApiKey).Substring($KintsugiApiKey.Length - 4))" -ForegroundColor Green
+    Write-Host "   API Key: ***$(($KintsugiApiKey).Substring($KintsugiApiKey.Length - 4))" -ForegroundColor Green
 }
 Write-Host ""
 
 # Verify Azure CLI login
-Write-Host "🔐 Checking Azure authentication..." -ForegroundColor Yellow
+Write-Host "Checking Azure authentication..." -ForegroundColor Yellow
 try {
     $account = az account show --output json | ConvertFrom-Json
-    Write-Host "   ✅ Authenticated as: $($account.user.name)" -ForegroundColor Green
+    Write-Host "   [SUCCESS] Authenticated as: $($account.user.name)" -ForegroundColor Green
 }
 catch {
-    Write-Host "   ❌ Not authenticated with Azure CLI" -ForegroundColor Red
+    Write-Host "   [ERROR] Not authenticated with Azure CLI" -ForegroundColor Red
     Write-Host "   Please run: az login" -ForegroundColor Yellow
     exit 1
 }
 
 # Verify Function App exists
-Write-Host "🔍 Verifying Function App exists..." -ForegroundColor Yellow
+Write-Host "Verifying Function App exists..." -ForegroundColor Yellow
 try {
     $functionApp = az functionapp show --name $FunctionAppName --resource-group $ResourceGroupName --output json | ConvertFrom-Json
-    Write-Host "   ✅ Function App found: $($functionApp.defaultHostName)" -ForegroundColor Green
+    Write-Host "   [SUCCESS] Function App found: $($functionApp.defaultHostName)" -ForegroundColor Green
 }
 catch {
-    Write-Host "   ❌ Function App '$FunctionAppName' not found in resource group '$ResourceGroupName'" -ForegroundColor Red
+    Write-Host "   [ERROR] Function App '$FunctionAppName' not found in resource group '$ResourceGroupName'" -ForegroundColor Red
     Write-Host "   Please check the names or deploy infrastructure first" -ForegroundColor Yellow
     exit 1
 }
 
 # Verify project directory exists
-Write-Host "📁 Checking project directory..." -ForegroundColor Yellow
+Write-Host "Checking project directory..." -ForegroundColor Yellow
 if (-not (Test-Path $FunctionProjectDir)) {
-    Write-Host "   ❌ Function project directory not found: $FunctionProjectDir" -ForegroundColor Red
+    Write-Host "   [ERROR] Function project directory not found: $FunctionProjectDir" -ForegroundColor Red
     exit 1
 }
-Write-Host "   ✅ Project directory found" -ForegroundColor Green
+Write-Host "   [SUCCESS] Project directory found" -ForegroundColor Green
 
 # Change to project directory
-Write-Host "📂 Navigating to project directory..." -ForegroundColor Yellow
+Write-Host "Navigating to project directory..." -ForegroundColor Yellow
 Set-Location $FunctionProjectDir
 
 # Clean and build the project
-Write-Host "🧹 Cleaning previous build..." -ForegroundColor Yellow
+Write-Host "Cleaning previous build..." -ForegroundColor Yellow
 try {
     dotnet clean --configuration Release --verbosity quiet
-    Write-Host "   ✅ Clean completed" -ForegroundColor Green
+    Write-Host "   [SUCCESS] Clean completed" -ForegroundColor Green
 }
 catch {
-    Write-Host "   ⚠️ Clean failed, continuing..." -ForegroundColor Yellow
+    Write-Host "   [WARNING] Clean failed, continuing..." -ForegroundColor Yellow
 }
 
-Write-Host "🔨 Building Function App..." -ForegroundColor Yellow
+Write-Host "Building Function App..." -ForegroundColor Yellow
 try {
     dotnet build --configuration Release --no-restore --verbosity minimal
     if ($LASTEXITCODE -ne 0) {
         throw "Build failed with exit code $LASTEXITCODE"
     }
-    Write-Host "   ✅ Build completed successfully" -ForegroundColor Green
+    Write-Host "   [SUCCESS] Build completed successfully" -ForegroundColor Green
 }
 catch {
-    Write-Host "   ❌ Build failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "   [ERROR] Build failed: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
 # Update application settings if API key provided
 if ($KintsugiApiKey) {
-    Write-Host "⚙️ Updating application settings..." -ForegroundColor Yellow
+    Write-Host "Updating application settings..." -ForegroundColor Yellow
     try {
         az functionapp config appsettings set --name $FunctionAppName --resource-group $ResourceGroupName --settings "KINTSUGI_API_KEY=$KintsugiApiKey" --output none
-        Write-Host "   ✅ API key updated" -ForegroundColor Green
+        Write-Host "   [SUCCESS] API key updated" -ForegroundColor Green
     }
     catch {
-        Write-Host "   ⚠️ Failed to update API key, continuing with deployment..." -ForegroundColor Yellow
+        Write-Host "   [WARNING] Failed to update API key, continuing with deployment..." -ForegroundColor Yellow
     }
 }
 
 # Deploy the code
-Write-Host "🚀 Deploying code to Azure Function App..." -ForegroundColor Yellow
+Write-Host "Deploying code to Azure Function App..." -ForegroundColor Yellow
 Write-Host "   This may take a few minutes..." -ForegroundColor Gray
 
 try {
@@ -139,20 +139,20 @@ try {
         throw "Deployment failed with exit code $LASTEXITCODE"
     }
     
-    Write-Host "   ✅ Code deployment completed successfully" -ForegroundColor Green
+    Write-Host "   [SUCCESS] Code deployment completed successfully" -ForegroundColor Green
 }
 catch {
-    Write-Host "   ❌ Deployment failed: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "   [ERROR] Deployment failed: $($_.Exception.Message)" -ForegroundColor Red
     Write-Host ""
-    Write-Host "🔍 TROUBLESHOOTING:" -ForegroundColor Yellow
-    Write-Host "   • Verify Azure Functions Core Tools are installed: func --version" -ForegroundColor Gray
-    Write-Host "   • Check Function App status in Azure Portal" -ForegroundColor Gray
-    Write-Host "   • Try restarting the Function App: az functionapp restart --name $FunctionAppName --resource-group $ResourceGroupName" -ForegroundColor Gray
+    Write-Host "TROUBLESHOOTING:" -ForegroundColor Yellow
+    Write-Host "   - Verify Azure Functions Core Tools are installed: func --version" -ForegroundColor Gray
+    Write-Host "   - Check Function App status in Azure Portal" -ForegroundColor Gray
+    Write-Host "   - Try restarting the Function App: az functionapp restart --name $FunctionAppName --resource-group $ResourceGroupName" -ForegroundColor Gray
     exit 1
 }
 
 # Verify deployment
-Write-Host "✅ Verifying deployment..." -ForegroundColor Yellow
+Write-Host "Verifying deployment..." -ForegroundColor Yellow
 try {
     Start-Sleep -Seconds 10  # Give the function app time to restart
     
@@ -162,27 +162,27 @@ try {
     $response = Invoke-WebRequest -Uri $healthUrl -Method GET -TimeoutSec 30 -UseBasicParsing
     
     if ($response.StatusCode -eq 200) {
-        Write-Host "   ✅ Health check passed - Function App is running" -ForegroundColor Green
+        Write-Host "   [SUCCESS] Health check passed - Function App is running" -ForegroundColor Green
     } else {
-        Write-Host "   ⚠️ Health check returned status: $($response.StatusCode)" -ForegroundColor Yellow
+        Write-Host "   [WARNING] Health check returned status: $($response.StatusCode)" -ForegroundColor Yellow
     }
 }
 catch {
-    Write-Host "   ⚠️ Health check failed, but deployment may still be successful" -ForegroundColor Yellow
+    Write-Host "   [WARNING] Health check failed, but deployment may still be successful" -ForegroundColor Yellow
     Write-Host "   Function App may need a few more minutes to fully start" -ForegroundColor Gray
 }
 
 Write-Host ""
-Write-Host "🎊 CODE DEPLOYMENT COMPLETED! 🎊" -ForegroundColor Green
+Write-Host "CODE DEPLOYMENT COMPLETED!" -ForegroundColor Green
 Write-Host ""
-Write-Host "🌐 FUNCTION APP ENDPOINTS:" -ForegroundColor Cyan
-Write-Host "   • Base URL: https://$FunctionAppName.azurewebsites.net" -ForegroundColor White
-Write-Host "   • Health: https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor White
-Write-Host "   • Main Workflow: https://$FunctionAppName.azurewebsites.net/api/KintsugiWorkflow" -ForegroundColor White
+Write-Host "FUNCTION APP ENDPOINTS:" -ForegroundColor Cyan
+Write-Host "   Base URL: https://$FunctionAppName.azurewebsites.net" -ForegroundColor White
+Write-Host "   Health: https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor White
+Write-Host "   Main Workflow: https://$FunctionAppName.azurewebsites.net/api/KintsugiWorkflow" -ForegroundColor White
 Write-Host ""
-Write-Host "📋 NEXT STEPS:" -ForegroundColor Yellow
+Write-Host "NEXT STEPS:" -ForegroundColor Yellow
 Write-Host "   1. Test your endpoints using the sample-requests.md examples" -ForegroundColor Gray
 Write-Host "   2. Monitor logs in Azure Portal or Application Insights" -ForegroundColor Gray
-Write-Host "   3. Your recent code changes (conditional metadata inclusion) are now live!" -ForegroundColor Gray
+Write-Host "   3. Your recent code changes are now live!" -ForegroundColor Gray
 Write-Host ""
-Write-Host "💡 TIP: Use this script for future code-only deployments!" -ForegroundColor Cyan
+Write-Host "TIP: Use this script for future code-only deployments!" -ForegroundColor Cyan

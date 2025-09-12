@@ -244,6 +244,21 @@
   .focus-trap {
     @apply focus:outline-none;
   }
+
+  /* Chart Bar Components - for dynamic height charts */
+  .chart-bar-dynamic {
+    height: var(--chart-height, 8%);
+    min-height: 8px;
+  }
+
+  /* Progress Bar Components - for dynamic width progress bars */
+  .progress-dynamic {
+    width: var(--progress-width, 0%);
+  }
+
+  .progress-animated {
+    transition: width 0.5s ease-in-out;
+  }
 }
 
 /* Animation for reduced motion users */

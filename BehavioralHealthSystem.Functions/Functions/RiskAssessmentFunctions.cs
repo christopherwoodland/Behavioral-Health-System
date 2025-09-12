@@ -24,7 +24,7 @@ public class RiskAssessmentFunctions
 
     [Function("GenerateRiskAssessment")]
     public async Task<HttpResponseData> GenerateRiskAssessment(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "sessions/{sessionId}/risk-assessment")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/{sessionId}/risk-assessment")] HttpRequestData req,
         string sessionId)
     {
         try
@@ -91,7 +91,7 @@ public class RiskAssessmentFunctions
 
     [Function("GetRiskAssessment")]
     public async Task<HttpResponseData> GetRiskAssessment(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sessions/{sessionId}/risk-assessment")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{sessionId}/risk-assessment")] HttpRequestData req,
         string sessionId)
     {
         try

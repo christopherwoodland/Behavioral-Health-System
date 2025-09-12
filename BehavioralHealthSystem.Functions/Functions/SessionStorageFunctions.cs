@@ -21,7 +21,7 @@ public class SessionStorageFunctions
 
     [Function("SaveSessionData")]
     public async Task<HttpResponseData> SaveSessionData(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "sessions")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions")] HttpRequestData req)
     {
         try
         {
@@ -87,7 +87,7 @@ public class SessionStorageFunctions
 
     [Function("GetSessionData")]
     public async Task<HttpResponseData> GetSessionData(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sessions/{sessionId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{sessionId}")] HttpRequestData req,
         string sessionId)
     {
         try
@@ -128,7 +128,7 @@ public class SessionStorageFunctions
 
     [Function("GetUserSessions")]
     public async Task<HttpResponseData> GetUserSessions(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "sessions/users/{userId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/users/{userId}")] HttpRequestData req,
         string userId)
     {
         try
@@ -161,7 +161,7 @@ public class SessionStorageFunctions
 
     [Function("UpdateSessionData")]
     public async Task<HttpResponseData> UpdateSessionData(
-        [HttpTrigger(AuthorizationLevel.Function, "put", Route = "sessions/{sessionId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "sessions/{sessionId}")] HttpRequestData req,
         string sessionId)
     {
         try
@@ -227,7 +227,7 @@ public class SessionStorageFunctions
 
     [Function("DeleteSessionData")]
     public async Task<HttpResponseData> DeleteSessionData(
-        [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "sessions/{sessionId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "sessions/{sessionId}")] HttpRequestData req,
         string sessionId)
     {
         try

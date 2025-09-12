@@ -1,10 +1,25 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
+import { copyFileSync } from 'fs'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Plugin to copy web.config to dist folder
+    {
+      name: 'copy-web-config',
+      writeBundle() {
+        try {
+          copyFileSync('web.config', 'dist/web.config')
+          console.log('✅ web.config copied to dist folder')
+        } catch (error) {
+          console.warn('⚠️ Could not copy web.config:', error)
+        }
+      }
+    }
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

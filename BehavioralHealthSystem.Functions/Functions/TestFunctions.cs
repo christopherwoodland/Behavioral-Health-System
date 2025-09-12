@@ -22,7 +22,7 @@ public class TestFunctions
 
     [Function("TestKintsugiConnection")]
     public async Task<HttpResponseData> TestKintsugiConnection(
-        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
         try
         {
@@ -93,7 +93,7 @@ public class TestFunctions
 
     [Function("InitiateSession")]
     public async Task<HttpResponseData> InitiateSession(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "sessions/initiate")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/initiate")] HttpRequestData req)
     {
         try
         {
@@ -195,7 +195,7 @@ public class TestFunctions
 
     [Function("GetUserPredictions")]
     public async Task<HttpResponseData> GetUserPredictions(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "predictions/{userId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "predictions/{userId}")] HttpRequestData req,
         string userId)
     {
         try
@@ -247,7 +247,7 @@ public class TestFunctions
 
     [Function("GetPredictionBySessionId")]
     public async Task<HttpResponseData> GetPredictionBySessionId(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "predictions/sessions/{sessionId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "predictions/sessions/{sessionId}")] HttpRequestData req,
         string sessionId)
     {
         try
@@ -384,7 +384,7 @@ public class TestFunctions
 
     [Function("SubmitPrediction")]
     public async Task<HttpResponseData> SubmitPrediction(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "predictions/submit")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "predictions/submit")] HttpRequestData req)
     {
         try
         {

@@ -787,7 +787,134 @@ npm install -g artillery
 # artillery run load-test-config.yml
 ```
 
-## 🔍 Troubleshooting
+## � Deployment Script Examples
+
+The solution includes several PowerShell deployment scripts for different scenarios:
+
+### Full System Deployment Script
+
+Use the `deploy-full-system.ps1` script to deploy both the Functions app and UI in sequence:
+
+```powershell
+# Deploy to specific Azure resources
+.\deploy-full-system.ps1 -KintsugiApiKey "your-api-key-here"
+
+# This script will:
+# 1. Deploy Functions to: cwbhieastus001
+# 2. Deploy UI to: cwuibhieastus001  
+# 3. Target resource group: bhi
+```
+
+**Script Output Example:**
+
+```text
+========================================
+Starting Behavioral Health System Deployment
+========================================
+
+[INFO] Starting Function App deployment...
+[INFO] Deploying to Function App: cwbhieastus001
+[INFO] Resource Group: bhi
+
+[SUCCESS] Function App deployment completed successfully!
+
+[INFO] Starting UI deployment...  
+[INFO] Deploying to App Service: cwuibhieastus001
+[INFO] Resource Group: bhi
+
+[SUCCESS] UI deployment completed successfully!
+
+========================================
+Deployment Summary
+========================================
+Function App: cwbhieastus001 - SUCCESS
+UI App Service: cwuibhieastus001 - SUCCESS
+Total deployment time: 3m 45s
+```
+
+### Individual Component Deployment
+
+Deploy just the Functions app:
+
+```powershell
+# Deploy only the Azure Functions
+.\deploy-code-only.ps1 -FunctionAppName "cwbhieastus001" -ResourceGroupName "bhi"
+```
+
+Deploy just the UI:
+
+```powershell
+# Deploy only the UI application
+.\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "cwuibhieastus001" -ResourceGroupName "bhi"
+```
+
+### Agent Project Example
+
+The solution includes a multi-agent behavioral health system with coordinated agents:
+
+#### CoordinatorAgent Usage Example
+
+```csharp
+// Initialize the group chat system
+var groupChat = new BehavioralHealthGroupChat(kernel, logger, loggerFactory);
+await groupChat.InitializeAsync();
+
+// Process user messages through intelligent routing
+var response = await groupChat.ProcessMessageAsync("user-123", "I want to start a PHQ-2 assessment");
+
+// Example responses:
+// "Starting PHQ-2 rapid screening assessment for user: user-123..."
+// "Starting PHQ-9 comprehensive assessment for user: user-123..."
+```
+
+#### Direct Agent Invocation
+
+```csharp
+// Directly invoke specific agents
+var phq2Response = groupChat.InvokeAgentDirectly("PHQ2Agent", "user-123", "start assessment");
+var phq9Response = groupChat.InvokeAgentDirectly("PHQ9Agent", "user-123", "begin assessment");
+
+// Get agent information
+var agentInfo = groupChat.GetAgentInfo();
+```
+
+### Global Usings Pattern Example
+
+The solution implements a clean global usings pattern to reduce code duplication:
+
+**GlobalUsings.cs:**
+
+```csharp
+global using System.ComponentModel.DataAnnotations;
+global using System.Collections.Generic;
+global using System.Text.Json;
+global using Microsoft.Azure.Functions.Worker;
+global using Microsoft.Azure.Functions.Worker.Http;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Logging;
+global using BehavioralHealthSystem.Helpers.Models;
+global using BehavioralHealthSystem.Helpers.Services.Interfaces;
+global using BehavioralHealthSystem.Helpers.Validators;
+```
+
+**Benefits:**
+
+- ✅ Eliminates redundant using statements across all files
+- ✅ Centralized namespace management
+- ✅ Cleaner, more maintainable code
+- ✅ Consistent imports across the entire project
+
+### PowerShell Script Features
+
+All deployment scripts include:
+
+- ✅ **Error Handling** - Comprehensive error checking and rollback
+- ✅ **Progress Reporting** - Real-time status updates and completion summaries
+- ✅ **Validation** - Pre-deployment checks for required parameters
+- ✅ **Logging** - Detailed deployment logs for troubleshooting
+- ✅ **Security** - Secure handling of API keys and connection strings
+
+## �🔍 Troubleshooting
 
 ### Common Issues
 

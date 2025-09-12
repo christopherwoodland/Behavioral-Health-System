@@ -159,18 +159,18 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
           </p>
           
           <div className="space-y-3">
-            <button
+            <button type="button"
               onClick={generateAssessment}
-              className="btn-primary"
+              className="btn btn--primary"
               aria-label="Generate AI risk assessment"
             >
               <Brain className="w-4 h-4 mr-2" aria-hidden="true" />
               Generate AI Risk Assessment
             </button>
             
-            <button
+            <button type="button"
               onClick={loadAssessment}
-              className="btn-secondary"
+              className="btn btn--secondary"
               aria-label="Check for existing assessment"
             >
               <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -237,10 +237,10 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
             </span>
           )}
           
-          <button
+          <button type="button"
             onClick={generateAssessment}
             disabled={isGenerating}
-            className="btn-secondary text-xs"
+            className="btn btn--secondary text-xs"
             aria-label="Regenerate risk assessment"
           >
             <RefreshCw className={`w-3 h-3 mr-1 ${isGenerating ? 'animate-spin' : ''}`} aria-hidden="true" />

@@ -956,7 +956,7 @@ const UploadAnalyze: React.FC = () => {
             <div className="flex items-center space-x-3">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Processing Mode:</span>
               <div className="relative inline-flex items-center">
-                <button
+                <button type="button"
                   onClick={toggleMode}
                   className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                     isMultiMode 
@@ -1067,7 +1067,7 @@ const UploadAnalyze: React.FC = () => {
               {/* User ID Management Controls */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <button
+                  <button type="button"
                     onClick={handleToggleUserIdMode}
                     className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
                     aria-describedby="user-id-mode-help"
@@ -1076,7 +1076,7 @@ const UploadAnalyze: React.FC = () => {
                   </button>
                   
                   {!isCustomUserIdMode && (
-                    <button
+                    <button type="button"
                       onClick={handleGenerateNewUserId}
                       className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
                       title="Generate a new random User ID"
@@ -1098,7 +1098,7 @@ const UploadAnalyze: React.FC = () => {
                         aria-describedby="custom-user-id-help"
                         aria-invalid={userIdError ? 'true' : 'false'}
                       />
-                      <button
+                      <button type="button"
                         onClick={handleApplyCustomUserId}
                         disabled={!customUserId.trim()}
                         className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
@@ -1282,8 +1282,7 @@ const UploadAnalyze: React.FC = () => {
           >
             <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
             <div className="mb-4">
-              <button
-                type="button"
+              <button type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
               >
@@ -1327,8 +1326,7 @@ const UploadAnalyze: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
+                  <button type="button"
                     onClick={resetState}
                     className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     aria-label="Remove selected file"
@@ -1340,8 +1338,7 @@ const UploadAnalyze: React.FC = () => {
                 {/* Audio Player */}
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    <button
-                      type="button"
+                    <button type="button"
                       onClick={handlePlayPause}
                       className="flex items-center justify-center w-10 h-10 bg-blue-600 hover:bg-blue-700 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                       aria-label={isPlaying ? 'Pause audio' : 'Play audio'}
@@ -1362,10 +1359,10 @@ const UploadAnalyze: React.FC = () => {
                   </div>
                   
                   {audioFile.duration && (
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div className="audio-progress">
                       <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-200"
-                        style={{ width: `${(currentTime / audioFile.duration) * 100}%` }}
+                        className="audio-progress__fill progress-dynamic progress-animated"
+                        style={{ '--progress-width': `${(currentTime / audioFile.duration) * 100}%` } as React.CSSProperties}
                         role="progressbar"
                         aria-label="Audio playback progress"
                         aria-valuenow={currentTime}
@@ -1395,8 +1392,7 @@ const UploadAnalyze: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                     Selected Files ({audioFiles.length})
                   </h3>
-                  <button
-                    type="button"
+                  <button type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                   >
@@ -1428,8 +1424,7 @@ const UploadAnalyze: React.FC = () => {
                           <div className="flex items-center space-x-2">
                             {/* Start button for individual file */}
                             {fileState === 'ready' && (
-                              <button
-                                type="button"
+                              <button type="button"
                                 onClick={() => startSingleFile(file.id)}
                                 className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800"
                                 aria-label={`Start processing ${file.file.name}`}
@@ -1455,8 +1450,7 @@ const UploadAnalyze: React.FC = () => {
                                 Error
                               </span>
                             )}
-                            <button
-                              type="button"
+                            <button type="button"
                               onClick={() => removeAudioFile(file.id)}
                               className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                               aria-label={`Remove ${file.file.name}`}
@@ -1477,10 +1471,10 @@ const UploadAnalyze: React.FC = () => {
                                 {Math.round(progress.progress)}%
                               </span>
                             </div>
-                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mt-1">
+                            <div className="processing-progress mt-1">
                               <div
-                                className={`h-1 rounded-full transition-all duration-300 ${getProgressColor(progress.stage)}`}
-                                style={{ width: `${progress.progress}%` }}
+                                className={`processing-progress__fill progress-dynamic progress-animated ${getProgressColor(progress.stage)}`}
+                                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
                               />
                             </div>
                           </div>
@@ -1530,10 +1524,10 @@ const UploadAnalyze: React.FC = () => {
                 {Math.round(progress.progress)}%
               </span>
             </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+            <div className="processing-progress">
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(progress.stage)}`}
-                style={{ width: `${progress.progress}%` }}
+                className={`processing-progress__fill progress-dynamic progress-animated ${getProgressColor(progress.stage)}`}
+                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
                 role="progressbar"
                 aria-label="Processing progress"
                 aria-valuenow={progress.progress}
@@ -1737,8 +1731,7 @@ const UploadAnalyze: React.FC = () => {
           )}
 
           <div className="mt-6 flex space-x-3">
-            <button
-              type="button"
+            <button type="button"
               onClick={resetState}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
             >
@@ -1757,8 +1750,7 @@ const UploadAnalyze: React.FC = () => {
             // Multi-file mode controls
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  type="button"
+                <button type="button"
                   onClick={processMultipleFiles}
                   disabled={audioFiles.length === 0 || !userId.trim() || 
                            !audioFiles.some(file => fileStates[file.id] === 'ready')}
@@ -1777,8 +1769,7 @@ const UploadAnalyze: React.FC = () => {
           ) : (
             // Single-file mode controls
             <div>
-              <button
-                type="button"
+              <button type="button"
                 onClick={processAndAnalyze}
                 disabled={!audioFile || !userId.trim()}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
@@ -1884,7 +1875,7 @@ const UploadAnalyze: React.FC = () => {
                   {audioFile && (
                     <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                       <div className="flex items-center space-x-3">
-                        <button
+                        <button type="button"
                           onClick={() => {
                             const audio = document.getElementById(`audio-${fileId}`) as HTMLAudioElement;
                             if (audio.paused) {
@@ -1962,8 +1953,7 @@ const UploadAnalyze: React.FC = () => {
                   </p>
                 </div>
                 <div className="ml-4 flex-shrink-0">
-                  <button
-                    type="button"
+                  <button type="button"
                     onClick={() => removeToast(toast.id)}
                     className="inline-flex text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     aria-label="Close notification"

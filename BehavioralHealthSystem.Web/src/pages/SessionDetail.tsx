@@ -179,14 +179,14 @@ const SessionDetail: React.FC = () => {
               </h3>
               <p className="text-red-700 dark:text-red-300 mt-1">{error.message}</p>
               <div className="mt-4 space-x-3">
-                <button
+                <button type="button"
                   onClick={loadSession}
-                  className="btn-primary"
+                  className="btn btn--primary"
                   aria-label="Retry loading session"
                 >
                   Try Again
                 </button>
-                <Link to="/sessions" className="btn-secondary">
+                <Link to="/sessions" className="btn btn--secondary">
                   Back to Sessions
                 </Link>
               </div>
@@ -208,7 +208,7 @@ const SessionDetail: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             The requested session could not be found.
           </p>
-          <Link to="/sessions" className="btn-primary">
+          <Link to="/sessions" className="btn btn--primary">
             Back to Sessions
           </Link>
         </div>
@@ -221,9 +221,9 @@ const SessionDetail: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center space-x-4">
-          <button
+          <button type="button"
             onClick={() => navigate('/sessions')}
-            className="btn-secondary"
+            className="btn btn--secondary"
             aria-label="Back to sessions list"
           >
             <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -241,28 +241,28 @@ const SessionDetail: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={toggleRawJson}
-            className="btn-secondary"
+            className="btn btn--secondary"
             aria-label={`${showRawJson ? 'Hide' : 'Show'} raw JSON data`}
           >
             {showRawJson ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
             {showRawJson ? 'Hide JSON' : 'Show JSON'}
           </button>
           
-          <button
+          <button type="button"
             onClick={refreshSession}
             disabled={isRefreshing}
-            className="btn-secondary"
+            className="btn btn--secondary"
             aria-label="Refresh session data"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </button>
           
-          <button
+          <button type="button"
             onClick={downloadSessionData}
-            className="btn-primary"
+            className="btn btn--primary"
             aria-label="Download session data as JSON"
           >
             <Download className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -372,9 +372,9 @@ const SessionDetail: React.FC = () => {
                   Audio File
                 </label>
                 <div className="flex items-center space-x-3">
-                  <button
+                  <button type="button"
                     onClick={toggleAudioPlayback}
-                    className="btn-secondary"
+                    className="btn btn--secondary"
                     aria-label={`${audioPlaying ? 'Pause' : 'Play'} audio`}
                   >
                     {audioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}

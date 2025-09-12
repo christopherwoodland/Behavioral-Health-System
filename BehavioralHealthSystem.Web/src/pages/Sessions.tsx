@@ -301,9 +301,9 @@ const Sessions: React.FC = () => {
                 Error Loading Sessions
               </h3>
               <p className="text-red-700 dark:text-red-300 mt-1">{error.message}</p>
-              <button
+              <button type="button"
                 onClick={loadSessions}
-                className="mt-4 btn-primary"
+                className="mt-4 btn btn--primary"
                 aria-label="Retry loading sessions"
               >
                 Try Again
@@ -329,10 +329,10 @@ const Sessions: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-3">
-          <button
+          <button type="button"
             onClick={loadSessions}
             disabled={loading}
-            className="btn-secondary"
+            className="btn btn--secondary"
             aria-label="Refresh sessions list"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
@@ -341,7 +341,7 @@ const Sessions: React.FC = () => {
           
           <Link
             to="/upload"
-            className="btn-primary"
+            className="btn btn--primary"
             aria-label="Start new analysis session"
           >
             New Analysis
@@ -365,7 +365,7 @@ const Sessions: React.FC = () => {
                 placeholder="Search by session ID, filename, or status..."
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="form__input w-full pl-10 pr-4 py-2"
                 aria-describedby="search-help"
               />
             </div>
@@ -375,10 +375,10 @@ const Sessions: React.FC = () => {
           </div>
 
           {/* Filter Toggle */}
-          <button
+          <button type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className="btn-secondary flex items-center"
-            aria-expanded={showFilters}
+            className="btn btn--secondary flex items-center"
+            aria-expanded={showFilters ? 'true' : 'false'}
             aria-controls="filter-panel"
             aria-label={`${showFilters ? 'Hide' : 'Show'} filter options`}
           >
@@ -480,9 +480,9 @@ const Sessions: React.FC = () => {
           
           {selectedSessions.size > 0 && (
             <div className="flex items-center gap-2">
-              <button
+              <button type="button"
                 onClick={handleBulkDelete}
-                className="btn-danger"
+                className="btn btn--danger"
                 aria-label={`Delete ${selectedSessions.size} selected sessions`}
               >
                 <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -601,7 +601,7 @@ const Sessions: React.FC = () => {
                           <Eye className="w-4 h-4" aria-hidden="true" />
                         </Link>
                         {session.status === 'succeeded' && (
-                          <button
+                          <button type="button"
                             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
                             aria-label={`Download results for session ${session.sessionId}`}
                           >
@@ -663,15 +663,15 @@ const Sessions: React.FC = () => {
                 <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
                   <Link
                     to={`/sessions/${session.sessionId}`}
-                    className="btn-secondary text-xs"
+                    className="btn btn--secondary text-xs"
                     aria-label={`View details for session ${session.sessionId}`}
                   >
                     <Eye className="w-4 h-4 mr-1" aria-hidden="true" />
                     View
                   </Link>
                   {session.status === 'succeeded' && (
-                    <button
-                      className="btn-secondary text-xs"
+                    <button type="button"
+                      className="btn btn--secondary text-xs"
                       aria-label={`Download results for session ${session.sessionId}`}
                     >
                       <Download className="w-4 h-4 mr-1" aria-hidden="true" />
@@ -696,11 +696,11 @@ const Sessions: React.FC = () => {
             }
           </p>
           {sessions.length === 0 ? (
-            <Link to="/upload" className="btn-primary">
+            <Link to="/upload" className="btn btn--primary">
               Start Your First Analysis
             </Link>
           ) : (
-            <button
+            <button type="button"
               onClick={() => setFilters({
                 search: '',
                 status: 'all',
@@ -708,7 +708,7 @@ const Sessions: React.FC = () => {
                 sortBy: 'date',
                 sortOrder: 'desc',
               })}
-              className="btn-secondary"
+              className="btn btn--secondary"
             >
               Clear Filters
             </button>

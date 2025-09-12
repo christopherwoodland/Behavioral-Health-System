@@ -505,8 +505,8 @@ const Predictions: React.FC = () => {
             return (
               <div
                 key={index}
-                className={`flex-1 ${categoryColor} opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-200 rounded-t cursor-pointer relative group`}
-                style={{ height: `${Math.max(height, 8)}%` }}
+                className={`flex-1 ${categoryColor} opacity-70 hover:opacity-100 hover:scale-105 transition-all duration-200 rounded-t cursor-pointer relative group chart-bar-dynamic`}
+                style={{ '--chart-height': `${Math.max(height, 8)}%` } as React.CSSProperties}
                 onClick={() => onBarClick(dataPoint.sessionId)}
                 role="button"
                 tabIndex={0}
@@ -573,8 +573,9 @@ const Predictions: React.FC = () => {
               </h3>
               <p className="text-red-700 dark:text-red-300 mt-1">{error.message}</p>
               <button
+                type="button"
                 onClick={loadPredictions}
-                className="mt-4 btn-primary"
+                className="mt-4 btn btn--primary"
                 aria-label="Retry loading predictions"
               >
                 Try Again
@@ -601,9 +602,10 @@ const Predictions: React.FC = () => {
         
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => setShowFilters(!showFilters)}
-            className="btn-secondary"
-            aria-expanded={showFilters}
+            className="btn btn--secondary"
+            aria-expanded={showFilters ? 'true' : 'false'}
             aria-label={`${showFilters ? 'Hide' : 'Show'} filter options`}
           >
             <Filter className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -612,8 +614,9 @@ const Predictions: React.FC = () => {
           </button>
           
           <button
+            type="button"
             onClick={loadPredictions}
-            className="btn-secondary"
+            className="btn btn--secondary"
             aria-label="Refresh predictions data"
           >
             <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
@@ -621,8 +624,9 @@ const Predictions: React.FC = () => {
           </button>
           
           <button
+            type="button"
             onClick={downloadPredictions}
-            className="btn-primary"
+            className="btn btn--primary"
             disabled={filteredSessions.length === 0}
             aria-label="Download predictions data"
           >
@@ -677,7 +681,7 @@ const Predictions: React.FC = () => {
                   type="checkbox"
                   checked={filters.showTrends}
                   onChange={(e) => updateFilter('showTrends', e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
+                  className="form__input form__input--checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-2"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Show trend analysis</span>
               </label>
@@ -698,7 +702,7 @@ const Predictions: React.FC = () => {
               : "No sessions found for the selected date range."
             }
           </p>
-          <Link to="/upload" className="btn-primary">
+          <Link to="/upload" className="btn btn--primary">
             Start Your First Analysis
           </Link>
         </div>
@@ -782,7 +786,7 @@ const Predictions: React.FC = () => {
             <div className="bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-6 opacity-60">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <CheckCircle className="w-8 h-8 text-gray-500" aria-hidden="true" />
+                  <Activity className="w-8 h-8 text-gray-500" aria-hidden="true" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Improvement Rate</p>
@@ -855,8 +859,8 @@ const Predictions: React.FC = () => {
                           </div>
                           <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
-                              className={`h-2 rounded-full ${item.color}`}
-                              style={{ width: `${item.percentage}%` }}
+                              className={`h-2 rounded-full ${item.color} progress-dynamic progress-animated`}
+                              style={{ '--progress-width': `${item.percentage}%` } as React.CSSProperties}
                             />
                           </div>
                         </div>

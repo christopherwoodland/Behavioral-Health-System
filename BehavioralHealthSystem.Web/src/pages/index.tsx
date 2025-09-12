@@ -95,10 +95,10 @@ export const SystemHealth: React.FC = () => {
             Monitor API status and system connectivity
           </p>
         </div>
-        <button
+        <button type="button"
           onClick={() => refetch()}
           disabled={isLoading}
-          className="btn-secondary flex items-center space-x-2"
+          className="btn btn--secondary flex items-center space-x-2"
           aria-label="Refresh system health status"
         >
           <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -130,7 +130,7 @@ export const SystemHealth: React.FC = () => {
               <p className="text-red-700 dark:text-red-300 mt-1">
                 {error.message || 'Unable to retrieve system health status'}
               </p>
-              <button
+              <button type="button"
                 onClick={() => refetch()}
                 className="mt-3 text-sm text-red-800 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100 underline"
               >
@@ -284,7 +284,7 @@ export const NotFound: React.FC = () => {
       </p>
       <a
         href="/"
-        className="btn-primary"
+        className="btn btn--primary"
       >
         Go to Dashboard
       </a>

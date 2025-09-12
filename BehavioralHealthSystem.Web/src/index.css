@@ -40,74 +40,179 @@
 }
 
 @layer components {
-  /* Accessible button variants */
+  /* Button Component - BEM notation */
   .btn {
     @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .btn-primary {
+  .btn--primary {
     @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 dark:bg-primary-500 dark:hover:bg-primary-600;
   }
 
-  .btn-secondary {
+  .btn--secondary {
     @apply btn bg-secondary-100 text-secondary-900 hover:bg-secondary-200 focus:ring-secondary-500 dark:bg-secondary-800 dark:text-secondary-100 dark:hover:bg-secondary-700;
   }
 
-  .btn-outline {
+  .btn--outline {
     @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700;
   }
 
-  .btn-danger {
+  .btn--danger {
     @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 dark:bg-red-500 dark:hover:bg-red-600;
   }
 
-  /* Form controls */
-  .form-input {
+  .btn--loading {
+    @apply btn opacity-75 cursor-not-allowed;
+  }
+
+  .btn__icon {
+    @apply w-4 h-4 mr-2;
+  }
+
+  .btn__icon--right {
+    @apply w-4 h-4 ml-2;
+  }
+
+  /* Form Component - BEM notation */
+  .form__input {
     @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white;
   }
 
-  .form-label {
+  .form__input--checkbox {
+    @apply w-auto h-auto;
+  }
+
+  .form__input--error {
+    @apply border-red-300 focus:ring-red-500 focus:border-red-500;
+  }
+
+  .form__label {
     @apply block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1;
   }
 
-  /* Status indicators */
-  .status-chip {
+  .form__label--required::after {
+    content: ' *';
+    @apply text-red-500;
+  }
+
+  .form__error {
+    @apply text-sm text-red-600 dark:text-red-400 mt-1;
+  }
+
+  .form__help {
+    @apply text-sm text-gray-500 dark:text-gray-400 mt-1;
+  }
+
+  /* Status Component - BEM notation */
+  .status {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 
-  .status-queued {
-    @apply status-chip bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300;
+  .status--queued {
+    @apply status bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300;
   }
 
-  .status-running {
-    @apply status-chip bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300;
+  .status--running {
+    @apply status bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300;
   }
 
-  .status-succeeded {
-    @apply status-chip bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300;
+  .status--succeeded {
+    @apply status bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300;
   }
 
-  .status-failed {
-    @apply status-chip bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300;
+  .status--failed {
+    @apply status bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300;
   }
 
-  /* Card components */
+  .status__icon {
+    @apply w-3 h-3 mr-1;
+  }
+
+  /* Card Component - BEM notation */
   .card {
     @apply bg-surface-light dark:bg-surface-dark rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6;
   }
 
-  /* Progress bar */
-  .progress-bar {
+  .card--compact {
+    @apply p-4;
+  }
+
+  .card--elevated {
+    @apply shadow-md;
+  }
+
+  .card__header {
+    @apply mb-4 pb-4 border-b border-gray-200 dark:border-gray-700;
+  }
+
+  .card__title {
+    @apply text-lg font-semibold text-gray-900 dark:text-white;
+  }
+
+  .card__subtitle {
+    @apply text-sm text-gray-500 dark:text-gray-400 mt-1;
+  }
+
+  .card__content {
+    @apply text-gray-700 dark:text-gray-300;
+  }
+
+  .card__footer {
+    @apply mt-4 pt-4 border-t border-gray-200 dark:border-gray-700;
+  }
+
+  /* Progress Component - BEM notation */
+  .progress {
     @apply w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700;
   }
 
-  .progress-fill {
+  .progress--large {
+    @apply h-4;
+  }
+
+  .progress--small {
+    @apply h-1;
+  }
+
+  .progress__fill {
     @apply bg-primary-600 h-2 rounded-full transition-all duration-300;
   }
 
-  /* Loading spinner */
+  .progress__fill--large {
+    @apply h-4;
+  }
+
+  .progress__fill--small {
+    @apply h-1;
+  }
+
+  .progress__fill--success {
+    @apply bg-green-600;
+  }
+
+  .progress__fill--warning {
+    @apply bg-yellow-600;
+  }
+
+  .progress__fill--error {
+    @apply bg-red-600;
+  }
+
+  /* Loading Spinner Component - BEM notation */
   .spinner {
     @apply animate-spin rounded-full border-2 border-gray-300 border-t-primary-600;
+  }
+
+  .spinner--small {
+    @apply w-4 h-4;
+  }
+
+  .spinner--medium {
+    @apply w-6 h-6;
+  }
+
+  .spinner--large {
+    @apply w-8 h-8;
   }
 }
 

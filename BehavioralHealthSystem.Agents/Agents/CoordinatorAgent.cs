@@ -24,10 +24,12 @@ public class CoordinatorAgent
         Available Agents:
         - PHQ2Agent: Handles PHQ-2 rapid depression screening (2 questions)
         - PHQ9Agent: Handles PHQ-9 comprehensive depression assessments (9 questions)
+        - ComedianAgent: Provides jokes, humor, and light-hearted conversation to help ease minds
 
         When routing requests:
         - For rapid/initial depression screening, route to PHQ2Agent
         - For comprehensive depression assessments, route to PHQ9Agent
+        - For jokes and playful banter, route to ComedianAgent
         - For general coordination, handle directly
         - Always provide clear communication about next steps
         """;
@@ -77,6 +79,17 @@ public class CoordinatorAgent
                 return $"Routing to PHQ2Agent for initial depression screening. User: {userId}";
             }
 
+            // Route to ComedianAgent for humor and jokes
+            if (lowerMessage.Contains("joke") || lowerMessage.Contains("funny") || 
+                lowerMessage.Contains("laugh") || lowerMessage.Contains("humor") ||
+                lowerMessage.Contains("cheer me up") || lowerMessage.Contains("make me smile") ||
+                lowerMessage.Contains("story") || lowerMessage.Contains("encourage") ||
+                lowerMessage.Contains("lighten the mood") || lowerMessage.Contains("something fun") ||
+                lowerMessage.Contains("comedy") || lowerMessage.Contains("amusing"))
+            {
+                return $"Routing to ComedianAgent for humor and lighthearted conversation. User: {userId}";
+            }
+
             if (lowerMessage.Contains("help") || lowerMessage.Contains("available") || 
                 lowerMessage.Contains("what can"))
             {
@@ -95,13 +108,23 @@ public class CoordinatorAgent
                        - Clinical recommendations
                        - Takes about 5 minutes
                     
+                    3. Comedy & Humor Support
+                       - Clean, uplifting jokes and stories
+                       - Light-hearted conversation
+                       - Encouragement through humor
+                       - Mood-lifting activities
+                    
                     Commands:
                     - "Start PHQ-2" - Begin rapid depression screening
                     - "Start PHQ-9" - Begin comprehensive depression assessment
+                    - "Tell me a joke" - Get a mood-lifting joke
+                    - "Tell me a story" - Hear a funny, wholesome story
+                    - "Cheer me up" - Get encouraging humor
                     - "Get my results" - Retrieve latest assessment results
                     - "Assessment status" - Check current assessment progress
                     
                     Recommendation: Start with PHQ-2 for initial screening, then PHQ-9 if needed.
+                    For a quick mood boost, try asking for a joke or story!
                     
                     How can I assist you today?
                     """;
@@ -113,9 +136,11 @@ public class CoordinatorAgent
                 I can help you with:
                 - PHQ-2 Rapid Depression Screening (2 questions, ~1 minute)
                 - PHQ-9 Comprehensive Depression Assessment (9 questions, ~5 minutes)
+                - Comedy & Humor Support (jokes, stories, encouragement)
                 - Mental health screening coordination
                 
                 For initial screening, I recommend starting with PHQ-2.
+                For a quick mood boost, try "tell me a joke" or "cheer me up".
                 Please let me know what you'd like to do, or type 'help' for more options.
                 """;
         }

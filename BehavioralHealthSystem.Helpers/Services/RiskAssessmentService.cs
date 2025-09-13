@@ -4,8 +4,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Azure;
 using Azure.AI.OpenAI;
-using Azure.AI.OpenAI.Chat;
-using OpenAI.Chat;
 using BehavioralHealthSystem.Configuration;
 using BehavioralHealthSystem.Models;
 using BehavioralHealthSystem.Services.Interfaces;
@@ -196,19 +194,22 @@ public class RiskAssessmentService : IRiskAssessmentService
             var apiKey = _openAIOptions.ApiKey;
             var deploymentName = _openAIOptions.DeploymentName;
 
-            AzureOpenAIClient azureClient = new(
+            OpenAIClient client = new OpenAIClient(
                 endpoint,
                 new AzureKeyCredential(apiKey));
-            ChatClient chatClient = azureClient.GetChatClient(deploymentName);
 
             // Check if this is a GPT-5 model based on deployment name
             bool isGpt5Model = deploymentName.ToLowerInvariant().Contains("gpt-5");
 
             // Configure request options with conditional parameters based on model type
-            var requestOptions = new ChatCompletionOptions()
+            var requestOptions = new ChatCompletionsOptions()
             {
-                MaxOutputTokenCount = _openAIOptions.MaxTokens
+                MaxTokens = _openAIOptions.MaxTokens,
+                DeploymentName = deploymentName
             };
+
+            requestOptions.Messages.Add(new ChatRequestSystemMessage("You are a licensed mental health professional AI assistant. Provide accurate, professional, and ethical clinical assessments."));
+            requestOptions.Messages.Add(new ChatRequestUserMessage(prompt));
 
             if (isGpt5Model)
             {
@@ -219,32 +220,20 @@ public class RiskAssessmentService : IRiskAssessmentService
             {
                 // Non-GPT-5 models: set parameters for most deterministic results
                 requestOptions.Temperature = 0.1f; // Very low temperature for deterministic output
-                requestOptions.TopP = 0.1f; // Very low top-p for focused, deterministic responses
+                requestOptions.NucleusSamplingFactor = 0.1f; // Very low top-p for focused, deterministic responses
                 requestOptions.FrequencyPenalty = 0;
                 requestOptions.PresencePenalty = 0;
             }
-
-            // Enable the new max_completion_tokens property (required for latest models)
-#pragma warning disable AOAI001
-            requestOptions.SetNewMaxCompletionTokensPropertyEnabled(true);
-#pragma warning restore AOAI001
-
-            // Prepare messages
-            List<ChatMessage> messages = new List<ChatMessage>()
-            {
-                new SystemChatMessage("You are a licensed mental health professional AI assistant. Provide accurate, professional, and ethical clinical assessments."),
-                new UserChatMessage(prompt)
-            };
 
             // Set timeout for the HTTP client (30 seconds)
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             // Make the API call with timeout
-            var response = await chatClient.CompleteChatAsync(messages, requestOptions, cancellationTokenSource.Token);
+            var response = await client.GetChatCompletionsAsync(requestOptions, cancellationTokenSource.Token);
             
-            if (response?.Value?.Content?.Count > 0)
+            if (response?.Value?.Choices?.Count > 0)
             {
-                var content = response.Value.Content[0].Text;
+                var content = response.Value.Choices[0].Message.Content;
                 _logger.LogInformation("[{MethodName}] Azure OpenAI API call successful. Model: {Model}, Response length: {Length}", 
                     nameof(CallAzureOpenAIAsync), isGpt5Model ? "GPT-5" : "Non-GPT-5", content?.Length ?? 0);
                 
@@ -258,8 +247,8 @@ public class RiskAssessmentService : IRiskAssessmentService
             }
             else
             {
-                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Content count: {Count}", 
-                    nameof(CallAzureOpenAIAsync), response?.Value == null, response?.Value?.Content?.Count ?? 0);
+                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Choices count: {Count}", 
+                    nameof(CallAzureOpenAIAsync), response?.Value == null, response?.Value?.Choices?.Count ?? 0);
                 return null;
             }
         }

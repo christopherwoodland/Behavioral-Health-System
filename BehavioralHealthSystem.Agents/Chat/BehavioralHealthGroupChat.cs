@@ -42,6 +42,10 @@ public class BehavioralHealthGroupChat
             var coordinatorAgent = new CoordinatorAgent(_kernel, _loggerFactory.CreateLogger<CoordinatorAgent>());
             _agents.Add("CoordinatorAgent", coordinatorAgent);
 
+            // Create Comedian Agent
+            var comedianAgent = new ComedianAgent(_kernel, _loggerFactory.CreateLogger<ComedianAgent>());
+            _agents.Add("ComedianAgent", comedianAgent);
+
             _logger.LogInformation("Group chat initialized with {AgentCount} agents", _agents.Count);
             
             await Task.CompletedTask; // Make method async for future extensibility
@@ -83,6 +87,12 @@ public class BehavioralHealthGroupChat
                 return await InvokeAgentDirectlyAsync("PHQ9Agent", userId, message);
             }
 
+            // Check if we need to route to Comedian agent
+            if (routingResult.Contains("ComedianAgent"))
+            {
+                return await InvokeAgentDirectlyAsync("ComedianAgent", userId, message);
+            }
+
             _logger.LogInformation("Completed processing message for user {UserId}", userId);
             return routingResult;
         }
@@ -110,6 +120,7 @@ public class BehavioralHealthGroupChat
                 Phq2Agent phq2 => $"- {kvp.Key}: {phq2.Description}",
                 Phq9Agent phq9 => $"- {kvp.Key}: {phq9.Description}",
                 CoordinatorAgent coord => $"- {kvp.Key}: {coord.Description}",
+                ComedianAgent comedian => $"- {kvp.Key}: {comedian.Description}",
                 _ => $"- {kvp.Key}: Unknown Agent"
             };
         });
@@ -137,6 +148,7 @@ public class BehavioralHealthGroupChat
                 Phq2Agent phq2Agent => ProcessPhq2Message(phq2Agent, userId, message),
                 Phq9Agent phq9Agent => ProcessPhq9Message(phq9Agent, userId, message),
                 CoordinatorAgent coordAgent => coordAgent.RouteRequest(userId, message),
+                ComedianAgent comedianAgent => ProcessComedianMessage(comedianAgent, userId, message),
                 _ => "Unknown agent type."
             };
         }
@@ -255,6 +267,38 @@ public class BehavioralHealthGroupChat
         }
 
         return "I can help you with PHQ-2 rapid screening. Try: 'start assessment', 'get status', 'get results', or respond with a number (0-3) to answer questions.";
+    }
+
+    private string ProcessComedianMessage(ComedianAgent agent, string userId, string message)
+    {
+        var lowerMessage = message.ToLowerInvariant();
+
+        // Parse different Comedian operations
+        if (lowerMessage.Contains("joke") || lowerMessage.Contains("tell me something funny"))
+        {
+            // Determine joke type from message
+            string jokeType = "random";
+            if (lowerMessage.Contains("dad")) jokeType = "dad";
+            else if (lowerMessage.Contains("pun")) jokeType = "pun";
+            else if (lowerMessage.Contains("animal")) jokeType = "animal";
+            else if (lowerMessage.Contains("work") || lowerMessage.Contains("office")) jokeType = "work";
+            
+            return agent.TellJoke(jokeType);
+        }
+        else if (lowerMessage.Contains("story") || lowerMessage.Contains("tell me a story"))
+        {
+            return agent.TellFunnyStory();
+        }
+        else if (lowerMessage.Contains("encourage") || lowerMessage.Contains("cheer me up") || 
+                 lowerMessage.Contains("make me feel better") || lowerMessage.Contains("motivation"))
+        {
+            return agent.EncourageWithHumor(lowerMessage);
+        }
+        else
+        {
+            // Default to playful banter for any other message
+            return agent.PlayfulBanter(message);
+        }
     }
 
     private bool TryParseResponse(string message, out int questionNumber, out int score)

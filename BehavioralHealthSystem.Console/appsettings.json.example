@@ -7,8 +7,8 @@
     }
   },
   "AzureOpenAI": {
-    "Endpoint": "https://openai-sesame-eastus-001.openai.azure.com/",
-    "ApiKey": "REDACTED_AZURE_OPENAI_API_KEY",
-    "DeploymentName": "gpt-4.1"
+    "Endpoint": "https://your-azure-openai-resource.openai.azure.com/",
+    "ApiKey": "your-azure-openai-api-key-here",
+    "DeploymentName": "gpt-4o-mini"
   }
 }

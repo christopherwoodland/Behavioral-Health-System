@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 
 namespace BehavioralHealthSystem.Console;

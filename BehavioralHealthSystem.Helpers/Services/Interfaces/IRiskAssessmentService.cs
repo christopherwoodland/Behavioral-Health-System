@@ -1,5 +1,3 @@
-using BehavioralHealthSystem.Models;
-
 namespace BehavioralHealthSystem.Services.Interfaces;
 
 public interface IRiskAssessmentService

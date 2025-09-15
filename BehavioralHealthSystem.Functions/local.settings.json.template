@@ -8,8 +8,6 @@
     "KINTSUGI_TIMEOUT_SECONDS": "300",
     "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",
     "KINTSUGI_RETRY_DELAY_MS": "1000",
-    "WORKFLOW_MAX_RETRIES": "100",
-    "WORKFLOW_RETRY_DELAY_SECONDS": "30",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "your-app-insights-connection-string-here-optional",
     "AZURE_OPENAI_ENDPOINT": "https://your-openai-resource.openai.azure.com/",
     "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key",

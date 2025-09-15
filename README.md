@@ -304,49 +304,71 @@ Add these settings to your Azure Function App configuration:
 
 ## 🚢 Deployment
 
-### Option 1: Lightning Fast Deployment (Recommended for Getting Started)
+### **🚀 Quick Deploy (Recommended for Getting Started)**
 
-Perfect for demos, testing, and rapid prototyping:
+Perfect for demos, testing, and rapid prototyping with minimal configuration:
 
 ```powershell
-# From solution root directory
-.\quick-deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key"
+# From solution root directory - Auto-generates resource group name
+.\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
 ```
 
-This will:
+This creates:
 
-- ✅ Build your complete solution
-- ✅ Create resource group: `rg-your-unique-app-name`
-- ✅ Deploy to East US region
-- ✅ Configure all Azure resources with secure defaults
-- ✅ Set up monitoring and logging
+- ✅ Resource group: `rg-your-unique-app-name` (auto-generated)
+- ✅ Deploys to East US region (optimal for most scenarios)
+- ✅ Configures all Azure resources with secure defaults
+- ✅ Sets up monitoring and logging
 
-### Option 2: Full Solution Deployment (Production)
+### **🏭 Production Deploy (Custom Configuration)**
 
-For production deployments with custom configurations:
+For production deployments with custom resource group and region:
 
 ```powershell
-# From solution root directory
+# From solution root directory - Full control over resources
 .\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
 ```
 
-### Option 3: Infrastructure-Only Deployment
+### **⚡ Code-Only Deploy (Rapid Updates)**
 
-Deploy just the Azure infrastructure without building the solution:
-
-```powershell
-# From BehavioralHealthSystem.Helpers/Deploy directory
-.\deploy.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
-```
-
-### Option 4: Quick Infrastructure Deployment
+For updating code on existing Azure infrastructure:
 
 ```powershell
-# From BehavioralHealthSystem.Helpers/Deploy directory
-.\quick-deploy.ps1 -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key"
+# Deploy only code changes to existing Function App
+.\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
 ```
 
-### Option 5: Automated Deployment with GitHub Actions
+### **🌐 UI-Only Deploy**
+
+Deploy just the React web application:
+
+```powershell
+# Deploy to Azure App Service
+.\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "your-web-app" -ResourceGroupName "your-rg"
+
+# Deploy to Azure Storage static website
+.\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
+
+# Deploy to Azure Static Web Apps
+.\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
+```
+
+### **📋 Deployment Script Overview**
+
+| Script | Purpose | Use Case |
+|--------|---------|----------|
+| `deploy-solution.ps1` | **Complete solution deployment** | New projects, full infrastructure setup |
+| `deploy-code-only.ps1` | **Code updates only** | Rapid development iterations |
+| `deploy-ui.ps1` | **UI deployment only** | Frontend updates, multi-target deployment |
+
+### **🎯 Which Script Should I Use?**
+
+- **🆕 First-time deployment?** → Use `deploy-solution.ps1` with `-QuickDeploy`
+- **🔄 Code changes only?** → Use `deploy-code-only.ps1`
+- **🎨 UI updates only?** → Use `deploy-ui.ps1`
+- **🏭 Production setup?** → Use `deploy-solution.ps1` with custom parameters
+
+### **🤖 Automated Deployment with GitHub Actions**
 
 1. **Setup GitHub Repository Secrets:**
 
@@ -358,6 +380,36 @@ Deploy just the Azure infrastructure without building the solution:
 
    ```text
    AZURE_FUNCTIONAPP_NAME
+   ```
+
+3. **Push to main branch** - The CI/CD pipeline will automatically:
+   - Build and test the application
+   - Deploy to Azure Functions
+   - Run health checks
+
+### **🔧 Manual Deployment with Azure CLI**
+
+1. **Create Resource Group:**
+
+   ```bash
+   az group create --name myResourceGroup --location "East US"
+   ```
+
+2. **Deploy ARM Template:**
+
+   ```bash
+   az deployment group create \
+     --resource-group myResourceGroup \
+     --template-file BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json \
+     --parameters BehavioralHealthSystem.Helpers/Deploy/azuredeploy.parameters.json \
+     --parameters functionAppName=myFunctionApp
+   ```
+
+3. **Deploy Function Code:**
+
+   ```bash
+   func azure functionapp publish myFunctionApp
+   ```
    ```
 
 3. **Push to main branch** - The CI/CD pipeline will automatically:
@@ -831,6 +883,8 @@ Function App: cwbhieastus001 - SUCCESS
 UI App Service: cwuibhieastus001 - SUCCESS
 Total deployment time: 3m 45s
 ```
+
+**Note:** The above example references legacy scripts that have been consolidated. Use the deployment scripts documented in the main deployment section above.
 
 ### Individual Component Deployment
 

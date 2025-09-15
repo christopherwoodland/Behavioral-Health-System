@@ -6,7 +6,7 @@ import { Layout } from '@/components/layout/Layout';
 
 // Page components
 import { Dashboard } from '@/pages/Dashboard';
-import { UploadAnalyze, Sessions, SessionDetail, Predictions, SystemHealth, NotFound } from '@/pages';
+import { UploadAnalyze, Sessions, SessionDetail, Predictions, AgentExperience, SystemHealth, NotFound } from '@/pages';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -44,6 +44,7 @@ function App() {
               <Route path="/sessions" element={<Sessions />} />
               <Route path="/sessions/:sessionId" element={<SessionDetail />} />
               <Route path="/predictions" element={<Predictions />} />
+              <Route path="/agent-experience" element={<AgentExperience />} />
               <Route path="/health" element={<SystemHealth />} />
               
               {/* 404 page */}

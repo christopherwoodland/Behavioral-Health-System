@@ -119,6 +119,14 @@ export default {
         'slide-in': 'slideIn 0.3s ease-out',
         'pulse-soft': 'pulseSoft 2s infinite'
       },
+      animationDelay: {
+        '100': '0.1s',
+        '200': '0.2s',
+        '300': '0.3s',
+        '500': '0.5s',
+        '700': '0.7s',
+        '1000': '1s',
+      },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },

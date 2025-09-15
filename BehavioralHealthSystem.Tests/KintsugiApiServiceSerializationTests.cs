@@ -1,6 +1,5 @@
 using System.Text.Json;
 using BehavioralHealthSystem.Models;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BehavioralHealthSystem.Tests
 {

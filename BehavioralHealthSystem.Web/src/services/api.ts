@@ -188,21 +188,7 @@ export const apiService = {
     }
   },
 
-  // Kintsugi Workflow - complete workflow for audio analysis
-  async submitKintsugiWorkflow(request: {
-    userMetadata: {
-      userId: string;
-      age?: number;
-      gender?: string;
-      sessionNotes?: string;
-    };
-    audioUrl: string;
-  }): Promise<{ prediction: PredictionResult }> {
-    return apiClient.post<{ prediction: PredictionResult }>(
-      '/kintsugiworkflow',
-      request
-    );
-  },
+
 
   // Risk Assessment API methods
   async generateRiskAssessment(sessionId: string): Promise<{ success: boolean; riskAssessment?: RiskAssessment; message: string }> {
@@ -309,8 +295,6 @@ export class PredictionPoller {
   }
 }
 
-// Convenience function for the Upload & Analyze page
-export const submitKintsugiWorkflow = apiService.submitKintsugiWorkflow.bind(apiService);
 
 // Export PredictionResult type for external use
 export type { PredictionResult } from '@/types';

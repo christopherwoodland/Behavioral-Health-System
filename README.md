@@ -46,13 +46,11 @@ BehavioralHealthSystem/
 ├── 📁 BehavioralHealthSystem.Functions/         # Azure Functions backend
 │   ├── 📁 Functions/                            # Function endpoints
 │   │   ├── HealthCheckFunction.cs                # Health monitoring endpoint
-│   │   ├── KintsugiActivityFunctions.cs          # Deprecated: Activity functions (Durable Functions)
-│   │   ├── KintsugiWorkflowFunction.cs           # Main workflow orchestration
+│   │   ├── KintsugiActivityFunctions.cs          # Kintsugi API integration functions
 │   │   ├── RiskAssessmentFunctions.cs            # Risk assessment endpoints
 │   │   ├── SessionStorageFunctions.cs            # Session data management endpoints
 │   │   └── TestFunctions.cs                      # Testing and utility endpoints
 │   ├── 📁 Models/                               # Function-specific models
-│   │   └── WorkflowStages.cs                     # Workflow stage enumeration
 │   ├── GlobalUsings.cs                          # Global using directives for cleaner code
 │   ├── Program.cs                               # Function host configuration
 │   ├── host.json                                # Azure Functions configuration
@@ -92,7 +90,6 @@ BehavioralHealthSystem/
 │   │   └── HandoffCoordinator.cs                # Handoff orchestration
 │   ├── 📁 Models/                               # Agent-specific models
 │   └── 📁 Services/                             # Agent services
-├── 📁 BehavioralHealthSystem.Console/          # Console application for testing
 ├── 📁 BehavioralHealthSystem.Helpers/          # Shared library project
 │   ├── 📁 Configuration/                        # Typed configuration and retry policies
 │   │   ├── KintsugiApiOptions.cs
@@ -106,17 +103,14 @@ BehavioralHealthSystem/
 │   │   ├── ActualScore.cs
 │   │   ├── PredictError.cs
 │   │   ├── ApiErrorResponse.cs
-│   │   ├── UserMetadata.cs
-│   │   ├── KintsugiWorkflowInput.cs
-│   │   └── KintsugiWorkflowResult.cs
+│   │   └── UserMetadata.cs
 │   ├── 📁 Services/                             # Business logic and API clients
 │   │   ├── Interfaces/
 │   │   │   └── IKintsugiApiService.cs
 │   │   ├── KintsugiApiService.cs
 │   │   └── KintsugiApiHealthCheck.cs
 │   ├── 📁 Validators/                           # FluentValidation rules
-│   │   ├── InitiateRequestValidator.cs
-│   │   ├── KintsugiWorkflowInputValidator.cs
+│   │   └── InitiateRequestValidator.cs
 │   │   └── UserMetadataValidator.cs
 │   ├── 📁 Deploy/                               # Azure deployment resources
 │   │   ├── azuredeploy.json                     # ARM template
@@ -125,8 +119,7 @@ BehavioralHealthSystem/
 ├── 📁 BehavioralHealthSystem.Tests/            # Unit test project
 │   ├── 📁 Functions/                            # Function tests
 │   │   ├── HealthCheckFunctionTests.cs
-│   │   ├── KintsugiActivityFunctionsTests.cs    # Deprecated function tests
-│   │   ├── KintsugiWorkflowFunctionTests.cs     # Main workflow tests
+│   │   ├── KintsugiActivityFunctionsTests.cs    # Kintsugi API integration tests
 │   │   ├── RiskAssessmentFunctionsTests.cs      # Risk assessment tests
 │   │   ├── SessionStorageFunctionsTests.cs      # Session storage tests
 │   │   ├── TestFunctionsTests.cs
@@ -136,8 +129,6 @@ BehavioralHealthSystem/
 │   │   ├── ApiErrorResponseTests.cs
 │   │   ├── InitiateRequestTests.cs
 │   │   ├── InitiateResponseTests.cs
-│   │   ├── KintsugiWorkflowInputTests.cs
-│   │   ├── KintsugiWorkflowResultTests.cs
 │   │   ├── PredictErrorTests.cs
 │   │   ├── PredictionRequestTests.cs
 │   │   ├── PredictionResponseTests.cs
@@ -347,10 +338,10 @@ services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
 
 ### **3. Main Workflow Process**
 
-The `KintsugiWorkflow` function performs:
+The system provides separate endpoints for different workflow steps:
 
-1. **Session Initiation** - Creates a new session with user metadata
-2. **Prediction Submission** - Uploads audio data for analysis using either:
+1. **Session Initiation** - Creates a new session with user metadata (`/api/sessions/initiate`)
+2. **Prediction Submission** - Uploads audio data for analysis (`/api/predictions/submit`) using either:
    - **URL-based approach** - Downloads audio from Azure Blob Storage URLs
    - **Byte array approach** - Direct upload of base64-encoded audio data  
 3. **Immediate Response** - Returns session ID for client tracking
@@ -381,7 +372,7 @@ _logger.LogInformation("Session initiated successfully with ID: {SessionId} for 
 // Program.cs in Functions project - Full DI configuration
 services.Configure<KintsugiApiOptions>(configuration.GetSection("Values"));
 services.AddHttpClient<IKintsugiApiService, KintsugiApiService>();
-services.AddValidatorsFromAssemblyContaining<KintsugiWorkflowInputValidator>();
+services.AddValidatorsFromAssemblyContaining<InitiateRequestValidator>();
 services.AddHealthChecks().AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
 ```
 
@@ -428,7 +419,7 @@ Add these settings to your Azure Function App configuration:
 
 ### **🔄 Main Workflow**
 
-- **POST** `/api/KintsugiWorkflow` - Submit session and prediction data
+- **POST** `/api/sessions/initiate` - Create new session with user metadata and audio data
 - **POST** `/api/predictions/submit` - Submit prediction with session ID and audio URL
 
 ### **📊 Session Management**
@@ -697,7 +688,7 @@ The API supports two approaches for audio file submission:
 
 #### Option 1: URL-Based Audio Submission (Recommended)
 
-**POST** `/api/KintsugiWorkflow`
+**POST** `/api/sessions/initiate`
 
 ```json
 {
@@ -718,7 +709,7 @@ The API supports two approaches for audio file submission:
 
 #### Option 2: Base64 Audio Data Submission (Legacy)
 
-**POST** `/api/KintsugiWorkflow`
+**POST** `/api/predictions/submit`
 
 ```json
 {
@@ -1001,7 +992,7 @@ dotnet watch test
 3. **🚀 Start Workflow:**
 
    ```bash
-   curl -X POST http://localhost:7071/api/KintsugiWorkflow \
+   curl -X POST http://localhost:7071/api/sessions/initiate \
      -H "Content-Type: application/json" \
      -d '{
        "userId": "test-user-123",

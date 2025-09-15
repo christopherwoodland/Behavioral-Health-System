@@ -535,11 +535,6 @@ const SessionDetail: React.FC = () => {
                            (session.prediction as any).predicted_score_depression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                            'N/A')}
                       </div>
-                      {session.analysisResults?.confidence && (
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                          Confidence: {(session.analysisResults.confidence * 100).toFixed(1)}%
-                        </div>
-                      )}
                     </div>
                   )}
                   
@@ -558,11 +553,6 @@ const SessionDetail: React.FC = () => {
                            (session.prediction as any).predicted_score_anxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                            'N/A')}
                       </div>
-                      {session.analysisResults?.confidence && (
-                        <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                          Confidence: {(session.analysisResults.confidence * 100).toFixed(1)}%
-                        </div>
-                      )}
                     </div>
                   )}
                   

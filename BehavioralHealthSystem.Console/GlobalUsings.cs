@@ -4,6 +4,4 @@ global using Microsoft.Extensions.DependencyInjection;
 global using Microsoft.Extensions.Hosting;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.SemanticKernel;
-global using Microsoft.SemanticKernel.Connectors.OpenAI;
 global using BehavioralHealthSystem.Agents.Chat;
-global using BehavioralHealthSystem.Agents.Agents;

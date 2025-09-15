@@ -231,12 +231,6 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
         </h2>
         
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-          {assessment.confidenceLevel && (
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              Confidence: {(assessment.confidenceLevel * 100).toFixed(0)}%
-            </span>
-          )}
-          
           <button type="button"
             onClick={generateAssessment}
             disabled={isGenerating}

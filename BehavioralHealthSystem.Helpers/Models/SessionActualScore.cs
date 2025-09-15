@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace BehavioralHealthSystem.Models;
 
 public class SessionActualScore

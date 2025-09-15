@@ -78,7 +78,8 @@ public class BehavioralHealthGroupChat
             // Check if we need to route to PHQ-2 agent
             if (routingResult.Contains("PHQ2Agent"))
             {
-                return await InvokeAgentDirectlyAsync("PHQ2Agent", userId, message);
+                // Route to independent PHQ-2 assessment
+                return await StartIndependentPhq2AssessmentAsync(userId);
             }
 
             // Check if we need to route to PHQ-9 agent
@@ -316,5 +317,107 @@ public class BehavioralHealthGroupChat
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Starts an independent PHQ-2 assessment conversation
+    /// </summary>
+    private async Task<string> StartIndependentPhq2AssessmentAsync(string userId)
+    {
+        try
+        {
+            _logger.LogInformation("Starting independent PHQ-2 assessment for user {UserId}", userId);
+
+            var phq2Agent = (Phq2Agent)_agents["PHQ2Agent"];
+            
+            // Initialize assessment and get initial message
+            var (chatHistory, assessment, initialMessage) = await phq2Agent.InitializeIndependentAssessmentAsync(userId);
+            var currentMessage = initialMessage;
+
+            while (true)
+            {
+                // In a real implementation, this would get actual user input
+                // For now, we'll simulate the conversation
+                var userResponse = await GetUserInputAsync(currentMessage);
+                
+                // Check for exit conditions
+                if (phq2Agent.IsExitRequest(userResponse))
+                {
+                    if (assessment.IsCompleted)
+                    {
+                        return "PHQ-2 assessment completed. Returning to main menu.";
+                    }
+                    else
+                    {
+                        return "PHQ-2 assessment was not completed. Returning to main menu. You can restart the assessment anytime.";
+                    }
+                }
+
+                // Check for crisis situations
+                if (phq2Agent.IsCrisisSignal(userResponse))
+                {
+                    return """
+                        ⚠️ CRISIS DETECTED ⚠️
+                        
+                        If you are thinking about harming yourself or are in crisis, please seek help immediately:
+                        
+                        🆘 In the U.S., call or text 988 (Suicide & Crisis Lifeline)
+                        🆘 Or contact your local emergency services (911)
+                        🆘 Go to your nearest emergency room
+                        
+                        I'm returning you to the coordinator for immediate assistance.
+                        """;
+                }
+
+                chatHistory.AddUserMessage(userResponse);
+
+                // Get AI response from the agent
+                var responseText = await phq2Agent.GetChatResponseAsync(chatHistory, userId, userResponse);
+                chatHistory.AddAssistantMessage(responseText);
+
+                // Check if assessment is complete
+                if (assessment.IsCompleted)
+                {
+                    var finalResults = phq2Agent.CompleteAssessment(userId);
+                    currentMessage = responseText + "\n\n" + finalResults + "\n\nWould you like to:\n1. Take the PHQ-9 for a more comprehensive assessment\n2. Return to the main menu\n3. Ask me any questions about these results?";
+                    
+                    // Wait for final user choice
+                    var finalChoice = await GetUserInputAsync(currentMessage);
+                    
+                    if (finalChoice.ToLowerInvariant().Contains("phq-9") || finalChoice.Contains("1"))
+                    {
+                        return "Assessment complete. User wants PHQ-9. Transferring to coordinator for PHQ-9 assessment.";
+                    }
+                    else if (finalChoice.ToLowerInvariant().Contains("question") || finalChoice.Contains("3"))
+                    {
+                        // Continue conversation for questions
+                        currentMessage = "I'm here to answer any questions about your PHQ-2 results. What would you like to know?";
+                        continue;
+                    }
+                    else
+                    {
+                        return "PHQ-2 assessment completed successfully. Returning to coordinator.";
+                    }
+                }
+
+                currentMessage = responseText;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during independent PHQ-2 assessment for user {UserId}", userId);
+            return "Sorry, I encountered an error during the PHQ-2 assessment. Please try again.";
+        }
+    }
+
+    /// <summary>
+    /// Simulates getting user input - in real implementation this would interface with actual user input
+    /// </summary>
+    private async Task<string> GetUserInputAsync(string prompt)
+    {
+        // This is a placeholder implementation
+        // In reality, this would connect to the actual user interface
+        await Task.Delay(100);
+        return "1"; // Simulate user response
     }
 }

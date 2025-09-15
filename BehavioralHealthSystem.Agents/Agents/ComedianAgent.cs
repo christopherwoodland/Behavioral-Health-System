@@ -1,19 +1,24 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using System.ComponentModel;
+using BehavioralHealthSystem.Agents.Interfaces;
 
 namespace BehavioralHealthSystem.Agents.Agents;
 
 /// <summary>
 /// Comedian agent that tells jokes and engages in playful banter to help ease people's minds
 /// </summary>
-public class ComedianAgent
+public class ComedianAgent : IHandoffAgent
 {
     private readonly ILogger<ComedianAgent> _logger;
     private readonly Kernel _kernel;
 
-    public string Name => "ComedianAgent";
+    // IHandoffAgent properties
+    public string AgentId => "comedian";
+    public string Name => "Comedy & Humor Agent";
     public string Description => "Comedy and Humor Agent - Jokes, Stories, and Light-hearted Conversation";
+    public string[] TriggerKeywords => new[] { "joke", "funny", "humor", "laugh", "cheer me up", "comedy", "story", "amusing" };
+    public int Priority => 4; // Medium-high priority for humor requests
     
     public string Instructions => """
         You are the ComedianAgent, a friendly and uplifting comedy companion designed to bring joy and laughter to people who might be feeling down or stressed.
@@ -268,4 +273,193 @@ public class ComedianAgent
             Want a joke to seal the deal? Here's one: Why did the optimist fall into a well? Because they couldn't see that far down! (But hey, they probably found something interesting down there!) 😄
             """;
     }
+
+    #region IHandoffAgent Implementation
+
+    public bool CanHandle(string userInput, Dictionary<string, object> context)
+    {
+        var lowerInput = userInput.ToLowerInvariant();
+        return lowerInput.Contains("joke") ||
+               lowerInput.Contains("funny") ||
+               lowerInput.Contains("humor") ||
+               lowerInput.Contains("laugh") ||
+               lowerInput.Contains("cheer me up") ||
+               lowerInput.Contains("make me smile") ||
+               lowerInput.Contains("comedy") ||
+               lowerInput.Contains("story") ||
+               lowerInput.Contains("amusing") ||
+               lowerInput.Contains("lighten the mood");
+    }
+
+    public Task<HandoffInitializationResult> InitializeHandoffAsync(string userId, Dictionary<string, object> context)
+    {
+        try
+        {
+            _logger.LogInformation("Initializing comedy handoff for user {UserId}", userId);
+
+            var initialMessage = """
+                Hey there! 😄 I'm your comedy companion, here to brighten your day with some wholesome humor!
+                
+                I can help you with:
+                • Clean, uplifting jokes
+                • Funny stories and anecdotes  
+                • Light-hearted banter
+                • Encouraging humor to lift your spirits
+                
+                What would you like? A joke, a funny story, or just some playful conversation to lighten the mood?
+                """;
+
+            var result = new HandoffInitializationResult
+            {
+                Success = true,
+                InitialMessage = initialMessage,
+                EstimatedDuration = TimeSpan.FromMinutes(3),
+                UpdatedContext = new Dictionary<string, object>
+                {
+                    ["comedy_started"] = DateTime.UtcNow,
+                    ["interaction_type"] = "humor"
+                }
+            };
+
+            return Task.FromResult(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initializing comedy handoff for user {UserId}", userId);
+            var errorResult = new HandoffInitializationResult
+            {
+                Success = false,
+                ErrorMessage = "I'm having trouble getting my comedy hat on! Give me a moment to find my funny bone."
+            };
+            return Task.FromResult(errorResult);
+        }
+    }
+
+    public Task<HandoffProcessingResult> ProcessInputAsync(string userId, string userInput, Dictionary<string, object> context)
+    {
+        try
+        {
+            var lowerInput = userInput.ToLowerInvariant();
+
+            // Check for exit requests
+            if (lowerInput.Contains("exit") || lowerInput.Contains("back") || lowerInput.Contains("done") ||
+                lowerInput.Contains("enough") || lowerInput.Contains("return"))
+            {
+                var exitResult = new HandoffProcessingResult
+                {
+                    Success = true,
+                    ResponseMessage = "Thanks for letting me share some laughs with you! I hope I brightened your day just a little. Take care! 😊",
+                    IsComplete = true,
+                    UpdatedContext = new Dictionary<string, object>
+                    {
+                        ["exit_reason"] = "user_request",
+                        ["session_completed"] = DateTime.UtcNow
+                    }
+                };
+                return Task.FromResult(exitResult);
+            }
+
+            // Handle different types of humor requests
+            string response;
+            
+            if (lowerInput.Contains("joke"))
+            {
+                response = TellJoke();
+            }
+            else if (lowerInput.Contains("story"))
+            {
+                response = TellFunnyStory();
+            }
+            else if (lowerInput.Contains("encourage") || lowerInput.Contains("cheer"))
+            {
+                response = EncourageWithHumor(userInput);
+            }
+            else if (lowerInput.Contains("more") || lowerInput.Contains("another"))
+            {
+                // Randomly pick between joke and story
+                response = Random.Shared.Next(2) == 0 ? TellJoke() : TellFunnyStory();
+            }
+            else
+            {
+                // General playful banter
+                response = PlayfulBanter(userInput);
+            }
+
+            // Add continuation prompt
+            response += "\n\nWould you like another joke, a funny story, or shall we chat about something else? (Or say 'done' if you're ready to return to the main conversation.)";
+
+            var currentCount = Convert.ToInt32(context.GetValueOrDefault("interaction_count", 0));
+            var result = new HandoffProcessingResult
+            {
+                Success = true,
+                ResponseMessage = response,
+                UpdatedContext = new Dictionary<string, object>
+                {
+                    ["last_interaction"] = DateTime.UtcNow,
+                    ["interaction_count"] = currentCount + 1
+                }
+            };
+
+            return Task.FromResult(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing comedy input for user {UserId}", userId);
+            var errorResult = new HandoffProcessingResult
+            {
+                Success = false,
+                ErrorMessage = "Oops! My joke database had a hiccup. Let me try again!"
+            };
+            return Task.FromResult(errorResult);
+        }
+    }
+
+    public Task<HandoffCompletionResult> CompleteHandoffAsync(string userId, Dictionary<string, object> context)
+    {
+        try
+        {
+            _logger.LogInformation("Completing comedy handoff for user {UserId}", userId);
+
+            var interactionCount = Convert.ToInt32(context.GetValueOrDefault("interaction_count", 0));
+            var completionData = new Dictionary<string, object>
+            {
+                ["completion_time"] = DateTime.UtcNow,
+                ["interaction_count"] = interactionCount,
+                ["session_type"] = "comedy"
+            };
+
+            var result = new HandoffCompletionResult
+            {
+                Success = true,
+                CompletionMessage = "Hope I managed to put a smile on your face! Sometimes laughter really is the best medicine. 😊",
+                CompletionData = completionData,
+                UpdatedContext = new Dictionary<string, object>
+                {
+                    ["returning_from_agent"] = "comedian",
+                    ["completion_data"] = completionData
+                }
+            };
+
+            return Task.FromResult(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing comedy handoff for user {UserId}", userId);
+            var errorResult = new HandoffCompletionResult
+            {
+                Success = false,
+                ErrorMessage = "I'm signing off with a smile! Thanks for the laughs!"
+            };
+            return Task.FromResult(errorResult);
+        }
+    }
+
+    public async Task HandleInterruptionAsync(string userId, string reason)
+    {
+        _logger.LogWarning("Comedy agent interrupted for user {UserId}: {Reason}", userId, reason);
+        // Comedy agent doesn't need special cleanup
+        await Task.CompletedTask;
+    }
+
+    #endregion
 }

@@ -1,8 +1,6 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BehavioralHealthSystem.Functions;
 using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;
-using BehavioralHealthSystem.Services;
 using Moq;
 
 namespace BehavioralHealthSystem.Tests

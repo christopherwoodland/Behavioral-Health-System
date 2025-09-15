@@ -1,16 +1,11 @@
 // NOTE: These tests validate functionality that is available through the service layer
 // and validate interface contracts and model properties.
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;
 using BehavioralHealthSystem.Functions;
 using BehavioralHealthSystem.Models;
-using BehavioralHealthSystem.Services;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Azure.Functions.Worker;
-using System.Text.Json;
 
 namespace BehavioralHealthSystem.Tests
 {

@@ -2,7 +2,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace BehavioralHealthSystem.Services;
 
-public class KintsugiApiHealthCheck : IHealthCheck
+public class KintsugiApiHealthCheck : IKintsugiApiHealthCheck
 {
     private readonly IKintsugiApiService _kintsugiApiService;
     private readonly ILogger<KintsugiApiHealthCheck> _logger;

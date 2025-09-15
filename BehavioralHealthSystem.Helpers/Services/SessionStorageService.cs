@@ -1,20 +1,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using BehavioralHealthSystem.Models;
-using Microsoft.Extensions.Logging;
-using System.Text;
-using System.Text.Json;
 
 namespace BehavioralHealthSystem.Services;
-
-public interface ISessionStorageService
-{
-    Task<bool> SaveSessionDataAsync(SessionData sessionData, CancellationToken cancellationToken = default);
-    Task<SessionData?> GetSessionDataAsync(string sessionId, CancellationToken cancellationToken = default);
-    Task<List<SessionData>> GetUserSessionsAsync(string userId, CancellationToken cancellationToken = default);
-    Task<bool> UpdateSessionDataAsync(SessionData sessionData, CancellationToken cancellationToken = default);
-    Task<bool> DeleteSessionDataAsync(string sessionId, CancellationToken cancellationToken = default);
-}
 
 public class SessionStorageService : ISessionStorageService
 {

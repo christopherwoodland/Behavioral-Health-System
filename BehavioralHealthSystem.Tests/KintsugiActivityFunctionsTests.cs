@@ -3,7 +3,6 @@
 // These tests are preserved for reference but the functions themselves
 // should be considered deprecated unless converted to standalone HTTP functions.
 
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BehavioralHealthSystem.Functions;
 using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;

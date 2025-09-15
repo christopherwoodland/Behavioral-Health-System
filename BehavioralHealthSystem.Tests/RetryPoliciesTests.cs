@@ -3,6 +3,7 @@ using BehavioralHealthSystem.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Polly;
+using Polly.Timeout;
 
 namespace BehavioralHealthSystem.Tests;
 
@@ -175,7 +176,7 @@ public class RetryPoliciesTests
         var policy = RetryPolicies.GetTimeoutPolicy();
 
         // Act & Assert
-        await Assert.ThrowsExceptionAsync<TimeoutRejectedException>(async () =>
+        await Assert.ThrowsExceptionAsync<Polly.Timeout.TimeoutRejectedException>(async () =>
         {
             await policy.ExecuteAsync(async () =>
             {

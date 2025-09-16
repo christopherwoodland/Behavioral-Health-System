@@ -18,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
     { path: '/upload', label: 'Upload & Analyze', icon: '📤' },
     { path: '/sessions', label: 'Sessions', icon: '📊' },
     { path: '/predictions', label: 'My Predictions', icon: '📈' },
+    { path: '/control-panel', label: 'Control Panel', icon: '⚙️' },
     { path: '/health', label: 'System Health', icon: '🏥' },
   ];
 

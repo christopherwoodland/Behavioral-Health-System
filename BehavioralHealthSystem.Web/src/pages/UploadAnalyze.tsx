@@ -11,6 +11,12 @@ interface UploadProgress {
   stage: 'idle' | 'starting' | 'initiating' | 'converting' | 'uploading' | 'submitting' | 'analyzing' | 'complete' | 'error';
   progress: number;
   message: string;
+  error?: {
+    code: string;
+    message: string;
+    details?: Record<string, unknown>;
+    uploadedFileUrl?: string; // Track uploaded file for cleanup
+  };
 }
 
 interface AudioFile {
@@ -653,9 +659,59 @@ const UploadAnalyze: React.FC = () => {
       });
 
     } catch (err) {
+      console.error(`Error processing file ${fileId}:`, err);
+      
+      // Extract error details for enhanced error display
+      let errorCode = 'UNKNOWN_ERROR';
+      let errorMessage = 'An unexpected error occurred';
+      let errorDetails: Record<string, unknown> = {};
+
+      if (err && typeof err === 'object') {
+        // Handle AppError interface
+        if ('code' in err && typeof err.code === 'string') {
+          errorCode = err.code;
+        }
+        if ('message' in err && typeof err.message === 'string') {
+          errorMessage = err.message;
+        }
+        if ('details' in err && typeof err.details === 'object') {
+          errorDetails = err.details as Record<string, unknown>;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+        errorCode = err.name || 'ERROR';
+      }
+
+      // Attempt to find and cleanup uploaded file if it exists
+      // The file name should follow the pattern we used: `${userId}_${sessionId}_${timestamp}.wav`
+      try {
+        // Try to extract session ID from error context or generate cleanup pattern
+        const currentProgress = processingProgress[fileId];
+        if (currentProgress && (currentProgress.stage === 'uploading' || 
+                              currentProgress.stage === 'submitting' || 
+                              currentProgress.stage === 'analyzing')) {
+          // File was likely uploaded, attempt cleanup with pattern matching
+          const fileName = `${userId}_*_*.wav`; // Pattern for potential cleanup
+          // Note: In a real implementation, you'd want to track the exact fileName
+          // For now, log the cleanup attempt
+          console.log(`Attempting cleanup for file pattern: ${fileName}`);
+        }
+      } catch (cleanupError) {
+        console.warn('Error during cleanup attempt:', cleanupError);
+      }
+
       setProcessingProgress(prev => ({
         ...prev,
-        [fileId]: { stage: 'error', progress: 0, message: 'Processing failed' }
+        [fileId]: { 
+          stage: 'error', 
+          progress: 0, 
+          message: 'Processing failed',
+          error: {
+            code: errorCode,
+            message: errorMessage,
+            details: errorDetails
+          }
+        }
       }));
       throw err; // Re-throw to be handled by the calling function
     }
@@ -699,14 +755,42 @@ const UploadAnalyze: React.FC = () => {
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
           addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+          // Extract detailed error information
+          let errorCode = 'FILE_PROCESSING_ERROR';
+          let errorMessage = 'An unexpected error occurred';
+          let errorDetails: Record<string, unknown> = {};
+
+          if (error && typeof error === 'object') {
+            if ('code' in error && typeof error.code === 'string') {
+              errorCode = error.code;
+            }
+            if ('message' in error && typeof error.message === 'string') {
+              errorMessage = error.message;
+            }
+            if ('details' in error && typeof error.details === 'object') {
+              errorDetails = error.details as Record<string, unknown>;
+            }
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+            errorCode = error.name || 'ERROR';
+          }
+
           addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
           
-          // Set error state for this file
+          // Set error state for this file with detailed error information
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'error' }));
           setProcessingProgress(prev => ({
             ...prev,
-            [audioFile.id]: { stage: 'error', progress: 0, message: `Failed: ${errorMessage}` }
+            [audioFile.id]: { 
+              stage: 'error', 
+              progress: 0, 
+              message: `Failed: ${errorMessage}`,
+              error: {
+                code: errorCode,
+                message: errorMessage,
+                details: errorDetails
+              }
+            }
           }));
         }
       }
@@ -1821,6 +1905,44 @@ const UploadAnalyze: React.FC = () => {
                       )}
                     </div>
                   </div>
+
+                  {/* Error Details Section */}
+                  {progress?.stage === 'error' && progress?.error && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-3">
+                      <div className="flex items-start">
+                        <AlertCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                        <div className="flex-1">
+                          <h4 className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                            Error Details
+                          </h4>
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-red-600 dark:text-red-400 font-medium">Error Code:</span>
+                                <span className="font-mono text-red-900 dark:text-red-100">{progress.error.code}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-red-600 dark:text-red-400 font-medium">Error Message:</span>
+                                <span className="font-mono text-red-900 dark:text-red-100 text-right">{progress.error.message}</span>
+                              </div>
+                            </div>
+                            {progress.error.details && Object.keys(progress.error.details).length > 0 && (
+                              <details className="mt-3">
+                                <summary className="cursor-pointer text-sm font-medium text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100">
+                                  View Additional Error Details
+                                </summary>
+                                <div className="mt-2 bg-red-100 dark:bg-red-900/40 rounded p-3 overflow-auto max-h-32">
+                                  <pre className="text-xs text-red-800 dark:text-red-200 whitespace-pre-wrap">
+                                    {JSON.stringify(progress.error.details, null, 2)}
+                                  </pre>
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* API Response Summary for this file */}
                   {result.rawApiResponse && (

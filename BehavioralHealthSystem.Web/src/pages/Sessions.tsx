@@ -33,6 +33,7 @@ const statusConfig = {
   succeeded: { color: 'green', icon: CheckCircle, label: 'Completed' },
   success: { color: 'green', icon: CheckCircle, label: 'Completed' },
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
+  error: { color: 'red', icon: XCircle, label: 'Error' },
 } as const;
 
 // Utility function to format score categories
@@ -317,7 +318,18 @@ const Sessions: React.FC = () => {
 
   // Get status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.failed;
+    // For any unknown status that contains "error" or "fail", treat as error
+    const normalizedStatus = status.toLowerCase();
+    let config = statusConfig[status as keyof typeof statusConfig];
+    
+    if (!config) {
+      if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
+        config = statusConfig.error;
+      } else {
+        config = statusConfig.failed; // Default fallback
+      }
+    }
+    
     const Icon = config.icon;
     
     return (

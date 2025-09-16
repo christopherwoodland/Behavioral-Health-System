@@ -940,9 +940,9 @@ const UploadAnalyze: React.FC = () => {
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {
-      case 'error': return 'bg-red-500';
-      case 'complete': return 'bg-green-500';
-      default: return 'bg-blue-500';
+      case 'error': return 'processing-progress__fill--error';
+      case 'complete': return 'processing-progress__fill--success';
+      default: return ''; // Use default blue color from CSS
     }
   }, []);
 
@@ -1361,8 +1361,8 @@ const UploadAnalyze: React.FC = () => {
                   {audioFile.duration && (
                     <div className="audio-progress">
                       <div
-                        className="audio-progress__fill progress-dynamic progress-animated"
-                        style={{ '--progress-width': `${(currentTime / audioFile.duration) * 100}%` } as React.CSSProperties}
+                        className="audio-progress__fill progress-animated"
+                        style={{ width: `${(currentTime / audioFile.duration) * 100}%` }}
                         role="progressbar"
                         aria-label="Audio playback progress"
                         aria-valuenow={currentTime}
@@ -1473,8 +1473,8 @@ const UploadAnalyze: React.FC = () => {
                             </div>
                             <div className="processing-progress mt-1">
                               <div
-                                className={`processing-progress__fill progress-dynamic progress-animated ${getProgressColor(progress.stage)}`}
-                                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
+                                className={`processing-progress__fill progress-animated ${getProgressColor(progress.stage)}`}
+                                style={{ width: `${progress.progress}%` }}
                               />
                             </div>
                           </div>
@@ -1526,8 +1526,8 @@ const UploadAnalyze: React.FC = () => {
             </div>
             <div className="processing-progress">
               <div
-                className={`processing-progress__fill progress-dynamic progress-animated ${getProgressColor(progress.stage)}`}
-                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
+                className={`processing-progress__fill progress-animated ${getProgressColor(progress.stage)}`}
+                style={{ width: `${progress.progress}%` }}
                 role="progressbar"
                 aria-label="Processing progress"
                 aria-valuenow={progress.progress}

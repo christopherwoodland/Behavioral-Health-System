@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Files, File } from 'lucide-react';
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
 import { apiService, PredictionPoller } from '../services/api';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { getUserId, getStoredProcessingMode, setStoredProcessingMode, setUserId, generateNewUserId, isCustomUserId, setUserIdMode } from '../utils';
+import { getStoredProcessingMode, setStoredProcessingMode, getUserId } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
 interface UploadProgress {
@@ -55,6 +56,9 @@ interface AnalysisResult {
 }
 
 const UploadAnalyze: React.FC = () => {
+  // Auth context for user identification
+  const { user } = useAuth();
+  
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingMode());
   const [processingProgress, setProcessingProgress] = useState<ProcessingProgress>({});
@@ -74,6 +78,7 @@ const UploadAnalyze: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
   const [userMetadata, setUserMetadata] = useState({
+    userId: '', // Will be auto-generated on component mount
     age: '',
     gender: '',
     race: '',
@@ -92,13 +97,21 @@ const UploadAnalyze: React.FC = () => {
     timestamp: number;
   }>>([]);
 
-  // User ID management state
-  const [isCustomUserIdMode, setIsCustomUserIdMode] = useState(() => isCustomUserId());
-  const [customUserId, setCustomUserId] = useState('');
-  const [userIdError, setUserIdError] = useState<string | null>(null);
+  // User ID management state - REMOVED (now part of metadata)
+  
+  // Auto-generate user ID when component loads (for form metadata)
+  useEffect(() => {
+    if (!userMetadata.userId) {
+      const newUserId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      setUserMetadata(prev => ({ ...prev, userId: newUserId }));
+    }
+  }, [userMetadata.userId]);
 
-  // Get the current user ID from localStorage
-  const userId = getUserId();
+  // Helper function to get authenticated user ID for blob storage
+  const getAuthenticatedUserId = useCallback((): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  }, [user?.id]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,79 +153,6 @@ const UploadAnalyze: React.FC = () => {
     setPlayingFileId(null);
     setIsProcessing(false);
   }, []);
-
-  // User ID management functions
-  const handleToggleUserIdMode = useCallback(() => {
-    setIsCustomUserIdMode(prev => {
-      const newMode = !prev;
-      setUserIdMode(newMode);
-      setUserIdError(null);
-      
-      if (!newMode) {
-        // Switching back to auto-generated mode
-        setCustomUserId('');
-        const newUserId = generateNewUserId();
-        announceToScreenReader(`Switched to auto-generated mode. New User ID: ${newUserId}`);
-      } else {
-        // Switching to custom mode
-        setCustomUserId(userId);
-        announceToScreenReader('Switched to custom User ID mode');
-      }
-      
-      return newMode;
-    });
-  }, [userId, announceToScreenReader]);
-
-  const handleCustomUserIdChange = useCallback((value: string) => {
-    setCustomUserId(value);
-    setUserIdError(null);
-  }, []);
-
-  const handleApplyCustomUserId = useCallback(() => {
-    const trimmedUserId = customUserId.trim();
-    
-    if (!trimmedUserId) {
-      setUserIdError('User ID cannot be empty');
-      return;
-    }
-
-    // Basic validation - allow any string but check for reasonable length and characters
-    if (trimmedUserId.length < 3) {
-      setUserIdError('User ID must be at least 3 characters long');
-      return;
-    }
-
-    if (trimmedUserId.length > 100) {
-      setUserIdError('User ID must be less than 100 characters');
-      return;
-    }
-
-    // Check for potentially problematic characters (optional - you can remove this if you want to allow all characters)
-    const problematicChars = /[<>"/\\|?*\x00-\x1f]/;
-    if (problematicChars.test(trimmedUserId)) {
-      setUserIdError('User ID contains invalid characters. Please avoid special characters like < > " / \\ | ? *');
-      return;
-    }
-
-    try {
-      setUserId(trimmedUserId);
-      setUserIdError(null);
-      announceToScreenReader(`Custom User ID applied: ${trimmedUserId}`);
-      
-      // Refresh the page to use the new user ID
-      window.location.reload();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to set User ID';
-      setUserIdError(errorMessage);
-    }
-  }, [customUserId, announceToScreenReader]);
-
-  const handleGenerateNewUserId = useCallback(() => {
-    const newUserId = generateNewUserId();
-    announceToScreenReader(`New User ID generated: ${newUserId}`);
-    // Refresh the page to use the new user ID
-    window.location.reload();
-  }, [announceToScreenReader]);
 
   const generateFileId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -455,21 +395,21 @@ const UploadAnalyze: React.FC = () => {
 
   const processAndAnalyze = useCallback(async () => {
     if (isMultiMode) {
-      if (audioFiles.length === 0 || !userId.trim()) {
+      if (audioFiles.length === 0 || !userMetadata.userId.trim()) {
         setError('Please select audio files. User ID is automatically generated.');
         addToast('error', 'Missing Information', 'Please select audio files. User ID is automatically generated.');
         return;
       }
       await processMultipleFiles();
     } else {
-      if (!audioFile || !userId.trim()) {
+      if (!audioFile || !userMetadata.userId.trim()) {
         setError('Please select an audio file. User ID is automatically generated.');
         addToast('error', 'Missing Information', 'Please select an audio file. User ID is automatically generated.');
         return;
       }
       await processSingleFile();
     }
-  }, [audioFile, audioFiles, userId, isMultiMode]);
+  }, [audioFile, audioFiles, userMetadata.userId, isMultiMode]);
 
   const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile) => {
     try {
@@ -481,7 +421,7 @@ const UploadAnalyze: React.FC = () => {
 
       const metadata = buildMetadata();
       const sessionRequest: any = {
-        userid: userId.trim(),
+        userid: userMetadata.userId.trim(),
         is_initiated: true
       };
 
@@ -494,7 +434,7 @@ const UploadAnalyze: React.FC = () => {
 
       const sessionData: SessionInfo = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim()
+        userId: userMetadata.userId.trim()
       };
 
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
@@ -505,7 +445,7 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim(),
+        userId: userMetadata.userId.trim(),
         userMetadata: metadata,
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -515,9 +455,12 @@ const UploadAnalyze: React.FC = () => {
 
       try {
         await apiService.saveSessionData(initialSessionData);
+        console.log('Session data saved successfully (multi-file):', initialSessionData.sessionId);
       } catch (error) {
+        console.error('Failed to save session data (multi-file):', error);
+        addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
         // Continue with the process even if saving fails
-        // Error is handled silently as this is not critical for the main workflow
+        // This is not critical for the main workflow, but user should be informed
       }
 
       setProcessingProgress(prev => ({
@@ -543,7 +486,7 @@ const UploadAnalyze: React.FC = () => {
       }));
 
       // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+      const fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
       const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
         setProcessingProgress(prev => ({
           ...prev,
@@ -553,7 +496,7 @@ const UploadAnalyze: React.FC = () => {
             message: `Uploading... ${Math.round(progressPercent)}%`
           }
         }));
-      });
+      }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
 
       setProcessingProgress(prev => ({
         ...prev,
@@ -577,7 +520,7 @@ const UploadAnalyze: React.FC = () => {
 
       // Step 4: Submit prediction with URL to /predictions/submit endpoint
       await apiService.submitPrediction({
-        userId: userId.trim(),
+        userId: userMetadata.userId.trim(),
         sessionid: sessionData.sessionId,
         audioFileUrl: audioUrl,
         audioFileName: fileName
@@ -641,7 +584,29 @@ const UploadAnalyze: React.FC = () => {
               timestamp: result.updatedAt,
               audioUrl: audioUrl,
               rawApiResponse: result // Store the complete API response
-            };            
+            };
+            
+            // Update session data with final analysis results (fire-and-forget)
+            const finalSessionData = {
+              ...initialSessionData,
+              audioUrl: audioUrl,
+              analysisResult: analysisResult,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            
+            // Save analysis results to session storage (async, non-blocking)
+            apiService.updateSessionData(sessionData.sessionId, finalSessionData)
+              .then(() => {
+                console.log('Multi-file session data updated with analysis results for session:', sessionData.sessionId);
+                addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
+              })
+              .catch((error) => {
+                console.error('Failed to save multi-file analysis results to session storage:', error);
+                addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
+              });
+              
             setProcessingProgress(prev => ({
               ...prev,
               [fileId]: { stage: 'complete', progress: 100, message: 'Analysis complete!' }
@@ -683,7 +648,7 @@ const UploadAnalyze: React.FC = () => {
       }
 
       // Attempt to find and cleanup uploaded file if it exists
-      // The file name should follow the pattern we used: `${userId}_${sessionId}_${timestamp}.wav`
+      // The file name should follow the pattern we used: `${userMetadata.userId}_${sessionId}_${timestamp}.wav`
       try {
         // Try to extract session ID from error context or generate cleanup pattern
         const currentProgress = processingProgress[fileId];
@@ -691,7 +656,7 @@ const UploadAnalyze: React.FC = () => {
                               currentProgress.stage === 'submitting' || 
                               currentProgress.stage === 'analyzing')) {
           // File was likely uploaded, attempt cleanup with pattern matching
-          const fileName = `${userId}_*_*.wav`; // Pattern for potential cleanup
+          const fileName = `${userMetadata.userId}_*_*.wav`; // Pattern for potential cleanup
           // Note: In a real implementation, you'd want to track the exact fileName
           // For now, log the cleanup attempt
           console.log(`Attempting cleanup for file pattern: ${fileName}`);
@@ -715,7 +680,7 @@ const UploadAnalyze: React.FC = () => {
       }));
       throw err; // Re-throw to be handled by the calling function
     }
-  }, [userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast]);
+  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast]);
 
   const processMultipleFiles = useCallback(async () => {
     setIsProcessing(true);
@@ -838,7 +803,7 @@ const UploadAnalyze: React.FC = () => {
   }, [audioFiles, validateMetadata, addToast, processSingleFileById]);
 
   const processSingleFile = useCallback(async () => {
-    if (!audioFile || !userId.trim()) {
+    if (!audioFile || !userMetadata.userId.trim()) {
       setError('Please select an audio file. User ID is automatically generated.');
       addToast('error', 'Missing Information', 'Please select an audio file. User ID is automatically generated.');
       return;
@@ -861,7 +826,7 @@ const UploadAnalyze: React.FC = () => {
 
       const metadata = buildMetadata();
       const sessionRequest: any = {
-        userid: userId.trim(),
+        userid: userMetadata.userId.trim(),
         is_initiated: true
       };
 
@@ -874,7 +839,7 @@ const UploadAnalyze: React.FC = () => {
 
       const sessionData: SessionInfo = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim()
+        userId: userMetadata.userId.trim()
       };
 
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
@@ -882,7 +847,7 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim(),
+        userId: userMetadata.userId.trim(),
         userMetadata: metadata,
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -892,9 +857,12 @@ const UploadAnalyze: React.FC = () => {
 
       try {
         await apiService.saveSessionData(initialSessionData);
+        console.log('Session data saved successfully (single-file):', initialSessionData.sessionId);
       } catch (error) {
+        console.error('Failed to save session data (single-file):', error);
+        addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
         // Continue with the process even if saving fails
-        // Error is handled silently as this is not critical for the main workflow
+        // This is not critical for the main workflow, but user should be informed
       }
 
       setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
@@ -913,14 +881,14 @@ const UploadAnalyze: React.FC = () => {
       announceToScreenReader('Audio converted successfully, now uploading');
 
       // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+      const fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
       const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
         setProgress({
           stage: 'uploading',
           progress: 40 + (progressPercent * 0.25), // 40-65% for upload
           message: `Uploading... ${Math.round(progressPercent)}%`
         });
-      });
+      }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
 
       setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
       announceToScreenReader('Upload complete, submitting for behavioral health analysis');
@@ -942,7 +910,7 @@ const UploadAnalyze: React.FC = () => {
 
       // Step 4: Submit prediction with URL to /predictions/submit endpoint
       await apiService.submitPrediction({
-        userId: userId.trim(),
+        userId: userMetadata.userId.trim(),
         sessionid: sessionData.sessionId,
         audioFileUrl: audioUrl,
         audioFileName: fileName
@@ -998,12 +966,34 @@ const UploadAnalyze: React.FC = () => {
             timestamp: result.updatedAt,
             audioUrl: audioUrl,
             rawApiResponse: result // Store the complete API response
-          };            
-            setProgress({ stage: 'complete', progress: 100, message: 'Analysis complete!' });
-            setResult(analysisResult);
-            addToast('success', 'Analysis Complete', 'Your behavioral health analysis has been completed successfully.');
-            announceToScreenReader('Behavioral health analysis completed successfully');
-            resolve();
+          };
+          
+          // Update session data with final analysis results (fire-and-forget)
+          const finalSessionData = {
+            ...initialSessionData,
+            audioUrl: audioUrl,
+            analysisResult: analysisResult,
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          // Save analysis results to session storage (async, non-blocking)
+          apiService.updateSessionData(sessionData.sessionId, finalSessionData)
+            .then(() => {
+              console.log('Session data updated with analysis results for session:', sessionData.sessionId);
+              addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
+            })
+            .catch((error) => {
+              console.error('Failed to save analysis results to session storage:', error);
+              addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
+            });
+            
+          setProgress({ stage: 'complete', progress: 100, message: 'Analysis complete!' });
+          setResult(analysisResult);
+          addToast('success', 'Analysis Complete', 'Your behavioral health analysis has been completed successfully.');
+          announceToScreenReader('Behavioral health analysis completed successfully');
+          resolve();
           },
           (error: AppError) => {
             addToast('error', 'Analysis Error', error.message || 'An unexpected error occurred during analysis.');
@@ -1020,7 +1010,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userId, announceToScreenReader, validateMetadata, buildMetadata]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {
@@ -1135,82 +1125,21 @@ const UploadAnalyze: React.FC = () => {
           Patient Information
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2 lg:col-span-3 mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              User ID Management
+          <div>
+            <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              User ID (Auto-generated, editable)
             </label>
-            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md border space-y-3">
-              {/* Current User ID Display */}
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current User ID:</p>
-                <code className="text-sm font-mono text-gray-900 dark:text-gray-100 break-all block bg-white dark:bg-gray-800 p-2 rounded border">
-                  {userId}
-                </code>
-              </div>
-              
-              {/* User ID Management Controls */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <button type="button"
-                    onClick={handleToggleUserIdMode}
-                    className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                    aria-describedby="user-id-mode-help"
-                  >
-                    {isCustomUserIdMode ? 'Switch to Auto-Generated' : 'Use Custom User ID'}
-                  </button>
-                  
-                  {!isCustomUserIdMode && (
-                    <button type="button"
-                      onClick={handleGenerateNewUserId}
-                      className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
-                      title="Generate a new random User ID"
-                    >
-                      Generate New ID
-                    </button>
-                  )}
-                </div>
-
-                {isCustomUserIdMode && (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={customUserId}
-                        onChange={(e) => handleCustomUserIdChange(e.target.value)}
-                        placeholder="Enter custom User ID (any unique string)"
-                        className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        aria-describedby="custom-user-id-help"
-                        aria-invalid={userIdError ? 'true' : 'false'}
-                      />
-                      <button type="button"
-                        onClick={handleApplyCustomUserId}
-                        disabled={!customUserId.trim()}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                    
-                    {userIdError && (
-                      <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                        {userIdError}
-                      </p>
-                    )}
-                    
-                    <p id="custom-user-id-help" className="text-xs text-gray-500 dark:text-gray-400">
-                      Any unique string (3-100 characters). Examples: "patient-001", "john.doe@clinic", "study-participant-42"
-                    </p>
-                  </div>
-                )}
-                
-                <p id="user-id-mode-help" className="text-xs text-gray-500 dark:text-gray-400">
-                  {isCustomUserIdMode 
-                    ? 'Custom mode: Use any unique identifier for tracking (e.g., patient ID, username, study code)' 
-                    : 'Auto mode: System generates unique UUIDs automatically'
-                  }
-                </p>
-              </div>
-            </div>
+            <input
+              type="text"
+              id="userId"
+              value={userMetadata.userId}
+              onChange={(e) => setUserMetadata(prev => ({ ...prev, userId: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Auto-generated user ID"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Unique identifier for API calls. Auto-generated but can be customized.
+            </p>
           </div>
 
           <div>
@@ -1836,7 +1765,7 @@ const UploadAnalyze: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button type="button"
                   onClick={processMultipleFiles}
-                  disabled={audioFiles.length === 0 || !userId.trim() || 
+                  disabled={audioFiles.length === 0 || !userMetadata.userId.trim() || 
                            !audioFiles.some(file => fileStates[file.id] === 'ready')}
                   className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
                 >
@@ -1855,7 +1784,7 @@ const UploadAnalyze: React.FC = () => {
             <div>
               <button type="button"
                 onClick={processAndAnalyze}
-                disabled={!audioFile || !userId.trim()}
+                disabled={!audioFile || !userMetadata.userId.trim()}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
               >
                 <Play className="h-5 w-5 mr-2" aria-hidden="true" />

@@ -1,19 +1,17 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
-import { getUserId } from '@/utils';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
 import { useAuth } from '@/contexts/AuthContext';
 
 export const Dashboard: React.FC = () => {
-  const userId = getUserId();
   const { announce } = useAnnouncements();
   const { canAccessControlPanel } = useAuth();
   
   // Fetch health status and recent sessions
   const { data: healthStatus, isLoading: isHealthLoading, error: healthError } = useHealthCheck();
-  const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions(userId);
+  const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions();
 
   useEffect(() => {
     announce('Dashboard page loaded', 'polite');
@@ -166,21 +164,6 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* User ID display */}
-      <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
-        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
-          Patient User ID
-        </h2>
-        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
-          <code className="text-sm font-mono text-text-primary-light dark:text-text-primary-dark break-all">
-            {userId}
-          </code>
-        </div>
-        <p className="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
-          This ID is automatically generated and stored locally to track your sessions.
-        </p>
-      </div>
 
       {/* Recent activity */}
       <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">

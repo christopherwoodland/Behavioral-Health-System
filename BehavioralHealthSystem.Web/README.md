@@ -5,10 +5,15 @@ A productio### Environment Variables
 Create a `.env.local` file with:
 
 ```env
+# Authentication Configuration
+# Set to 'true' to enable Azure AD/Entra ID authentication
+# Set to 'false' or leave unset to run without authentication (uses mock auth)
+VITE_ENABLE_ENTRA_AUTH=true
+
 # API Configuration
 VITE_API_BASE=http://localhost:7071/api
 
-# Azure AD Configuration
+# Azure AD Configuration (required when VITE_ENABLE_ENTRA_AUTH=true)
 VITE_AZURE_CLIENT_ID=63e9b3fd-de9d-4083-879c-9c13f3aac54d
 VITE_AZURE_TENANT_ID=3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
@@ -115,6 +120,30 @@ VITE_ENABLE_DEBUG_LOGGING=false
 3. Set the SAS URL in your environment variables
 
 ### Azure AD Authentication Setup
+
+#### Conditional Authentication
+
+The application supports conditional authentication, allowing you to run with or without Azure AD integration:
+
+**With Authentication (Production/Secure Environment):**
+```env
+VITE_ENABLE_ENTRA_AUTH=true
+```
+- Full Azure AD authentication with role-based access control
+- Requires Azure AD app registration and configuration
+- Users must sign in to access the application
+
+**Without Authentication (Development/Testing):**
+```env
+VITE_ENABLE_ENTRA_AUTH=false
+# or leave the variable unset
+```
+- Uses mock authentication with a default admin user
+- No Azure AD configuration required
+- Useful for development, testing, or demo environments
+- All authorization checks pass automatically
+
+#### Full Azure AD Setup (when VITE_ENABLE_ENTRA_AUTH=true)
 
 1. **Register application in Azure AD:**
    - Go to Azure Portal > Azure Active Directory > App registrations

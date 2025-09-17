@@ -13,7 +13,7 @@ import { APP_ROLES } from '@/config/authConfig';
 
 // Page components
 import { Dashboard } from '@/pages/Dashboard';
-import { UploadAnalyze, Sessions, SessionDetail, Predictions, SystemHealth, NotFound } from '@/pages';
+import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, SystemHealth, NotFound } from '@/pages';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -91,6 +91,14 @@ function App() {
                     element={
                       <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                         <Predictions />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/summary" 
+                    element={
+                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                        <ControlPanel />
                       </ProtectedRoute>
                     } 
                   />

@@ -188,6 +188,12 @@ export const apiService = {
     );
   },
 
+  async getAllSessions(): Promise<{ success: boolean; count: number; sessions: SessionData[] }> {
+    return apiClient.get<{ success: boolean; count: number; sessions: SessionData[] }>(
+      'sessions/all'
+    );
+  },
+
   async updateSessionData(sessionId: string, sessionData: SessionData): Promise<{ success: boolean; message: string }> {
     return apiClient.put<{ success: boolean; message: string }>(
       `sessions/${sessionId}`,

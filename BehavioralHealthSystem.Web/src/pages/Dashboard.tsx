@@ -4,10 +4,12 @@ import { Eye } from 'lucide-react';
 import { getUserId } from '@/utils';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const Dashboard: React.FC = () => {
   const userId = getUserId();
   const { announce } = useAnnouncements();
+  const { canAccessControlPanel } = useAuth();
   
   // Fetch health status and recent sessions
   const { data: healthStatus, isLoading: isHealthLoading, error: healthError } = useHealthCheck();
@@ -38,13 +40,6 @@ export const Dashboard: React.FC = () => {
       href: '/predictions',
       icon: '📈',
       color: 'accent'
-    },
-    {
-      title: 'System Health',
-      description: 'Check API status and system connectivity',
-      href: '/health',
-      icon: '🏥',
-      color: 'warning'
     }
   ];
 
@@ -77,27 +72,12 @@ export const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* User ID display */}
-      <div className="card">
-        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
-          Your User ID
-        </h2>
-        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
-          <code className="text-sm font-mono text-text-primary-light dark:text-text-primary-dark break-all">
-            {userId}
-          </code>
-        </div>
-        <p className="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
-          This ID is automatically generated and stored locally to track your sessions.
-        </p>
-      </div>
-
       {/* Quick actions */}
       <div>
         <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-6">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quickActions.map((action) => (
             <Link
               key={action.href}
@@ -121,8 +101,45 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Summary Access - Only for authorized users */}
+      {canAccessControlPanel() && (
+        <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
+                📊 Summary
+              </h2>
+              <p className="text-text-secondary-light dark:text-text-secondary-dark">
+                Advanced analytics dashboard
+              </p>
+            </div>
+            <Link
+              to="/summary"
+              className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 inline-block"
+            >
+              View Summary
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* User ID display */}
+      <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
+        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
+          Patient User ID
+        </h2>
+        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
+          <code className="text-sm font-mono text-text-primary-light dark:text-text-primary-dark break-all">
+            {userId}
+          </code>
+        </div>
+        <p className="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
+          This ID is automatically generated and stored locally to track your sessions.
+        </p>
+      </div>
+
       {/* Recent activity */}
-      <div className="card">
+      <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
         <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
           Recent Activity
         </h2>
@@ -190,9 +207,17 @@ export const Dashboard: React.FC = () => {
 
       {/* System status */}
       <div className="card">
-        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
-          System Status
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+            System Status
+          </h2>
+          <Link
+            to="/health"
+            className="px-6 py-3 bg-black hover:bg-gray-800 text-white border-2 border-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 inline-block"
+          >
+            System Health
+          </Link>
+        </div>
         {isHealthLoading ? (
           <div className="flex items-center space-x-2">
             <div className="spinner w-4 h-4"></div>

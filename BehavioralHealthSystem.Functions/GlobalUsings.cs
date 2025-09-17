@@ -7,10 +7,7 @@ global using System.Collections.Generic;
 global using System.Linq;
 global using System.Net;
 global using System.Net.Http;
-global using System.Text;
 global using System.Text.Json;
-global using System.Text.Json.Serialization;
-global using System.Threading;
 global using System.Threading.Tasks;
 
 // Microsoft namespaces
@@ -25,9 +22,6 @@ global using Microsoft.Azure.Functions.Worker.Http;
 
 // Third-party namespaces
 global using FluentValidation;
-global using Polly;
-global using Polly.Extensions.Http;
-global using Polly.Timeout;
 
 // Project-specific namespaces
 global using BehavioralHealthSystem.Models;

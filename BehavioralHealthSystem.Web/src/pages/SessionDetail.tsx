@@ -36,6 +36,7 @@ const statusConfig = {
   succeeded: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
   success: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
   failed: { color: 'red', icon: XCircle, label: 'Failed', description: 'Analysis encountered an error' },
+  error: { color: 'red', icon: XCircle, label: 'Error', description: 'An error occurred during processing' },
 } as const;
 
 const SessionDetail: React.FC = () => {
@@ -131,7 +132,18 @@ const SessionDetail: React.FC = () => {
 
   // Status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.failed;
+    // For any unknown status that contains "error" or "fail", treat as error
+    const normalizedStatus = status.toLowerCase();
+    let config = statusConfig[status as keyof typeof statusConfig];
+    
+    if (!config) {
+      if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
+        config = statusConfig.error;
+      } else {
+        config = statusConfig.failed; // Default fallback
+      }
+    }
+    
     const Icon = config.icon;
     
     return (
@@ -535,11 +547,6 @@ const SessionDetail: React.FC = () => {
                            (session.prediction as any).predicted_score_depression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                            'N/A')}
                       </div>
-                      {session.analysisResults?.confidence && (
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                          Confidence: {(session.analysisResults.confidence * 100).toFixed(1)}%
-                        </div>
-                      )}
                     </div>
                   )}
                   
@@ -558,11 +565,6 @@ const SessionDetail: React.FC = () => {
                            (session.prediction as any).predicted_score_anxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
                            'N/A')}
                       </div>
-                      {session.analysisResults?.confidence && (
-                        <div className="text-xs text-purple-600 dark:text-purple-400 mt-1">
-                          Confidence: {(session.analysisResults.confidence * 100).toFixed(1)}%
-                        </div>
-                      )}
                     </div>
                   )}
                   

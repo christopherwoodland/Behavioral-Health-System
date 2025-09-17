@@ -1,48 +1,95 @@
-# Behavioral Health System - Kintsugi API Integration
+# Behavioral Health System - Complete Mental Health Platform
 
-A **production-ready** Azure Functions application that integrates with the Kintsugi Health API for behavioral health assessments, following Microsoft's best practices for enterprise-grade development.
+A **production-ready** full-stack behavioral health assessment platform featuring Azure Functions backend, React frontend, and AI-powered agent handoff system. Integrates with Kintsugi Health API for advanced mental health analysis, following Microsoft's best practices for enterprise-grade development.
 
 ## 🚀 Key Features
 
-### **Enterprise Architecture**
+### **🏗️ Enterprise Architecture**
 
+- ✅ **Full-Stack Solution** - React frontend with Azure Functions backend
+- ✅ **Real-Time Communication** - SignalR integration for bidirectional communication
+- ✅ **AI Agent Handoff System** - Multi-agent coordination for behavioral health assessments
 - ✅ **Direct HTTP Function Endpoints** - Simple, reliable HTTP functions for session management
 - ✅ **Dependency Injection & Configuration** - Proper service registration with typed configurations
 - ✅ **Interface-Based Design** - SOLID principles with testable architecture
 - ✅ **Global Usings** - Clean, maintainable code structure with centralized namespace management
 - ✅ **Clean Architecture** - Organized project structure with proper separation of concerns
 
-### **Resilience & Reliability**
+### **🛡️ Resilience & Reliability**
 
 - ✅ **Polly Retry Policies** - Exponential backoff and circuit breaker patterns
 - ✅ **Comprehensive Error Handling** - Proper HTTP status codes and error recovery
 - ✅ **FluentValidation** - Input validation with detailed error messages
 - ✅ **Health Checks** - Automated monitoring and diagnostics
+- ✅ **Session Management** - Persistent session data with proper deletion functionality
 
-### **Observability**
+### **🎙️ Advanced Speech Processing**
+
+- ✅ **Web Speech API Integration** - Browser-native speech recognition
+- ✅ **Voice Activity Detection** - Smart speech detection and processing
+- ✅ **Interruption Handling** - Responsive speech interaction controls
+- ✅ **Multiple Speech Engines** - Support for various speech recognition services
+- ✅ **Audio File Processing** - Multiple audio format support and processing
+
+### **📊 Observability**
 
 - ✅ **Application Insights Integration** - Comprehensive telemetry and monitoring
 - ✅ **Structured Logging** - Correlation IDs and performance tracking
 - ✅ **Unit Testing** - Comprehensive tests with excellent coverage
 - ✅ **CI/CD Pipeline** - GitHub Actions for automated deployment
+- ✅ **Real-Time Monitoring** - Live session tracking and analytics
 
 ## 📁 Project Structure
 
 ```text
 BehavioralHealthSystem/
-├── 📁 BehavioralHealthSystem.Functions/         # Azure Functions project
+├── 📁 BehavioralHealthSystem.Functions/         # Azure Functions backend
 │   ├── 📁 Functions/                            # Function endpoints
 │   │   ├── HealthCheckFunction.cs                # Health monitoring endpoint
-│   │   ├── KintsugiActivityFunctions.cs          # Deprecated: Activity functions (Durable Functions)
+│   │   ├── KintsugiActivityFunctions.cs          # Kintsugi API integration functions
 │   │   ├── RiskAssessmentFunctions.cs            # Risk assessment endpoints
 │   │   ├── SessionStorageFunctions.cs            # Session data management endpoints
 │   │   └── TestFunctions.cs                      # Testing and utility endpoints
 │   ├── 📁 Models/                               # Function-specific models
-│   │   └── WorkflowStages.cs                     # Workflow stage enumeration
 │   ├── GlobalUsings.cs                          # Global using directives for cleaner code
 │   ├── Program.cs                               # Function host configuration
 │   ├── host.json                                # Azure Functions configuration
 │   └── local.settings.json.template             # Local development settings template
+├── 📁 BehavioralHealthSystem.Web/              # React frontend application
+│   ├── 📁 src/                                  # React source code
+│   │   ├── 📁 components/                       # Reusable React components
+│   │   │   ├── AudioRecorder.tsx                # Audio recording functionality
+│   │   │   ├── SessionCard.tsx                  # Session display components
+│   │   │   └── ui/                              # UI component library
+│   │   ├── 📁 pages/                            # Application pages
+│   │   │   ├── AgentExperience.tsx              # AI agent interaction interface
+│   │   │   ├── Dashboard.tsx                    # Main dashboard
+│   │   │   ├── Sessions.tsx                     # Session management
+│   │   │   └── SessionDetail.tsx                # Detailed session view
+│   │   ├── 📁 services/                         # API and service integrations
+│   │   │   ├── apiService.ts                    # Backend API client
+│   │   │   └── speechService.ts                 # Speech recognition service
+│   │   ├── 📁 hooks/                            # Custom React hooks
+│   │   ├── 📁 contexts/                         # React context providers
+│   │   ├── 📁 types/                            # TypeScript type definitions
+│   │   └── 📁 utils/                            # Utility functions
+│   ├── package.json                             # Node.js dependencies
+│   ├── vite.config.ts                          # Vite build configuration
+│   ├── tailwind.config.js                      # Tailwind CSS configuration
+│   └── tsconfig.json                           # TypeScript configuration
+├── 📁 BehavioralHealthSystem.Agents/           # AI Agent system
+│   ├── 📁 Agents/                               # Individual agent implementations
+│   │   ├── CoordinatorAgent.cs                  # Main coordination agent
+│   │   ├── Phq2Agent.cs                         # PHQ-2 depression screening agent
+│   │   └── ComedianAgent.cs                     # Humor interaction agent
+│   ├── 📁 Chat/                                 # Group chat orchestration
+│   │   └── BehavioralHealthGroupChat.cs         # Multi-agent chat coordination
+│   ├── 📁 Handoff/                              # Agent handoff system
+│   │   ├── Interfaces/                          # Handoff interfaces
+│   │   ├── HandoffSession.cs                    # Session handoff management
+│   │   └── HandoffCoordinator.cs                # Handoff orchestration
+│   ├── 📁 Models/                               # Agent-specific models
+│   └── 📁 Services/                             # Agent services
 ├── 📁 BehavioralHealthSystem.Helpers/          # Shared library project
 │   ├── 📁 Configuration/                        # Typed configuration and retry policies
 │   │   ├── KintsugiApiOptions.cs
@@ -56,28 +103,23 @@ BehavioralHealthSystem/
 │   │   ├── ActualScore.cs
 │   │   ├── PredictError.cs
 │   │   ├── ApiErrorResponse.cs
-│   │   ├── UserMetadata.cs
-│   │   ├── KintsugiWorkflowInput.cs
-│   │   └── KintsugiWorkflowResult.cs
+│   │   └── UserMetadata.cs
 │   ├── 📁 Services/                             # Business logic and API clients
 │   │   ├── Interfaces/
 │   │   │   └── IKintsugiApiService.cs
 │   │   ├── KintsugiApiService.cs
 │   │   └── KintsugiApiHealthCheck.cs
 │   ├── 📁 Validators/                           # FluentValidation rules
-│   │   ├── InitiateRequestValidator.cs
-│   │   ├── KintsugiWorkflowInputValidator.cs
+│   │   └── InitiateRequestValidator.cs
 │   │   └── UserMetadataValidator.cs
 │   ├── 📁 Deploy/                               # Azure deployment resources
 │   │   ├── azuredeploy.json                     # ARM template
-│   │   ├── azuredeploy.parameters.json          # ARM parameters
-│   │   ├── deploy.ps1                           # Full deployment script
-│   │   └── quick-deploy.ps1                     # Quick deployment script
+│   │   └── azuredeploy.parameters.json          # ARM parameters
 │   └── GlobalUsings.cs                          # Global using directives
 ├── 📁 BehavioralHealthSystem.Tests/            # Unit test project
 │   ├── 📁 Functions/                            # Function tests
 │   │   ├── HealthCheckFunctionTests.cs
-│   │   ├── KintsugiActivityFunctionsTests.cs    # Deprecated function tests
+│   │   ├── KintsugiActivityFunctionsTests.cs    # Kintsugi API integration tests
 │   │   ├── RiskAssessmentFunctionsTests.cs      # Risk assessment tests
 │   │   ├── SessionStorageFunctionsTests.cs      # Session storage tests
 │   │   ├── TestFunctionsTests.cs
@@ -87,32 +129,46 @@ BehavioralHealthSystem/
 │   │   ├── ApiErrorResponseTests.cs
 │   │   ├── InitiateRequestTests.cs
 │   │   ├── InitiateResponseTests.cs
-│   │   ├── KintsugiWorkflowInputTests.cs
-│   │   ├── KintsugiWorkflowResultTests.cs
 │   │   ├── PredictErrorTests.cs
 │   │   ├── PredictionRequestTests.cs
 │   │   ├── PredictionResponseTests.cs
 │   │   ├── PredictionResultTests.cs
 │   │   └── UserMetadataTests.cs
 │   └── test-requests.http                       # HTTP test requests for local development
-├── 📄 deploy-solution.ps1                      # Solution-level deployment script
-├── 📄 quick-deploy-solution.ps1               # Quick solution deployment
-├── 📄 test-setup.ps1                          # Test environment setup
-├── 📄 test-setup-simple.ps1                   # Simplified test setup
+├── 📄 deploy-solution.ps1                      # Complete solution deployment script
+├── 📄 deploy-code-only.ps1                     # Code-only deployment script
+├── 📄 deploy-ui.ps1                             # UI deployment script
+├── 📄 local-run.ps1                             # Local development startup script
+└── 📄 BehavioralHealthSystem.sln                # Solution file
+```
 └── 📄 BehavioralHealthSystem.sln              # Solution file
 ```
 
 ## 📋 Prerequisites
 
+### **🛠️ Development Environment**
+
 - **📥 .NET 8.0 SDK** - [Download here](https://dotnet.microsoft.com/download/dotnet/8.0)
-- **🔧 Azure CLI** - [Installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
+- **🟢 Node.js 18+** - [Download here](https://nodejs.org/) (Required for React frontend)
+- **� npm/yarn** - Package manager for frontend dependencies
+- **�🔧 Azure CLI** - [Installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli)
 - **💻 PowerShell** (for deployment scripts) - Windows PowerShell 5.1+ or PowerShell Core 7+
 - **⚡ Azure Functions Core Tools v4** - [Installation guide](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
+
+### **🔑 API Credentials**
+
 - **🔑 Valid Kintsugi Health API credentials** - Contact Kintsugi Health for API access
+- **📊 Application Insights connection string** - For telemetry and monitoring (optional for local development)
+
+### **🌐 Browser Requirements**
+
+- **🎙️ Modern browser with Web Speech API support** - Chrome, Edge, Safari, Firefox
+- **🔊 Microphone access** - Required for speech input functionality
+- **📱 Responsive design support** - Works on desktop, tablet, and mobile devices
 
 ## 🖥️ Local Development
 
-### Quick Start
+### **🚀 Quick Start**
 
 1. **📦 Setup local environment:**
 
@@ -122,15 +178,25 @@ BehavioralHealthSystem/
    # Edit local.settings.json with your Kintsugi API key (Application Insights is optional)
    ```
 
-2. **🏃‍♂️ Run locally (Option 1 - Using convenience script):**
+1. **📦 Setup local environment:**
 
    ```bash
-   # From the solution root directory
-   .\local-run.ps1
-   # This script builds the Functions project and starts both the Azure Functions host and frontend dev server
+   cd BehavioralHealthSystem.Functions
+   copy local.settings.json.template local.settings.json
+   # Edit local.settings.json with your Kintsugi API key (Application Insights is optional)
    ```
 
-3. **🏃‍♂️ Run locally (Option 2 - Manual approach):**
+2. **🏃‍♂️ Run full-stack locally (Recommended - using convenience script):**
+
+   ```bash
+   # From the solution root directory - starts both backend and frontend
+   .\local-run.ps1
+   # This script builds the Functions project and starts both:
+   # - Azure Functions host (localhost:7071)
+   # - React development server (localhost:3001)
+   ```
+
+3. **🏃‍♂️ Run backend only (Manual approach):**
 
    ```bash
    cd ..
@@ -139,11 +205,85 @@ BehavioralHealthSystem/
    func start
    ```
 
-4. **🧪 Test endpoints:**
-   - Health Check: `http://localhost:7071/api/health`
-   - Use `BehavioralHealthSystem.Tests/test-requests.http` for comprehensive testing
+4. **🌐 Run frontend only:**
 
-### Local Settings Configuration
+   ```bash
+   cd BehavioralHealthSystem.Web
+   npm install
+   npm run dev
+   ```
+
+5. **🧪 Test endpoints:**
+   - Backend Health Check: `http://localhost:7071/api/health`
+   - Frontend Application: `http://localhost:3001`
+   - Use `BehavioralHealthSystem.Tests/test-requests.http` for API testing
+
+### **🎯 Development Workflow**
+
+The `local-run.ps1` script provides the optimal development experience:
+
+- ✅ **Automatic building** - Builds the Functions project with error checking
+- ✅ **Parallel startup** - Starts both backend and frontend simultaneously
+- ✅ **Process management** - Handles cleanup and error reporting
+- ✅ **Hot reloading** - Both backend and frontend support live reload during development
+
+### **🔧 Development Tools Setup**
+
+For the best development experience, install:
+
+- **🎯 VS Code** with Azure Functions extension
+- **🔍 REST Client** extension for testing HTTP requests
+- **📊 Azure Storage Explorer** for local storage debugging
+- **📈 Application Insights** extension for monitoring
+- **⚛️ React DevTools** browser extension
+- **🎨 Tailwind CSS IntelliSense** VS Code extension
+
+## 🏗️ Application Architecture
+
+The application implements a modern full-stack architecture with the following key components:
+
+### **🎭 AI Agent Experience**
+
+```typescript
+// Multi-agent behavioral health system with coordinated handoffs
+const agents = {
+  coordinator: "Main orchestration and crisis detection",
+  phq2: "PHQ-2 rapid depression screening",
+  phq9: "PHQ-9 comprehensive depression assessment", 
+  comedian: "Humor-based interaction and mood lifting"
+};
+```
+
+Features:
+
+- **🤖 Intelligent Agent Handoffs** - Seamless transitions between specialized agents
+- **🎙️ Advanced Speech Processing** - Web Speech API with voice activity detection
+- **🎭 Animated Bot Visualization** - Engaging visual feedback during interactions
+- **♿ Accessibility Features** - Full keyboard navigation and screen reader support
+
+### **📡 Real-Time Communication**
+
+```csharp
+// SignalR integration for bidirectional communication
+services.AddSignalR();
+services.AddSingleton<IHubContext<ChatHub>>();
+```
+
+Features:
+
+- **⚡ Live Session Updates** - Real-time session status and progress tracking
+- **🔄 Bidirectional Communication** - Frontend ↔ Backend real-time messaging
+- **📊 Live Analytics** - Real-time dashboard updates and monitoring
+- **🎯 Connection Management** - Robust connection handling and reconnection logic
+
+### **📋 Session Management**
+
+- **💾 Persistent Sessions** - Session data stored with proper deletion functionality
+- **🔄 Session Lifecycle** - Complete session tracking from creation to completion
+- **📊 Session Analytics** - Detailed session metrics and performance data
+- **🗑️ Proper Cleanup** - Backend deletion ensures data consistency
+
+## ⚙️ Local Settings Configuration
 
 Create a `local.settings.json` file from the template:
 
@@ -198,10 +338,10 @@ services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
 
 ### **3. Main Workflow Process**
 
-The `KintsugiWorkflow` function performs:
+The system provides separate endpoints for different workflow steps:
 
-1. **Session Initiation** - Creates a new session with user metadata
-2. **Prediction Submission** - Uploads audio data for analysis using either:
+1. **Session Initiation** - Creates a new session with user metadata (`/api/sessions/initiate`)
+2. **Prediction Submission** - Uploads audio data for analysis (`/api/predictions/submit`) using either:
    - **URL-based approach** - Downloads audio from Azure Blob Storage URLs
    - **Byte array approach** - Direct upload of base64-encoded audio data  
 3. **Immediate Response** - Returns session ID for client tracking
@@ -232,7 +372,7 @@ _logger.LogInformation("Session initiated successfully with ID: {SessionId} for 
 // Program.cs in Functions project - Full DI configuration
 services.Configure<KintsugiApiOptions>(configuration.GetSection("Values"));
 services.AddHttpClient<IKintsugiApiService, KintsugiApiService>();
-services.AddValidatorsFromAssemblyContaining<KintsugiWorkflowInputValidator>();
+services.AddValidatorsFromAssemblyContaining<InitiateRequestValidator>();
 services.AddHealthChecks().AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
 ```
 
@@ -271,20 +411,40 @@ Add these settings to your Azure Function App configuration:
 
 ## 📡 API Endpoints
 
-### **Main Workflow**
+### **🎭 Agent Experience**
 
-- **POST** `/api/KintsugiWorkflow` - Submit session and prediction data
+- **POST** `/api/agent/chat` - Interactive chat with AI agents
+- **GET** `/api/agent/info` - Get available agents and their capabilities
+- **POST** `/api/agent/handoff` - Trigger agent handoff during conversation
+
+### **🔄 Main Workflow**
+
+- **POST** `/api/sessions/initiate` - Create new session with user metadata and audio data
 - **POST** `/api/predictions/submit` - Submit prediction with session ID and audio URL
 
-### **Health & Monitoring**
+### **📊 Session Management**
+
+- **GET** `/api/sessions` - Get all sessions for current user
+- **GET** `/api/sessions/{sessionId}` - Get specific session details
+- **DELETE** `/api/sessions/{sessionId}` - Delete session (persists to backend)
+- **POST** `/api/sessions/bulk-delete` - Delete multiple sessions
+
+### **🏥 Health & Monitoring**
 
 - **GET** `/api/health` - Health check endpoint with detailed status
 - **POST** `/api/TestKintsugiConnection` - API connectivity test
 
-### **Prediction Results**
+### **📈 Prediction Results**
 
 - **GET** `/api/predictions/{userId}` - Get all predictions for a user
 - **GET** `/api/predictions/sessions/{sessionId}` - Get specific prediction by session ID
+
+### **📡 SignalR Hub**
+
+- **SignalR Hub** `/chatHub` - Real-time bidirectional communication
+  - `JoinGroup(userId)` - Join user-specific communication group
+  - `SendMessage(userId, message)` - Send real-time message to user
+  - `SessionUpdate(sessionId, status)` - Broadcast session status updates
 
 ### **Health Check Response**
 
@@ -304,49 +464,71 @@ Add these settings to your Azure Function App configuration:
 
 ## 🚢 Deployment
 
-### Option 1: Lightning Fast Deployment (Recommended for Getting Started)
+### **🚀 Quick Deploy (Recommended for Getting Started)**
 
-Perfect for demos, testing, and rapid prototyping:
+Perfect for demos, testing, and rapid prototyping with minimal configuration:
 
 ```powershell
-# From solution root directory
-.\quick-deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key"
+# From solution root directory - Auto-generates resource group name
+.\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
 ```
 
-This will:
+This creates:
 
-- ✅ Build your complete solution
-- ✅ Create resource group: `rg-your-unique-app-name`
-- ✅ Deploy to East US region
-- ✅ Configure all Azure resources with secure defaults
-- ✅ Set up monitoring and logging
+- ✅ Resource group: `rg-your-unique-app-name` (auto-generated)
+- ✅ Deploys to East US region (optimal for most scenarios)
+- ✅ Configures all Azure resources with secure defaults
+- ✅ Sets up monitoring and logging
 
-### Option 2: Full Solution Deployment (Production)
+### **🏭 Production Deploy (Custom Configuration)**
 
-For production deployments with custom configurations:
+For production deployments with custom resource group and region:
 
 ```powershell
-# From solution root directory
+# From solution root directory - Full control over resources
 .\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
 ```
 
-### Option 3: Infrastructure-Only Deployment
+### **⚡ Code-Only Deploy (Rapid Updates)**
 
-Deploy just the Azure infrastructure without building the solution:
-
-```powershell
-# From BehavioralHealthSystem.Helpers/Deploy directory
-.\deploy.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
-```
-
-### Option 4: Quick Infrastructure Deployment
+For updating code on existing Azure infrastructure:
 
 ```powershell
-# From BehavioralHealthSystem.Helpers/Deploy directory
-.\quick-deploy.ps1 -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key"
+# Deploy only code changes to existing Function App
+.\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
 ```
 
-### Option 5: Automated Deployment with GitHub Actions
+### **🌐 UI-Only Deploy**
+
+Deploy just the React web application:
+
+```powershell
+# Deploy to Azure App Service
+.\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "your-web-app" -ResourceGroupName "your-rg"
+
+# Deploy to Azure Storage static website
+.\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
+
+# Deploy to Azure Static Web Apps
+.\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
+```
+
+### **📋 Deployment Script Overview**
+
+| Script | Purpose | Use Case |
+|--------|---------|----------|
+| `deploy-solution.ps1` | **Complete solution deployment** | New projects, full infrastructure setup |
+| `deploy-code-only.ps1` | **Code updates only** | Rapid development iterations |
+| `deploy-ui.ps1` | **UI deployment only** | Frontend updates, multi-target deployment |
+
+### **🎯 Which Script Should I Use?**
+
+- **🆕 First-time deployment?** → Use `deploy-solution.ps1` with `-QuickDeploy`
+- **🔄 Code changes only?** → Use `deploy-code-only.ps1`
+- **🎨 UI updates only?** → Use `deploy-ui.ps1`
+- **🏭 Production setup?** → Use `deploy-solution.ps1` with custom parameters
+
+### **🤖 Automated Deployment with GitHub Actions**
 
 1. **Setup GitHub Repository Secrets:**
 
@@ -358,6 +540,36 @@ Deploy just the Azure infrastructure without building the solution:
 
    ```text
    AZURE_FUNCTIONAPP_NAME
+   ```
+
+3. **Push to main branch** - The CI/CD pipeline will automatically:
+   - Build and test the application
+   - Deploy to Azure Functions
+   - Run health checks
+
+### **🔧 Manual Deployment with Azure CLI**
+
+1. **Create Resource Group:**
+
+   ```bash
+   az group create --name myResourceGroup --location "East US"
+   ```
+
+2. **Deploy ARM Template:**
+
+   ```bash
+   az deployment group create \
+     --resource-group myResourceGroup \
+     --template-file BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json \
+     --parameters BehavioralHealthSystem.Helpers/Deploy/azuredeploy.parameters.json \
+     --parameters functionAppName=myFunctionApp
+   ```
+
+3. **Deploy Function Code:**
+
+   ```bash
+   func azure functionapp publish myFunctionApp
+   ```
    ```
 
 3. **Push to main branch** - The CI/CD pipeline will automatically:
@@ -476,7 +688,7 @@ The API supports two approaches for audio file submission:
 
 #### Option 1: URL-Based Audio Submission (Recommended)
 
-**POST** `/api/KintsugiWorkflow`
+**POST** `/api/sessions/initiate`
 
 ```json
 {
@@ -497,7 +709,7 @@ The API supports two approaches for audio file submission:
 
 #### Option 2: Base64 Audio Data Submission (Legacy)
 
-**POST** `/api/KintsugiWorkflow`
+**POST** `/api/predictions/submit`
 
 ```json
 {
@@ -686,6 +898,52 @@ with open('path/to/your/audio.wav', 'rb') as audio_file:
     print(base64_audio)
 ```
 
+## 🎨 Frontend Features
+
+### **📱 Modern React Application**
+
+The React frontend provides a comprehensive user interface built with modern web technologies:
+
+#### **🎭 Agent Experience Page**
+
+- **🤖 Interactive AI Chat** - Real-time conversation with specialized behavioral health agents
+- **🎙️ Advanced Speech Input** - Web Speech API integration with voice activity detection
+- **✋ Interruption Handling** - Users can interrupt agent speech naturally
+- **🎚️ Speech Controls** - Adjustable speech rate, pitch, and voice selection
+- **🎭 Animated Bot Avatar** - Visual feedback and engagement during conversations
+
+#### **📊 Session Dashboard**
+
+- **📋 Session Overview** - Comprehensive view of all behavioral health assessment sessions
+- **🔍 Session Details** - Detailed view of individual session results
+- **🗑️ Session Deletion** - Proper session cleanup with backend persistence
+- **📈 Progress Tracking** - Visual indicators of session completion status
+
+#### **🎯 User Experience**
+
+- **🌓 Dark/Light Mode** - Adaptive theming for user preference
+- **📱 Responsive Design** - Mobile-first design that works on all devices
+- **♿ Accessibility** - WCAG compliant with keyboard navigation and screen readers
+- **⚡ Performance** - Optimized loading with lazy loading and code splitting
+
+#### **🎨 Design System**
+
+- **🎨 Tailwind CSS** - Utility-first CSS framework for consistent styling
+- **🧩 Component Library** - Reusable UI components with shadcn/ui
+- **🎭 Animations** - Smooth transitions and micro-interactions
+- **📐 Typography** - Clear, readable typography hierarchy
+
+### **🔧 Technical Stack**
+
+- **⚛️ React 18** - Latest React with concurrent features
+- **📘 TypeScript** - Full type safety throughout the application
+- **⚡ Vite** - Fast build tool with hot module replacement
+- **🎨 Tailwind CSS** - Utility-first CSS framework
+- **🧩 shadcn/ui** - High-quality component library
+- **📡 Axios** - HTTP client for API communication
+- **🔄 React Query** - Data fetching and caching (if implemented)
+- **📊 Chart.js** - Data visualization for session analytics
+
 ## 🧪 Testing
 
 ### **Comprehensive Unit Testing**
@@ -734,7 +992,7 @@ dotnet watch test
 3. **🚀 Start Workflow:**
 
    ```bash
-   curl -X POST http://localhost:7071/api/KintsugiWorkflow \
+   curl -X POST http://localhost:7071/api/sessions/initiate \
      -H "Content-Type: application/json" \
      -d '{
        "userId": "test-user-123",
@@ -831,6 +1089,8 @@ Function App: cwbhieastus001 - SUCCESS
 UI App Service: cwuibhieastus001 - SUCCESS
 Total deployment time: 3m 45s
 ```
+
+**Note:** The above example references legacy scripts that have been consolidated. Use the deployment scripts documented in the main deployment section above.
 
 ### Individual Component Deployment
 
@@ -1038,6 +1298,42 @@ Set up Azure Monitor alerts for:
 - 🛠️ [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
 - 🎯 [VS Code Azure Functions Extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
 - 📱 [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/)
+
+## 🆕 Recent Updates & Features
+
+### **🎭 AI Agent Experience (Latest)**
+
+- ✅ **Multi-Agent System** - Coordinated AI agents for behavioral health assessments
+- ✅ **Intelligent Handoffs** - Seamless transitions between specialized agents
+- ✅ **Advanced Speech Processing** - Web Speech API with voice activity detection
+- ✅ **Interactive Chat Interface** - Real-time conversation with animated bot visualization
+
+### **📡 Real-Time Features**
+
+- ✅ **SignalR Integration** - Bidirectional real-time communication
+- ✅ **Live Session Updates** - Real-time session status and progress tracking
+- ✅ **Connection Management** - Robust connection handling and reconnection logic
+
+### **🎨 Enhanced Frontend**
+
+- ✅ **React 18 Migration** - Latest React with concurrent features and TypeScript
+- ✅ **Modern UI Components** - shadcn/ui component library with Tailwind CSS
+- ✅ **Responsive Design** - Mobile-first design that works on all devices
+- ✅ **Accessibility Improvements** - WCAG compliant with keyboard navigation
+
+### **🛠️ Developer Experience**
+
+- ✅ **Consolidated Deployment Scripts** - Streamlined deployment with single `deploy-solution.ps1`
+- ✅ **Local Development Script** - `local-run.ps1` for one-command full-stack startup
+- ✅ **Enhanced Documentation** - Comprehensive README with all latest features
+- ✅ **Session Management** - Proper session deletion with backend persistence
+
+### **🔧 Backend Improvements**
+
+- ✅ **Session Storage Functions** - Enhanced session management and deletion
+- ✅ **Health Check Enhancements** - Comprehensive health monitoring
+- ✅ **Error Handling** - Improved error responses and logging
+- ✅ **API Endpoints** - New endpoints for agent chat and session management
 
 ## 🤝 Contributing
 

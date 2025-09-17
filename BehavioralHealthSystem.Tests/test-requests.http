@@ -23,8 +23,8 @@ Content-Type: application/json
 
 ###
 
-### 3. Start Behavioral Health Workflow - Main workflow entry point (URL-based)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+### 3. Initiate Session - Create a new session for user
+POST {{baseUrl}}/api/sessions/initiate
 Content-Type: application/json
 
 {
@@ -44,8 +44,8 @@ Content-Type: application/json
 
 ###
 
-### 3.1. Start Workflow - Alternative with Base64 Audio Data (Legacy)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+### 3.1. Initiate Session - Alternative with SAS URL
+POST {{baseUrl}}/api/sessions/initiate
 Content-Type: application/json
 
 {
@@ -65,9 +65,8 @@ Content-Type: application/json
 
 ###
 
-### 4. Get Workflow Status - Check orchestration progress
-### Replace {instanceId} with the ID returned from step 3
-GET {{baseUrl}}/api/orchestrators/your-instance-id-here
+### 4. Submit Prediction - Submit prediction data
+POST {{baseUrl}}/api/predictions/submit
 Accept: application/json
 
 ###
@@ -86,8 +85,8 @@ Accept: application/json
 
 ### Advanced Test Cases
 
-### 6. Start Workflow with Minimal Data (URL-based)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+### 6. Initiate Session with Minimal Data
+POST {{baseUrl}}/api/sessions/initiate
 Content-Type: application/json
 
 {
@@ -102,8 +101,8 @@ Content-Type: application/json
 
 ###
 
-### 6.1. Start Workflow with Minimal Data (Base64 - Legacy)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+### 6.1. Submit Prediction with Minimal Data
+POST {{baseUrl}}/api/predictions/submit
 Content-Type: application/json
 
 {
@@ -118,7 +117,7 @@ Content-Type: application/json
 ###
 
 ### 7. Test Invalid Request (should return validation errors)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+POST {{baseUrl}}/api/sessions/initiate
 Content-Type: application/json
 
 {
@@ -129,8 +128,8 @@ Content-Type: application/json
 
 ###
 
-### 8. Test with Different Demographics (URL-based)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+### 8. Initiate Session with Different Demographics
+POST {{baseUrl}}/api/sessions/initiate
 Content-Type: application/json
 
 {
@@ -150,8 +149,8 @@ Content-Type: application/json
 
 ###
 
-### 8.1. Test with Different Demographics (Base64 - Legacy)
-POST {{baseUrl}}/api/KintsugiWorkflow_HttpStart
+### 8.1. Submit Prediction with Different Demographics
+POST {{baseUrl}}/api/predictions/submit
 Content-Type: application/json
 
 {
@@ -170,23 +169,22 @@ Content-Type: application/json
 
 ###
 
-### Workflow Testing Sequence
+### API Testing Sequence
 ### 1. Run step 1 (Health Check) to verify functions are running
 ### 2. Run step 2 (Test Connection) to verify API credentials
-### 3. Run step 3 (Start Workflow - URL-based) for modern approach OR
-###    Run step 3.1 (Start Workflow - Base64) for legacy approach
-### 4. Replace {instanceId} in step 4 with the actual ID and run to check status
-### 5. Wait for workflow completion, then run step 5 to get results by userId OR
+### 3. Run step 3 (Initiate Session) to create a new session
+### 4. Run step 4 (Submit Prediction) to submit prediction data  
+### 5. Run step 5 to get results by userId OR
 ###    Run step 5.1 to get results by sessionId
 ###
 ### Audio File Submission Options:
 ### - URL-based (Recommended): Provide audioFileUrl and audioFileName
-### - Base64 (Legacy): Provide audioData as base64-encoded content
+### - Base64: Provide audioData as base64-encoded content
 ### 
 ### Expected Response Flow:
 ### - Health Check: {"status": "Healthy", ...}
 ### - Test Connection: {"message": "Connection successful", ...}
-### - Start Workflow: {"instanceId": "abc123", "userId": "test-user-123"}
-### - Workflow Status: {"runtimeStatus": "Running|Completed", ...}
+### - Initiate Session: {"sessionId": "abc123", "userId": "test-user-123"}
+### - Submit Prediction: {"success": true, "sessionId": "..."}
 ### - User Predictions (by userId): [{"sessionId": "...", "results": [...]}]
 ### - Prediction (by sessionId): {"sessionId": "...", "status": "...", "predictedScore": "...", ...}

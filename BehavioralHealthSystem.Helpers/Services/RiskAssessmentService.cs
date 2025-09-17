@@ -1,12 +1,5 @@
-using System.Text;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Azure;
 using Azure.AI.OpenAI;
-using BehavioralHealthSystem.Configuration;
-using BehavioralHealthSystem.Models;
-using BehavioralHealthSystem.Services.Interfaces;
 
 namespace BehavioralHealthSystem.Services;
 

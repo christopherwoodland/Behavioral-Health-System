@@ -6,6 +6,7 @@ import { MsalProvider } from '@azure/msal-react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/AuthGuards';
+import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect';
 import { ApiAuthInitializer } from '@/components/auth/ApiAuthInitializer';
 import { Layout } from '@/components/layout/Layout';
 import { msalConfig } from '@/config/authConfig';
@@ -56,6 +57,7 @@ function App() {
                       path="/" 
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                          <RoleBasedRedirect />
                           <Dashboard />
                         </ProtectedRoute>
                       } 

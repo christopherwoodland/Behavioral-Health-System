@@ -33,6 +33,7 @@ const statusConfig = {
   succeeded: { color: 'green', icon: CheckCircle, label: 'Completed' },
   success: { color: 'green', icon: CheckCircle, label: 'Completed' },
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
+  error: { color: 'red', icon: XCircle, label: 'Error' },
 } as const;
 
 // Utility function to format score categories
@@ -235,17 +236,75 @@ const Sessions: React.FC = () => {
     }
   }, [selectedSessions.size, filteredAndSortedSessions, announceToScreenReader]);
 
+  // Handle individual session deletion
+  const handleDeleteSession = useCallback(async (sessionId: string) => {
+    const confirmed = window.confirm('Are you sure you want to delete this session? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await apiService.deleteSessionData(sessionId);
+      
+      // Remove from local state after successful API call
+      setSessions(prev => prev.filter(session => session.sessionId !== sessionId));
+      
+      // Remove from selection if it was selected
+      setSelectedSessions(prev => {
+        const newSelection = new Set(prev);
+        newSelection.delete(sessionId);
+        return newSelection;
+      });
+      
+      announceToScreenReader('Session deleted successfully');
+    } catch (err) {
+      const appError = err as AppError;
+      announceToScreenReader(`Error deleting session: ${appError.message}`);
+      // Optionally show a toast or alert for the error
+      alert(`Failed to delete session: ${appError.message}`);
+    }
+  }, [announceToScreenReader]);
+
   // Handle bulk actions
   const handleBulkDelete = useCallback(async () => {
     if (selectedSessions.size === 0) return;
     
-    const confirmed = window.confirm(`Are you sure you want to delete ${selectedSessions.size} session(s)?`);
+    const confirmed = window.confirm(`Are you sure you want to delete ${selectedSessions.size} session(s)? This action cannot be undone.`);
     if (!confirmed) return;
 
-    // For now, just remove from local state (would call API in real implementation)
-    setSessions(prev => prev.filter(session => !selectedSessions.has(session.sessionId)));
+    const sessionIds = Array.from(selectedSessions);
+    let successCount = 0;
+    let failedSessions: string[] = [];
+
+    // Process deletions sequentially to avoid overwhelming the server
+    for (const sessionId of sessionIds) {
+      try {
+        await apiService.deleteSessionData(sessionId);
+        successCount++;
+      } catch (err) {
+        const appError = err as AppError;
+        failedSessions.push(sessionId);
+        console.error(`Failed to delete session ${sessionId}:`, appError.message);
+      }
+    }
+
+    // Remove successfully deleted sessions from local state
+    if (successCount > 0) {
+      setSessions(prev => prev.filter(session => {
+        const wasDeleted = selectedSessions.has(session.sessionId) && !failedSessions.includes(session.sessionId);
+        return !wasDeleted;
+      }));
+    }
+
+    // Clear selection
     setSelectedSessions(new Set());
-    announceToScreenReader(`${selectedSessions.size} sessions deleted`);
+
+    // Announce results
+    if (failedSessions.length === 0) {
+      announceToScreenReader(`${successCount} sessions deleted successfully`);
+    } else {
+      const message = `${successCount} sessions deleted successfully, ${failedSessions.length} failed`;
+      announceToScreenReader(message);
+      alert(`${message}. Failed sessions: ${failedSessions.join(', ')}`);
+    }
   }, [selectedSessions, announceToScreenReader]);
 
   // Format file size
@@ -259,7 +318,18 @@ const Sessions: React.FC = () => {
 
   // Get status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.failed;
+    // For any unknown status that contains "error" or "fail", treat as error
+    const normalizedStatus = status.toLowerCase();
+    let config = statusConfig[status as keyof typeof statusConfig];
+    
+    if (!config) {
+      if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
+        config = statusConfig.error;
+      } else {
+        config = statusConfig.failed; // Default fallback
+      }
+    }
+    
     const Icon = config.icon;
     
     return (
@@ -378,7 +448,7 @@ const Sessions: React.FC = () => {
           <button type="button"
             onClick={() => setShowFilters(!showFilters)}
             className="btn btn--secondary flex items-center"
-            aria-expanded={showFilters ? 'true' : 'false'}
+            aria-expanded={showFilters ? "true" : "false"}
             aria-controls="filter-panel"
             aria-label={`${showFilters ? 'Hide' : 'Show'} filter options`}
           >
@@ -608,6 +678,13 @@ const Sessions: React.FC = () => {
                             <Download className="w-4 h-4" aria-hidden="true" />
                           </button>
                         )}
+                        <button type="button"
+                          onClick={() => handleDeleteSession(session.sessionId)}
+                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                          aria-label={`Delete session ${session.sessionId}`}
+                        >
+                          <Trash2 className="w-4 h-4" aria-hidden="true" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -678,6 +755,14 @@ const Sessions: React.FC = () => {
                       Download
                     </button>
                   )}
+                  <button type="button"
+                    onClick={() => handleDeleteSession(session.sessionId)}
+                    className="btn btn--danger text-xs"
+                    aria-label={`Delete session ${session.sessionId}`}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" aria-hidden="true" />
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}

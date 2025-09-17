@@ -20,21 +20,24 @@
 #
 # PARAMETERS:
 # ===========
-# - ResourceGroupName: Target Azure Resource Group name
+# - ResourceGroupName: Target Azure Resource Group name (default: auto-generated as "rg-{FunctionAppName}")
 # - FunctionAppName: Globally unique Function App name
 # - KintsugiApiKey: Kintsugi Health API key for service integration
 # - Location: Azure region (default: East US)
 # - SubscriptionId: Azure subscription ID (optional)
+# - QuickDeploy: Use auto-generated resource group name for rapid deployment
 #
 # EXAMPLE USAGE:
 # ==============
-# From solution root:
+# QUICK DEPLOY (auto-generated resource group):
+# .\deploy-solution.ps1 -FunctionAppName "myapp-func" -KintsugiApiKey "your-key" -QuickDeploy
+#
+# CUSTOM DEPLOY (specify resource group):
 # .\deploy-solution.ps1 -ResourceGroupName "myapp-rg" -FunctionAppName "myapp-func" -KintsugiApiKey "your-key"
 
 param(
-    [Parameter(Mandatory=$true, HelpMessage="Enter the Azure Resource Group name")]
-    [ValidateNotNullOrEmpty()]
-    [string]$ResourceGroupName,
+    [Parameter(Mandatory=$false, HelpMessage="Enter the Azure Resource Group name (auto-generated if using -QuickDeploy)")]
+    [string]$ResourceGroupName = "",
     
     [Parameter(Mandatory=$true, HelpMessage="Enter a globally unique Function App name")]
     [ValidatePattern("^[a-zA-Z0-9\-]{3,60}$")]
@@ -48,12 +51,21 @@ param(
     [string]$Location = "East US",
     
     [Parameter(Mandatory=$false)]
-    [string]$SubscriptionId = $null
+    [string]$SubscriptionId = $null,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Enable quick deploy with auto-generated resource group")]
+    [switch]$QuickDeploy
 )
 
 # Set error handling
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+
+# Handle QuickDeploy option - auto-generate resource group name
+if ($QuickDeploy -or [string]::IsNullOrEmpty($ResourceGroupName)) {
+    $ResourceGroupName = "rg-$FunctionAppName"
+    Write-Host "🚀 QUICK DEPLOY MODE: Auto-generated resource group name: $ResourceGroupName" -ForegroundColor Magenta
+}
 
 Write-Host "================================================================================" -ForegroundColor Blue
 Write-Host "                         SOLUTION DEPLOYMENT                                   " -ForegroundColor Blue

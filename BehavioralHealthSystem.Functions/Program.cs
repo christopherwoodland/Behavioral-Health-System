@@ -85,13 +85,6 @@ var host = new HostBuilder()
                 options.AutoProvideConsent);
         });
 
-        services.Configure<WorkflowOptions>(options =>
-        {
-            var config = context.Configuration;
-            options.MaxRetries = config.GetValue<int>("WORKFLOW_MAX_RETRIES", 100);
-            options.RetryDelaySeconds = config.GetValue<int>("WORKFLOW_RETRY_DELAY_SECONDS", 30);
-        });
-
         // Azure OpenAI Configuration
         services.Configure<AzureOpenAIOptions>(options =>
         {
@@ -171,8 +164,11 @@ var host = new HostBuilder()
         });
         services.AddScoped<ISessionStorageService, SessionStorageService>();
         
+        // Health Check Service
+        services.AddScoped<IKintsugiApiHealthCheck, KintsugiApiHealthCheck>();
+        
         // Validators
-        services.AddValidatorsFromAssemblyContaining<KintsugiWorkflowInputValidator>();
+        services.AddValidatorsFromAssemblyContaining<UserMetadataValidator>();
         
         // Health checks
         services.AddHealthChecks()

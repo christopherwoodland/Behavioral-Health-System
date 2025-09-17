@@ -60,7 +60,8 @@ export class AzureBlobService {
       });
 
       const containerClient = this.getContainerClient();
-      const blobName = fileName || this.generateBlobName(file.name, userId);
+      // Always use generateBlobName when userId is provided for proper folder structure
+      const blobName = userId ? this.generateBlobName(fileName || file.name, userId) : (fileName || this.generateBlobName(file.name));
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       // Upload with progress tracking

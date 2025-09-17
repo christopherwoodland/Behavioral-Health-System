@@ -11,7 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, isAuthenticated, isAdmin, canAccessControlPanel } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
   const location = useLocation();
   const { handleEnterSpace } = useKeyboardNavigation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,20 +20,22 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   // Filter navigation items based on user permissions
   const getNavigationItems = () => {
     const baseItems = [
-      { path: '/', label: 'Dashboard', icon: '🏠', roles: [APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL] },
+      { path: '/', label: 'Dashboard', icon: '🏠', roles: [APP_ROLES.ADMIN] },
       { path: '/upload', label: 'Upload & Analyze', icon: '📤', roles: [APP_ROLES.ADMIN] },
       { path: '/sessions', label: 'Sessions', icon: '📊', roles: [APP_ROLES.ADMIN] },
       { path: '/predictions', label: 'My Predictions', icon: '📈', roles: [APP_ROLES.ADMIN] },
+      { path: '/summary', label: 'Summary', icon: '📋', roles: [APP_ROLES.ADMIN] }, // Only Admins can see navigation
+      { path: '/agent-experience', label: 'Agent Experience', icon: '🤖', roles: [APP_ROLES.ADMIN] }, // Only Admins can see navigation
     ];
 
     if (!isAuthenticated) {
       return [];
     }
 
-    return baseItems.filter(item => {
+    // Only show navigation items to Admin users, ControlPanel users get no navigation buttons
+    return baseItems.filter(() => {
       if (isAdmin()) return true; // Admins can access everything
-      if (canAccessControlPanel() && item.roles.includes(APP_ROLES.CONTROL_PANEL)) return true; // Control panel users can access specific pages
-      return false;
+      return false; // ControlPanel users see no navigation buttons
     });
   };
 

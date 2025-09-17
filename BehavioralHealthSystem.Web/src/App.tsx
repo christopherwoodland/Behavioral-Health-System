@@ -95,6 +95,14 @@ function App() {
                     } 
                   />
                   <Route 
+                    path="/summary" 
+                    element={
+                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                        <ControlPanel />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
                     path="/health" 
                     element={
                       <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
@@ -116,30 +124,6 @@ function App() {
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </MsalProvider>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <Router>
-          <Layout>
-            <Routes>
-              {/* Main routes */}
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/upload" element={<UploadAnalyze />} />
-              <Route path="/sessions" element={<Sessions />} />
-              <Route path="/sessions/:sessionId" element={<SessionDetail />} />
-              <Route path="/predictions" element={<Predictions />} />
-              <Route path="/control-panel" element={<ControlPanel />} />
-              <Route path="/health" element={<SystemHealth />} />
-              
-              {/* 404 page */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
-        </Router>
-      </ThemeProvider>
-      
-      {/* React Query DevTools (only in development) */}
-      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-    </QueryClientProvider>
   );
 }
 

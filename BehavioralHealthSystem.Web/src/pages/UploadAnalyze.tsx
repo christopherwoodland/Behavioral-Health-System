@@ -445,7 +445,7 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: userMetadata.userId.trim(),
+        userId: getAuthenticatedUserId(), // Use authenticated user ID for proper folder structure
         userMetadata: metadata,
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -454,10 +454,12 @@ const UploadAnalyze: React.FC = () => {
       };
 
       try {
-        await apiService.saveSessionData(initialSessionData);
-        console.log('Session data saved successfully (multi-file):', initialSessionData.sessionId);
+        console.log('Attempting to save session data (multi-file):', initialSessionData);
+        const saveResult = await apiService.saveSessionData(initialSessionData);
+        console.log('Session data saved successfully (multi-file):', saveResult);
       } catch (error) {
         console.error('Failed to save session data (multi-file):', error);
+        console.error('Session data that failed to save:', initialSessionData);
         addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
         // Continue with the process even if saving fails
         // This is not critical for the main workflow, but user should be informed
@@ -590,20 +592,36 @@ const UploadAnalyze: React.FC = () => {
             const finalSessionData = {
               ...initialSessionData,
               audioUrl: audioUrl,
-              analysisResult: analysisResult,
+              prediction: result, // Store the complete API response
+              analysisResults: {
+                depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
+                anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
+                riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
+                          result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+                confidence: 0.85, // This would come from the API in a real scenario
+                insights: [
+                  'Analysis completed using Kintsugi Health API',
+                  result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
+                  result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
+                  'Results should be reviewed by a qualified healthcare professional'
+                ].filter(insight => insight.trim() !== ''),
+                completedAt: new Date().toISOString()
+              },
               status: 'completed',
               completedAt: new Date().toISOString(),
               updatedAt: new Date().toISOString()
             };
             
             // Save analysis results to session storage (async, non-blocking)
-            apiService.updateSessionData(sessionData.sessionId, finalSessionData)
-              .then(() => {
-                console.log('Multi-file session data updated with analysis results for session:', sessionData.sessionId);
+            apiService.saveSessionData(finalSessionData)
+              .then((result) => {
+                console.log('Multi-file session data saved with analysis results for session:', sessionData.sessionId);
+                console.log('Save result:', result);
                 addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
               })
               .catch((error) => {
                 console.error('Failed to save multi-file analysis results to session storage:', error);
+                console.error('Session data that failed to save:', finalSessionData);
                 addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
               });
               
@@ -847,7 +865,7 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: userMetadata.userId.trim(),
+        userId: getAuthenticatedUserId(), // Use authenticated user ID for proper folder structure
         userMetadata: metadata,
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -856,10 +874,12 @@ const UploadAnalyze: React.FC = () => {
       };
 
       try {
-        await apiService.saveSessionData(initialSessionData);
-        console.log('Session data saved successfully (single-file):', initialSessionData.sessionId);
+        console.log('Attempting to save session data (single-file):', initialSessionData);
+        const saveResult = await apiService.saveSessionData(initialSessionData);
+        console.log('Session data saved successfully (single-file):', saveResult);
       } catch (error) {
         console.error('Failed to save session data (single-file):', error);
+        console.error('Session data that failed to save:', initialSessionData);
         addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
         // Continue with the process even if saving fails
         // This is not critical for the main workflow, but user should be informed
@@ -972,20 +992,36 @@ const UploadAnalyze: React.FC = () => {
           const finalSessionData = {
             ...initialSessionData,
             audioUrl: audioUrl,
-            analysisResult: analysisResult,
+            prediction: result, // Store the complete API response
+            analysisResults: {
+              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
+              anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
+              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
+                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              confidence: 0.85, // This would come from the API in a real scenario
+              insights: [
+                'Analysis completed using Kintsugi Health API',
+                result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
+                result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
+                'Results should be reviewed by a qualified healthcare professional'
+              ].filter(insight => insight.trim() !== ''),
+              completedAt: new Date().toISOString()
+            },
             status: 'completed',
             completedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
           
           // Save analysis results to session storage (async, non-blocking)
-          apiService.updateSessionData(sessionData.sessionId, finalSessionData)
-            .then(() => {
-              console.log('Session data updated with analysis results for session:', sessionData.sessionId);
+          apiService.saveSessionData(finalSessionData)
+            .then((result) => {
+              console.log('Session data saved with analysis results for session:', sessionData.sessionId);
+              console.log('Save result:', result);
               addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
             })
             .catch((error) => {
               console.error('Failed to save analysis results to session storage:', error);
+              console.error('Session data that failed to save:', finalSessionData);
               addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
             });
             

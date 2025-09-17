@@ -214,6 +214,44 @@
   .spinner--large {
     @apply w-8 h-8;
   }
+
+  /* Voice Activity Visualizer Component - BEM notation */
+  .voice-bar {
+    height: calc(attr(data-height) * 1px);
+    animation-delay: calc(attr(data-delay) * 1ms);
+  }
+  
+  .voice-bar[data-height="4"] {
+    height: 4px;
+  }
+  
+  .voice-bar[data-height="8"] {
+    height: 8px;
+  }
+  
+  .voice-bar[data-height="12"] {
+    height: 12px;
+  }
+  
+  .voice-bar[data-height="16"] {
+    height: 16px;
+  }
+  
+  .voice-bar[data-height="20"] {
+    height: 20px;
+  }
+  
+  .voice-bar[data-height="24"] {
+    height: 24px;
+  }
+  
+  .voice-bar[data-height="28"] {
+    height: 28px;
+  }
+  
+  .voice-bar[data-height="32"] {
+    height: 32px;
+  }
 }
 
 @layer utilities {
@@ -259,6 +297,26 @@
   .progress-animated {
     transition: width 0.5s ease-in-out;
   }
+}
+
+/* Custom brain throb animation */
+@keyframes brain-throb {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.05);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+}
+
+.brain-throb {
+  animation: brain-throb 1.5s ease-in-out infinite;
 }
 
 /* Animation for reduced motion users */

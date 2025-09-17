@@ -1,13 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { getUserId } from '@/utils';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
+import { useAuth } from '@/contexts/AuthContext';
 
 export const Dashboard: React.FC = () => {
   const userId = getUserId();
   const { announce } = useAnnouncements();
+  const { canAccessControlPanel } = useAuth();
+  const [showControlPanel, setShowControlPanel] = useState(false);
   
   // Fetch health status and recent sessions
   const { data: healthStatus, isLoading: isHealthLoading, error: healthError } = useHealthCheck();
@@ -76,6 +79,55 @@ export const Dashboard: React.FC = () => {
           Audio-based mental health prediction and analysis
         </p>
       </div>
+
+      {/* Control Panel Access - Only for authorized users */}
+      {canAccessControlPanel() && (
+        <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
+                🛠️ Control Panel
+              </h2>
+              <p className="text-text-secondary-light dark:text-text-secondary-dark">
+                Access advanced administrative features and system controls
+              </p>
+            </div>
+            <button
+              onClick={() => setShowControlPanel(!showControlPanel)}
+              className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+            >
+              {showControlPanel ? 'Hide Control Panel' : 'Show Control Panel'}
+            </button>
+          </div>
+          
+          {showControlPanel && (
+            <div className="mt-6 border-t border-primary-200 dark:border-primary-800 pt-6">
+              <div className="card bg-gray-50 dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
+                  🔧 Control Panel
+                </h3>
+                <p className="text-text-secondary-light dark:text-text-secondary-dark mb-4">
+                  Advanced administrative features and system controls will be displayed here.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">User Management</h4>
+                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">Manage user accounts and permissions</p>
+                  </div>
+                  <div className="p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">System Configuration</h4>
+                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">Configure system settings and parameters</p>
+                  </div>
+                  <div className="p-4 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <h4 className="font-medium text-text-primary-light dark:text-text-primary-dark">Data Analytics</h4>
+                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1">View system analytics and reports</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* User ID display */}
       <div className="card">

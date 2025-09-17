@@ -1,6 +1,6 @@
 import { BlobServiceClient, ContainerClient } from '@azure/storage-blob';
 import { config } from '@/config/constants';
-import { createAppError } from '@/utils';
+import { createAppError, getUserId } from '@/utils';
 
 export interface UploadProgress {
   progress: number;
@@ -49,7 +49,8 @@ export class AzureBlobService {
   async uploadFile(
     file: File,
     fileName?: string,
-    onProgress?: (progress: UploadProgress) => void
+    onProgress?: (progress: UploadProgress) => void,
+    userId?: string
   ): Promise<UploadResult> {
     try {
       onProgress?.({
@@ -59,7 +60,7 @@ export class AzureBlobService {
       });
 
       const containerClient = this.getContainerClient();
-      const blobName = fileName || this.generateBlobName(file.name);
+      const blobName = fileName || this.generateBlobName(file.name, userId);
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       // Upload with progress tracking
@@ -114,12 +115,16 @@ export class AzureBlobService {
     }
   }
 
-  private generateBlobName(originalFileName: string): string {
+  private generateBlobName(originalFileName: string, userId?: string): string {
+    // Get user ID for data isolation
+    const effectiveUserId = userId || getUserId();
+    
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const randomId = Math.random().toString(36).substring(2, 8);
     const extension = originalFileName.split('.').pop() || 'wav';
     
-    return `audio/${timestamp}-${randomId}.${extension}`;
+    // Include user ID in the path for data isolation
+    return `users/${effectiveUserId}/audio/${timestamp}-${randomId}.${extension}`;
   }
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
@@ -155,6 +160,81 @@ export class AzureBlobService {
       );
     }
   }
+
+  /**
+   * List all files for a specific user
+   */
+  async listUserFiles(userId?: string): Promise<string[]> {
+    try {
+      const effectiveUserId = userId || getUserId();
+      const containerClient = this.getContainerClient();
+      const userPrefix = `users/${effectiveUserId}/`;
+      
+      const blobs: string[] = [];
+      for await (const blob of containerClient.listBlobsFlat({ prefix: userPrefix })) {
+        blobs.push(blob.name);
+      }
+      
+      return blobs;
+    } catch (error) {
+      throw createAppError(
+        'LIST_ERROR',
+        'Failed to list user files from Azure Blob Storage',
+        { originalError: error, userId }
+      );
+    }
+  }
+
+  /**
+   * Delete all files for a specific user (for GDPR compliance)
+   */
+  async deleteUserData(userId?: string): Promise<number> {
+    try {
+      const effectiveUserId = userId || getUserId();
+      const userFiles = await this.listUserFiles(effectiveUserId);
+      
+      let deletedCount = 0;
+      for (const fileName of userFiles) {
+        await this.deleteFile(fileName);
+        deletedCount++;
+      }
+      
+      return deletedCount;
+    } catch (error) {
+      throw createAppError(
+        'DELETE_USER_DATA_ERROR',
+        'Failed to delete user data from Azure Blob Storage',
+        { originalError: error, userId }
+      );
+    }
+  }
+
+  /**
+   * Get storage usage for a specific user
+   */
+  async getUserStorageUsage(userId?: string): Promise<{ fileCount: number; totalSizeBytes: number }> {
+    try {
+      const effectiveUserId = userId || getUserId();
+      const containerClient = this.getContainerClient();
+      const userPrefix = `users/${effectiveUserId}/`;
+      
+      let fileCount = 0;
+      let totalSizeBytes = 0;
+      
+      for await (const blob of containerClient.listBlobsFlat({ prefix: userPrefix })) {
+        fileCount++;
+        totalSizeBytes += blob.properties.contentLength || 0;
+      }
+      
+      return { fileCount, totalSizeBytes };
+    } catch (error) {
+      throw createAppError(
+        'STORAGE_USAGE_ERROR',
+        'Failed to get user storage usage from Azure Blob Storage',
+        { originalError: error, userId }
+      );
+    }
+  }
 }
 
 // Singleton instance
@@ -172,11 +252,12 @@ export const isAzureBlobConfigured = (): boolean => {
   return Boolean(config.azure.blobSasUrl && config.azure.containerName);
 };
 
-// Convenience function for the Upload & Analyze page
+// Convenience function for the Upload & Analyze page with user isolation
 export const uploadToAzureBlob = async (
   file: File | Blob,
   fileName: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  userId?: string
 ): Promise<string> => {
   const blobService = getBlobService();
   
@@ -186,7 +267,8 @@ export const uploadToAzureBlob = async (
   const result = await blobService.uploadFile(
     fileToUpload,
     fileName,
-    onProgress ? (progress) => onProgress(progress.progress) : undefined
+    onProgress ? (progress) => onProgress(progress.progress) : undefined,
+    userId
   );
 
   return result.url;

@@ -1,12 +1,13 @@
 import { getUserId, formatRelativeTime, formatDateTime, createAppError, isNetworkError } from '../index';
 import type { AppError } from '@/types';
+import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
 // Mock localStorage
 const mockLocalStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 
 Object.defineProperty(window, 'localStorage', {
@@ -17,14 +18,14 @@ Object.defineProperty(window, 'localStorage', {
 // Mock crypto.randomUUID
 Object.defineProperty(global, 'crypto', {
   value: {
-    randomUUID: jest.fn(() => 'mock-uuid-12345'),
+    randomUUID: vi.fn(() => 'mock-uuid-12345'),
   },
   writable: true,
 });
 
 describe('Utility Functions', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('getUserId', () => {
@@ -60,12 +61,12 @@ describe('Utility Functions', () => {
   describe('formatRelativeTime', () => {
     beforeEach(() => {
       // Mock current time to a fixed date for consistent testing
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date('2025-09-07T12:00:00.000Z'));
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2025-09-07T12:00:00.000Z'));
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('should format "just now" for recent times', () => {
@@ -223,7 +224,7 @@ describe('Utility Functions', () => {
       delete (global as any).crypto;
       
       // Mock Math.random for fallback
-      jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      vi.spyOn(Math, 'random').mockReturnValue(0.5);
       
       try {
         const userId = getUserId();
@@ -231,7 +232,7 @@ describe('Utility Functions', () => {
         expect(typeof userId).toBe('string');
       } finally {
         global.crypto = originalCrypto;
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
       }
     });
 

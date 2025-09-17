@@ -6,18 +6,19 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Dashboard } from '@/pages/Dashboard';
 import Sessions from '@/pages/Sessions';
 import { apiService } from '@/services/api';
+import { vi, describe, beforeEach, test, expect } from 'vitest';
 
 // Mock the API service
-jest.mock('@/services/api');
-const mockApiService = apiService as jest.Mocked<typeof apiService>;
+vi.mock('@/services/api');
+const mockApiService = apiService as any;
 
 // Mock the user ID utility
-jest.mock('@/utils', () => ({
-  getUserId: jest.fn(() => 'test-user-123'),
-  formatRelativeTime: jest.fn((_date: string) => 'just now'),
-  formatDateTime: jest.fn((_date: string) => '2025-09-07 10:00:00'),
-  createAppError: jest.fn(),
-  isNetworkError: jest.fn(),
+vi.mock('@/utils', () => ({
+  getUserId: vi.fn(() => 'test-user-123'),
+  formatRelativeTime: vi.fn((_date: string) => 'just now'),
+  formatDateTime: vi.fn((_date: string) => '2025-09-07 10:00:00'),
+  createAppError: vi.fn(),
+  isNetworkError: vi.fn(),
 }));
 
 // Test wrapper component

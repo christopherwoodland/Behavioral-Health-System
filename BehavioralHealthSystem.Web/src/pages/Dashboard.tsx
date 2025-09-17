@@ -25,38 +25,51 @@ export const Dashboard: React.FC = () => {
       description: 'Upload audio files for behavioral health analysis',
       href: '/upload',
       icon: '📤',
-      color: 'primary'
+      color: 'primary',
+      disabled: false
     },
     {
       title: 'View Sessions',
       description: 'Browse all analysis sessions and their results',
       href: '/sessions',
       icon: '📊',
-      color: 'secondary'
+      color: 'secondary',
+      disabled: false
     },
     {
       title: 'My Predictions',
       description: 'View your complete prediction history',
       href: '/predictions',
       icon: '📈',
-      color: 'accent'
+      color: 'accent',
+      disabled: false
+    },
+    {
+      title: 'Agent Experience',
+      description: 'Interactive chat with AI behavioral health agents',
+      href: '/agent-experience',
+      icon: '🤖',
+      color: 'warning',
+      disabled: true
     }
   ];
 
-  const getActionClasses = (color: string) => {
-    const baseClasses = 'block p-6 rounded-lg border-2 transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const getActionClasses = (color: string, disabled: boolean = false) => {
+    const baseClasses = disabled 
+      ? 'block p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-not-allowed opacity-60' 
+      : 'block p-4 rounded-lg border-2 transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2';
     
     switch (color) {
       case 'primary':
-        return `${baseClasses} border-primary-200 bg-primary-50 hover:border-primary-300 hover:bg-primary-100 dark:border-primary-800 dark:bg-primary-900 dark:hover:border-primary-700 dark:hover:bg-primary-800 focus:ring-primary-500`;
+        return `${baseClasses} border-primary-200 bg-primary-50 ${!disabled && 'hover:border-primary-300 hover:bg-primary-100'} dark:border-primary-800 dark:bg-primary-900 ${!disabled && 'dark:hover:border-primary-700 dark:hover:bg-primary-800'} focus:ring-primary-500`;
       case 'secondary':
-        return `${baseClasses} border-secondary-200 bg-secondary-50 hover:border-secondary-300 hover:bg-secondary-100 dark:border-secondary-800 dark:bg-secondary-900 dark:hover:border-secondary-700 dark:hover:bg-secondary-800 focus:ring-secondary-500`;
+        return `${baseClasses} border-secondary-200 bg-secondary-50 ${!disabled && 'hover:border-secondary-300 hover:bg-secondary-100'} dark:border-secondary-800 dark:bg-secondary-900 ${!disabled && 'dark:hover:border-secondary-700 dark:hover:bg-secondary-800'} focus:ring-secondary-500`;
       case 'accent':
-        return `${baseClasses} border-accent-200 bg-accent-50 hover:border-accent-300 hover:bg-accent-100 dark:border-accent-800 dark:bg-accent-900 dark:hover:border-accent-700 dark:hover:bg-accent-800 focus:ring-accent-500`;
+        return `${baseClasses} border-accent-200 bg-accent-50 ${!disabled && 'hover:border-accent-300 hover:bg-accent-100'} dark:border-accent-800 dark:bg-accent-900 ${!disabled && 'dark:hover:border-accent-700 dark:hover:bg-accent-800'} focus:ring-accent-500`;
       case 'warning':
-        return `${baseClasses} border-warning-200 bg-warning-50 hover:border-warning-300 hover:bg-warning-100 dark:border-teal-600 dark:bg-teal-800 dark:hover:border-teal-500 dark:hover:bg-teal-700 focus:ring-warning-500`;
+        return `${baseClasses} border-warning-200 bg-warning-50 ${!disabled && 'hover:border-warning-300 hover:bg-warning-100'} dark:border-teal-600 dark:bg-teal-800 ${!disabled && 'dark:hover:border-teal-500 dark:hover:bg-teal-700'} focus:ring-warning-500`;
       default:
-        return `${baseClasses} border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600 dark:hover:bg-gray-700 focus:ring-gray-500`;
+        return `${baseClasses} border-gray-200 bg-gray-50 ${!disabled && 'hover:border-gray-300 hover:bg-gray-100'} dark:border-gray-700 dark:bg-gray-800 ${!disabled && 'dark:hover:border-gray-600 dark:hover:bg-gray-700'} focus:ring-gray-500`;
     }
   };
 
@@ -77,27 +90,58 @@ export const Dashboard: React.FC = () => {
         <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-6">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quickActions.map((action) => (
-            <Link
-              key={action.href}
-              to={action.href}
-              className={getActionClasses(action.color)}
-              aria-label={`${action.title}: ${action.description}`}
-            >
-              <div className="text-center">
-                <div className="text-3xl mb-3" role="img" aria-hidden="true">
-                  {action.icon}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickActions.map((action) => {
+            if (action.disabled) {
+              return (
+                <div
+                  key={action.href}
+                  className={`${getActionClasses(action.color, true)} relative`}
+                  aria-label={`${action.title}: Coming Soon`}
+                >
+                  <div className="text-center">
+                    <div className="text-2xl mb-2" role="img" aria-hidden="true">
+                      {action.icon}
+                    </div>
+                    <h3 className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
+                      {action.title}
+                    </h3>
+                    <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                      {action.description}
+                    </p>
+                  </div>
+                  {/* Coming Soon Overlay */}
+                  <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-white font-bold text-sm mb-1">🚧</div>
+                      <div className="text-white font-semibold text-xs">COMING SOON</div>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
-                  {action.title}
-                </h3>
-                <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                  {action.description}
-                </p>
-              </div>
-            </Link>
-          ))}
+              );
+            }
+            
+            return (
+              <Link
+                key={action.href}
+                to={action.href}
+                className={getActionClasses(action.color, false)}
+                aria-label={`${action.title}: ${action.description}`}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-2" role="img" aria-hidden="true">
+                    {action.icon}
+                  </div>
+                  <h3 className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
+                    {action.title}
+                  </h3>
+                  <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                    {action.description}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -213,7 +257,7 @@ export const Dashboard: React.FC = () => {
           </h2>
           <Link
             to="/health"
-            className="px-6 py-3 bg-black hover:bg-gray-800 text-white border-2 border-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 inline-block"
+            className="px-6 py-3 bg-black hover:bg-gray-800 text-white border-2 border-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 inline-block"
           >
             System Health
           </Link>

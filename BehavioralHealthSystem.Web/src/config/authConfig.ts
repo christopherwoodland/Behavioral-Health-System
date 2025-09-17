@@ -72,7 +72,7 @@ export const silentRequest: PopupRequest = {
  */
 export const APP_ROLES = {
   ADMIN: 'Admin',
-  CONTROL_PANEL: 'Control Panel',
+  CONTROL_PANEL: 'ControlPanel',
 } as const;
 
 /**

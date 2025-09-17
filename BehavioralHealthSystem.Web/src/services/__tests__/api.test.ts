@@ -1,19 +1,10 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { apiService } from '../api';
 import type { SessionData, SessionInitiateRequest, PredictionSubmitRequest } from '@/types';
 
 // Mock fetch globally
-const mockFetch = jest.fn();
+const mockFetch = vi.fn();
 global.fetch = mockFetch;
-
-// Mock environment variables
-const mockEnv = {
-  VITE_API_BASE: 'http://localhost:7071/api',
-};
-
-Object.defineProperty(import.meta, 'env', {
-  value: mockEnv,
-  writable: true,
-});
 
 describe('API Service', () => {
   beforeEach(() => {
@@ -283,7 +274,7 @@ describe('API Service', () => {
     it('should handle network errors', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      await expect(apiService.getUserSessions('test-user')).rejects.toThrow('Network error');
+      await expect(apiService.getUserSessions('test-user')).rejects.toThrow('Unable to connect to the server. Please check your internet connection.');
     });
 
     it('should handle HTTP errors with custom messages', async () => {

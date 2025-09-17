@@ -1,13 +1,45 @@
 # Behavioral Health System - Web Application
 
-A production-grade, accessible React application for behavioral health analysis using audio files.
+A productio### Environment Variables
+
+Create a `.env.local` file with:
+
+```env
+# API Configuration
+VITE_API_BASE=http://localhost:7071/api
+
+# Azure AD Configuration
+VITE_AZURE_CLIENT_ID=63e9b3fd-de9d-4083-879c-9c13f3aac54d
+VITE_AZURE_TENANT_ID=3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
+VITE_AZURE_REDIRECT_URI=http://localhost:5173
+VITE_AZURE_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
+VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
+
+# Azure AD Groups (if using groups instead of app roles)
+VITE_AZURE_ADMIN_GROUP_ID=admin-group-object-id
+VITE_AZURE_CONTROL_PANEL_GROUP_ID=control-panel-group-object-id
+
+# Azure Blob Storage
+VITE_AZURE_BLOB_SAS_URL=https://yourstorage.blob.core.windows.net/audio-uploads?sp=racw&st=...
+VITE_STORAGE_CONTAINER_NAME=audio-uploads
+
+# Polling Configuration
+VITE_POLL_INTERVAL_MS=3000
+
+# Feature Flags
+VITE_ENABLE_FFMPEG_WORKER=true
+VITE_ENABLE_DEBUG_LOGGING=false
+``` React application for behavioral health analysis using audio files.
 
 ## 🚀 Features
 
 - **WCAG 2.2 Level AA Compliant** - Full accessibility support with screen readers, keyboard navigation, and high contrast
 - **Section 508 Compliant** - Meets government accessibility standards
+- **Azure AD Authentication** - Microsoft identity platform integration with role-based access control
+- **Real-time Communication** - SignalR-powered agent messaging with handoff capabilities
 - **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
 - **Dark/Light Mode** - Automatic theme detection with manual toggle
+- **Interactive Animations** - Brain icon hover animations for enhanced user engagement
 - **Audio Processing** - Client-side audio conversion using FFmpeg.wasm
 - **Azure Integration** - Direct upload to Azure Blob Storage with SAS tokens
 - **Real-time Updates** - Polling for prediction results with progress tracking
@@ -82,6 +114,27 @@ VITE_ENABLE_DEBUG_LOGGING=false
 2. Generate a SAS URL with read, add, create, write permissions
 3. Set the SAS URL in your environment variables
 
+### Azure AD Authentication Setup
+
+1. **Register application in Azure AD:**
+   - Go to Azure Portal > Azure Active Directory > App registrations
+   - Create new registration with redirect URI: `http://localhost:5173`
+   - Note the Application (client) ID and Directory (tenant) ID
+
+2. **Configure authentication:**
+   - Add platform configuration for Single-page application
+   - Set redirect URIs for development and production
+   - Enable ID tokens and access tokens
+
+3. **Set up roles or groups:**
+   - **App Roles:** Define custom roles in the app manifest
+   - **Groups:** Create security groups and assign users
+   - Configure group IDs in environment variables
+
+4. **Update environment variables:**
+   - Use the client ID, tenant ID, and authority URL
+   - Set appropriate redirect URIs for your environment
+
 ## 🧪 Testing
 
 ### Unit Tests
@@ -125,6 +178,128 @@ The application uses a custom Tailwind theme with:
 - **High Contrast:** Colors meet WCAG 2.2 AA contrast ratios (4.5:1 minimum)
 - **Zoom Support:** Layout remains functional up to 200% zoom
 - **Motion Preferences:** Respects `prefers-reduced-motion`
+
+## 🎨 UI/UX Enhancements
+
+### Brain Icon Animation
+
+The application features an interactive brain throb animation that activates on hover:
+
+- **Location:** Header navigation and Microsoft sign-in page
+- **Animation:** Custom CSS keyframe animation with realistic scaling pattern
+- **Duration:** 1.5 seconds with smooth transitions
+- **Pattern:** Scale progression (1.0 → 1.05 → 1.1 → 1.05 → 1.0) creates a "living brain" effect
+- **Implementation:** Uses Tailwind CSS classes with custom `@keyframes brain-throb` animation
+
+```css
+@keyframes brain-throb {
+  0% { transform: scale(1.0); }
+  25% { transform: scale(1.05); }
+  50% { transform: scale(1.1); }
+  75% { transform: scale(1.05); }
+  100% { transform: scale(1.0); }
+}
+```
+
+This subtle animation enhances user engagement while maintaining accessibility standards.
+
+## 🔄 Real-Time Communication System
+
+The application features a comprehensive real-time communication system using SignalR for behavioral health agent interactions.
+
+### Features
+
+- **Real-time messaging** between users and behavioral health agents
+- **Agent handoff** with seamless transitions between specialized agents  
+- **Typing indicators** to show when agents are processing responses
+- **Session management** with unique session IDs for each user interaction
+- **Speech integration** with voice input/output capabilities
+- **Crisis detection** and appropriate agent routing
+
+### Architecture
+
+#### Backend Components
+
+**AgentCommunicationHub.cs** - SignalR hub handling real-time communication:
+- `GET /api/negotiate` - SignalR connection negotiation
+- `POST /api/sendagentmessage` - Send message from agent to client
+- `POST /api/notifyagenthandoff` - Notify client of agent handoff
+- `POST /api/notifyagenttyping` - Send typing indicators
+- `POST /api/joinsession` - Join a communication session
+- `POST /api/sendusermessage` - Process user messages
+
+**RealtimeAgentOrchestrator.cs** - Processes user input and coordinates agent responses:
+- Crisis detection and routing
+- Confidence scoring for agent responses
+- Mock agent simulation for development
+- Session status tracking
+
+#### Frontend Components
+
+**signalRService.ts** - TypeScript service for SignalR client communication:
+- Connection management with automatic reconnection
+- Event handling for messages, handoffs, typing indicators
+- Session management and status tracking
+- Error handling and connection state monitoring
+
+**useSignalR.ts** - React hook for managing SignalR state:
+- Connection status tracking
+- Real-time message collection
+- Agent handoff notifications
+- Typing indicators by agent
+- Session status and participants
+
+### Message Types
+
+```typescript
+interface UserMessage {
+  content: string;
+  timestamp: string;
+  audioData?: string;
+  metadata?: {
+    speechConfidence?: number;
+    voiceActivityLevel?: number;
+    processingTime?: number;
+  };
+}
+
+interface AgentMessage {
+  agentName: string;
+  content: string;
+  timestamp: string;
+  confidence?: number;
+  suggestedActions?: string[];
+}
+
+interface AgentHandoffNotification {
+  fromAgent: string;
+  toAgent: string;
+  reason: string;
+  timestamp: string;
+  userContext?: any;
+}
+```
+
+### Configuration
+
+#### Local Development
+- SignalR connection uses default local endpoint: `http://localhost:7071/api`
+- No Azure SignalR service required for local development
+- CORS enabled for cross-origin requests
+
+#### Production
+- Set `AzureSignalRConnectionString` environment variable
+- Configure Azure SignalR Service resource
+- Update frontend `signalRService.ts` baseUrl if needed
+
+### Session Flow
+
+1. **Connection:** Frontend establishes SignalR connection on load
+2. **Session Join:** Generates unique session ID and joins session
+3. **Messaging:** User sends messages through SignalR to backend
+4. **Processing:** RealtimeAgentOrchestrator processes message through agent system
+5. **Response:** Agents send responses back through SignalR hub
+6. **Handoff:** System automatically handles agent transitions with notifications
 
 ## 📁 Project Structure
 
@@ -192,6 +367,17 @@ For production deployment, ensure these environment variables are set:
 - Other configuration variables as needed
 
 ## 🎯 Usage
+
+### Navigation & Dashboard Features
+
+The application includes several UI improvements for better user experience:
+
+- **Streamlined Navigation:** Clean header navigation with Dashboard, Upload, Sessions, and Predictions
+- **Quick Actions Dashboard:** Four-column responsive grid layout for admin functions
+- **Role-Based Access:** System Health and Agent Experience features require appropriate permissions
+- **Coming Soon Features:** Agent Experience functionality is disabled with visual overlay indication
+- **Consistent Button Styling:** System Health button matches View Summary styling (black text on white background)
+- **Real-time Agent Communication:** SignalR-powered messaging system with typing indicators and agent handoffs
 
 ### Audio Upload Workflow
 

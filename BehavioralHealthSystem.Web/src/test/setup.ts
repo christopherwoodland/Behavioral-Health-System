@@ -1,4 +1,47 @@
 import '@testing-library/jest-dom';
+import { vi, beforeAll, afterAll } from 'vitest';
+
+// Mock FFmpeg and related imports
+vi.mock('@ffmpeg/ffmpeg', () => ({
+  FFmpeg: vi.fn(() => ({
+    load: vi.fn(),
+    writeFile: vi.fn(),
+    exec: vi.fn(),
+    readFile: vi.fn(),
+    deleteFile: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  })),
+}));
+
+vi.mock('@ffmpeg/util', () => ({
+  fetchFile: vi.fn(),
+  toBlobURL: vi.fn(),
+}));
+
+// Mock Azure Storage Blob
+vi.mock('@azure/storage-blob', () => ({
+  BlobServiceClient: vi.fn(),
+  BlockBlobClient: vi.fn(),
+}));
+
+// Mock Microsoft SignalR
+vi.mock('@microsoft/signalr', () => ({
+  HubConnectionBuilder: vi.fn(() => ({
+    withUrl: vi.fn().mockReturnThis(),
+    build: vi.fn(() => ({
+      start: vi.fn(),
+      stop: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+      invoke: vi.fn(),
+    })),
+  })),
+  HubConnectionState: {
+    Connected: 'Connected',
+    Disconnected: 'Disconnected',
+  },
+}));
 
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
@@ -23,31 +66,48 @@ global.ResizeObserver = class ResizeObserver {
 // Mock matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: jest.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: jest.fn(), // deprecated
-    removeListener: jest.fn(), // deprecated
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
   })),
 });
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 };
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 });
 
 // Mock fetch
-global.fetch = jest.fn();
+global.fetch = vi.fn();
+
+// Mock Web Speech API
+Object.defineProperty(window, 'SpeechRecognition', {
+  writable: true,
+  value: vi.fn(() => ({
+    start: vi.fn(),
+    stop: vi.fn(),
+    abort: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })),
+});
+
+Object.defineProperty(window, 'webkitSpeechRecognition', {
+  writable: true,
+  value: window.SpeechRecognition,
+});
 
 // Suppress console errors in tests
 const originalError = console.error;

@@ -299,6 +299,26 @@
   }
 }
 
+/* Custom brain throb animation */
+@keyframes brain-throb {
+  0%, 100% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.05);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  75% {
+    transform: scale(1.05);
+  }
+}
+
+.brain-throb {
+  animation: brain-throb 1.5s ease-in-out infinite;
+}
+
 /* Animation for reduced motion users */
 @media (prefers-reduced-motion: reduce) {
   *,

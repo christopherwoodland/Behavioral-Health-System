@@ -2,8 +2,22 @@ import { v4 as uuidv4 } from 'uuid';
 import { STORAGE_KEYS, VALIDATION } from '@/config/constants';
 import type { Theme, AppError } from '@/types';
 
-// User ID management
+// Global variable to hold the current authenticated user ID
+let currentAuthenticatedUserId: string | null = null;
+
+// Set the authenticated user ID (called from auth context)
+export const setAuthenticatedUserId = (userId: string | null): void => {
+  currentAuthenticatedUserId = userId;
+};
+
+// User ID management - prioritizes authenticated user ID
 export const getUserId = (): string => {
+  // If user is authenticated, use their ID
+  if (currentAuthenticatedUserId) {
+    return currentAuthenticatedUserId;
+  }
+
+  // Fallback to local storage for non-authenticated users
   let userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
   
   // If no User ID exists, generate a new UUID

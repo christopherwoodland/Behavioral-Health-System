@@ -1,5 +1,4 @@
 using BehavioralHealthSystem.Agents.Interfaces;
-using BehavioralHealthSystem.Agents.Handoff;
 
 namespace BehavioralHealthSystem.Agents.Agents;
 

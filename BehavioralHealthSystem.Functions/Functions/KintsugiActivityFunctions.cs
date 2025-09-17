@@ -1,5 +1,3 @@
-using Microsoft.DurableTask;
-
 namespace BehavioralHealthSystem.Functions;
 
 public class KintsugiActivityFunctions

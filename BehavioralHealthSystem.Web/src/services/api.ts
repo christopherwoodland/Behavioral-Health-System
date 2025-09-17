@@ -12,12 +12,23 @@ import type {
   AppError,
 } from '@/types';
 
-// Base API client with error handling
+// Type for authentication context
+interface AuthHeaders {
+  getAuthHeaders(): Promise<Record<string, string>>;
+}
+
+// Base API client with error handling and authentication
 class ApiClient {
   private baseUrl: string;
+  private authProvider?: AuthHeaders;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, authProvider?: AuthHeaders) {
     this.baseUrl = baseUrl;
+    this.authProvider = authProvider;
+  }
+
+  setAuthProvider(authProvider: AuthHeaders) {
+    this.authProvider = authProvider;
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
@@ -52,6 +63,17 @@ class ApiClient {
         'Content-Type': 'application/json',
         ...options.headers,
       };
+
+      // Add authentication headers if available
+      if (this.authProvider) {
+        try {
+          const authHeaders = await this.authProvider.getAuthHeaders();
+          Object.assign(defaultHeaders, authHeaders);
+        } catch (authError) {
+          // Log auth error but continue with request - some endpoints may not require auth
+          console.warn('Failed to get authentication headers:', authError);
+        }
+      }
 
       const response = await fetch(url, {
         ...options,
@@ -105,6 +127,11 @@ class ApiClient {
 
 // Create API client instance
 const apiClient = new ApiClient(config.api.baseUrl);
+
+// Function to set authentication provider (called from app initialization)
+export const setApiAuthProvider = (authProvider: AuthHeaders) => {
+  apiClient.setAuthProvider(authProvider);
+};
 
 // API Service functions
 export const apiService = {
@@ -161,6 +188,12 @@ export const apiService = {
     );
   },
 
+  async getAllSessions(): Promise<{ success: boolean; count: number; sessions: SessionData[] }> {
+    return apiClient.get<{ success: boolean; count: number; sessions: SessionData[] }>(
+      'sessions/all'
+    );
+  },
+
   async updateSessionData(sessionId: string, sessionData: SessionData): Promise<{ success: boolean; message: string }> {
     return apiClient.put<{ success: boolean; message: string }>(
       `sessions/${sessionId}`,
@@ -188,21 +221,7 @@ export const apiService = {
     }
   },
 
-  // Kintsugi Workflow - complete workflow for audio analysis
-  async submitKintsugiWorkflow(request: {
-    userMetadata: {
-      userId: string;
-      age?: number;
-      gender?: string;
-      sessionNotes?: string;
-    };
-    audioUrl: string;
-  }): Promise<{ prediction: PredictionResult }> {
-    return apiClient.post<{ prediction: PredictionResult }>(
-      '/kintsugiworkflow',
-      request
-    );
-  },
+
 
   // Risk Assessment API methods
   async generateRiskAssessment(sessionId: string): Promise<{ success: boolean; riskAssessment?: RiskAssessment; message: string }> {
@@ -309,8 +328,6 @@ export class PredictionPoller {
   }
 }
 
-// Convenience function for the Upload & Analyze page
-export const submitKintsugiWorkflow = apiService.submitKintsugiWorkflow.bind(apiService);
 
 // Export PredictionResult type for external use
 export type { PredictionResult } from '@/types';

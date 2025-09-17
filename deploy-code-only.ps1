@@ -178,7 +178,8 @@ Write-Host ""
 Write-Host "FUNCTION APP ENDPOINTS:" -ForegroundColor Cyan
 Write-Host "   Base URL: https://$FunctionAppName.azurewebsites.net" -ForegroundColor White
 Write-Host "   Health: https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor White
-Write-Host "   Main Workflow: https://$FunctionAppName.azurewebsites.net/api/KintsugiWorkflow" -ForegroundColor White
+Write-Host "   Sessions Initiate: https://$FunctionAppName.azurewebsites.net/api/sessions/initiate" -ForegroundColor White
+Write-Host "   Predictions Submit: https://$FunctionAppName.azurewebsites.net/api/predictions/submit" -ForegroundColor White
 Write-Host ""
 Write-Host "NEXT STEPS:" -ForegroundColor Yellow
 Write-Host "   1. Test your endpoints using the sample-requests.md examples" -ForegroundColor Gray

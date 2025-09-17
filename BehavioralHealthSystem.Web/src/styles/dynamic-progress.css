@@ -17,7 +17,7 @@
   height: 100%;
   background-color: rgb(37 99 235);
   transition: all 0.2s ease-out;
-  width: var(--progress-width, 0%);
+  width: 0%;
 }
 
 .audio-progress__fill--animated {
@@ -41,7 +41,7 @@
   background-color: rgb(37 99 235);
   border-radius: 9999px;
   transition: all 0.3s ease-in-out;
-  width: var(--progress-width, 0%);
+  width: 0%;
 }
 
 .processing-progress__fill--animated {

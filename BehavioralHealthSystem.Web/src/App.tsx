@@ -6,6 +6,7 @@ import { MsalProvider } from '@azure/msal-react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProtectedRoute } from '@/components/auth/AuthGuards';
+import { RoleBasedRedirect } from '@/components/auth/RoleBasedRedirect';
 import { ApiAuthInitializer } from '@/components/auth/ApiAuthInitializer';
 import { Layout } from '@/components/layout/Layout';
 import { msalConfig } from '@/config/authConfig';
@@ -13,7 +14,7 @@ import { APP_ROLES } from '@/config/authConfig';
 
 // Page components
 import { Dashboard } from '@/pages/Dashboard';
-import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, SystemHealth, NotFound } from '@/pages';
+import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, AgentExperience, SystemHealth, NotFound } from '@/pages';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -51,71 +52,80 @@ function App() {
               <Router>
                 <Layout>
                   <Routes>
-                  {/* Control Panel route - accessible to both Admin and Control Panel roles */}
-                  <Route 
-                    path="/" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  {/* Admin-only routes */}
-                  <Route 
-                    path="/upload" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
-                        <UploadAnalyze />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/sessions" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
-                        <Sessions />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/sessions/:sessionId" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
-                        <SessionDetail />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/predictions" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
-                        <Predictions />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/summary" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
-                        <ControlPanel />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/health" 
-                    element={
-                      <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
-                        <SystemHealth />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  
-                  {/* 404 page */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Layout>
-            </Router>
+                    {/* Control Panel route - accessible to both Admin and Control Panel roles */}
+                    <Route 
+                      path="/" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                          <RoleBasedRedirect />
+                          <Dashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* Admin-only routes */}
+                    <Route 
+                      path="/upload" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
+                          <UploadAnalyze />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/sessions" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
+                          <Sessions />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/sessions/:sessionId" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
+                          <SessionDetail />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/predictions" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
+                          <Predictions />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/summary" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                          <ControlPanel />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/agent-experience" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                          <AgentExperience />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/health" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
+                          <SystemHealth />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    
+                    {/* 404 page */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Layout>
+              </Router>
             </ApiAuthInitializer>
           </AuthProvider>
         </ThemeProvider>

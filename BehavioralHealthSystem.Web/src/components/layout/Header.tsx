@@ -11,7 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, isAuthenticated, isAdmin, canAccessControlPanel } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin } = useAuth();
   const location = useLocation();
   const { handleEnterSpace } = useKeyboardNavigation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -20,20 +20,22 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   // Filter navigation items based on user permissions
   const getNavigationItems = () => {
     const baseItems = [
-      { path: '/', label: 'Dashboard', icon: '🏠', roles: [APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL] },
+      { path: '/', label: 'Dashboard', icon: '🏠', roles: [APP_ROLES.ADMIN] },
       { path: '/upload', label: 'Upload & Analyze', icon: '📤', roles: [APP_ROLES.ADMIN] },
       { path: '/sessions', label: 'Sessions', icon: '📊', roles: [APP_ROLES.ADMIN] },
       { path: '/predictions', label: 'My Predictions', icon: '📈', roles: [APP_ROLES.ADMIN] },
+      { path: '/summary', label: 'Summary', icon: '📋', roles: [APP_ROLES.ADMIN] }, // Only Admins can see navigation
+      { path: '/agent-experience', label: 'Agent Experience', icon: '🤖', roles: [APP_ROLES.ADMIN] }, // Only Admins can see navigation
     ];
 
     if (!isAuthenticated) {
       return [];
     }
 
-    return baseItems.filter(item => {
+    // Only show navigation items to Admin users, ControlPanel users get no navigation buttons
+    return baseItems.filter(() => {
       if (isAdmin()) return true; // Admins can access everything
-      if (item.path === '/' && canAccessControlPanel()) return true; // Control panel users can access dashboard
-      return false;
+      return false; // ControlPanel users see no navigation buttons
     });
   };
 
@@ -90,10 +92,10 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
           <div className="flex items-center">
             <Link
               to="/"
-              className="flex items-center space-x-3 text-xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1"
+              className="flex items-center space-x-3 text-xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1 group"
               aria-label="Behavioral Health System - Go to Dashboard"
             >
-              <span className="text-2xl" role="img" aria-label="Brain icon">🧠</span>
+              <span className="text-2xl group-hover:brain-throb transition-all duration-300 group-hover:scale-105" role="img" aria-label="Brain icon">🧠</span>
               <span className="hidden sm:block">Behavioral Health System</span>
               <span className="sm:hidden">BHS</span>
             </Link>

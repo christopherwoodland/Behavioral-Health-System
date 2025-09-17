@@ -173,6 +173,9 @@ var host = new HostBuilder()
         // Health checks
         services.AddHealthChecks()
             .AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
+            
+        // SignalR Service
+        services.AddSignalR();
     })
     .Build();
 

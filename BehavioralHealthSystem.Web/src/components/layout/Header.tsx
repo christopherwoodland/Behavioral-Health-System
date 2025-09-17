@@ -90,10 +90,10 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
           <div className="flex items-center">
             <Link
               to="/"
-              className="flex items-center space-x-3 text-xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1"
+              className="flex items-center space-x-3 text-xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1 group"
               aria-label="Behavioral Health System - Go to Dashboard"
             >
-              <span className="text-2xl" role="img" aria-label="Brain icon">🧠</span>
+              <span className="text-2xl group-hover:brain-throb transition-all duration-300 group-hover:scale-105" role="img" aria-label="Brain icon">🧠</span>
               <span className="hidden sm:block">Behavioral Health System</span>
               <span className="sm:hidden">BHS</span>
             </Link>

@@ -24,9 +24,6 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
       { path: '/upload', label: 'Upload & Analyze', icon: '📤', roles: [APP_ROLES.ADMIN] },
       { path: '/sessions', label: 'Sessions', icon: '📊', roles: [APP_ROLES.ADMIN] },
       { path: '/predictions', label: 'My Predictions', icon: '📈', roles: [APP_ROLES.ADMIN] },
-      { path: '/agent-experience', label: 'Agent Experience', icon: '🤖', roles: [APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL] },
-      { path: '/summary', label: 'Summary', icon: '📋', roles: [APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL] },
-      { path: '/health', label: 'System Health', icon: '💚', roles: [APP_ROLES.ADMIN] },
     ];
 
     if (!isAuthenticated) {

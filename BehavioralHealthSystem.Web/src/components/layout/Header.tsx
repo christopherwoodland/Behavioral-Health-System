@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRoleAccess } from '@/components/auth/AuthGuards';
 import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { APP_ROLES } from '@/config/authConfig';
 
@@ -12,8 +11,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const { theme, toggleTheme } = useTheme();
-  const { user, logout, login, isAuthenticated } = useAuth();
-  const { canAccessControlPanel, isAdmin } = useRoleAccess();
+  const { user, logout, isAuthenticated, isAdmin, canAccessControlPanel } = useAuth();
   const location = useLocation();
   const { handleEnterSpace } = useKeyboardNavigation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -39,6 +37,15 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
       return false;
     });
   };
+
+  // Debug authentication state
+  useEffect(() => {
+    console.log('[Header] Authentication state:', {
+      isAuthenticated,
+      user: user ? { id: user.id, name: user.name, roles: user.roles } : null,
+      timestamp: new Date().toISOString()
+    });
+  }, [isAuthenticated, user]);
 
   const navItems = getNavigationItems();
 
@@ -116,25 +123,8 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
             ))}
           </nav>
 
-          {/* Theme toggle and user menu */}
+          {/* User menu and theme toggle */}
           <div className="flex items-center space-x-4">
-            <button
-              onClick={toggleTheme}
-              onKeyDown={handleEnterSpace(toggleTheme)}
-              className="
-                p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100
-                dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700
-                focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-                transition-colors touch-target
-              "
-              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-              type="button"
-            >
-              <span className="text-xl" role="img" aria-hidden="true">
-                {theme === 'light' ? '🌙' : '☀️'}
-              </span>
-            </button>
-
             {/* Authenticated User Menu */}
             {isAuthenticated && user && (
               <div className="relative" data-user-menu>
@@ -209,38 +199,43 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
               </div>
             )}
 
-            {/* Unauthenticated Login Button */}
-            {!isAuthenticated && (
-              <button
-                onClick={() => login()}
-                className="
-                  px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md
-                  hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                  transition-colors
-                "
-              >
-                Sign In
-              </button>
-            )}
-
-            {/* Mobile menu button */}
             <button
-              onClick={toggleMobileMenu}
-              onKeyDown={handleEnterSpace(toggleMobileMenu)}
+              onClick={toggleTheme}
+              onKeyDown={handleEnterSpace(toggleTheme)}
               className="
-                md:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100
+                p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100
                 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700
                 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
                 transition-colors touch-target
               "
-              aria-label={isMobileMenuOpen ? "Close mobile menu" : "Open mobile menu"}
+              aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
               type="button"
-              {...(isMobileMenuOpen ? { 'aria-expanded': true } : { 'aria-expanded': false })}
             >
               <span className="text-xl" role="img" aria-hidden="true">
-                {isMobileMenuOpen ? '✕' : '☰'}
+                {theme === 'light' ? '🌙' : '☀️'}
               </span>
             </button>
+
+            {/* Mobile menu button - only show when authenticated */}
+            {isAuthenticated && (
+              <button
+                onClick={toggleMobileMenu}
+                onKeyDown={handleEnterSpace(toggleMobileMenu)}
+                className="
+                  md:hidden p-2 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100
+                  dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-700
+                  focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                  transition-colors touch-target
+                "
+                aria-label={isMobileMenuOpen ? "Close mobile menu" : "Open mobile menu"}
+                type="button"
+                {...(isMobileMenuOpen ? { 'aria-expanded': true } : { 'aria-expanded': false })}
+              >
+                <span className="text-xl" role="img" aria-hidden="true">
+                  {isMobileMenuOpen ? '✕' : '☰'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 

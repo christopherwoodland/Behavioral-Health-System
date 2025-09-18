@@ -93,7 +93,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   const uniqueUsers = new Set(allSessions.map(s => s.userId)).size;
   
   const completedSessions = allSessions.filter(s => 
-    s.status === 'succeeded' && s.prediction
+    s.status === 'succeeded' || s.status === 'completed'
   );
   
   const failedSessions = allSessions.filter(s => 
@@ -147,19 +147,45 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   };
 
   completedSessions.forEach(session => {
-    if (session.prediction) {
-      // Handle both camelCase and snake_case property names from API
-      const prediction = session.prediction as any;
-      
-      const depScore = prediction.predictedScoreDepression || prediction.predicted_score_depression;
-      if (depScore && depScore in depressionCounts) {
-        depressionCounts[depScore as keyof typeof depressionCounts]++;
-      }
+    // Handle depression scores - try multiple sources
+    let depressionCategory: string | null = null;
+    let anxietyCategory: string | null = null;
 
-      const anxScore = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
-      if (anxScore && anxScore in anxietyCounts) {
-        anxietyCounts[anxScore as keyof typeof anxietyCounts]++;
-      }
+    // First try prediction object for classification strings
+    if (session.prediction) {
+      const prediction = session.prediction as any;
+      depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
+      anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+    }
+
+    // If no classification from prediction, try to categorize from numeric scores in analysisResults
+    if (!depressionCategory && session.analysisResults?.depressionScore !== null && session.analysisResults?.depressionScore !== undefined) {
+      const score = session.analysisResults.depressionScore;
+      // Convert numeric PHQ-9 score to categories (0-27 scale)
+      if (score >= 0 && score <= 4) depressionCategory = 'no_to_mild';
+      else if (score >= 5 && score <= 9) depressionCategory = 'mild_to_moderate';
+      else if (score >= 10 && score <= 14) depressionCategory = 'mild_to_moderate';
+      else if (score >= 15 && score <= 19) depressionCategory = 'moderate_to_severe';
+      else if (score >= 20) depressionCategory = 'severe';
+    }
+
+    if (!anxietyCategory && session.analysisResults?.anxietyScore !== null && session.analysisResults?.anxietyScore !== undefined) {
+      const score = session.analysisResults.anxietyScore;
+      // Convert numeric GAD-7 score to categories (0-21 scale)
+      if (score >= 0 && score <= 4) anxietyCategory = 'no_or_minimal';
+      else if (score >= 5 && score <= 9) anxietyCategory = 'mild';
+      else if (score >= 10 && score <= 14) anxietyCategory = 'moderate';
+      else if (score >= 15 && score <= 19) anxietyCategory = 'moderately_severe';
+      else if (score >= 20) anxietyCategory = 'severe';
+    }
+
+    // Count the categories
+    if (depressionCategory && depressionCategory in depressionCounts) {
+      depressionCounts[depressionCategory as keyof typeof depressionCounts]++;
+    }
+
+    if (anxietyCategory && anxietyCategory in anxietyCounts) {
+      anxietyCounts[anxietyCategory as keyof typeof anxietyCounts]++;
     }
   });
 
@@ -202,7 +228,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     const userStats = userStatsMap.get(groupingUserId)!;
     userStats.totalSessions++;
     userStats.sessions.push(session);
-    if (session.status === 'succeeded' && session.prediction) {
+    if (session.status === 'succeeded' || session.status === 'completed') {
       userStats.successfulSessions++;
     }
   });
@@ -213,10 +239,15 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     
     // Calculate average confidence for this user
     const successfulSessions = stats.sessions.filter(s => 
-      s.status === 'succeeded' && s.prediction && s.analysisResults?.confidence
+      s.status === 'succeeded' || s.status === 'completed'
     );
-    const avgConfidence = successfulSessions.length > 0 
-      ? successfulSessions.reduce((sum, s) => sum + (s.analysisResults?.confidence || 0), 0) / successfulSessions.length
+    
+    const confidenceValues = successfulSessions
+      .map(s => s.analysisResults?.confidence)
+      .filter(c => c !== null && c !== undefined && typeof c === 'number');
+    
+    const avgConfidence = confidenceValues.length > 0 
+      ? confidenceValues.reduce((sum, c) => sum + c!, 0) / confidenceValues.length
       : 0;
 
     // Risk distribution for this user
@@ -251,19 +282,45 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     };
 
     successfulSessions.forEach(session => {
-      if (session.prediction) {
-        // Handle both camelCase and snake_case property names from API
-        const prediction = session.prediction as any;
-        
-        const depScore = prediction.predictedScoreDepression || prediction.predicted_score_depression;
-        if (depScore && depScore in userDepressionScores) {
-          userDepressionScores[depScore as keyof typeof userDepressionScores]++;
-        }
+      // Handle depression scores - try multiple sources
+      let depressionCategory: string | null = null;
+      let anxietyCategory: string | null = null;
 
-        const anxScore = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
-        if (anxScore && anxScore in userAnxietyScores) {
-          userAnxietyScores[anxScore as keyof typeof userAnxietyScores]++;
-        }
+      // First try prediction object for classification strings
+      if (session.prediction) {
+        const prediction = session.prediction as any;
+        depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
+        anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+      }
+
+      // If no classification from prediction, try to categorize from numeric scores in analysisResults
+      if (!depressionCategory && session.analysisResults?.depressionScore !== null && session.analysisResults?.depressionScore !== undefined) {
+        const score = session.analysisResults.depressionScore;
+        // Convert numeric PHQ-9 score to categories (0-27 scale)
+        if (score >= 0 && score <= 4) depressionCategory = 'no_to_mild';
+        else if (score >= 5 && score <= 9) depressionCategory = 'mild_to_moderate';
+        else if (score >= 10 && score <= 14) depressionCategory = 'mild_to_moderate';
+        else if (score >= 15 && score <= 19) depressionCategory = 'moderate_to_severe';
+        else if (score >= 20) depressionCategory = 'severe';
+      }
+
+      if (!anxietyCategory && session.analysisResults?.anxietyScore !== null && session.analysisResults?.anxietyScore !== undefined) {
+        const score = session.analysisResults.anxietyScore;
+        // Convert numeric GAD-7 score to categories (0-21 scale)
+        if (score >= 0 && score <= 4) anxietyCategory = 'no_or_minimal';
+        else if (score >= 5 && score <= 9) anxietyCategory = 'mild';
+        else if (score >= 10 && score <= 14) anxietyCategory = 'moderate';
+        else if (score >= 15 && score <= 19) anxietyCategory = 'moderately_severe';
+        else if (score >= 20) anxietyCategory = 'severe';
+      }
+
+      // Count the categories for this user
+      if (depressionCategory && depressionCategory in userDepressionScores) {
+        userDepressionScores[depressionCategory as keyof typeof userDepressionScores]++;
+      }
+
+      if (anxietyCategory && anxietyCategory in userAnxietyScores) {
+        userAnxietyScores[anxietyCategory as keyof typeof userAnxietyScores]++;
       }
     });
 
@@ -773,17 +830,19 @@ const UserStatsTable: React.FC<{
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-3 px-2 font-medium text-gray-900 dark:text-white">
+                <th className="text-left py-3 px-2 font-medium text-gray-900 dark:text-white w-48">
                   User ID
                 </th>
                 <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
                   Sessions
                 </th>
                 <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
-                  Job Success Rate
-                </th>
-                <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
-                  Avg Confidence
+                  <div className="flex flex-col items-center">
+                    <span>Avg Confidence</span>
+                    <span className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
+                      (Analysis accuracy 0-100%)
+                    </span>
+                  </div>
                 </th>
                 <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
                   Risk Distribution

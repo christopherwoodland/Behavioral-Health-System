@@ -1,5 +1,5 @@
 import { getUserId, formatRelativeTime, formatDateTime, createAppError, isNetworkError } from '../index';
-import type { AppError } from '@/types';
+import type { AppError } from '../../types';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 
 // Mock localStorage

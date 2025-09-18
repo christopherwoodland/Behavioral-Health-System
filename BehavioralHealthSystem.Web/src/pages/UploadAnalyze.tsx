@@ -97,6 +97,14 @@ const UploadAnalyze: React.FC = () => {
     timestamp: number;
   }>>([]);
 
+  // Validation state for real-time field validation
+  const [validationErrors, setValidationErrors] = useState<{
+    age?: string;
+    weight?: string;
+    zipcode?: string;
+    sessionNotes?: string;
+  }>({});
+
   // User ID management state - REMOVED (now part of metadata)
   
   // Auto-generate user ID when component loads (for form metadata)
@@ -356,6 +364,81 @@ const UploadAnalyze: React.FC = () => {
 
     return errors;
   }, [userMetadata]);
+
+  // Individual field validation functions for real-time validation
+  const validateAge = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const age = parseInt(value);
+    if (isNaN(age) || age < 18 || age > 130) {
+      return 'Age must be between 18 and 130';
+    }
+    return undefined;
+  }, []);
+
+  const validateWeight = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const weight = parseInt(value);
+    if (isNaN(weight) || weight < 10 || weight > 1000) {
+      return 'Weight must be between 10 and 1000 pounds (lbs)';
+    }
+    return undefined;
+  }, []);
+
+  const validateZipcode = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const zipcodeRegex = /^[a-zA-Z0-9]{1,10}$/;
+    if (!zipcodeRegex.test(value)) {
+      return 'Zipcode must be alphanumeric and contain no more than 10 characters';
+    }
+    return undefined;
+  }, []);
+
+  const validateSessionNotes = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    if (value.length > 500) {
+      return 'Session notes must be 500 characters or less';
+    }
+    return undefined;
+  }, []);
+
+  // Real-time field validation handler
+  const handleFieldValidation = useCallback((field: string, value: string) => {
+    let error: string | undefined;
+    
+    switch (field) {
+      case 'age':
+        error = validateAge(value);
+        break;
+      case 'weight':
+        error = validateWeight(value);
+        break;
+      case 'zipcode':
+        error = validateZipcode(value);
+        break;
+      case 'sessionNotes':
+        error = validateSessionNotes(value);
+        break;
+      default:
+        return;
+    }
+
+    setValidationErrors(prev => {
+      const newErrors = {
+        ...prev,
+        [field]: error
+      };
+      
+      // Check if all validation errors are cleared
+      const hasAnyErrors = Object.values(newErrors).some(err => err !== undefined);
+      
+      // If no validation errors exist, clear the global error state
+      if (!hasAnyErrors) {
+        setError(null);
+      }
+      
+      return newErrors;
+    });
+  }, [validateAge, validateWeight, validateZipcode, validateSessionNotes]);
 
   const buildMetadata = useCallback(() => {
     const metadata: Partial<SessionMetadata> = {};
@@ -1158,7 +1241,7 @@ const UploadAnalyze: React.FC = () => {
       {/* User Metadata Form */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Patient Information
+          Patient Information (Optional)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
@@ -1180,39 +1263,71 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Age (Optional)
+              Age
             </label>
             <input
               type="number"
               id="age"
               value={userMetadata.age}
               onChange={(e) => setUserMetadata(prev => ({ ...prev, age: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onBlur={(e) => handleFieldValidation('age', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('age', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.age 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               placeholder="Age in years"
               min="1"
               max="150"
+              aria-describedby={validationErrors.age ? "age-error" : undefined}
             />
+            {validationErrors.age && (
+              <p id="age-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.age}
+              </p>
+            )}
           </div>
 
           <div>
             <label htmlFor="weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Weight (Optional)
+              Weight
             </label>
             <input
               type="number"
               id="weight"
               value={userMetadata.weight}
               onChange={(e) => setUserMetadata(prev => ({ ...prev, weight: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onBlur={(e) => handleFieldValidation('weight', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('weight', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.weight 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               placeholder="Weight in lbs"
               min="1"
               max="1000"
+              aria-describedby={validationErrors.weight ? "weight-error" : undefined}
             />
+            {validationErrors.weight && (
+              <p id="weight-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.weight}
+              </p>
+            )}
           </div>
 
           <div>
             <label htmlFor="gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Gender (Optional)
+              Gender
             </label>
             <select
               id="gender"
@@ -1233,7 +1348,7 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="race" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Race (Optional)
+              Race
             </label>
             <select
               id="race"
@@ -1255,7 +1370,7 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="ethnicity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Ethnicity (Optional)
+              Ethnicity
             </label>
             <select
               id="ethnicity"
@@ -1271,7 +1386,7 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Primary Language (Optional)
+              Primary Language
             </label>
             <select
               id="language"
@@ -1287,32 +1402,67 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="zipcode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              ZIP Code (Optional)
+              ZIP Code
             </label>
             <input
               type="text"
               id="zipcode"
               value={userMetadata.zipcode}
               onChange={(e) => setUserMetadata(prev => ({ ...prev, zipcode: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onBlur={(e) => handleFieldValidation('zipcode', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('zipcode', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.zipcode 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               placeholder="Enter ZIP code"
               pattern="[0-9]{5}(-[0-9]{4})?"
               title="Enter a valid ZIP code (e.g., 12345 or 12345-6789)"
+              aria-describedby={validationErrors.zipcode ? "zipcode-error" : undefined}
             />
+            {validationErrors.zipcode && (
+              <p id="zipcode-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.zipcode}
+              </p>
+            )}
           </div>
 
           <div className="md:col-span-2 lg:col-span-3">
             <label htmlFor="sessionNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Session Notes (Optional)
+              Session Notes
             </label>
             <textarea
               id="sessionNotes"
               value={userMetadata.sessionNotes}
               onChange={(e) => setUserMetadata(prev => ({ ...prev, sessionNotes: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onBlur={(e) => handleFieldValidation('sessionNotes', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('sessionNotes', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.sessionNotes 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               rows={3}
               placeholder="Additional notes about this session or patient context"
+              aria-describedby={validationErrors.sessionNotes ? "sessionNotes-error" : undefined}
             />
+            {validationErrors.sessionNotes && (
+              <p id="sessionNotes-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.sessionNotes}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {userMetadata.sessionNotes.length}/500 characters
+            </p>
           </div>
         </div>
       </div>
@@ -1802,7 +1952,8 @@ const UploadAnalyze: React.FC = () => {
                 <button type="button"
                   onClick={processMultipleFiles}
                   disabled={audioFiles.length === 0 || !userMetadata.userId.trim() || 
-                           !audioFiles.some(file => fileStates[file.id] === 'ready')}
+                           !audioFiles.some(file => fileStates[file.id] === 'ready') ||
+                           !!error || Object.values(validationErrors).some(err => err !== undefined)}
                   className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
                 >
                   <Play className="h-5 w-5 mr-2" aria-hidden="true" />
@@ -1820,7 +1971,8 @@ const UploadAnalyze: React.FC = () => {
             <div>
               <button type="button"
                 onClick={processAndAnalyze}
-                disabled={!audioFile || !userMetadata.userId.trim()}
+                disabled={!audioFile || !userMetadata.userId.trim() || 
+                         !!error || Object.values(validationErrors).some(err => err !== undefined)}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
               >
                 <Play className="h-5 w-5 mr-2" aria-hidden="true" />

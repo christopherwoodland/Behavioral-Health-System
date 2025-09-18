@@ -35,6 +35,7 @@ const statusConfig = {
   processing: { color: 'blue', icon: RefreshCw, label: 'Processing', description: 'Analysis in progress' },
   succeeded: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
   success: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
+  completed: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
   failed: { color: 'red', icon: XCircle, label: 'Failed', description: 'Analysis encountered an error' },
   error: { color: 'red', icon: XCircle, label: 'Error', description: 'An error occurred during processing' },
 } as const;
@@ -140,7 +141,8 @@ const SessionDetail: React.FC = () => {
       if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
         config = statusConfig.error;
       } else {
-        config = statusConfig.failed; // Default fallback
+        // Default to initiated for unknown statuses instead of failed
+        config = statusConfig.initiated;
       }
     }
     

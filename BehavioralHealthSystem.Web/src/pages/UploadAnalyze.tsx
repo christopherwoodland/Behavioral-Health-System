@@ -654,7 +654,8 @@ const UploadAnalyze: React.FC = () => {
       let fileName: string;
 
       // Check if this is a pre-filled session with existing audio URL (re-run scenario)
-      if (audioFile.url) {
+      // Ensure the URL is a valid Azure Storage URL, not a blob URL
+      if (audioFile.url && !audioFile.url.startsWith('blob:')) {
         // Skip conversion and upload for re-run - audio is already processed and stored
         setProcessingProgress(prev => ({
           ...prev,
@@ -671,6 +672,7 @@ const UploadAnalyze: React.FC = () => {
         }));
       } else {
         // Normal flow: convert and upload new audio file
+        // This includes the case where audioFile.url is a blob URL (invalid for backend)
         setProcessingProgress(prev => ({
           ...prev,
           [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
@@ -1126,7 +1128,8 @@ const UploadAnalyze: React.FC = () => {
       let fileName: string;
 
       // Check if this is a pre-filled session with existing audio URL (re-run scenario)
-      if (audioFile.url) {
+      // Ensure the URL is a valid Azure Storage URL, not a blob URL
+      if (audioFile.url && !audioFile.url.startsWith('blob:')) {
         // Skip conversion and upload for re-run - audio is already processed and stored
         setProgress({ stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' });
         announceToScreenReader('Session created successfully, reusing previously processed audio file');
@@ -1138,6 +1141,7 @@ const UploadAnalyze: React.FC = () => {
         setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
       } else {
         // Normal flow: convert and upload new audio file
+        // This includes the case where audioFile.url is a blob URL (invalid for backend)
         setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
         announceToScreenReader('Session created successfully, now converting audio');
 

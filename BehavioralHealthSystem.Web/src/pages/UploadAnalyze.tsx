@@ -459,22 +459,14 @@ const UploadAnalyze: React.FC = () => {
       }));
       
       // Show success toast
-      setToasts(prev => [...prev, {
-        id: Date.now(),
-        type: 'success',
-        message: 'Grammar and spelling corrected successfully'
-      }]);
+      addToast('success', 'Grammar Corrected', 'Grammar and spelling corrected successfully');
       
     } catch (error) {
       console.error('Grammar correction failed:', error);
       const appError = error as AppError;
       
       // Show error toast
-      setToasts(prev => [...prev, {
-        id: Date.now(),
-        type: 'error',
-        message: appError.message || 'Failed to correct grammar. Please try again.'
-      }]);
+      addToast('error', 'Grammar Correction Failed', appError.message || 'Failed to correct grammar. Please try again.');
     } finally {
       setIsCorrectingGrammar(false);
     }
@@ -1531,12 +1523,12 @@ const UploadAnalyze: React.FC = () => {
                 {validationErrors.sessionNotes}
               </p>
             )}
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {userMetadata.sessionNotes.length}/500 characters
-            </p>
-            
-            {/* Grammar Correction Button */}
-            <div className="mt-2">
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {userMetadata.sessionNotes.length}/500 characters
+              </p>
+              
+              {/* Grammar Correction Button - Next to character count */}
               <button
                 type="button"
                 onClick={() => handleGrammarCorrection()}
@@ -1545,20 +1537,24 @@ const UploadAnalyze: React.FC = () => {
                 aria-label="Correct grammar and spelling in session notes"
                 title="Correct grammar and spelling"
               >
-                <svg 
-                  className="w-3.5 h-3.5 mr-1.5" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
-                  />
-                </svg>
+                {isCorrectingGrammar ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <svg 
+                    className="w-3.5 h-3.5 mr-1.5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
+                    />
+                  </svg>
+                )}
                 {isCorrectingGrammar ? 'Correcting...' : 'Correct Grammar'}
               </button>
             </div>

@@ -528,8 +528,9 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: getAuthenticatedUserId(), // Use authenticated user ID for proper folder structure
-        userMetadata: metadata,
+        userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
+        metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
+        ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -948,8 +949,9 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: getAuthenticatedUserId(), // Use authenticated user ID for proper folder structure
-        userMetadata: metadata,
+        userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
+        metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
+        ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

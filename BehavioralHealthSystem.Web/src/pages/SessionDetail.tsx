@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
+import { getBlobService } from '../services/azure';
 import { formatDateTime, formatRelativeTime } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import type { SessionData, AppError } from '../types';
@@ -129,6 +130,29 @@ const SessionDetail: React.FC = () => {
     URL.revokeObjectURL(url);
     
     announceToScreenReader('Session data download started');
+  }, [session, announceToScreenReader]);
+
+  // Download audio file from blob storage
+  const downloadAudioFile = useCallback(async () => {
+    if (!session?.audioFileName || !session?.userId) return;
+
+    try {
+      const blobService = getBlobService();
+      const blobPath = `${session.userId}/${session.audioFileName}`;
+      
+      // Create a direct blob URL for download
+      const sasUrl = blobService['sasUrl'];
+      const containerName = 'audio-uploads'; // Assuming this is the container name
+      const downloadUrl = `${sasUrl.split('?')[0]}/${containerName}/${blobPath}?${sasUrl.split('?')[1]}`;
+      
+      // Open the download URL in a new tab
+      window.open(downloadUrl, '_blank');
+      
+      announceToScreenReader(`Downloading audio file: ${session.audioFileName}`);
+    } catch (error) {
+      console.error('Failed to download audio file:', error);
+      announceToScreenReader('Failed to download audio file');
+    }
   }, [session, announceToScreenReader]);
 
   // Status badge component
@@ -358,6 +382,18 @@ const SessionDetail: React.FC = () => {
                 {session.userId}
               </div>
             </div>
+            
+            {session.metadata_user_id && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <User className="w-4 h-4 inline mr-1" aria-hidden="true" />
+                  Metadata User ID
+                </label>
+                <div className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border break-all">
+                  {session.metadata_user_id}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -374,9 +410,13 @@ const SessionDetail: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   File Name
                 </label>
-                <div className="text-sm text-gray-900 dark:text-white font-medium">
+                <button
+                  onClick={downloadAudioFile}
+                  className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                  title="Click to download audio file"
+                >
                   {session.audioFileName}
-                </div>
+                </button>
               </div>
             )}
             
@@ -570,60 +610,7 @@ const SessionDetail: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Risk Level */}
-                  {session.analysisResults?.riskLevel && (
-                    <div className={`p-4 rounded-lg border ${
-                      session.analysisResults.riskLevel === 'high' 
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                        : session.analysisResults.riskLevel === 'medium'
-                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
-                        : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className={`text-sm font-medium ${
-                          session.analysisResults.riskLevel === 'high' 
-                            ? 'text-red-700 dark:text-red-300'
-                            : session.analysisResults.riskLevel === 'medium'
-                            ? 'text-yellow-700 dark:text-yellow-300'
-                            : 'text-green-700 dark:text-green-300'
-                        }`}>
-                          Risk Level
-                        </span>
-                        <AlertCircle className={`w-4 h-4 ${
-                          session.analysisResults.riskLevel === 'high' 
-                            ? 'text-red-600 dark:text-red-400'
-                            : session.analysisResults.riskLevel === 'medium'
-                            ? 'text-yellow-600 dark:text-yellow-400'
-                            : 'text-green-600 dark:text-green-400'
-                        }`} aria-hidden="true" />
-                      </div>
-                      <div className={`text-2xl font-bold ${
-                        session.analysisResults.riskLevel === 'high' 
-                          ? 'text-red-900 dark:text-red-100'
-                          : session.analysisResults.riskLevel === 'medium'
-                          ? 'text-yellow-900 dark:text-yellow-100'
-                          : 'text-green-900 dark:text-green-100'
-                      }`}>
-                        {session.analysisResults.riskLevel.charAt(0).toUpperCase() + session.analysisResults.riskLevel.slice(1)}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Confidence Score */}
-                  {session.analysisResults?.confidence && (
-                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Confidence
-                        </span>
-                        <TrendingUp className="w-4 h-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                        {(session.analysisResults.confidence * 100).toFixed(1)}%
-                      </div>
-                    </div>
-                  )}
-                  
+                  {/* Note: Risk Level and Confidence scores have been removed per user request */}
                   {/* Note: Overall Score (predicted_score) is deprecated and no longer displayed */}
                 </div>
               </div>

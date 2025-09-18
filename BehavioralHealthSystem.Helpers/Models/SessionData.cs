@@ -8,6 +8,9 @@ public class SessionData
     [JsonPropertyName("userId")]
     public string UserId { get; set; } = string.Empty;
     
+    [JsonPropertyName("metadata_user_id")]
+    public string? MetadataUserId { get; set; }
+    
     [JsonPropertyName("prediction")]
     public PredictionResult? Prediction { get; set; }
     

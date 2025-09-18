@@ -131,11 +131,17 @@ const SessionDetail: React.FC = () => {
     announceToScreenReader('Session data download started');
   }, [session, announceToScreenReader]);
 
-  // Download audio file from blob storage
+  // Download audio file using audioUrl from session data
   const downloadAudioFile = useCallback(async () => {
+    if (!session?.audioUrl || !session?.audioFileName) return;
     if (!session?.audioUrl) return;
 
     try {
+      // Use the audioUrl directly from session data
+      const downloadUrl = session.audioUrl;
+      
+      // Open the download URL in a new tab
+      window.open(downloadUrl, '_blank');
       // Use the audioUrl directly from session data
       window.open(session.audioUrl, '_blank');
       
@@ -396,6 +402,7 @@ const SessionDetail: React.FC = () => {
           </h2>
           
           <div className="space-y-4">
+            {session.audioFileName && session.audioUrl && (
             {session.audioFileName && session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

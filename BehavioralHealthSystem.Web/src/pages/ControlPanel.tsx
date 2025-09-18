@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info } from 'lucide-react';
+import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info, X } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
@@ -1043,6 +1043,8 @@ const FunnelChart: React.FC<{
 const UserStatsTable: React.FC<{
   userStats: AnalyticsData['userStats'];
 }> = ({ userStats }) => {
+  const [showConfidenceModal, setShowConfidenceModal] = useState(false);
+  
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -1152,21 +1154,14 @@ const UserStatsTable: React.FC<{
                   <div className="flex flex-col items-center">
                     <div className="flex items-center space-x-1">
                       <span>Avg Confidence</span>
-                      <div className="relative group">
-                        <Info className="h-3 w-3 text-gray-400 hover:text-blue-500 cursor-help" />
-                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[99999]">
-                          <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg p-3 shadow-2xl border border-gray-600 whitespace-nowrap w-80">
-                            <div className="font-semibold mb-2 text-center">Average Confidence Calculation:</div>
-                            <div className="space-y-1 text-left">
-                              <div>• Calculated from AI model confidence scores</div>
-                              <div>• Averaged across all successful sessions per user</div>
-                              <div>• Related to risk distribution/evaluation accuracy</div>
-                              <div>• Higher values indicate more reliable assessments</div>
-                            </div>
-                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
-                          </div>
-                        </div>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowConfidenceModal(true)}
+                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                        aria-label="Show Average Confidence information"
+                      >
+                        <Info className="h-3 w-3 text-gray-400 hover:text-blue-500 cursor-pointer" />
+                      </button>
                     </div>
                     <span className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
                       (Analysis accuracy 0-100%)
@@ -1229,6 +1224,37 @@ const UserStatsTable: React.FC<{
             </tbody>
           </table>
         </div>
+        </div>
+      )}
+
+      {/* Average Confidence Modal */}
+      {showConfidenceModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowConfidenceModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Average Confidence Information</h3>
+              <button
+                type="button"
+                onClick={() => setShowConfidenceModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              <div className="font-medium text-center text-gray-900 dark:text-white mb-3">Average Confidence Calculation:</div>
+              <div className="space-y-2">
+                <div>• Calculated from AI model confidence scores</div>
+                <div>• Averaged across all successful sessions per user</div>
+                <div>• Related to risk distribution/evaluation accuracy</div>
+                <div>• Higher values indicate more reliable assessments</div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                Analysis accuracy range: 0-100%
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

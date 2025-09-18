@@ -1,10 +1,31 @@
 # BehavioralHealthSystem.Agents
 
-This project contains AI agents built with Microsoft Semantic Kernel for behavioral health assessments and workflows.
+This project contains AI agents built with Microsoft Semantic Kernel for behavioral health assessments and workflows, featuring advanced real-time communication and handoff capabilities.
 
 ## Overview
 
-The agents use the Group Chat multi-agent architecture to collaborate and provide comprehensive behavioral health services. The initial implementation focuses on the PHQ-9 (Patient Health Questionnaire-9) depression assessment.
+The agents use the Group Chat multi-agent architecture to collaborate and provide comprehensive behavioral health services. The system includes sophisticated agent handoff mechanisms, real-time communication via SignalR, and crisis detection capabilities for emergency interventions.
+
+## Core Architecture
+
+### Real-Time Communication System
+
+The agent system features comprehensive real-time communication capabilities:
+
+- **SignalR Integration** - Bidirectional real-time messaging between agents and clients
+- **Agent Handoff Notifications** - Seamless transitions between specialized agents
+- **Typing Indicators** - Real-time feedback when agents are processing responses
+- **Session Management** - Persistent session tracking with unique identifiers
+- **Crisis Detection** - Automatic routing to appropriate crisis intervention agents
+
+### Multi-Agent Coordination
+
+The system implements advanced multi-agent coordination patterns:
+
+- **Group Chat Architecture** - Collaborative agent interactions using Semantic Kernel
+- **Specialized Agent Roles** - Each agent handles specific aspects of behavioral health
+- **Intelligent Routing** - Coordinator agent manages workflow and agent selection
+- **Context Preservation** - Seamless context transfer during agent handoffs
 
 ## Agents
 
@@ -29,13 +50,55 @@ The PHQ-9 Agent administers and manages the Patient Health Questionnaire-9, a va
 
 ### Coordinator Agent (`CoordinatorAgent`)
 
-The Coordinator Agent manages workflows and routes requests between specialized agents.
+The Coordinator Agent manages workflows and routes requests between specialized agents with enhanced real-time capabilities.
 
-**Features:**
+**Enhanced Features:**
 - Route user requests to appropriate specialized agents
-- Coordinate multi-step workflows
+- Coordinate multi-step workflows with real-time updates
 - Aggregate results from multiple agents
 - Provide unified responses to users
+- **Crisis Detection** - Intelligent identification of emergency situations
+- **Agent Handoff Management** - Seamless transitions with context preservation
+- **Real-time Notifications** - Live updates to clients during agent changes
+
+### Communication Features
+
+The agent system includes sophisticated real-time communication capabilities:
+
+**SignalR Integration:**
+- **Live Messaging** - Real-time bidirectional communication
+- **Typing Indicators** - Visual feedback during agent processing
+- **Handoff Notifications** - Seamless agent transition announcements
+- **Session Tracking** - Persistent session management across interactions
+
+**Agent Handoff System:**
+- **Intelligent Routing** - Automatic agent selection based on user needs
+- **Context Preservation** - Seamless information transfer between agents
+- **Crisis Escalation** - Immediate routing to crisis intervention specialists
+- **Performance Monitoring** - Real-time tracking of agent response times
+
+## Agent Communication Hub
+
+The system includes a comprehensive communication infrastructure:
+
+```csharp
+// SignalR Hub for real-time agent communication
+public class AgentCommunicationHub : Hub
+{
+    // Real-time messaging endpoints
+    public async Task SendUserMessage(string sessionId, string message);
+    public async Task NotifyAgentHandoff(string sessionId, AgentHandoffInfo handoff);
+    public async Task SendTypingIndicator(string sessionId, string agentName);
+}
+```
+
+**Available Endpoints:**
+- `GET /api/negotiate` - SignalR connection negotiation
+- `POST /api/sendagentmessage` - Agent-to-client messaging
+- `POST /api/notifyagenthandoff` - Agent handoff notifications
+- `POST /api/notifyagenttyping` - Typing indicator updates
+- `POST /api/joinsession` - Session management
+- `POST /api/sendusermessage` - User message processing
 
 ## PHQ-9 Questionnaire
 

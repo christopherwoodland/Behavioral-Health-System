@@ -153,6 +153,9 @@ var host = new HostBuilder()
         // Risk Assessment Service (no longer needs HttpClient)
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         
+        // Grammar Correction Service
+        services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();
+        
         // Blob Storage Service
         services.AddSingleton(serviceProvider =>
         {

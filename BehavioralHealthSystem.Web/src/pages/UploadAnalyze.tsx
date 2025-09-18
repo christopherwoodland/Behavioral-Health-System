@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Files, File } from 'lucide-react';
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
@@ -12,6 +13,7 @@ interface UploadProgress {
   stage: 'idle' | 'starting' | 'initiating' | 'converting' | 'uploading' | 'submitting' | 'analyzing' | 'complete' | 'error';
   progress: number;
   message: string;
+  sessionId?: string; // Track session ID for status updates
   error?: {
     code: string;
     message: string;
@@ -55,9 +57,27 @@ interface AnalysisResult {
   rawApiResponse?: any; // Store the complete API response
 }
 
+// Interface for pre-filled data from re-run functionality
+interface PrefilledSessionData {
+  userMetadata?: {
+    age?: number;
+    gender?: string;
+    race?: string;
+    ethnicity?: string;
+    language?: boolean;
+    weight?: number;
+    zipcode?: string;
+    sessionNotes?: string;
+  };
+  audioUrl?: string;
+  audioFileName?: string;
+  originalSessionId?: string;
+}
+
 const UploadAnalyze: React.FC = () => {
   // Auth context for user identification
   const { user } = useAuth();
+  const location = useLocation();
   
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingMode());
@@ -77,16 +97,20 @@ const UploadAnalyze: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
+  
+  // Get pre-filled data from location state (for re-run functionality)
+  const prefilledData = location.state as PrefilledSessionData | undefined;
+  
   const [userMetadata, setUserMetadata] = useState({
     userId: '', // Will be auto-generated on component mount
-    age: '',
-    gender: '',
-    race: '',
-    ethnicity: '',
-    language: '',
-    weight: '',
-    zipcode: '',
-    sessionNotes: ''
+    age: prefilledData?.userMetadata?.age?.toString() || '',
+    gender: prefilledData?.userMetadata?.gender || '',
+    race: prefilledData?.userMetadata?.race || '',
+    ethnicity: prefilledData?.userMetadata?.ethnicity || '',
+    language: prefilledData?.userMetadata?.language?.toString() || '',
+    weight: prefilledData?.userMetadata?.weight?.toString() || '',
+    zipcode: prefilledData?.userMetadata?.zipcode || '',
+    sessionNotes: prefilledData?.userMetadata?.sessionNotes || ''
   });
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Array<{
@@ -104,6 +128,8 @@ const UploadAnalyze: React.FC = () => {
     zipcode?: string;
     sessionNotes?: string;
   }>({});
+
+  const [isCorrectingGrammar, setIsCorrectingGrammar] = useState(false);
 
   // User ID management state - REMOVED (now part of metadata)
   
@@ -147,6 +173,43 @@ const UploadAnalyze: React.FC = () => {
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
+
+  // Handle pre-filled data from re-run functionality
+  useEffect(() => {
+    if (prefilledData) {
+      // Show a toast to inform user that data has been pre-filled
+      addToast('info', 'Session Data Pre-filled', 
+        `Metadata and audio file from session ${prefilledData.originalSessionId ? prefilledData.originalSessionId.slice(0, 8) + '...' : ''} have been loaded. Click "Start Analysis" to begin processing.`);
+      
+      // If there's an audio URL, create a virtual audio file entry
+      if (prefilledData.audioUrl && prefilledData.audioFileName) {
+        // Create a mock file object since we already have the URL
+        const mockFile = {
+          name: prefilledData.audioFileName,
+          size: 0,
+          type: 'audio/wav',
+          lastModified: Date.now(),
+          stream: () => new ReadableStream(),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          text: () => Promise.resolve(''),
+          slice: () => new Blob()
+        } as File;
+
+        const virtualAudioFile: AudioFile = {
+          id: `prefilled-${Date.now()}`,
+          file: mockFile,
+          url: prefilledData.audioUrl,
+          duration: undefined
+        };
+        
+        if (isMultiMode) {
+          setAudioFiles([virtualAudioFile]);
+        } else {
+          setAudioFile(virtualAudioFile);
+        }
+      }
+    }
+  }, [prefilledData, addToast, isMultiMode]); // Include dependencies
 
   const resetState = useCallback(() => {
     setAudioFiles([]);
@@ -431,14 +494,52 @@ const UploadAnalyze: React.FC = () => {
       // Check if all validation errors are cleared
       const hasAnyErrors = Object.values(newErrors).some(err => err !== undefined);
       
-      // If no validation errors exist, clear the global error state
+      // Clear global error if no field validation errors exist, or if this specific field error was cleared
+      // and the global error contains validation messages
       if (!hasAnyErrors) {
         setError(null);
+      } else if (error === undefined) {
+        // If this specific field error was cleared, check if global error is validation-related and clear it
+        setError(prevError => {
+          if (prevError && prevError.toLowerCase().includes('validation')) {
+            return null;
+          }
+          return prevError;
+        });
       }
       
       return newErrors;
     });
   }, [validateAge, validateWeight, validateZipcode, validateSessionNotes]);
+
+  const handleGrammarCorrection = useCallback(async () => {
+    if (!userMetadata.sessionNotes.trim()) {
+      return;
+    }
+
+    setIsCorrectingGrammar(true);
+    try {
+      const response = await apiService.correctGrammar(userMetadata.sessionNotes);
+      
+      // Update the session notes with the corrected text
+      setUserMetadata(prev => ({
+        ...prev,
+        sessionNotes: response.correctedText
+      }));
+      
+      // Show success toast
+      addToast('success', 'Grammar Corrected', 'Grammar and spelling corrected successfully');
+      
+    } catch (error) {
+      console.error('Grammar correction failed:', error);
+      const appError = error as AppError;
+      
+      // Show error toast
+      addToast('error', 'Grammar Correction Failed', appError.message || 'Failed to correct grammar. Please try again.');
+    } finally {
+      setIsCorrectingGrammar(false);
+    }
+  }, [userMetadata.sessionNotes]);
 
   const buildMetadata = useCallback(() => {
     const metadata: Partial<SessionMetadata> = {};
@@ -523,7 +624,7 @@ const UploadAnalyze: React.FC = () => {
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
       setProcessingProgress(prev => ({
         ...prev,
-        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...' }
+        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...', sessionId: sessionResponse.sessionId }
       }));
 
       const initialSessionData = {
@@ -549,40 +650,62 @@ const UploadAnalyze: React.FC = () => {
         // This is not critical for the main workflow, but user should be informed
       }
 
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
-      }));
+      let audioUrl: string;
+      let fileName: string;
 
-      // Step 2: Convert audio using FFmpeg
-      const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+      // Check if this is a pre-filled session with existing audio URL (re-run scenario)
+      if (audioFile.url) {
+        // Skip conversion and upload for re-run - audio is already processed and stored
         setProcessingProgress(prev => ({
           ...prev,
-          [fileId]: {
-            stage: 'converting',
-            progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
-            message: `Converting audio... ${Math.round(progressPercent)}%`
-          }
+          [fileId]: { stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' }
         }));
-      });
-
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' }
-      }));
-
-      // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
-      const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+        
+        audioUrl = audioFile.url;
+        fileName = audioFile.file.name;
+        
+        // Skip to 65% progress since conversion and upload are not needed
         setProcessingProgress(prev => ({
           ...prev,
-          [fileId]: {
-            stage: 'uploading',
-            progress: 40 + (progressPercent * 0.25), // 40-65% for upload
-            message: `Uploading... ${Math.round(progressPercent)}%`
-          }
+          [fileId]: { stage: 'submitting', progress: 65, message: 'Submitting for analysis...' }
         }));
-      }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      } else {
+        // Normal flow: convert and upload new audio file
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
+        }));
+
+        // Step 2: Convert audio using FFmpeg
+        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+          setProcessingProgress(prev => ({
+            ...prev,
+            [fileId]: {
+              stage: 'converting',
+              progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
+              message: `Converting audio... ${Math.round(progressPercent)}%`
+            }
+          }));
+        });
+
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' }
+        }));
+
+        // Step 3: Upload to Azure Blob Storage
+        fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+        audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+          setProcessingProgress(prev => ({
+            ...prev,
+            [fileId]: {
+              stage: 'uploading',
+              progress: 40 + (progressPercent * 0.25), // 40-65% for upload
+              message: `Uploading... ${Math.round(progressPercent)}%`
+            }
+          }));
+        }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      }
 
       setProcessingProgress(prev => ({
         ...prev,
@@ -749,6 +872,34 @@ const UploadAnalyze: React.FC = () => {
         errorCode = err.name || 'ERROR';
       }
 
+      // Update session status to failed if session was created
+      try {
+        // Try to find the session data from the processing progress or session context
+        const currentProgress = processingProgress[fileId];
+        if (currentProgress && currentProgress.sessionId) {
+          // Update session status to failed
+          const failedSessionData = {
+            sessionId: currentProgress.sessionId,
+            userId: getAuthenticatedUserId(),
+            metadata_user_id: userMetadata.userId.trim(),
+            audioFileName: audioFile.file.name,
+            createdAt: new Date().toISOString(), // Set as current time since we don't have original
+            status: 'failed',
+            updatedAt: new Date().toISOString(),
+            error: {
+              code: errorCode,
+              message: errorMessage,
+              details: errorDetails
+            }
+          };
+          
+          await apiService.updateSessionData(currentProgress.sessionId, failedSessionData);
+          console.log(`Updated session ${currentProgress.sessionId} status to failed`);
+        }
+      } catch (updateError) {
+        console.error('Failed to update session status to failed:', updateError);
+      }
+
       // Attempt to find and cleanup uploaded file if it exists
       // The file name should follow the pattern we used: `${userMetadata.userId}_${sessionId}_${timestamp}.wav`
       try {
@@ -895,6 +1046,7 @@ const UploadAnalyze: React.FC = () => {
     } catch (error) {
       console.error(`Error processing ${audioFile.file.name}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      
       addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
       setFileStates(prev => ({ ...prev, [fileId]: 'error' }));
       setProcessingProgress(prev => ({
@@ -970,30 +1122,47 @@ const UploadAnalyze: React.FC = () => {
         // This is not critical for the main workflow, but user should be informed
       }
 
-      setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
-      announceToScreenReader('Session created successfully, now converting audio');
+      let audioUrl: string;
+      let fileName: string;
 
-      // Step 2: Convert audio using FFmpeg
-      const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
-        setProgress({
-          stage: 'converting',
-          progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
-          message: `Converting audio... ${Math.round(progressPercent)}%`
+      // Check if this is a pre-filled session with existing audio URL (re-run scenario)
+      if (audioFile.url) {
+        // Skip conversion and upload for re-run - audio is already processed and stored
+        setProgress({ stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' });
+        announceToScreenReader('Session created successfully, reusing previously processed audio file');
+        
+        audioUrl = audioFile.url;
+        fileName = audioFile.file.name;
+        
+        // Skip to 65% progress since conversion and upload are not needed
+        setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
+      } else {
+        // Normal flow: convert and upload new audio file
+        setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
+        announceToScreenReader('Session created successfully, now converting audio');
+
+        // Step 2: Convert audio using FFmpeg
+        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+          setProgress({
+            stage: 'converting',
+            progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
+            message: `Converting audio... ${Math.round(progressPercent)}%`
+          });
         });
-      });
 
-      setProgress({ stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' });
-      announceToScreenReader('Audio converted successfully, now uploading');
+        setProgress({ stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' });
+        announceToScreenReader('Audio converted successfully, now uploading');
 
-      // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
-      const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
-        setProgress({
-          stage: 'uploading',
-          progress: 40 + (progressPercent * 0.25), // 40-65% for upload
-          message: `Uploading... ${Math.round(progressPercent)}%`
-        });
-      }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+        // Step 3: Upload to Azure Blob Storage
+        fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+        audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+          setProgress({
+            stage: 'uploading',
+            progress: 40 + (progressPercent * 0.25), // 40-65% for upload
+            message: `Uploading... ${Math.round(progressPercent)}%`
+          });
+        }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      }
 
       setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
       announceToScreenReader('Upload complete, submitting for behavioral health analysis');
@@ -1271,7 +1440,12 @@ const UploadAnalyze: React.FC = () => {
               type="number"
               id="age"
               value={userMetadata.age}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, age: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, age: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('age', newValue);
+              }}
               onBlur={(e) => handleFieldValidation('age', e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1303,7 +1477,12 @@ const UploadAnalyze: React.FC = () => {
               type="number"
               id="weight"
               value={userMetadata.weight}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, weight: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, weight: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('weight', newValue);
+              }}
               onBlur={(e) => handleFieldValidation('weight', e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1410,7 +1589,12 @@ const UploadAnalyze: React.FC = () => {
               type="text"
               id="zipcode"
               value={userMetadata.zipcode}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, zipcode: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, zipcode: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('zipcode', newValue);
+              }}
               onBlur={(e) => handleFieldValidation('zipcode', e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1462,9 +1646,41 @@ const UploadAnalyze: React.FC = () => {
                 {validationErrors.sessionNotes}
               </p>
             )}
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {userMetadata.sessionNotes.length}/500 characters
-            </p>
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {userMetadata.sessionNotes.length}/500 characters
+              </p>
+              
+              {/* Grammar Correction Button - Next to character count */}
+              <button
+                type="button"
+                onClick={() => handleGrammarCorrection()}
+                disabled={!userMetadata.sessionNotes.trim() || isCorrectingGrammar}
+                className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:text-blue-300 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Correct grammar and spelling in session notes"
+                title="Correct grammar and spelling"
+              >
+                {isCorrectingGrammar ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <svg 
+                    className="w-3.5 h-3.5 mr-1.5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
+                    />
+                  </svg>
+                )}
+                {isCorrectingGrammar ? 'Correcting...' : 'Correct Grammar'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1674,7 +1890,7 @@ const UploadAnalyze: React.FC = () => {
                             </div>
                             <div className="processing-progress mt-1">
                               <div
-                                className={`processing-progress__fill progress-animated ${getProgressColor(progress.stage)}`}
+                                className={`processing-progress__fill ${getProgressColor(progress.stage)}`}
                                 style={{ width: `${progress.progress}%` }}
                               />
                             </div>

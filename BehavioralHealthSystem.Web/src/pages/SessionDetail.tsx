@@ -568,6 +568,60 @@ const SessionDetail: React.FC = () => {
                     </div>
                   )}
                   
+                  {/* Risk Level */}
+                  {session.analysisResults?.riskLevel && (
+                    <div className={`p-4 rounded-lg border ${
+                      session.analysisResults.riskLevel === 'high' 
+                        ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                        : session.analysisResults.riskLevel === 'medium'
+                        ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                        : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-sm font-medium ${
+                          session.analysisResults.riskLevel === 'high' 
+                            ? 'text-red-700 dark:text-red-300'
+                            : session.analysisResults.riskLevel === 'medium'
+                            ? 'text-yellow-700 dark:text-yellow-300'
+                            : 'text-green-700 dark:text-green-300'
+                        }`}>
+                          Risk Level
+                        </span>
+                        <AlertCircle className={`w-4 h-4 ${
+                          session.analysisResults.riskLevel === 'high' 
+                            ? 'text-red-600 dark:text-red-400'
+                            : session.analysisResults.riskLevel === 'medium'
+                            ? 'text-yellow-600 dark:text-yellow-400'
+                            : 'text-green-600 dark:text-green-400'
+                        }`} aria-hidden="true" />
+                      </div>
+                      <div className={`text-2xl font-bold ${
+                        session.analysisResults.riskLevel === 'high' 
+                          ? 'text-red-900 dark:text-red-100'
+                          : session.analysisResults.riskLevel === 'medium'
+                          ? 'text-yellow-900 dark:text-yellow-100'
+                          : 'text-green-900 dark:text-green-100'
+                      }`}>
+                        {session.analysisResults.riskLevel.charAt(0).toUpperCase() + session.analysisResults.riskLevel.slice(1)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Confidence Score */}
+                  {session.analysisResults?.confidence && (
+                    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Confidence
+                        </span>
+                        <TrendingUp className="w-4 h-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                        {(session.analysisResults.confidence * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                  )}
+                  
                   {/* Note: Overall Score (predicted_score) is deprecated and no longer displayed */}
                 </div>
               </div>

@@ -18,6 +18,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { getUserId, formatRelativeTime } from '../utils';
 import type { SessionData, AppError } from '../types';
@@ -52,6 +53,7 @@ interface PredictionFilters {
 }
 
 const Predictions: React.FC = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
@@ -65,6 +67,12 @@ const Predictions: React.FC = () => {
   const { announceToScreenReader } = useAccessibility();
   const navigate = useNavigate();
 
+  // Get authenticated user ID for API calls (matches blob storage folder structure)
+  const getAuthenticatedUserId = useCallback((): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  }, [user?.id]);
+
   // Handle bar click to navigate to session details
   const handleBarClick = useCallback((sessionId: string) => {
     navigate(`/sessions/${sessionId}`);
@@ -77,7 +85,7 @@ const Predictions: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const userId = getUserId();
+      const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
       const response = await apiService.getUserSessions(userId);
       
       // Filter sessions that have analysis results or predictions

@@ -30,6 +30,9 @@ A **production-ready** full-stack behavioral health assessment platform featurin
 - ✅ **Interruption Handling** - Responsive speech interaction controls
 - ✅ **Multiple Speech Engines** - Support for various speech recognition services
 - ✅ **Audio File Processing** - Multiple audio format support and processing
+- ✅ **Smart Audio Conversion** - Intelligent skip logic for pre-processed files
+- ✅ **FFmpeg Integration** - Client-side audio conversion with WebAssembly
+- ✅ **Format Optimization** - Automatic conversion to optimal audio formats
 
 ### **📊 Observability**
 
@@ -276,12 +279,26 @@ Features:
 - **📊 Live Analytics** - Real-time dashboard updates and monitoring
 - **🎯 Connection Management** - Robust connection handling and reconnection logic
 
+### **🎨 Enhanced UI/UX Features**
+
+- **🧠 Interactive Brain Animation** - Hover-activated throb animation with realistic scaling pattern
+- **📱 Modal Dialogs** - Improved information display replacing problematic tooltips
+- **🔄 Streamlined Re-run Workflow** - Navigation-based re-run with pre-filled session data
+- **📊 Enhanced Session Views** - Detailed session pages with comprehensive information
+- **⚡ Responsive Design** - Optimized for desktop, tablet, and mobile experiences
+- **🎯 Accessible Components** - WCAG 2.2 Level AA compliant interface elements
+- **🌙 Theme Support** - Dark/light mode with automatic detection
+- **🎨 Consistent Styling** - Unified design language across all components
+
 ### **📋 Session Management**
 
 - **💾 Persistent Sessions** - Session data stored with proper deletion functionality
 - **🔄 Session Lifecycle** - Complete session tracking from creation to completion
 - **📊 Session Analytics** - Detailed session metrics and performance data
 - **🗑️ Proper Cleanup** - Backend deletion ensures data consistency
+- **🔁 Smart Re-run Functionality** - Re-analyze sessions with optimized audio processing
+- **📝 Session History** - Access previous sessions with enhanced detail views
+- **⚡ Audio Conversion Optimization** - Skip redundant audio processing for re-runs
 
 ## ⚙️ Local Settings Configuration
 

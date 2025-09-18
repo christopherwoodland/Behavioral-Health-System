@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
-import { getBlobService } from '../services/azure';
 import { formatDateTime, formatRelativeTime } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import type { SessionData, AppError } from '../types';
@@ -132,18 +131,13 @@ const SessionDetail: React.FC = () => {
     announceToScreenReader('Session data download started');
   }, [session, announceToScreenReader]);
 
-  // Download audio file from blob storage
+  // Download audio file using audioUrl from session data
   const downloadAudioFile = useCallback(async () => {
-    if (!session?.audioFileName || !session?.userId) return;
+    if (!session?.audioUrl || !session?.audioFileName) return;
 
     try {
-      const blobService = getBlobService();
-      const blobPath = `${session.userId}/${session.audioFileName}`;
-      
-      // Create a direct blob URL for download
-      const sasUrl = blobService['sasUrl'];
-      const containerName = 'audio-uploads'; // Assuming this is the container name
-      const downloadUrl = `${sasUrl.split('?')[0]}/${containerName}/${blobPath}?${sasUrl.split('?')[1]}`;
+      // Use the audioUrl directly from session data
+      const downloadUrl = session.audioUrl;
       
       // Open the download URL in a new tab
       window.open(downloadUrl, '_blank');
@@ -405,7 +399,7 @@ const SessionDetail: React.FC = () => {
           </h2>
           
           <div className="space-y-4">
-            {session.audioFileName && (
+            {session.audioFileName && session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   File Name

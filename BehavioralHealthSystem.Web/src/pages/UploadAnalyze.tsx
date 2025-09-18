@@ -434,9 +434,18 @@ const UploadAnalyze: React.FC = () => {
       // Check if all validation errors are cleared
       const hasAnyErrors = Object.values(newErrors).some(err => err !== undefined);
       
-      // If no validation errors exist, clear the global error state
+      // Clear global error if no field validation errors exist, or if this specific field error was cleared
+      // and the global error contains validation messages
       if (!hasAnyErrors) {
         setError(null);
+      } else if (error === undefined) {
+        // If this specific field error was cleared, check if global error is validation-related and clear it
+        setError(prevError => {
+          if (prevError && prevError.toLowerCase().includes('validation')) {
+            return null;
+          }
+          return prevError;
+        });
       }
       
       return newErrors;
@@ -1332,7 +1341,12 @@ const UploadAnalyze: React.FC = () => {
               type="number"
               id="age"
               value={userMetadata.age}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, age: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, age: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('age', newValue);
+              }}
               onBlur={(e) => handleFieldValidation('age', e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1364,7 +1378,12 @@ const UploadAnalyze: React.FC = () => {
               type="number"
               id="weight"
               value={userMetadata.weight}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, weight: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, weight: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('weight', newValue);
+              }}
               onBlur={(e) => handleFieldValidation('weight', e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1471,7 +1490,12 @@ const UploadAnalyze: React.FC = () => {
               type="text"
               id="zipcode"
               value={userMetadata.zipcode}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, zipcode: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, zipcode: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('zipcode', newValue);
+              }}
               onBlur={(e) => handleFieldValidation('zipcode', e.target.value)}
               onKeyUp={(e) => {
                 if (e.key === 'Enter' || e.key === 'Tab') {

@@ -80,6 +80,57 @@ interface AnalyticsData {
       severe: number;
     };
   }>;
+  correlations: {
+    ageDistribution: {
+      [ageGroup: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+    genderDistribution: {
+      [gender: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+    raceDistribution: {
+      [race: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+    ethnicityDistribution: {
+      [ethnicity: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+    languageDistribution: {
+      [language: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+    weightDistribution: {
+      [weightGroup: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+    zipCodeDistribution: {
+      [zipGroup: string]: {
+        depressionCases: number;
+        anxietyCases: number;
+        totalSessions: number;
+      };
+    };
+  };
 }
 
 // Utility function to calculate percentage
@@ -342,6 +393,154 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     };
   }).sort((a, b) => b.totalSessions - a.totalSessions); // Sort by total sessions desc
 
+  // Calculate correlations between metadata and mental health outcomes
+  const correlations = {
+    ageDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+    genderDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+    raceDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+    ethnicityDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+    languageDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+    weightDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+    zipCodeDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
+  };
+
+  // Helper function to determine if a session indicates depression/anxiety
+  const hasDepressionCase = (session: ImportedSessionData): boolean => {
+    // Check for moderate_to_severe or severe depression
+    if (session.prediction) {
+      const prediction = session.prediction as any;
+      const depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
+      return depressionCategory === 'moderate_to_severe' || depressionCategory === 'severe';
+    }
+    // Fallback to numeric score (PHQ-9 >= 10 indicates moderate or higher depression)
+    if (session.analysisResults?.depressionScore !== null && session.analysisResults?.depressionScore !== undefined) {
+      return session.analysisResults.depressionScore >= 10;
+    }
+    return false;
+  };
+
+  const hasAnxietyCase = (session: ImportedSessionData): boolean => {
+    // Check for moderate, moderately_severe, or severe anxiety
+    if (session.prediction) {
+      const prediction = session.prediction as any;
+      const anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+      return anxietyCategory === 'moderate' || anxietyCategory === 'moderately_severe' || anxietyCategory === 'severe';
+    }
+    // Fallback to numeric score (GAD-7 >= 10 indicates moderate or higher anxiety)
+    if (session.analysisResults?.anxietyScore !== null && session.analysisResults?.anxietyScore !== undefined) {
+      return session.analysisResults.anxietyScore >= 10;
+    }
+    return false;
+  };
+
+  // Process sessions with metadata
+  const sessionsWithMetadata = allSessions.filter(session => session.userMetadata);
+  
+  sessionsWithMetadata.forEach(session => {
+    const metadata = session.userMetadata!;
+    const hasDepression = hasDepressionCase(session);
+    const hasAnxiety = hasAnxietyCase(session);
+
+    // Age correlation (group by age ranges)
+    if (metadata.age) {
+      let ageGroup: string;
+      if (metadata.age < 25) ageGroup = '18-24';
+      else if (metadata.age < 35) ageGroup = '25-34';
+      else if (metadata.age < 45) ageGroup = '35-44';
+      else if (metadata.age < 55) ageGroup = '45-54';
+      else if (metadata.age < 65) ageGroup = '55-64';
+      else ageGroup = '65+';
+
+      if (!correlations.ageDistribution[ageGroup]) {
+        correlations.ageDistribution[ageGroup] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.ageDistribution[ageGroup].totalSessions++;
+      if (hasDepression) correlations.ageDistribution[ageGroup].depressionCases++;
+      if (hasAnxiety) correlations.ageDistribution[ageGroup].anxietyCases++;
+    }
+
+    // Gender correlation
+    if (metadata.gender) {
+      const gender = metadata.gender;
+      if (!correlations.genderDistribution[gender]) {
+        correlations.genderDistribution[gender] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.genderDistribution[gender].totalSessions++;
+      if (hasDepression) correlations.genderDistribution[gender].depressionCases++;
+      if (hasAnxiety) correlations.genderDistribution[gender].anxietyCases++;
+    }
+
+    // Race correlation
+    if (metadata.race) {
+      const race = metadata.race;
+      if (!correlations.raceDistribution[race]) {
+        correlations.raceDistribution[race] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.raceDistribution[race].totalSessions++;
+      if (hasDepression) correlations.raceDistribution[race].depressionCases++;
+      if (hasAnxiety) correlations.raceDistribution[race].anxietyCases++;
+    }
+
+    // Ethnicity correlation
+    if (metadata.ethnicity) {
+      const ethnicity = metadata.ethnicity;
+      if (!correlations.ethnicityDistribution[ethnicity]) {
+        correlations.ethnicityDistribution[ethnicity] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.ethnicityDistribution[ethnicity].totalSessions++;
+      if (hasDepression) correlations.ethnicityDistribution[ethnicity].depressionCases++;
+      if (hasAnxiety) correlations.ethnicityDistribution[ethnicity].anxietyCases++;
+    }
+
+    // Language correlation
+    if (metadata.language !== undefined) {
+      const language = metadata.language ? 'English' : 'Other';
+      if (!correlations.languageDistribution[language]) {
+        correlations.languageDistribution[language] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.languageDistribution[language].totalSessions++;
+      if (hasDepression) correlations.languageDistribution[language].depressionCases++;
+      if (hasAnxiety) correlations.languageDistribution[language].anxietyCases++;
+    }
+
+    // Weight correlation (group by BMI-like ranges)
+    if (metadata.weight) {
+      let weightGroup: string;
+      if (metadata.weight < 120) weightGroup = 'Under 120 lbs';
+      else if (metadata.weight < 150) weightGroup = '120-149 lbs';
+      else if (metadata.weight < 180) weightGroup = '150-179 lbs';
+      else if (metadata.weight < 220) weightGroup = '180-219 lbs';
+      else weightGroup = '220+ lbs';
+
+      if (!correlations.weightDistribution[weightGroup]) {
+        correlations.weightDistribution[weightGroup] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.weightDistribution[weightGroup].totalSessions++;
+      if (hasDepression) correlations.weightDistribution[weightGroup].depressionCases++;
+      if (hasAnxiety) correlations.weightDistribution[weightGroup].anxietyCases++;
+    }
+
+    // ZIP code correlation (group by region - first 2 digits for demonstration)
+    if (metadata.zipcode) {
+      const zipPrefix = metadata.zipcode.substring(0, 2);
+      let region: string;
+      // Simple US region mapping based on ZIP code prefixes
+      if (['0', '1', '2'].some(prefix => zipPrefix.startsWith(prefix))) region = 'Northeast';
+      else if (['3', '4'].some(prefix => zipPrefix.startsWith(prefix))) region = 'Southeast';
+      else if (['5', '6'].some(prefix => zipPrefix.startsWith(prefix))) region = 'South Central';
+      else if (['7', '8'].some(prefix => zipPrefix.startsWith(prefix))) region = 'Mountain/West';
+      else if (['9'].some(prefix => zipPrefix.startsWith(prefix))) region = 'Pacific';
+      else region = 'Other/International';
+
+      if (!correlations.zipCodeDistribution[region]) {
+        correlations.zipCodeDistribution[region] = { depressionCases: 0, anxietyCases: 0, totalSessions: 0 };
+      }
+      correlations.zipCodeDistribution[region].totalSessions++;
+      if (hasDepression) correlations.zipCodeDistribution[region].depressionCases++;
+      if (hasAnxiety) correlations.zipCodeDistribution[region].anxietyCases++;
+    }
+  });
+
   return {
     overview: {
       totalSessions,
@@ -373,6 +572,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     timeData,
     riskDistribution: riskCounts,
     userStats,
+    correlations,
   };
 };
 
@@ -540,6 +740,115 @@ const TimeSeriesChart: React.FC<{
   );
 };
 
+// Metadata Correlation Chart Component
+const MetadataCorrelationChart: React.FC<{
+  title: string;
+  data: Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>;
+  subtitle?: string;
+}> = ({ title, data, subtitle }) => {
+  const categories = Object.keys(data);
+  
+  if (categories.length === 0) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{title}</h3>
+        {subtitle && (
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{subtitle}</p>
+        )}
+        <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+          No metadata available for this correlation
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{title}</h3>
+      {subtitle && (
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{subtitle}</p>
+      )}
+      
+      <div className="space-y-4">
+        {categories.map((category, index) => {
+          const categoryData = data[category];
+          const depressionRate = categoryData.totalSessions > 0 
+            ? (categoryData.depressionCases / categoryData.totalSessions) * 100 
+            : 0;
+          const anxietyRate = categoryData.totalSessions > 0 
+            ? (categoryData.anxietyCases / categoryData.totalSessions) * 100 
+            : 0;
+          
+          return (
+            <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="font-medium text-gray-900 dark:text-white">{category}</h4>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {categoryData.totalSessions} sessions
+                </span>
+              </div>
+              
+              {/* Depression Bar */}
+              <div className="mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Depression Cases</span>
+                  <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                    {categoryData.depressionCases} ({depressionRate.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    className="h-2 bg-red-500 rounded-full transition-all duration-500"
+                    style={{ width: `${depressionRate}%` }}
+                    role="progressbar"
+                    aria-label={`Depression rate: ${depressionRate.toFixed(1)}%`}
+                  />
+                </div>
+              </div>
+              
+              {/* Anxiety Bar */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Anxiety Cases</span>
+                  <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                    {categoryData.anxietyCases} ({anxietyRate.toFixed(1)}%)
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    className="h-2 bg-orange-500 rounded-full transition-all duration-500"
+                    style={{ width: `${anxietyRate}%` }}
+                    role="progressbar"
+                    aria-label={`Anxiety rate: ${anxietyRate.toFixed(1)}%`}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Summary */}
+      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div className="text-lg font-bold text-red-600 dark:text-red-400">
+              {categories.reduce((sum, cat) => sum + data[cat].depressionCases, 0)}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Total Depression Cases</div>
+          </div>
+          <div>
+            <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+              {categories.reduce((sum, cat) => sum + data[cat].anxietyCases, 0)}
+            </div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Total Anxiety Cases</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Depression vs Anxiety Correlation Chart
 const CorrelationChart: React.FC<{
   title: string;
@@ -573,13 +882,13 @@ const CorrelationChart: React.FC<{
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">{title}</h3>
       
-      <div className="relative h-96">
-        <svg className="w-full h-full" viewBox="0 0 400 300">
+      <div className="relative h-[28rem]">
+        <svg className="w-full h-full" viewBox="0 0 600 350">
           {/* Grid lines */}
           <defs>
-            <pattern id="correlationGrid" width="40" height="30" patternUnits="userSpaceOnUse">
+            <pattern id="correlationGrid" width="50" height="35" patternUnits="userSpaceOnUse">
               <path
-                d="M 40 0 L 0 0 0 30"
+                d="M 50 0 L 0 0 0 35"
                 fill="none"
                 stroke="rgb(229 231 235)"
                 strokeWidth="0.5"
@@ -588,17 +897,17 @@ const CorrelationChart: React.FC<{
             </pattern>
           </defs>
           
-          <rect width="400" height="300" fill="url(#correlationGrid)" />
+          <rect width="600" height="350" fill="url(#correlationGrid)" />
           
           {/* Axes */}
-          <line x1="50" y1="270" x2="370" y2="270" stroke="rgb(107 114 128)" strokeWidth="2" />
-          <line x1="50" y1="270" x2="50" y2="30" stroke="rgb(107 114 128)" strokeWidth="2" />
+          <line x1="70" y1="310" x2="550" y2="310" stroke="rgb(107 114 128)" strokeWidth="2" />
+          <line x1="70" y1="310" x2="70" y2="40" stroke="rgb(107 114 128)" strokeWidth="2" />
           
           {/* Data points */}
           {correlationPoints.map((point, index) => {
-            const x = 50 + (point.depression / maxValue) * 320;
-            const y = 270 - (point.anxiety / maxValue) * 240;
-            const radius = Math.max(Math.sqrt(point.depression + point.anxiety) * 2.5, 8);
+            const x = 70 + (point.depression / maxValue) * 480;
+            const y = 310 - (point.anxiety / maxValue) * 270;
+            const radius = Math.max(Math.sqrt(point.depression + point.anxiety) * 3, 10);
             
             return (
               <g key={index}>
@@ -611,9 +920,9 @@ const CorrelationChart: React.FC<{
                 />
                 <text
                   x={x}
-                  y={y + 4}
+                  y={y + 5}
                   textAnchor="middle"
-                  className="text-xs fill-white font-bold"
+                  className="text-sm fill-white font-bold"
                 >
                   {point.depression + point.anxiety}
                 </text>
@@ -622,10 +931,10 @@ const CorrelationChart: React.FC<{
           })}
           
           {/* Axis labels */}
-          <text x="210" y="295" textAnchor="middle" className="text-sm font-medium fill-gray-700 dark:fill-gray-300">
+          <text x="310" y="335" textAnchor="middle" className="text-sm font-medium fill-gray-700 dark:fill-gray-300">
             Depression Cases →
           </text>
-          <text x="30" y="150" textAnchor="middle" transform="rotate(-90 30 150)" className="text-sm font-medium fill-gray-700 dark:fill-gray-300">
+          <text x="40" y="175" textAnchor="middle" transform="rotate(-90 40 175)" className="text-sm font-medium fill-gray-700 dark:fill-gray-300">
             ← Anxiety Cases
           </text>
         </svg>
@@ -975,6 +1284,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_1.wav',
+            userMetadata: {
+              age: 28,
+              gender: 'female',
+              race: 'white',
+              ethnicity: 'Not Hispanic, Latino, or Spanish Origin',
+              language: true,
+              weight: 145,
+              zipcode: '10001',
+            },
             prediction: {
               sessionId: 'demo-session-1',
               status: 'succeeded',
@@ -997,6 +1315,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), // 6 hours ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_2.wav',
+            userMetadata: {
+              age: 45,
+              gender: 'male',
+              race: 'black or african-american',
+              ethnicity: 'Hispanic, Latino, or Spanish Origin',
+              language: true,
+              weight: 190,
+              zipcode: '90210',
+            },
             prediction: {
               sessionId: 'demo-session-2',
               status: 'succeeded',
@@ -1019,6 +1346,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(), // 12 hours ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_3.wav',
+            userMetadata: {
+              age: 65,
+              gender: 'non-binary',
+              race: 'asian',
+              ethnicity: 'Not Hispanic, Latino, or Spanish Origin',
+              language: false,
+              weight: 160,
+              zipcode: '60601',
+            },
             analysisResults: {
               riskLevel: 'unknown',
               confidence: 0,
@@ -1033,6 +1369,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_4.wav',
+            userMetadata: {
+              age: 28,
+              gender: 'female',
+              race: 'white',
+              ethnicity: 'Not Hispanic, Latino, or Spanish Origin',
+              language: true,
+              weight: 145,
+              zipcode: '10001',
+            },
             prediction: {
               sessionId: 'demo-session-4',
               status: 'succeeded',
@@ -1055,6 +1400,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_5.wav',
+            userMetadata: {
+              age: 52,
+              gender: 'male',
+              race: 'american indian or alaskan native',
+              ethnicity: 'Not Hispanic, Latino, or Spanish Origin',
+              language: true,
+              weight: 220,
+              zipcode: '80202',
+            },
             analysisResults: {
               riskLevel: 'unknown',
               confidence: 0,
@@ -1069,6 +1423,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // 36 hours ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_6.wav',
+            userMetadata: {
+              age: 45,
+              gender: 'male',
+              race: 'black or african-american',
+              ethnicity: 'Hispanic, Latino, or Spanish Origin',
+              language: true,
+              weight: 190,
+              zipcode: '90210',
+            },
             prediction: {
               sessionId: 'demo-session-6',
               status: 'succeeded',
@@ -1091,6 +1454,15 @@ export const ControlPanel: React.FC = () => {
             createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 48 hours ago
             updatedAt: new Date().toISOString(),
             audioFileName: 'session_7.wav',
+            userMetadata: {
+              age: 35,
+              gender: 'transgender female',
+              race: 'two or more races',
+              ethnicity: 'Hispanic, Latino, or Spanish Origin',
+              language: false,
+              weight: 135,
+              zipcode: '33101',
+            },
             prediction: {
               sessionId: 'demo-session-7',
               status: 'succeeded',
@@ -1322,13 +1694,76 @@ export const ControlPanel: React.FC = () => {
           <UserStatsTable userStats={analytics.userStats} />
         </div>
 
-        {/* Depression vs Anxiety Correlation - Featured Analysis */}
+        {/* Metadata Correlation Analysis */}
         <div className="mb-8">
-          <CorrelationChart
-            title="Depression vs Anxiety Correlation"
-            depressionData={analytics.predictions.depression}
-            anxietyData={analytics.predictions.anxiety}
-          />
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Demographic Correlation Analysis
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Correlation between patient demographics and mental health outcomes (Depression & Anxiety cases)
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Depression vs Anxiety Correlation - Featured First */}
+            <div className="lg:col-span-2">
+              <CorrelationChart
+                title="Depression vs Anxiety Correlation"
+                depressionData={analytics.predictions.depression}
+                anxietyData={analytics.predictions.anxiety}
+              />
+            </div>
+            
+            {/* Age Correlation */}
+            <MetadataCorrelationChart
+              title="Age Groups vs Mental Health Cases"
+              subtitle="Distribution by age ranges showing depression and anxiety case rates"
+              data={analytics.correlations.ageDistribution}
+            />
+            
+            {/* Gender Correlation */}
+            <MetadataCorrelationChart
+              title="Gender vs Mental Health Cases"
+              subtitle="Distribution by gender identity showing case rates"
+              data={analytics.correlations.genderDistribution}
+            />
+            
+            {/* Weight Correlation */}
+            <MetadataCorrelationChart
+              title="Weight Groups vs Mental Health Cases"
+              subtitle="Distribution by weight ranges showing case rates"
+              data={analytics.correlations.weightDistribution}
+            />
+            
+            {/* Race Correlation */}
+            <MetadataCorrelationChart
+              title="Race vs Mental Health Cases"
+              subtitle="Distribution by racial identity showing case rates"
+              data={analytics.correlations.raceDistribution}
+            />
+            
+            {/* Ethnicity Correlation */}
+            <MetadataCorrelationChart
+              title="Ethnicity vs Mental Health Cases"
+              subtitle="Distribution by ethnic background showing case rates"
+              data={analytics.correlations.ethnicityDistribution}
+            />
+            
+            {/* Language Correlation */}
+            <MetadataCorrelationChart
+              title="Primary Language vs Mental Health Cases"
+              subtitle="Distribution by language preference showing case rates"
+              data={analytics.correlations.languageDistribution}
+            />
+            
+            {/* Geographic Correlation */}
+            <MetadataCorrelationChart
+              title="Geographic Region vs Mental Health Cases"
+              subtitle="Distribution by ZIP code regions showing case rates"
+              data={analytics.correlations.zipCodeDistribution}
+            />
+          </div>
         </div>
 
         {/* Session Analytics */}

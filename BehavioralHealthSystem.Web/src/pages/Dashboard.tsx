@@ -4,14 +4,21 @@ import { Eye } from 'lucide-react';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserId } from '@/utils';
 
 export const Dashboard: React.FC = () => {
   const { announce } = useAnnouncements();
-  const { canAccessControlPanel } = useAuth();
+  const { canAccessControlPanel, user } = useAuth();
+  
+  // Get authenticated user ID for API calls (matches blob storage folder structure)
+  const getAuthenticatedUserId = (): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  };
   
   // Fetch health status and recent sessions
   const { data: healthStatus, isLoading: isHealthLoading, error: healthError } = useHealthCheck();
-  const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions();
+  const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions(getAuthenticatedUserId());
 
   useEffect(() => {
     announce('Dashboard page loaded', 'polite');
@@ -192,7 +199,10 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {sessionsResponse.sessions.slice(0, 3).map((session) => (
+            {sessionsResponse.sessions
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .slice(0, 3)
+              .map((session) => (
               <div
                 key={session.sessionId}
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-md"

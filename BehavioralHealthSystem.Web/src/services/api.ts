@@ -235,6 +235,14 @@ export const apiService = {
       `sessions/${sessionId}/risk-assessment`
     );
   },
+
+  // Grammar Correction API methods
+  async correctGrammar(text: string): Promise<{ originalText: string; correctedText: string }> {
+    return apiClient.post<{ originalText: string; correctedText: string }>(
+      'CorrectGrammar',
+      { text }
+    );
+  },
 };
 
 // Polling utilities

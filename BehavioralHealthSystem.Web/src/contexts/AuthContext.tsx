@@ -11,8 +11,8 @@ import {
   useMsal, 
   useAccount, 
   useIsAuthenticated,
-  AuthenticatedTemplate,
-  UnauthenticatedTemplate
+  AuthenticatedTemplate as MsalAuthenticatedTemplate,
+  UnauthenticatedTemplate as MsalUnauthenticatedTemplate
 } from '@azure/msal-react';
 import { loginRequest, ROLE_CLAIMS, APP_ROLES } from '@/config/authConfig';
 import { setAuthenticatedUserId } from '@/utils';
@@ -54,6 +54,9 @@ interface AuthContextType {
 
 // Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Export the context so MockAuthProvider can use the same one
+export { AuthContext };
 
 // Hook to use the auth context
 export const useAuth = (): AuthContextType => {
@@ -286,5 +289,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-// Export authentication templates for convenience
-export { AuthenticatedTemplate, UnauthenticatedTemplate };
+// Conditional authentication templates
+const isAuthEnabled = import.meta.env.VITE_ENABLE_ENTRA_AUTH === 'true';
+
+interface AuthTemplateProps {
+  children: ReactNode;
+}
+
+export const AuthenticatedTemplate: React.FC<AuthTemplateProps> = ({ children }) => {
+  if (isAuthEnabled) {
+    return <MsalAuthenticatedTemplate>{children}</MsalAuthenticatedTemplate>;
+  } else {
+    // In mock mode, always show authenticated content
+    return <>{children}</>;
+  }
+};
+
+export const UnauthenticatedTemplate: React.FC<AuthTemplateProps> = ({ children }) => {
+  if (isAuthEnabled) {
+    return <MsalUnauthenticatedTemplate>{children}</MsalUnauthenticatedTemplate>;
+  } else {
+    // In mock mode, never show unauthenticated content
+    return null;
+  }
+};

@@ -1,16 +1,19 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Files, File } from 'lucide-react';
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
 import { apiService, PredictionPoller } from '../services/api';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { getUserId, getStoredProcessingMode, setStoredProcessingMode, setUserId, generateNewUserId, isCustomUserId, setUserIdMode } from '../utils';
+import { getStoredProcessingMode, setStoredProcessingMode, getUserId } from '../utils';
+import { useAuth } from '../contexts/AuthContext';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
 interface UploadProgress {
   stage: 'idle' | 'starting' | 'initiating' | 'converting' | 'uploading' | 'submitting' | 'analyzing' | 'complete' | 'error';
   progress: number;
   message: string;
+  sessionId?: string; // Track session ID for status updates
   error?: {
     code: string;
     message: string;
@@ -54,7 +57,28 @@ interface AnalysisResult {
   rawApiResponse?: any; // Store the complete API response
 }
 
+// Interface for pre-filled data from re-run functionality
+interface PrefilledSessionData {
+  userMetadata?: {
+    age?: number;
+    gender?: string;
+    race?: string;
+    ethnicity?: string;
+    language?: boolean;
+    weight?: number;
+    zipcode?: string;
+    sessionNotes?: string;
+  };
+  audioUrl?: string;
+  audioFileName?: string;
+  originalSessionId?: string;
+}
+
 const UploadAnalyze: React.FC = () => {
+  // Auth context for user identification
+  const { user } = useAuth();
+  const location = useLocation();
+  
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingMode());
   const [processingProgress, setProcessingProgress] = useState<ProcessingProgress>({});
@@ -73,15 +97,20 @@ const UploadAnalyze: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
+  
+  // Get pre-filled data from location state (for re-run functionality)
+  const prefilledData = location.state as PrefilledSessionData | undefined;
+  
   const [userMetadata, setUserMetadata] = useState({
-    age: '',
-    gender: '',
-    race: '',
-    ethnicity: '',
-    language: '',
-    weight: '',
-    zipcode: '',
-    sessionNotes: ''
+    userId: '', // Will be auto-generated on component mount
+    age: prefilledData?.userMetadata?.age?.toString() || '',
+    gender: prefilledData?.userMetadata?.gender || '',
+    race: prefilledData?.userMetadata?.race || '',
+    ethnicity: prefilledData?.userMetadata?.ethnicity || '',
+    language: prefilledData?.userMetadata?.language?.toString() || '',
+    weight: prefilledData?.userMetadata?.weight?.toString() || '',
+    zipcode: prefilledData?.userMetadata?.zipcode || '',
+    sessionNotes: prefilledData?.userMetadata?.sessionNotes || ''
   });
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Array<{
@@ -92,13 +121,31 @@ const UploadAnalyze: React.FC = () => {
     timestamp: number;
   }>>([]);
 
-  // User ID management state
-  const [isCustomUserIdMode, setIsCustomUserIdMode] = useState(() => isCustomUserId());
-  const [customUserId, setCustomUserId] = useState('');
-  const [userIdError, setUserIdError] = useState<string | null>(null);
+  // Validation state for real-time field validation
+  const [validationErrors, setValidationErrors] = useState<{
+    age?: string;
+    weight?: string;
+    zipcode?: string;
+    sessionNotes?: string;
+  }>({});
 
-  // Get the current user ID from localStorage
-  const userId = getUserId();
+  const [isCorrectingGrammar, setIsCorrectingGrammar] = useState(false);
+
+  // User ID management state - REMOVED (now part of metadata)
+  
+  // Auto-generate user ID when component loads (for form metadata)
+  useEffect(() => {
+    if (!userMetadata.userId) {
+      const newUserId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      setUserMetadata(prev => ({ ...prev, userId: newUserId }));
+    }
+  }, [userMetadata.userId]);
+
+  // Helper function to get authenticated user ID for blob storage
+  const getAuthenticatedUserId = useCallback((): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  }, [user?.id]);
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -127,6 +174,43 @@ const UploadAnalyze: React.FC = () => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
 
+  // Handle pre-filled data from re-run functionality
+  useEffect(() => {
+    if (prefilledData) {
+      // Show a toast to inform user that data has been pre-filled
+      addToast('info', 'Session Data Pre-filled', 
+        `Metadata and audio file from session ${prefilledData.originalSessionId ? prefilledData.originalSessionId.slice(0, 8) + '...' : ''} have been loaded. Click "Start Analysis" to begin processing.`);
+      
+      // If there's an audio URL, create a virtual audio file entry
+      if (prefilledData.audioUrl && prefilledData.audioFileName) {
+        // Create a mock file object since we already have the URL
+        const mockFile = {
+          name: prefilledData.audioFileName,
+          size: 0,
+          type: 'audio/wav',
+          lastModified: Date.now(),
+          stream: () => new ReadableStream(),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          text: () => Promise.resolve(''),
+          slice: () => new Blob()
+        } as File;
+
+        const virtualAudioFile: AudioFile = {
+          id: `prefilled-${Date.now()}`,
+          file: mockFile,
+          url: prefilledData.audioUrl,
+          duration: undefined
+        };
+        
+        if (isMultiMode) {
+          setAudioFiles([virtualAudioFile]);
+        } else {
+          setAudioFile(virtualAudioFile);
+        }
+      }
+    }
+  }, [prefilledData, addToast, isMultiMode]); // Include dependencies
+
   const resetState = useCallback(() => {
     setAudioFiles([]);
     setAudioFile(null);
@@ -140,79 +224,6 @@ const UploadAnalyze: React.FC = () => {
     setPlayingFileId(null);
     setIsProcessing(false);
   }, []);
-
-  // User ID management functions
-  const handleToggleUserIdMode = useCallback(() => {
-    setIsCustomUserIdMode(prev => {
-      const newMode = !prev;
-      setUserIdMode(newMode);
-      setUserIdError(null);
-      
-      if (!newMode) {
-        // Switching back to auto-generated mode
-        setCustomUserId('');
-        const newUserId = generateNewUserId();
-        announceToScreenReader(`Switched to auto-generated mode. New User ID: ${newUserId}`);
-      } else {
-        // Switching to custom mode
-        setCustomUserId(userId);
-        announceToScreenReader('Switched to custom User ID mode');
-      }
-      
-      return newMode;
-    });
-  }, [userId, announceToScreenReader]);
-
-  const handleCustomUserIdChange = useCallback((value: string) => {
-    setCustomUserId(value);
-    setUserIdError(null);
-  }, []);
-
-  const handleApplyCustomUserId = useCallback(() => {
-    const trimmedUserId = customUserId.trim();
-    
-    if (!trimmedUserId) {
-      setUserIdError('User ID cannot be empty');
-      return;
-    }
-
-    // Basic validation - allow any string but check for reasonable length and characters
-    if (trimmedUserId.length < 3) {
-      setUserIdError('User ID must be at least 3 characters long');
-      return;
-    }
-
-    if (trimmedUserId.length > 100) {
-      setUserIdError('User ID must be less than 100 characters');
-      return;
-    }
-
-    // Check for potentially problematic characters (optional - you can remove this if you want to allow all characters)
-    const problematicChars = /[<>"/\\|?*\x00-\x1f]/;
-    if (problematicChars.test(trimmedUserId)) {
-      setUserIdError('User ID contains invalid characters. Please avoid special characters like < > " / \\ | ? *');
-      return;
-    }
-
-    try {
-      setUserId(trimmedUserId);
-      setUserIdError(null);
-      announceToScreenReader(`Custom User ID applied: ${trimmedUserId}`);
-      
-      // Refresh the page to use the new user ID
-      window.location.reload();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to set User ID';
-      setUserIdError(errorMessage);
-    }
-  }, [customUserId, announceToScreenReader]);
-
-  const handleGenerateNewUserId = useCallback(() => {
-    const newUserId = generateNewUserId();
-    announceToScreenReader(`New User ID generated: ${newUserId}`);
-    // Refresh the page to use the new user ID
-    window.location.reload();
-  }, [announceToScreenReader]);
 
   const generateFileId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -417,6 +428,119 @@ const UploadAnalyze: React.FC = () => {
     return errors;
   }, [userMetadata]);
 
+  // Individual field validation functions for real-time validation
+  const validateAge = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const age = parseInt(value);
+    if (isNaN(age) || age < 18 || age > 130) {
+      return 'Age must be between 18 and 130';
+    }
+    return undefined;
+  }, []);
+
+  const validateWeight = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const weight = parseInt(value);
+    if (isNaN(weight) || weight < 10 || weight > 1000) {
+      return 'Weight must be between 10 and 1000 pounds (lbs)';
+    }
+    return undefined;
+  }, []);
+
+  const validateZipcode = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const zipcodeRegex = /^[a-zA-Z0-9]{1,10}$/;
+    if (!zipcodeRegex.test(value)) {
+      return 'Zipcode must be alphanumeric and contain no more than 10 characters';
+    }
+    return undefined;
+  }, []);
+
+  const validateSessionNotes = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    if (value.length > 500) {
+      return 'Session notes must be 500 characters or less';
+    }
+    return undefined;
+  }, []);
+
+  // Real-time field validation handler
+  const handleFieldValidation = useCallback((field: string, value: string) => {
+    let error: string | undefined;
+    
+    switch (field) {
+      case 'age':
+        error = validateAge(value);
+        break;
+      case 'weight':
+        error = validateWeight(value);
+        break;
+      case 'zipcode':
+        error = validateZipcode(value);
+        break;
+      case 'sessionNotes':
+        error = validateSessionNotes(value);
+        break;
+      default:
+        return;
+    }
+
+    setValidationErrors(prev => {
+      const newErrors = {
+        ...prev,
+        [field]: error
+      };
+      
+      // Check if all validation errors are cleared
+      const hasAnyErrors = Object.values(newErrors).some(err => err !== undefined);
+      
+      // Clear global error if no field validation errors exist, or if this specific field error was cleared
+      // and the global error contains validation messages
+      if (!hasAnyErrors) {
+        setError(null);
+      } else if (error === undefined) {
+        // If this specific field error was cleared, check if global error is validation-related and clear it
+        setError(prevError => {
+          if (prevError && prevError.toLowerCase().includes('validation')) {
+            return null;
+          }
+          return prevError;
+        });
+      }
+      
+      return newErrors;
+    });
+  }, [validateAge, validateWeight, validateZipcode, validateSessionNotes]);
+
+  const handleGrammarCorrection = useCallback(async () => {
+    if (!userMetadata.sessionNotes.trim()) {
+      return;
+    }
+
+    setIsCorrectingGrammar(true);
+    try {
+      const response = await apiService.correctGrammar(userMetadata.sessionNotes);
+      
+      // Update the session notes with the corrected text
+      setUserMetadata(prev => ({
+        ...prev,
+        sessionNotes: response.correctedText
+      }));
+      
+      // Show success toast
+      addToast('success', 'Grammar Corrected', 'Grammar and spelling corrected successfully');
+      
+    } catch (error) {
+      console.error('Grammar correction failed:', error);
+      const appError = error as AppError;
+      
+      // Show error toast
+      addToast('error', 'Grammar Correction Failed', appError.message || 'Failed to correct grammar. Please try again.');
+    } finally {
+      setIsCorrectingGrammar(false);
+    }
+  }, [userMetadata.sessionNotes]);
+
   const buildMetadata = useCallback(() => {
     const metadata: Partial<SessionMetadata> = {};
     let hasMetadata = false;
@@ -455,21 +579,21 @@ const UploadAnalyze: React.FC = () => {
 
   const processAndAnalyze = useCallback(async () => {
     if (isMultiMode) {
-      if (audioFiles.length === 0 || !userId.trim()) {
+      if (audioFiles.length === 0 || !userMetadata.userId.trim()) {
         setError('Please select audio files. User ID is automatically generated.');
         addToast('error', 'Missing Information', 'Please select audio files. User ID is automatically generated.');
         return;
       }
       await processMultipleFiles();
     } else {
-      if (!audioFile || !userId.trim()) {
+      if (!audioFile || !userMetadata.userId.trim()) {
         setError('Please select an audio file. User ID is automatically generated.');
         addToast('error', 'Missing Information', 'Please select an audio file. User ID is automatically generated.');
         return;
       }
       await processSingleFile();
     }
-  }, [audioFile, audioFiles, userId, isMultiMode]);
+  }, [audioFile, audioFiles, userMetadata.userId, isMultiMode]);
 
   const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile) => {
     try {
@@ -481,7 +605,7 @@ const UploadAnalyze: React.FC = () => {
 
       const metadata = buildMetadata();
       const sessionRequest: any = {
-        userid: userId.trim(),
+        userid: userMetadata.userId.trim(),
         is_initiated: true
       };
 
@@ -494,19 +618,20 @@ const UploadAnalyze: React.FC = () => {
 
       const sessionData: SessionInfo = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim()
+        userId: userMetadata.userId.trim()
       };
 
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
       setProcessingProgress(prev => ({
         ...prev,
-        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...' }
+        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...', sessionId: sessionResponse.sessionId }
       }));
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim(),
-        userMetadata: metadata,
+        userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
+        metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
+        ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -514,46 +639,73 @@ const UploadAnalyze: React.FC = () => {
       };
 
       try {
-        await apiService.saveSessionData(initialSessionData);
+        console.log('Attempting to save session data (multi-file):', initialSessionData);
+        const saveResult = await apiService.saveSessionData(initialSessionData);
+        console.log('Session data saved successfully (multi-file):', saveResult);
       } catch (error) {
+        console.error('Failed to save session data (multi-file):', error);
+        console.error('Session data that failed to save:', initialSessionData);
+        addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
         // Continue with the process even if saving fails
-        // Error is handled silently as this is not critical for the main workflow
+        // This is not critical for the main workflow, but user should be informed
       }
 
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
-      }));
+      let audioUrl: string;
+      let fileName: string;
 
-      // Step 2: Convert audio using FFmpeg
-      const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+      // Check if this is a pre-filled session with existing audio URL (re-run scenario)
+      if (audioFile.url) {
+        // Skip conversion and upload for re-run - audio is already processed and stored
         setProcessingProgress(prev => ({
           ...prev,
-          [fileId]: {
-            stage: 'converting',
-            progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
-            message: `Converting audio... ${Math.round(progressPercent)}%`
-          }
+          [fileId]: { stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' }
         }));
-      });
-
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' }
-      }));
-
-      // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userId}_${sessionData.sessionId}_${Date.now()}.wav`;
-      const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+        
+        audioUrl = audioFile.url;
+        fileName = audioFile.file.name;
+        
+        // Skip to 65% progress since conversion and upload are not needed
         setProcessingProgress(prev => ({
           ...prev,
-          [fileId]: {
-            stage: 'uploading',
-            progress: 40 + (progressPercent * 0.25), // 40-65% for upload
-            message: `Uploading... ${Math.round(progressPercent)}%`
-          }
+          [fileId]: { stage: 'submitting', progress: 65, message: 'Submitting for analysis...' }
         }));
-      });
+      } else {
+        // Normal flow: convert and upload new audio file
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
+        }));
+
+        // Step 2: Convert audio using FFmpeg
+        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+          setProcessingProgress(prev => ({
+            ...prev,
+            [fileId]: {
+              stage: 'converting',
+              progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
+              message: `Converting audio... ${Math.round(progressPercent)}%`
+            }
+          }));
+        });
+
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' }
+        }));
+
+        // Step 3: Upload to Azure Blob Storage
+        fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+        audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+          setProcessingProgress(prev => ({
+            ...prev,
+            [fileId]: {
+              stage: 'uploading',
+              progress: 40 + (progressPercent * 0.25), // 40-65% for upload
+              message: `Uploading... ${Math.round(progressPercent)}%`
+            }
+          }));
+        }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      }
 
       setProcessingProgress(prev => ({
         ...prev,
@@ -577,7 +729,7 @@ const UploadAnalyze: React.FC = () => {
 
       // Step 4: Submit prediction with URL to /predictions/submit endpoint
       await apiService.submitPrediction({
-        userId: userId.trim(),
+        userId: userMetadata.userId.trim(),
         sessionid: sessionData.sessionId,
         audioFileUrl: audioUrl,
         audioFileName: fileName
@@ -641,7 +793,45 @@ const UploadAnalyze: React.FC = () => {
               timestamp: result.updatedAt,
               audioUrl: audioUrl,
               rawApiResponse: result // Store the complete API response
-            };            
+            };
+            
+            // Update session data with final analysis results (fire-and-forget)
+            const finalSessionData = {
+              ...initialSessionData,
+              audioUrl: audioUrl,
+              prediction: result, // Store the complete API response
+              analysisResults: {
+                depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
+                anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
+                riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
+                          result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+                confidence: 0.85, // This would come from the API in a real scenario
+                insights: [
+                  'Analysis completed using Kintsugi Health API',
+                  result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
+                  result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
+                  'Results should be reviewed by a qualified healthcare professional'
+                ].filter(insight => insight.trim() !== ''),
+                completedAt: new Date().toISOString()
+              },
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+            
+            // Save analysis results to session storage (async, non-blocking)
+            apiService.saveSessionData(finalSessionData)
+              .then((result) => {
+                console.log('Multi-file session data saved with analysis results for session:', sessionData.sessionId);
+                console.log('Save result:', result);
+                addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
+              })
+              .catch((error) => {
+                console.error('Failed to save multi-file analysis results to session storage:', error);
+                console.error('Session data that failed to save:', finalSessionData);
+                addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
+              });
+              
             setProcessingProgress(prev => ({
               ...prev,
               [fileId]: { stage: 'complete', progress: 100, message: 'Analysis complete!' }
@@ -682,8 +872,36 @@ const UploadAnalyze: React.FC = () => {
         errorCode = err.name || 'ERROR';
       }
 
+      // Update session status to failed if session was created
+      try {
+        // Try to find the session data from the processing progress or session context
+        const currentProgress = processingProgress[fileId];
+        if (currentProgress && currentProgress.sessionId) {
+          // Update session status to failed
+          const failedSessionData = {
+            sessionId: currentProgress.sessionId,
+            userId: getAuthenticatedUserId(),
+            metadata_user_id: userMetadata.userId.trim(),
+            audioFileName: audioFile.file.name,
+            createdAt: new Date().toISOString(), // Set as current time since we don't have original
+            status: 'failed',
+            updatedAt: new Date().toISOString(),
+            error: {
+              code: errorCode,
+              message: errorMessage,
+              details: errorDetails
+            }
+          };
+          
+          await apiService.updateSessionData(currentProgress.sessionId, failedSessionData);
+          console.log(`Updated session ${currentProgress.sessionId} status to failed`);
+        }
+      } catch (updateError) {
+        console.error('Failed to update session status to failed:', updateError);
+      }
+
       // Attempt to find and cleanup uploaded file if it exists
-      // The file name should follow the pattern we used: `${userId}_${sessionId}_${timestamp}.wav`
+      // The file name should follow the pattern we used: `${userMetadata.userId}_${sessionId}_${timestamp}.wav`
       try {
         // Try to extract session ID from error context or generate cleanup pattern
         const currentProgress = processingProgress[fileId];
@@ -691,7 +909,7 @@ const UploadAnalyze: React.FC = () => {
                               currentProgress.stage === 'submitting' || 
                               currentProgress.stage === 'analyzing')) {
           // File was likely uploaded, attempt cleanup with pattern matching
-          const fileName = `${userId}_*_*.wav`; // Pattern for potential cleanup
+          const fileName = `${userMetadata.userId}_*_*.wav`; // Pattern for potential cleanup
           // Note: In a real implementation, you'd want to track the exact fileName
           // For now, log the cleanup attempt
           console.log(`Attempting cleanup for file pattern: ${fileName}`);
@@ -715,7 +933,7 @@ const UploadAnalyze: React.FC = () => {
       }));
       throw err; // Re-throw to be handled by the calling function
     }
-  }, [userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast]);
+  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast]);
 
   const processMultipleFiles = useCallback(async () => {
     setIsProcessing(true);
@@ -828,6 +1046,7 @@ const UploadAnalyze: React.FC = () => {
     } catch (error) {
       console.error(`Error processing ${audioFile.file.name}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      
       addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
       setFileStates(prev => ({ ...prev, [fileId]: 'error' }));
       setProcessingProgress(prev => ({
@@ -838,7 +1057,7 @@ const UploadAnalyze: React.FC = () => {
   }, [audioFiles, validateMetadata, addToast, processSingleFileById]);
 
   const processSingleFile = useCallback(async () => {
-    if (!audioFile || !userId.trim()) {
+    if (!audioFile || !userMetadata.userId.trim()) {
       setError('Please select an audio file. User ID is automatically generated.');
       addToast('error', 'Missing Information', 'Please select an audio file. User ID is automatically generated.');
       return;
@@ -861,7 +1080,7 @@ const UploadAnalyze: React.FC = () => {
 
       const metadata = buildMetadata();
       const sessionRequest: any = {
-        userid: userId.trim(),
+        userid: userMetadata.userId.trim(),
         is_initiated: true
       };
 
@@ -874,7 +1093,7 @@ const UploadAnalyze: React.FC = () => {
 
       const sessionData: SessionInfo = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim()
+        userId: userMetadata.userId.trim()
       };
 
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
@@ -882,8 +1101,9 @@ const UploadAnalyze: React.FC = () => {
 
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
-        userId: userId.trim(),
-        userMetadata: metadata,
+        userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
+        metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
+        ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -891,36 +1111,58 @@ const UploadAnalyze: React.FC = () => {
       };
 
       try {
-        await apiService.saveSessionData(initialSessionData);
+        console.log('Attempting to save session data (single-file):', initialSessionData);
+        const saveResult = await apiService.saveSessionData(initialSessionData);
+        console.log('Session data saved successfully (single-file):', saveResult);
       } catch (error) {
+        console.error('Failed to save session data (single-file):', error);
+        console.error('Session data that failed to save:', initialSessionData);
+        addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
         // Continue with the process even if saving fails
-        // Error is handled silently as this is not critical for the main workflow
+        // This is not critical for the main workflow, but user should be informed
       }
 
-      setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
-      announceToScreenReader('Session created successfully, now converting audio');
+      let audioUrl: string;
+      let fileName: string;
 
-      // Step 2: Convert audio using FFmpeg
-      const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
-        setProgress({
-          stage: 'converting',
-          progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
-          message: `Converting audio... ${Math.round(progressPercent)}%`
+      // Check if this is a pre-filled session with existing audio URL (re-run scenario)
+      if (audioFile.url) {
+        // Skip conversion and upload for re-run - audio is already processed and stored
+        setProgress({ stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' });
+        announceToScreenReader('Session created successfully, reusing previously processed audio file');
+        
+        audioUrl = audioFile.url;
+        fileName = audioFile.file.name;
+        
+        // Skip to 65% progress since conversion and upload are not needed
+        setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
+      } else {
+        // Normal flow: convert and upload new audio file
+        setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
+        announceToScreenReader('Session created successfully, now converting audio');
+
+        // Step 2: Convert audio using FFmpeg
+        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+          setProgress({
+            stage: 'converting',
+            progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
+            message: `Converting audio... ${Math.round(progressPercent)}%`
+          });
         });
-      });
 
-      setProgress({ stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' });
-      announceToScreenReader('Audio converted successfully, now uploading');
+        setProgress({ stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' });
+        announceToScreenReader('Audio converted successfully, now uploading');
 
-      // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userId}_${sessionData.sessionId}_${Date.now()}.wav`;
-      const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
-        setProgress({
-          stage: 'uploading',
-          progress: 40 + (progressPercent * 0.25), // 40-65% for upload
-          message: `Uploading... ${Math.round(progressPercent)}%`
-        });
-      });
+        // Step 3: Upload to Azure Blob Storage
+        fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+        audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+          setProgress({
+            stage: 'uploading',
+            progress: 40 + (progressPercent * 0.25), // 40-65% for upload
+            message: `Uploading... ${Math.round(progressPercent)}%`
+          });
+        }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      }
 
       setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
       announceToScreenReader('Upload complete, submitting for behavioral health analysis');
@@ -942,7 +1184,7 @@ const UploadAnalyze: React.FC = () => {
 
       // Step 4: Submit prediction with URL to /predictions/submit endpoint
       await apiService.submitPrediction({
-        userId: userId.trim(),
+        userId: userMetadata.userId.trim(),
         sessionid: sessionData.sessionId,
         audioFileUrl: audioUrl,
         audioFileName: fileName
@@ -998,12 +1240,50 @@ const UploadAnalyze: React.FC = () => {
             timestamp: result.updatedAt,
             audioUrl: audioUrl,
             rawApiResponse: result // Store the complete API response
-          };            
-            setProgress({ stage: 'complete', progress: 100, message: 'Analysis complete!' });
-            setResult(analysisResult);
-            addToast('success', 'Analysis Complete', 'Your behavioral health analysis has been completed successfully.');
-            announceToScreenReader('Behavioral health analysis completed successfully');
-            resolve();
+          };
+          
+          // Update session data with final analysis results (fire-and-forget)
+          const finalSessionData = {
+            ...initialSessionData,
+            audioUrl: audioUrl,
+            prediction: result, // Store the complete API response
+            analysisResults: {
+              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
+              anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
+              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
+                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              confidence: 0.85, // This would come from the API in a real scenario
+              insights: [
+                'Analysis completed using Kintsugi Health API',
+                result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
+                result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
+                'Results should be reviewed by a qualified healthcare professional'
+              ].filter(insight => insight.trim() !== ''),
+              completedAt: new Date().toISOString()
+            },
+            status: 'completed',
+            completedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          
+          // Save analysis results to session storage (async, non-blocking)
+          apiService.saveSessionData(finalSessionData)
+            .then((result) => {
+              console.log('Session data saved with analysis results for session:', sessionData.sessionId);
+              console.log('Save result:', result);
+              addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
+            })
+            .catch((error) => {
+              console.error('Failed to save analysis results to session storage:', error);
+              console.error('Session data that failed to save:', finalSessionData);
+              addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
+            });
+            
+          setProgress({ stage: 'complete', progress: 100, message: 'Analysis complete!' });
+          setResult(analysisResult);
+          addToast('success', 'Analysis Complete', 'Your behavioral health analysis has been completed successfully.');
+          announceToScreenReader('Behavioral health analysis completed successfully');
+          resolve();
           },
           (error: AppError) => {
             addToast('error', 'Analysis Error', error.message || 'An unexpected error occurred during analysis.');
@@ -1020,7 +1300,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userId, announceToScreenReader, validateMetadata, buildMetadata]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {
@@ -1132,122 +1412,103 @@ const UploadAnalyze: React.FC = () => {
       {/* User Metadata Form */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Patient Information
+          Patient Information (Optional)
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2 lg:col-span-3 mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              User ID Management
+          <div>
+            <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              User ID (Auto-generated, editable)
             </label>
-            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-md border space-y-3">
-              {/* Current User ID Display */}
-              <div>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current User ID:</p>
-                <code className="text-sm font-mono text-gray-900 dark:text-gray-100 break-all block bg-white dark:bg-gray-800 p-2 rounded border">
-                  {userId}
-                </code>
-              </div>
-              
-              {/* User ID Management Controls */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <button type="button"
-                    onClick={handleToggleUserIdMode}
-                    className="px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
-                    aria-describedby="user-id-mode-help"
-                  >
-                    {isCustomUserIdMode ? 'Switch to Auto-Generated' : 'Use Custom User ID'}
-                  </button>
-                  
-                  {!isCustomUserIdMode && (
-                    <button type="button"
-                      onClick={handleGenerateNewUserId}
-                      className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
-                      title="Generate a new random User ID"
-                    >
-                      Generate New ID
-                    </button>
-                  )}
-                </div>
-
-                {isCustomUserIdMode && (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={customUserId}
-                        onChange={(e) => handleCustomUserIdChange(e.target.value)}
-                        placeholder="Enter custom User ID (any unique string)"
-                        className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        aria-describedby="custom-user-id-help"
-                        aria-invalid={userIdError ? 'true' : 'false'}
-                      />
-                      <button type="button"
-                        onClick={handleApplyCustomUserId}
-                        disabled={!customUserId.trim()}
-                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                    
-                    {userIdError && (
-                      <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                        {userIdError}
-                      </p>
-                    )}
-                    
-                    <p id="custom-user-id-help" className="text-xs text-gray-500 dark:text-gray-400">
-                      Any unique string (3-100 characters). Examples: "patient-001", "john.doe@clinic", "study-participant-42"
-                    </p>
-                  </div>
-                )}
-                
-                <p id="user-id-mode-help" className="text-xs text-gray-500 dark:text-gray-400">
-                  {isCustomUserIdMode 
-                    ? 'Custom mode: Use any unique identifier for tracking (e.g., patient ID, username, study code)' 
-                    : 'Auto mode: System generates unique UUIDs automatically'
-                  }
-                </p>
-              </div>
-            </div>
+            <input
+              type="text"
+              id="userId"
+              value={userMetadata.userId}
+              onChange={(e) => setUserMetadata(prev => ({ ...prev, userId: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Auto-generated user ID"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Unique identifier for API calls. Auto-generated but can be customized.
+            </p>
           </div>
 
           <div>
             <label htmlFor="age" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Age (Optional)
+              Age
             </label>
             <input
               type="number"
               id="age"
               value={userMetadata.age}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, age: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, age: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('age', newValue);
+              }}
+              onBlur={(e) => handleFieldValidation('age', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('age', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.age 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               placeholder="Age in years"
               min="1"
               max="150"
+              aria-describedby={validationErrors.age ? "age-error" : undefined}
             />
+            {validationErrors.age && (
+              <p id="age-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.age}
+              </p>
+            )}
           </div>
 
           <div>
             <label htmlFor="weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Weight (Optional)
+              Weight
             </label>
             <input
               type="number"
               id="weight"
               value={userMetadata.weight}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, weight: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, weight: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('weight', newValue);
+              }}
+              onBlur={(e) => handleFieldValidation('weight', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('weight', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.weight 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               placeholder="Weight in lbs"
               min="1"
               max="1000"
+              aria-describedby={validationErrors.weight ? "weight-error" : undefined}
             />
+            {validationErrors.weight && (
+              <p id="weight-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.weight}
+              </p>
+            )}
           </div>
 
           <div>
             <label htmlFor="gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Gender (Optional)
+              Gender
             </label>
             <select
               id="gender"
@@ -1268,7 +1529,7 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="race" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Race (Optional)
+              Race
             </label>
             <select
               id="race"
@@ -1290,7 +1551,7 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="ethnicity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Ethnicity (Optional)
+              Ethnicity
             </label>
             <select
               id="ethnicity"
@@ -1306,7 +1567,7 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Primary Language (Optional)
+              Primary Language
             </label>
             <select
               id="language"
@@ -1322,32 +1583,104 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="zipcode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              ZIP Code (Optional)
+              ZIP Code
             </label>
             <input
               type="text"
               id="zipcode"
               value={userMetadata.zipcode}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, zipcode: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setUserMetadata(prev => ({ ...prev, zipcode: newValue }));
+                // Trigger validation on change for immediate feedback
+                handleFieldValidation('zipcode', newValue);
+              }}
+              onBlur={(e) => handleFieldValidation('zipcode', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('zipcode', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.zipcode 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               placeholder="Enter ZIP code"
               pattern="[0-9]{5}(-[0-9]{4})?"
               title="Enter a valid ZIP code (e.g., 12345 or 12345-6789)"
+              aria-describedby={validationErrors.zipcode ? "zipcode-error" : undefined}
             />
+            {validationErrors.zipcode && (
+              <p id="zipcode-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.zipcode}
+              </p>
+            )}
           </div>
 
           <div className="md:col-span-2 lg:col-span-3">
             <label htmlFor="sessionNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Session Notes (Optional)
+              Session Notes
             </label>
             <textarea
               id="sessionNotes"
               value={userMetadata.sessionNotes}
               onChange={(e) => setUserMetadata(prev => ({ ...prev, sessionNotes: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+              onBlur={(e) => handleFieldValidation('sessionNotes', e.target.value)}
+              onKeyUp={(e) => {
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  handleFieldValidation('sessionNotes', e.currentTarget.value);
+                }
+              }}
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                validationErrors.sessionNotes 
+                  ? 'border-red-300 dark:border-red-600' 
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
               rows={3}
               placeholder="Additional notes about this session or patient context"
+              aria-describedby={validationErrors.sessionNotes ? "sessionNotes-error" : undefined}
             />
+            {validationErrors.sessionNotes && (
+              <p id="sessionNotes-error" className="mt-1 text-sm text-red-600 dark:text-red-400" role="alert">
+                {validationErrors.sessionNotes}
+              </p>
+            )}
+            <div className="mt-1 flex items-center justify-between">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {userMetadata.sessionNotes.length}/500 characters
+              </p>
+              
+              {/* Grammar Correction Button - Next to character count */}
+              <button
+                type="button"
+                onClick={() => handleGrammarCorrection()}
+                disabled={!userMetadata.sessionNotes.trim() || isCorrectingGrammar}
+                className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:text-blue-300 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Correct grammar and spelling in session notes"
+                title="Correct grammar and spelling"
+              >
+                {isCorrectingGrammar ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <svg 
+                    className="w-3.5 h-3.5 mr-1.5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
+                    />
+                  </svg>
+                )}
+                {isCorrectingGrammar ? 'Correcting...' : 'Correct Grammar'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1557,7 +1890,7 @@ const UploadAnalyze: React.FC = () => {
                             </div>
                             <div className="processing-progress mt-1">
                               <div
-                                className={`processing-progress__fill progress-animated ${getProgressColor(progress.stage)}`}
+                                className={`processing-progress__fill ${getProgressColor(progress.stage)}`}
                                 style={{ width: `${progress.progress}%` }}
                               />
                             </div>
@@ -1836,8 +2169,9 @@ const UploadAnalyze: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button type="button"
                   onClick={processMultipleFiles}
-                  disabled={audioFiles.length === 0 || !userId.trim() || 
-                           !audioFiles.some(file => fileStates[file.id] === 'ready')}
+                  disabled={audioFiles.length === 0 || !userMetadata.userId.trim() || 
+                           !audioFiles.some(file => fileStates[file.id] === 'ready') ||
+                           !!error || Object.values(validationErrors).some(err => err !== undefined)}
                   className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
                 >
                   <Play className="h-5 w-5 mr-2" aria-hidden="true" />
@@ -1855,7 +2189,8 @@ const UploadAnalyze: React.FC = () => {
             <div>
               <button type="button"
                 onClick={processAndAnalyze}
-                disabled={!audioFile || !userId.trim()}
+                disabled={!audioFile || !userMetadata.userId.trim() || 
+                         !!error || Object.values(validationErrors).some(err => err !== undefined)}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
               >
                 <Play className="h-5 w-5 mr-2" aria-hidden="true" />

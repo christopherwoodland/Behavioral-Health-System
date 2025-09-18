@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Heart, Target, Clock } from 'lucide-react';
+import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
@@ -761,11 +761,11 @@ const UserStatsTable: React.FC<{
     : 0;
   const topPerformer = userStats.length > 0 
     ? userStats.reduce((best, current) => 
-        current.successRate > best.successRate ? current : best, userStats[0])
+        current.avgConfidence > best.avgConfidence ? current : best, userStats[0])
     : null;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 overflow-visible">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
           <Users className="h-5 w-5 mr-2 text-blue-500" />
@@ -784,8 +784,8 @@ const UserStatsTable: React.FC<{
           </div>
           {topPerformer && (
             <div className="text-center">
-              <div className="font-semibold text-green-600">{topPerformer.successRate}%</div>
-              <div className="text-gray-600 dark:text-gray-400">Best Job Success Rate</div>
+              <div className="font-semibold text-blue-600">{(topPerformer.avgConfidence * 100).toFixed(1)}%</div>
+              <div className="text-gray-600 dark:text-gray-400">Highest Avg Confidence</div>
             </div>
           )}
         </div>
@@ -826,7 +826,7 @@ const UserStatsTable: React.FC<{
             </div>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-visible relative">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -837,15 +837,32 @@ const UserStatsTable: React.FC<{
                   Sessions
                 </th>
                 <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
+                  Risk Distribution
+                </th>
+                <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white relative">
                   <div className="flex flex-col items-center">
-                    <span>Avg Confidence</span>
+                    <div className="flex items-center space-x-1">
+                      <span>Avg Confidence</span>
+                      <div className="relative group">
+                        <Info className="h-3 w-3 text-gray-400 hover:text-blue-500 cursor-help" />
+                        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-[99999]">
+                          <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg p-3 shadow-2xl border border-gray-600 whitespace-nowrap w-80">
+                            <div className="font-semibold mb-2 text-center">Average Confidence Calculation:</div>
+                            <div className="space-y-1 text-left">
+                              <div>• Calculated from AI model confidence scores</div>
+                              <div>• Averaged across all successful sessions per user</div>
+                              <div>• Related to risk distribution/evaluation accuracy</div>
+                              <div>• Higher values indicate more reliable assessments</div>
+                            </div>
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <span className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
                       (Analysis accuracy 0-100%)
                     </span>
                   </div>
-                </th>
-                <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
-                  Risk Distribution
                 </th>
                 <th className="text-right py-3 px-2 font-medium text-gray-900 dark:text-white">
                   Last Activity
@@ -862,8 +879,8 @@ const UserStatsTable: React.FC<{
                 >
                   <td className="py-3 px-2">
                     <div className="font-mono text-sm text-gray-900 dark:text-white">
-                      <div className="truncate max-w-[120px]" title={user.userId}>
-                        {user.userId.substring(0, 8)}...
+                      <div className="truncate max-w-[200px]" title={user.userId}>
+                        {user.userId}
                       </div>
                     </div>
                   </td>
@@ -873,19 +890,6 @@ const UserStatsTable: React.FC<{
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                       {user.successfulSessions} successful
-                    </div>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <div className={`font-medium ${
-                      user.successRate >= 80 ? 'text-green-600' : 
-                      user.successRate >= 60 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {user.successRate}%
-                    </div>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <div className="text-gray-900 dark:text-white font-medium">
-                      {(user.avgConfidence * 100).toFixed(1)}%
                     </div>
                   </td>
                   <td className="py-3 px-2 text-center">
@@ -899,6 +903,11 @@ const UserStatsTable: React.FC<{
                       <span className={`px-1 py-0.5 rounded ${getRiskColor('high', user.riskDistribution.high)}`}>
                         H:{user.riskDistribution.high}
                       </span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    <div className="text-gray-900 dark:text-white font-medium">
+                      {(user.avgConfidence * 100).toFixed(1)}%
                     </div>
                   </td>
                   <td className="py-3 px-2 text-right">
@@ -1147,14 +1156,6 @@ export const ControlPanel: React.FC = () => {
     loadAnalytics();
   }, [loadAnalytics]);
 
-  // Force refresh handler that clears cache and reloads
-  const handleForceRefresh = useCallback(async () => {
-    console.log('🔄 ControlPanel: Force refresh triggered - clearing cache and reloading...');
-    setAnalytics(null); // Clear current data
-    setError(null);
-    await loadAnalytics();
-  }, [loadAnalytics]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
@@ -1248,23 +1249,13 @@ export const ControlPanel: React.FC = () => {
                   <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
-                <button
-                  onClick={handleForceRefresh}
-                  disabled={loading}
-                  className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm"
-                  aria-label="Force refresh with cache clear"
-                  title="Clear cache and force refresh data"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Force Refresh
-                </button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Overview Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <MetricCard
             title="Total Sessions"
             value={analytics.overview.totalSessions}
@@ -1279,48 +1270,23 @@ export const ControlPanel: React.FC = () => {
             icon={<Users className="h-6 w-6" />}
             color="text-green-600"
           />
-          <MetricCard
-            title="Job Success Rate"
-            value={`${analytics.overview.successRate}%`}
-            subtitle="Completed analyses"
-            icon={<Target className="h-6 w-6" />}
-            color="text-purple-600"
-            trend={analytics.overview.successRate > 75 ? 'up' : analytics.overview.successRate < 50 ? 'down' : 'neutral'}
-          />
-          <MetricCard
-            title="Recent Activity"
-            value={analytics.overview.recentActivity}
-            subtitle="Last 24 hours"
-            icon={<Clock className="h-6 w-6" />}
-            color="text-orange-600"
-            trend={analytics.overview.recentActivity > 5 ? 'up' : analytics.overview.recentActivity === 0 ? 'down' : 'neutral'}
-          />
         </div>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Session Status Distribution */}
-          <DistributionChart
-            title="Session Status Distribution"
-            data={[
-              { label: 'Succeeded', value: analytics.sessionStatus.succeeded, color: 'bg-green-500' },
-              { label: 'Processing', value: analytics.sessionStatus.processing, color: 'bg-yellow-500' },
-              { label: 'Failed', value: analytics.sessionStatus.failed, color: 'bg-red-500' },
-            ]}
-            total={analytics.sessionStatus.total}
-          />
-
           {/* Risk Level Distribution */}
-          <DistributionChart
-            title="Risk Level Distribution"
-            data={[
-              { label: 'Low Risk', value: analytics.riskLevels.low, color: 'bg-green-500' },
-              { label: 'Medium Risk', value: analytics.riskLevels.medium, color: 'bg-yellow-500' },
-              { label: 'High Risk', value: analytics.riskLevels.high, color: 'bg-red-500' },
-              { label: 'Unknown', value: analytics.riskLevels.unknown, color: 'bg-gray-500' },
-            ]}
-            total={analytics.riskLevels.total}
-          />
+          <div className="lg:col-span-2">
+            <DistributionChart
+              title="Risk Level Distribution"
+              data={[
+                { label: 'Low Risk', value: analytics.riskLevels.low, color: 'bg-green-500' },
+                { label: 'Medium Risk', value: analytics.riskLevels.medium, color: 'bg-yellow-500' },
+                { label: 'High Risk', value: analytics.riskLevels.high, color: 'bg-red-500' },
+                { label: 'Unknown', value: analytics.riskLevels.unknown, color: 'bg-gray-500' },
+              ]}
+              total={analytics.riskLevels.total}
+            />
+          </div>
         </div>
 
         {/* Prediction Distribution */}
@@ -1379,34 +1345,6 @@ export const ControlPanel: React.FC = () => {
             title="Sessions Over Time (7 Days)"
             data={analytics.timeData}
           />
-        </div>
-
-        {/* System Health */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-            <Heart className="h-5 w-5 mr-2 text-red-500" />
-            System Health Overview
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {analytics.overview.successRate}%
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Job Success Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {analytics.overview.totalSessions}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Sessions</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {analytics.sessionStatus.processing}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Processing</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

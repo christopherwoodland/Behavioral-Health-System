@@ -1771,7 +1771,7 @@ const UploadAnalyze: React.FC = () => {
                             </div>
                             <div className="processing-progress mt-1">
                               <div
-                                className={`processing-progress__fill progress-animated ${getProgressColor(progress.stage)}`}
+                                className={`processing-progress__fill ${getProgressColor(progress.stage)}`}
                                 style={{ width: `${progress.progress}%` }}
                               />
                             </div>

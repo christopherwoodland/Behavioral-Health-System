@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, ChevronDown, ChevronUp, Eye, Download, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { getUserId, formatRelativeTime, formatDateTime } from '../utils';
 import type { SessionData, AppError } from '../types';
@@ -70,6 +71,7 @@ const getSeverityLevel = (category?: string): number => {
 };
 
 const Sessions: React.FC = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<SessionWithUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
@@ -85,30 +87,40 @@ const Sessions: React.FC = () => {
 
   const { announceToScreenReader } = useAccessibility();
 
+  // Get authenticated user ID for API calls (matches blob storage folder structure)
+  const getAuthenticatedUserId = useCallback((): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  }, [user?.id]);
+
   // Load sessions from API
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const userId = getUserId();
+      const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
       const response = await apiService.getUserSessions(userId);
       
       // Transform session data to include computed UI fields
       const transformedSessions: SessionWithUI[] = response.sessions.map(session => {
         // Handle both camelCase and snake_case property names from API
         const prediction = session.prediction as any;
+        const analysisResults = session.analysisResults;
         
         return {
           ...session,
           uploadedAt: session.createdAt,
           fileName: session.audioFileName || `Audio_${session.sessionId.slice(-8)}.wav`,
           fileSize: Math.floor(Math.random() * 5000000) + 1000000, // Mock file size for now
-          riskLevel: session.analysisResults?.riskLevel || 'unknown',
-          depressionScore: prediction?.predicted_score_depression || 
+          riskLevel: analysisResults?.riskLevel || 'unknown',
+          // Prioritize analysisResults, then fall back to prediction data
+          depressionScore: analysisResults?.depressionScore?.toString() ||
+                          prediction?.predicted_score_depression || 
                           prediction?.predictedScoreDepression ||
                           undefined,
-          anxietyScore: prediction?.predicted_score_anxiety || 
+          anxietyScore: analysisResults?.anxietyScore?.toString() ||
+                       prediction?.predicted_score_anxiety || 
                        prediction?.predictedScoreAnxiety ||
                        undefined,
         };

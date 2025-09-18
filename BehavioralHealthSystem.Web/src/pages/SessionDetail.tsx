@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
-import { getBlobService } from '../services/azure';
 import { formatDateTime, formatRelativeTime } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import type { SessionData, AppError } from '../types';
@@ -132,28 +131,46 @@ const SessionDetail: React.FC = () => {
     announceToScreenReader('Session data download started');
   }, [session, announceToScreenReader]);
 
-  // Download audio file from blob storage
+  // Download audio file using audioUrl from session data
   const downloadAudioFile = useCallback(async () => {
-    if (!session?.audioFileName || !session?.userId) return;
+    if (!session?.audioUrl || !session?.audioFileName) return;
+    if (!session?.audioUrl) return;
 
     try {
-      const blobService = getBlobService();
-      const blobPath = `${session.userId}/${session.audioFileName}`;
-      
-      // Create a direct blob URL for download
-      const sasUrl = blobService['sasUrl'];
-      const containerName = 'audio-uploads'; // Assuming this is the container name
-      const downloadUrl = `${sasUrl.split('?')[0]}/${containerName}/${blobPath}?${sasUrl.split('?')[1]}`;
+      // Use the audioUrl directly from session data
+      const downloadUrl = session.audioUrl;
       
       // Open the download URL in a new tab
       window.open(downloadUrl, '_blank');
+      // Use the audioUrl directly from session data
+      window.open(session.audioUrl, '_blank');
       
-      announceToScreenReader(`Downloading audio file: ${session.audioFileName}`);
+      announceToScreenReader(`Downloading audio file: ${session.audioFileName || 'audio file'}`);
     } catch (error) {
       console.error('Failed to download audio file:', error);
       announceToScreenReader('Failed to download audio file');
     }
   }, [session, announceToScreenReader]);
+
+  // Re-run session analysis
+  const handleRerunSession = useCallback(() => {
+    if (!session) return;
+    
+    const confirmed = window.confirm('Are you sure you want to re-run the analysis for this session? You will be redirected to the upload page with the session data pre-filled.');
+    if (!confirmed) return;
+
+    announceToScreenReader('Redirecting to upload page for re-run...');
+    
+    // Navigate to upload page with session data
+    navigate('/upload', {
+      state: {
+        originalSessionId: session.sessionId,
+        audioFileName: session.audioFileName,
+        audioUrl: session.audioUrl,
+        userMetadata: session.userMetadata
+      }
+    });
+  }, [session, navigate, announceToScreenReader]);
 
   // Status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -299,6 +316,15 @@ const SessionDetail: React.FC = () => {
           </button>
           
           <button type="button"
+            onClick={handleRerunSession}
+            className="btn btn--secondary"
+            aria-label="Re-run analysis for this session"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
+            Re-run
+          </button>
+          
+          <button type="button"
             onClick={downloadSessionData}
             className="btn btn--primary"
             aria-label="Download session data as JSON"
@@ -405,7 +431,7 @@ const SessionDetail: React.FC = () => {
           </h2>
           
           <div className="space-y-4">
-            {session.audioFileName && (
+            {session.audioFileName && session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   File Name
@@ -417,6 +443,17 @@ const SessionDetail: React.FC = () => {
                 >
                   {session.audioFileName}
                 </button>
+              </div>
+            )}
+            
+            {session.audioFileName && !session.audioUrl && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  File Name
+                </label>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {session.audioFileName} (download not available)
+                </span>
               </div>
             )}
             

@@ -49,6 +49,9 @@ VITE_ENABLE_DEBUG_LOGGING=false
 - **Azure Integration** - Direct upload to Azure Blob Storage with SAS tokens
 - **Real-time Updates** - Polling for prediction results with progress tracking
 - **Offline Support** - Progressive Web App capabilities
+- **Session Re-run Functionality** - Smart re-analysis with optimized audio processing
+- **Enhanced Modal System** - Improved information display replacing problematic tooltips
+- **Streamlined Navigation** - Intuitive user flow with consistent design patterns
 
 ## 🛠️ Tech Stack
 
@@ -425,7 +428,36 @@ The application includes several UI improvements for better user experience:
 - **Keyboard Shortcuts** for common actions
 - **Focus Management** between page transitions
 
-## 🔍 Troubleshooting
+## � Latest Features & Enhancements
+
+### Session Re-run Functionality
+
+The application now includes sophisticated session re-run capabilities:
+
+- **🔁 Smart Re-run System** - Re-analyze previous sessions with navigation-based workflow
+- **⚡ Audio Processing Optimization** - Skip redundant audio conversion for existing files
+- **📱 Dual Access Points** - Re-run from both Sessions list and Session Detail pages
+- **🎯 Pre-filled Data** - Session information automatically populated on re-run
+- **🔄 Optimized Performance** - Intelligent file handling reduces processing time
+
+### Enhanced UI/UX Improvements
+
+Recent interface enhancements for better user experience:
+
+- **📱 Improved Modal System** - Replaced problematic tooltips with accessible modal dialogs
+- **🧠 Interactive Brain Animation** - Custom CSS keyframe animation with realistic throb effect
+- **📊 Enhanced Session Views** - Detailed session information with consistent styling
+- **🎨 Unified Design Language** - Consistent button styling and component patterns
+- **⚡ Responsive Interactions** - Smooth transitions and hover effects
+
+### Technical Optimizations
+
+- **📁 File Upload Intelligence** - Conditional audio processing based on file state
+- **🔄 Navigation-Based Workflow** - Uses React Router state for efficient data transfer
+- **🎯 Error Prevention** - Robust handling of edge cases during re-run operations
+- **♿ Accessibility Focus** - All new features maintain WCAG 2.2 Level AA compliance
+
+## �🔍 Troubleshooting
 
 ### Common Issues
 

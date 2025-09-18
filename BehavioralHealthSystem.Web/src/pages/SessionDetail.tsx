@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
-import { getBlobService } from '../services/azure';
 import { formatDateTime, formatRelativeTime } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import type { SessionData, AppError } from '../types';
@@ -134,21 +133,13 @@ const SessionDetail: React.FC = () => {
 
   // Download audio file from blob storage
   const downloadAudioFile = useCallback(async () => {
-    if (!session?.audioFileName || !session?.userId) return;
+    if (!session?.audioUrl) return;
 
     try {
-      const blobService = getBlobService();
-      const blobPath = `${session.userId}/${session.audioFileName}`;
+      // Use the audioUrl directly from session data
+      window.open(session.audioUrl, '_blank');
       
-      // Create a direct blob URL for download
-      const sasUrl = blobService['sasUrl'];
-      const containerName = 'audio-uploads'; // Assuming this is the container name
-      const downloadUrl = `${sasUrl.split('?')[0]}/${containerName}/${blobPath}?${sasUrl.split('?')[1]}`;
-      
-      // Open the download URL in a new tab
-      window.open(downloadUrl, '_blank');
-      
-      announceToScreenReader(`Downloading audio file: ${session.audioFileName}`);
+      announceToScreenReader(`Downloading audio file: ${session.audioFileName || 'audio file'}`);
     } catch (error) {
       console.error('Failed to download audio file:', error);
       announceToScreenReader('Failed to download audio file');
@@ -405,7 +396,7 @@ const SessionDetail: React.FC = () => {
           </h2>
           
           <div className="space-y-4">
-            {session.audioFileName && (
+            {session.audioFileName && session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   File Name
@@ -417,6 +408,17 @@ const SessionDetail: React.FC = () => {
                 >
                   {session.audioFileName}
                 </button>
+              </div>
+            )}
+            
+            {session.audioFileName && !session.audioUrl && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  File Name
+                </label>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {session.audioFileName} (download not available)
+                </span>
               </div>
             )}
             

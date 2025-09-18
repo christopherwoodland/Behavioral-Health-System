@@ -41,6 +41,7 @@ export const setUserId = (userId: string): void => {
 export const generateNewUserId = (): string => {
   const newUserId = uuidv4();
   localStorage.setItem(STORAGE_KEYS.USER_ID, newUserId);
+  setUserIdMode(false); // Mark as auto-generated
   return newUserId;
 };
 

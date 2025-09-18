@@ -35,6 +35,7 @@ const statusConfig = {
   processing: { color: 'blue', icon: RefreshCw, label: 'Processing', description: 'Analysis in progress' },
   succeeded: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
   success: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
+  completed: { color: 'green', icon: CheckCircle, label: 'Completed', description: 'Analysis completed successfully' },
   failed: { color: 'red', icon: XCircle, label: 'Failed', description: 'Analysis encountered an error' },
   error: { color: 'red', icon: XCircle, label: 'Error', description: 'An error occurred during processing' },
 } as const;
@@ -130,6 +131,47 @@ const SessionDetail: React.FC = () => {
     announceToScreenReader('Session data download started');
   }, [session, announceToScreenReader]);
 
+  // Download audio file using audioUrl from session data
+  const downloadAudioFile = useCallback(async () => {
+    if (!session?.audioUrl || !session?.audioFileName) return;
+    if (!session?.audioUrl) return;
+
+    try {
+      // Use the audioUrl directly from session data
+      const downloadUrl = session.audioUrl;
+      
+      // Open the download URL in a new tab
+      window.open(downloadUrl, '_blank');
+      // Use the audioUrl directly from session data
+      window.open(session.audioUrl, '_blank');
+      
+      announceToScreenReader(`Downloading audio file: ${session.audioFileName || 'audio file'}`);
+    } catch (error) {
+      console.error('Failed to download audio file:', error);
+      announceToScreenReader('Failed to download audio file');
+    }
+  }, [session, announceToScreenReader]);
+
+  // Re-run session analysis
+  const handleRerunSession = useCallback(() => {
+    if (!session) return;
+    
+    const confirmed = window.confirm('Are you sure you want to re-run the analysis for this session? You will be redirected to the upload page with the session data pre-filled.');
+    if (!confirmed) return;
+
+    announceToScreenReader('Redirecting to upload page for re-run...');
+    
+    // Navigate to upload page with session data
+    navigate('/upload', {
+      state: {
+        originalSessionId: session.sessionId,
+        audioFileName: session.audioFileName,
+        audioUrl: session.audioUrl,
+        userMetadata: session.userMetadata
+      }
+    });
+  }, [session, navigate, announceToScreenReader]);
+
   // Status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     // For any unknown status that contains "error" or "fail", treat as error
@@ -140,7 +182,8 @@ const SessionDetail: React.FC = () => {
       if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
         config = statusConfig.error;
       } else {
-        config = statusConfig.failed; // Default fallback
+        // Default to initiated for unknown statuses instead of failed
+        config = statusConfig.initiated;
       }
     }
     
@@ -273,6 +316,15 @@ const SessionDetail: React.FC = () => {
           </button>
           
           <button type="button"
+            onClick={handleRerunSession}
+            className="btn btn--secondary"
+            aria-label="Re-run analysis for this session"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
+            Re-run
+          </button>
+          
+          <button type="button"
             onClick={downloadSessionData}
             className="btn btn--primary"
             aria-label="Download session data as JSON"
@@ -356,6 +408,18 @@ const SessionDetail: React.FC = () => {
                 {session.userId}
               </div>
             </div>
+            
+            {session.metadata_user_id && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <User className="w-4 h-4 inline mr-1" aria-hidden="true" />
+                  Metadata User ID
+                </label>
+                <div className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border break-all">
+                  {session.metadata_user_id}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -367,14 +431,29 @@ const SessionDetail: React.FC = () => {
           </h2>
           
           <div className="space-y-4">
-            {session.audioFileName && (
+            {session.audioFileName && session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   File Name
                 </label>
-                <div className="text-sm text-gray-900 dark:text-white font-medium">
+                <button
+                  onClick={downloadAudioFile}
+                  className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                  title="Click to download audio file"
+                >
                   {session.audioFileName}
-                </div>
+                </button>
+              </div>
+            )}
+            
+            {session.audioFileName && !session.audioUrl && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  File Name
+                </label>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {session.audioFileName} (download not available)
+                </span>
               </div>
             )}
             
@@ -568,6 +647,7 @@ const SessionDetail: React.FC = () => {
                     </div>
                   )}
                   
+                  {/* Note: Risk Level and Confidence scores have been removed per user request */}
                   {/* Note: Overall Score (predicted_score) is deprecated and no longer displayed */}
                 </div>
               </div>

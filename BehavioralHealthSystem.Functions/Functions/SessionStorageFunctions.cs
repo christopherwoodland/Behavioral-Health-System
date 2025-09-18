@@ -159,6 +159,38 @@ public class SessionStorageFunctions
         }
     }
 
+    [Function("GetAllSessions")]
+    public async Task<HttpResponseData> GetAllSessions(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/all")] HttpRequestData req)
+    {
+        try
+        {
+            _logger.LogInformation("[{FunctionName}] Getting all sessions for system-wide analytics", nameof(GetAllSessions));
+
+            var allSessions = await _sessionStorageService.GetAllSessionsAsync();
+            
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = true,
+                count = allSessions.Count,
+                sessions = allSessions
+            }, _jsonOptions));
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{FunctionName}] Error getting all sessions", nameof(GetAllSessions));
+            
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
+                success = false, 
+                message = "Error getting all sessions",
+                error = ex.Message 
+            }, _jsonOptions));
+            return errorResponse;
+        }
+    }
+
     [Function("UpdateSessionData")]
     public async Task<HttpResponseData> UpdateSessionData(
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "sessions/{sessionId}")] HttpRequestData req,

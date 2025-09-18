@@ -17,6 +17,9 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  // Check if authentication is enabled
+  const isAuthEnabled = import.meta.env.VITE_ENABLE_ENTRA_AUTH === 'true';
+
   // Filter navigation items based on user permissions
   const getNavigationItems = () => {
     const baseItems = [
@@ -26,6 +29,12 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
       { path: '/predictions', label: 'My Predictions', icon: '📈', roles: [APP_ROLES.ADMIN] },
     ];
 
+    // If auth is disabled, show all navigation items
+    if (!isAuthEnabled) {
+      return baseItems;
+    }
+
+    // If auth is enabled but user is not authenticated, show no items
     if (!isAuthenticated) {
       return [];
     }
@@ -123,10 +132,11 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
           </nav>
 
           {/* User menu and theme toggle */}
-          <div className="flex items-center space-x-4">
-            {/* Authenticated User Menu */}
-            {isAuthenticated && user && (
-              <div className="relative" data-user-menu>
+          <div className="flex items-center space-x-2">
+            {/* User indicator - always visible */}
+            <div className="relative" data-user-menu>
+              {isAuthEnabled && isAuthenticated && user ? (
+                // Authenticated user - fully functional
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   onKeyDown={handleEnterSpace(() => setShowUserMenu(!showUserMenu))}
@@ -154,49 +164,74 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
+              ) : (
+                // Disabled user indicator - grey and unclickable
+                <div
+                  className="
+                    flex items-center space-x-2 p-2 rounded-md text-gray-400 cursor-not-allowed opacity-50
+                    dark:text-gray-500 transition-colors touch-target
+                  "
+                  aria-label="User authentication disabled"
+                  title={!isAuthEnabled ? "Authentication is disabled" : "Not signed in"}
+                >
+                  <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    ?
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {!isAuthEnabled ? "Auth Disabled" : "Not Signed In"}
+                  </span>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              )}
 
-                {/* User dropdown menu */}
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
-                          {user.name.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                        </div>
+              {/* User dropdown menu - only show for authenticated users */}
+              {isAuthEnabled && isAuthenticated && user && showUserMenu && (
+                <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
+                        {user.name.charAt(0).toUpperCase()}
                       </div>
-                      <div className="mt-2">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                          {user.primaryRole}
-                        </span>
-                        {user.roles.length > 1 && (
-                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                            +{user.roles.length - 1} more
-                          </span>
-                        )}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
                     </div>
-                    <div className="py-1">
-                      <button
-                        onClick={() => {
-                          logout();
-                          setShowUserMenu(false);
-                        }}
-                        className="
-                          w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
-                          hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
-                        "
-                      >
-                        Sign out
-                      </button>
+                    <div className="mt-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {user.primaryRole}
+                      </span>
+                      {user.roles.length > 1 && (
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                          +{user.roles.length - 1} more
+                        </span>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            )}
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        logout();
+                        setShowUserMenu(false);
+                      }}
+                      className="
+                        w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
+                        hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
+                      "
+                    >
+                      Sign out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <button
               onClick={toggleTheme}
@@ -215,8 +250,8 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
               </span>
             </button>
 
-            {/* Mobile menu button - only show when authenticated */}
-            {isAuthenticated && (
+            {/* Mobile menu button - show when there are navigation items to display */}
+            {navItems.length > 0 && (
               <button
                 onClick={toggleMobileMenu}
                 onKeyDown={handleEnterSpace(toggleMobileMenu)}
@@ -239,7 +274,7 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
         </div>
 
         {/* Mobile navigation */}
-        {isMobileMenuOpen && isAuthenticated && (
+        {isMobileMenuOpen && navItems.length > 0 && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-700 pt-4 pb-3">
             <nav className="space-y-1" role="navigation" aria-label="Mobile navigation">
               {navItems.map(({ path, label, icon }) => (

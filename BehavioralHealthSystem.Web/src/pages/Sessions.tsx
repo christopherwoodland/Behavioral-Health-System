@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, Filter, ChevronDown, ChevronUp, Eye, Download, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,6 +73,7 @@ const getSeverityLevel = (category?: string): number => {
 
 const Sessions: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionWithUI[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
@@ -275,6 +276,38 @@ const Sessions: React.FC = () => {
       alert(`Failed to delete session: ${appError.message}`);
     }
   }, [announceToScreenReader]);
+
+  // Handle individual session re-run - navigate to upload page with session data pre-filled
+  const handleRerunSession = useCallback(async (sessionId: string) => {
+    const confirmed = window.confirm('Are you sure you want to re-run the analysis for this session? You will be redirected to the upload page with the session data pre-filled.');
+    if (!confirmed) return;
+
+    try {
+      // Find the session data to pass to upload page
+      const session = sessions.find(s => s.sessionId === sessionId);
+      if (!session) {
+        announceToScreenReader('Cannot re-run analysis: Session not found');
+        alert('Cannot re-run analysis: Session not found');
+        return;
+      }
+
+      announceToScreenReader('Redirecting to upload page for re-run...');
+      
+      // Navigate to upload page with session data
+      navigate('/upload', {
+        state: {
+          originalSessionId: session.sessionId,
+          audioFileName: session.audioFileName,
+          audioUrl: session.audioUrl,
+          userMetadata: session.userMetadata
+        }
+      });
+    } catch (err) {
+      const appError = err as AppError;
+      announceToScreenReader(`Error preparing re-run: ${appError.message}`);
+      alert(`Failed to prepare re-run: ${appError.message}`);
+    }
+  }, [announceToScreenReader, sessions, navigate]);
 
   // Handle bulk actions
   const handleBulkDelete = useCallback(async () => {
@@ -694,6 +727,13 @@ const Sessions: React.FC = () => {
                           </button>
                         )}
                         <button type="button"
+                          onClick={() => handleRerunSession(session.sessionId)}
+                          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          aria-label={`Re-run analysis for session ${session.sessionId}`}
+                        >
+                          <RefreshCw className="w-4 h-4" aria-hidden="true" />
+                        </button>
+                        <button type="button"
                           onClick={() => handleDeleteSession(session.sessionId)}
                           className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                           aria-label={`Delete session ${session.sessionId}`}
@@ -770,6 +810,14 @@ const Sessions: React.FC = () => {
                       Download
                     </button>
                   )}
+                  <button type="button"
+                    onClick={() => handleRerunSession(session.sessionId)}
+                    className="btn btn--secondary text-xs"
+                    aria-label={`Re-run analysis for session ${session.sessionId}`}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-1" aria-hidden="true" />
+                    Re-run
+                  </button>
                   <button type="button"
                     onClick={() => handleDeleteSession(session.sessionId)}
                     className="btn btn--danger text-xs"

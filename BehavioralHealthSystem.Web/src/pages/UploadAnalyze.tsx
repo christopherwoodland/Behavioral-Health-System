@@ -12,6 +12,7 @@ interface UploadProgress {
   stage: 'idle' | 'starting' | 'initiating' | 'converting' | 'uploading' | 'submitting' | 'analyzing' | 'complete' | 'error';
   progress: number;
   message: string;
+  sessionId?: string; // Track session ID for status updates
   error?: {
     code: string;
     message: string;
@@ -523,7 +524,7 @@ const UploadAnalyze: React.FC = () => {
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
       setProcessingProgress(prev => ({
         ...prev,
-        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...' }
+        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...', sessionId: sessionResponse.sessionId }
       }));
 
       const initialSessionData = {
@@ -749,6 +750,34 @@ const UploadAnalyze: React.FC = () => {
         errorCode = err.name || 'ERROR';
       }
 
+      // Update session status to failed if session was created
+      try {
+        // Try to find the session data from the processing progress or session context
+        const currentProgress = processingProgress[fileId];
+        if (currentProgress && currentProgress.sessionId) {
+          // Update session status to failed
+          const failedSessionData = {
+            sessionId: currentProgress.sessionId,
+            userId: getAuthenticatedUserId(),
+            metadata_user_id: userMetadata.userId.trim(),
+            audioFileName: audioFile.file.name,
+            createdAt: new Date().toISOString(), // Set as current time since we don't have original
+            status: 'failed',
+            updatedAt: new Date().toISOString(),
+            error: {
+              code: errorCode,
+              message: errorMessage,
+              details: errorDetails
+            }
+          };
+          
+          await apiService.updateSessionData(currentProgress.sessionId, failedSessionData);
+          console.log(`Updated session ${currentProgress.sessionId} status to failed`);
+        }
+      } catch (updateError) {
+        console.error('Failed to update session status to failed:', updateError);
+      }
+
       // Attempt to find and cleanup uploaded file if it exists
       // The file name should follow the pattern we used: `${userMetadata.userId}_${sessionId}_${timestamp}.wav`
       try {
@@ -895,6 +924,7 @@ const UploadAnalyze: React.FC = () => {
     } catch (error) {
       console.error(`Error processing ${audioFile.file.name}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      
       addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
       setFileStates(prev => ({ ...prev, [fileId]: 'error' }));
       setProcessingProgress(prev => ({

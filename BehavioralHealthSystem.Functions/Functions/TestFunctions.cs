@@ -386,6 +386,8 @@ public class TestFunctions
     public async Task<HttpResponseData> SubmitPrediction(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "predictions/submit")] HttpRequestData req)
     {
+        PredictionRequest? predictionRequest = null;
+        
         try
         {
             var requestBody = await req.ReadAsStringAsync();
@@ -402,7 +404,7 @@ public class TestFunctions
                 return badRequestResponse;
             }
 
-            var predictionRequest = JsonSerializer.Deserialize<PredictionRequest>(requestBody, _jsonOptions);
+            predictionRequest = JsonSerializer.Deserialize<PredictionRequest>(requestBody, _jsonOptions);
             if (predictionRequest == null)
             {
                 _logger.LogWarning("[{FunctionName}] Failed to deserialize prediction request body", nameof(SubmitPrediction));
@@ -494,6 +496,12 @@ public class TestFunctions
         {
             _logger.LogError(httpEx, "[{FunctionName}] HTTP error submitting prediction", nameof(SubmitPrediction));
             
+            // Update session status to failed if we have a sessionId
+            if (!string.IsNullOrEmpty(predictionRequest?.SessionId))
+            {
+                await UpdateSessionStatusToFailedAsync(predictionRequest.SessionId, httpEx);
+            }
+            
             var statusCode = (System.Net.HttpStatusCode)(httpEx.Data["StatusCode"] ?? System.Net.HttpStatusCode.InternalServerError);
             var errorResponse = req.CreateResponse(statusCode);
             
@@ -512,6 +520,12 @@ public class TestFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error submitting prediction", nameof(SubmitPrediction));
+            
+            // Update session status to failed if we have a sessionId
+            if (!string.IsNullOrEmpty(predictionRequest?.SessionId))
+            {
+                await UpdateSessionStatusToFailedAsync(predictionRequest.SessionId, ex);
+            }
             
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             var errorResult = new
@@ -563,5 +577,39 @@ public class TestFunctions
         insights.Add("Results should be reviewed by a qualified healthcare professional");
 
         return insights;
+    }
+
+    private async Task UpdateSessionStatusToFailedAsync(string sessionId, Exception exception)
+    {
+        try
+        {
+            _logger.LogInformation("[{FunctionName}] Updating session status to failed for session: {SessionId}", nameof(UpdateSessionStatusToFailedAsync), sessionId);
+
+            var existingSessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
+            if (existingSessionData != null)
+            {
+                existingSessionData.Status = "failed";
+                existingSessionData.UpdatedAt = DateTime.UtcNow.ToString("O");
+
+                var updateSuccess = await _sessionStorageService.UpdateSessionDataAsync(existingSessionData);
+                if (updateSuccess)
+                {
+                    _logger.LogInformation("[{FunctionName}] Successfully updated session status to failed for session: {SessionId}", nameof(UpdateSessionStatusToFailedAsync), sessionId);
+                }
+                else
+                {
+                    _logger.LogWarning("[{FunctionName}] Failed to update session status to failed for session: {SessionId}", nameof(UpdateSessionStatusToFailedAsync), sessionId);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("[{FunctionName}] Session data not found in blob storage for session: {SessionId}", nameof(UpdateSessionStatusToFailedAsync), sessionId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{FunctionName}] Error updating session status to failed for session: {SessionId}. Original error: {OriginalError}", nameof(UpdateSessionStatusToFailedAsync), sessionId, exception.Message);
+            // Don't throw - this is a cleanup operation that shouldn't fail the main request
+        }
     }
 }

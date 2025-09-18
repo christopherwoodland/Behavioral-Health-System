@@ -145,6 +145,57 @@ public class SessionStorageService : ISessionStorageService
         }
     }
 
+    public async Task<List<SessionData>> GetAllSessionsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Getting all sessions for all users");
+
+            var containerClient = await GetContainerClientAsync(cancellationToken);
+            var sessions = new List<SessionData>();
+
+            // Get all sessions across all users by scanning all blobs with session metadata
+            await foreach (var blobItem in containerClient.GetBlobsAsync(
+                traits: BlobTraits.Metadata,
+                prefix: "users/",
+                cancellationToken: cancellationToken))
+            {
+                try
+                {
+                    // Only process blobs that are session files (end with .json and contain sessionId metadata)
+                    if (blobItem.Name.EndsWith(".json") && 
+                        blobItem.Metadata?.ContainsKey("sessionId") == true)
+                    {
+                        var blobClient = containerClient.GetBlobClient(blobItem.Name);
+                        var response = await blobClient.DownloadContentAsync(cancellationToken);
+                        var jsonData = response.Value.Content.ToString();
+                        
+                        var sessionData = JsonSerializer.Deserialize<SessionData>(jsonData, _jsonOptions);
+                        if (sessionData != null)
+                        {
+                            sessions.Add(sessionData);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error deserializing session data from blob: {BlobName}", blobItem.Name);
+                }
+            }
+
+            // Sort by created date descending (newest first)
+            sessions = sessions.OrderByDescending(s => DateTime.TryParse(s.CreatedAt, out var date) ? date : DateTime.MinValue).ToList();
+
+            _logger.LogInformation("Successfully retrieved {Count} sessions across all users", sessions.Count);
+            return sessions;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all sessions across all users");
+            return new List<SessionData>();
+        }
+    }
+
     public async Task<bool> UpdateSessionDataAsync(SessionData sessionData, CancellationToken cancellationToken = default)
     {
         // Update is the same as save for blob storage

@@ -30,6 +30,13 @@ public interface ISessionStorageService
     Task<List<SessionData>> GetUserSessionsAsync(string userId, CancellationToken cancellationToken = default);
     
     /// <summary>
+    /// Get all sessions across all users (for system-wide analytics)
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of all session data in the system</returns>
+    Task<List<SessionData>> GetAllSessionsAsync(CancellationToken cancellationToken = default);
+    
+    /// <summary>
     /// Update existing session data
     /// </summary>
     /// <param name="sessionData">The session data to update</param>

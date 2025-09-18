@@ -70,7 +70,8 @@ export interface HealthCheckResponse {
 
 export interface SessionData {
   sessionId: string;
-  userId: string;
+  userId: string; // Authenticated user ID (for session filtering/access control)
+  metadata_user_id?: string; // Patient/metadata user ID
   prediction?: PredictionResult;
   userMetadata?: {
     age?: number;

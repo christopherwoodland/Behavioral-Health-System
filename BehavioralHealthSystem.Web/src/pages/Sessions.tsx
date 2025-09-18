@@ -33,6 +33,7 @@ const statusConfig = {
   processing: { color: 'blue', icon: RefreshCw, label: 'Processing' },
   succeeded: { color: 'green', icon: CheckCircle, label: 'Completed' },
   success: { color: 'green', icon: CheckCircle, label: 'Completed' },
+  completed: { color: 'green', icon: CheckCircle, label: 'Completed' },
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
   error: { color: 'red', icon: XCircle, label: 'Error' },
 } as const;
@@ -338,7 +339,8 @@ const Sessions: React.FC = () => {
       if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
         config = statusConfig.error;
       } else {
-        config = statusConfig.failed; // Default fallback
+        // Default to queued for unknown statuses instead of failed
+        config = statusConfig.queued;
       }
     }
     
@@ -460,7 +462,7 @@ const Sessions: React.FC = () => {
           <button type="button"
             onClick={() => setShowFilters(!showFilters)}
             className="btn btn--secondary flex items-center"
-            aria-expanded={showFilters ? "true" : "false"}
+            aria-expanded={showFilters}
             aria-controls="filter-panel"
             aria-label={`${showFilters ? 'Hide' : 'Show'} filter options`}
           >
@@ -490,6 +492,7 @@ const Sessions: React.FC = () => {
                 <option value="running">Running</option>
                 <option value="succeeded">Completed</option>
                 <option value="success">Success</option>
+                <option value="completed">Completed</option>
                 <option value="failed">Failed</option>
               </select>
             </div>

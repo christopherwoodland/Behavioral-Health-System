@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Files, File } from 'lucide-react';
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
@@ -56,9 +57,27 @@ interface AnalysisResult {
   rawApiResponse?: any; // Store the complete API response
 }
 
+// Interface for pre-filled data from re-run functionality
+interface PrefilledSessionData {
+  userMetadata?: {
+    age?: number;
+    gender?: string;
+    race?: string;
+    ethnicity?: string;
+    language?: boolean;
+    weight?: number;
+    zipcode?: string;
+    sessionNotes?: string;
+  };
+  audioUrl?: string;
+  audioFileName?: string;
+  originalSessionId?: string;
+}
+
 const UploadAnalyze: React.FC = () => {
   // Auth context for user identification
   const { user } = useAuth();
+  const location = useLocation();
   
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingMode());
@@ -78,16 +97,20 @@ const UploadAnalyze: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
+  
+  // Get pre-filled data from location state (for re-run functionality)
+  const prefilledData = location.state as PrefilledSessionData | undefined;
+  
   const [userMetadata, setUserMetadata] = useState({
     userId: '', // Will be auto-generated on component mount
-    age: '',
-    gender: '',
-    race: '',
-    ethnicity: '',
-    language: '',
-    weight: '',
-    zipcode: '',
-    sessionNotes: ''
+    age: prefilledData?.userMetadata?.age?.toString() || '',
+    gender: prefilledData?.userMetadata?.gender || '',
+    race: prefilledData?.userMetadata?.race || '',
+    ethnicity: prefilledData?.userMetadata?.ethnicity || '',
+    language: prefilledData?.userMetadata?.language?.toString() || '',
+    weight: prefilledData?.userMetadata?.weight?.toString() || '',
+    zipcode: prefilledData?.userMetadata?.zipcode || '',
+    sessionNotes: prefilledData?.userMetadata?.sessionNotes || ''
   });
   const [error, setError] = useState<string | null>(null);
   const [toasts, setToasts] = useState<Array<{
@@ -150,6 +173,43 @@ const UploadAnalyze: React.FC = () => {
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   }, []);
+
+  // Handle pre-filled data from re-run functionality
+  useEffect(() => {
+    if (prefilledData) {
+      // Show a toast to inform user that data has been pre-filled
+      addToast('info', 'Session Data Pre-filled', 
+        `Metadata and audio file from session ${prefilledData.originalSessionId ? prefilledData.originalSessionId.slice(0, 8) + '...' : ''} have been loaded. Click "Start Analysis" to begin processing.`);
+      
+      // If there's an audio URL, create a virtual audio file entry
+      if (prefilledData.audioUrl && prefilledData.audioFileName) {
+        // Create a mock file object since we already have the URL
+        const mockFile = {
+          name: prefilledData.audioFileName,
+          size: 0,
+          type: 'audio/wav',
+          lastModified: Date.now(),
+          stream: () => new ReadableStream(),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          text: () => Promise.resolve(''),
+          slice: () => new Blob()
+        } as File;
+
+        const virtualAudioFile: AudioFile = {
+          id: `prefilled-${Date.now()}`,
+          file: mockFile,
+          url: prefilledData.audioUrl,
+          duration: undefined
+        };
+        
+        if (isMultiMode) {
+          setAudioFiles([virtualAudioFile]);
+        } else {
+          setAudioFile(virtualAudioFile);
+        }
+      }
+    }
+  }, [prefilledData, addToast, isMultiMode]); // Include dependencies
 
   const resetState = useCallback(() => {
     setAudioFiles([]);
@@ -590,40 +650,62 @@ const UploadAnalyze: React.FC = () => {
         // This is not critical for the main workflow, but user should be informed
       }
 
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
-      }));
+      let audioUrl: string;
+      let fileName: string;
 
-      // Step 2: Convert audio using FFmpeg
-      const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+      // Check if this is a pre-filled session with existing audio URL (re-run scenario)
+      if (audioFile.url) {
+        // Skip conversion and upload for re-run - audio is already processed and stored
         setProcessingProgress(prev => ({
           ...prev,
-          [fileId]: {
-            stage: 'converting',
-            progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
-            message: `Converting audio... ${Math.round(progressPercent)}%`
-          }
+          [fileId]: { stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' }
         }));
-      });
-
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' }
-      }));
-
-      // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
-      const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+        
+        audioUrl = audioFile.url;
+        fileName = audioFile.file.name;
+        
+        // Skip to 65% progress since conversion and upload are not needed
         setProcessingProgress(prev => ({
           ...prev,
-          [fileId]: {
-            stage: 'uploading',
-            progress: 40 + (progressPercent * 0.25), // 40-65% for upload
-            message: `Uploading... ${Math.round(progressPercent)}%`
-          }
+          [fileId]: { stage: 'submitting', progress: 65, message: 'Submitting for analysis...' }
         }));
-      }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      } else {
+        // Normal flow: convert and upload new audio file
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'converting', progress: 15, message: 'Converting audio to required format...' }
+        }));
+
+        // Step 2: Convert audio using FFmpeg
+        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+          setProcessingProgress(prev => ({
+            ...prev,
+            [fileId]: {
+              stage: 'converting',
+              progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
+              message: `Converting audio... ${Math.round(progressPercent)}%`
+            }
+          }));
+        });
+
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' }
+        }));
+
+        // Step 3: Upload to Azure Blob Storage
+        fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+        audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+          setProcessingProgress(prev => ({
+            ...prev,
+            [fileId]: {
+              stage: 'uploading',
+              progress: 40 + (progressPercent * 0.25), // 40-65% for upload
+              message: `Uploading... ${Math.round(progressPercent)}%`
+            }
+          }));
+        }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      }
 
       setProcessingProgress(prev => ({
         ...prev,
@@ -1040,30 +1122,47 @@ const UploadAnalyze: React.FC = () => {
         // This is not critical for the main workflow, but user should be informed
       }
 
-      setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
-      announceToScreenReader('Session created successfully, now converting audio');
+      let audioUrl: string;
+      let fileName: string;
 
-      // Step 2: Convert audio using FFmpeg
-      const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
-        setProgress({
-          stage: 'converting',
-          progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
-          message: `Converting audio... ${Math.round(progressPercent)}%`
+      // Check if this is a pre-filled session with existing audio URL (re-run scenario)
+      if (audioFile.url) {
+        // Skip conversion and upload for re-run - audio is already processed and stored
+        setProgress({ stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' });
+        announceToScreenReader('Session created successfully, reusing previously processed audio file');
+        
+        audioUrl = audioFile.url;
+        fileName = audioFile.file.name;
+        
+        // Skip to 65% progress since conversion and upload are not needed
+        setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
+      } else {
+        // Normal flow: convert and upload new audio file
+        setProgress({ stage: 'converting', progress: 15, message: 'Converting audio to required format...' });
+        announceToScreenReader('Session created successfully, now converting audio');
+
+        // Step 2: Convert audio using FFmpeg
+        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+          setProgress({
+            stage: 'converting',
+            progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
+            message: `Converting audio... ${Math.round(progressPercent)}%`
+          });
         });
-      });
 
-      setProgress({ stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' });
-      announceToScreenReader('Audio converted successfully, now uploading');
+        setProgress({ stage: 'uploading', progress: 40, message: 'Uploading to Azure Blob Storage...' });
+        announceToScreenReader('Audio converted successfully, now uploading');
 
-      // Step 3: Upload to Azure Blob Storage
-      const fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
-      const audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
-        setProgress({
-          stage: 'uploading',
-          progress: 40 + (progressPercent * 0.25), // 40-65% for upload
-          message: `Uploading... ${Math.round(progressPercent)}%`
-        });
-      }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+        // Step 3: Upload to Azure Blob Storage
+        fileName = `${userMetadata.userId}_${sessionData.sessionId}_${Date.now()}.wav`;
+        audioUrl = await uploadToAzureBlob(convertedBlob, fileName, (progressPercent: number) => {
+          setProgress({
+            stage: 'uploading',
+            progress: 40 + (progressPercent * 0.25), // 40-65% for upload
+            message: `Uploading... ${Math.round(progressPercent)}%`
+          });
+        }, getAuthenticatedUserId()); // Use authenticated user ID for blob storage folder structure
+      }
 
       setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
       announceToScreenReader('Upload complete, submitting for behavioral health analysis');

@@ -152,6 +152,26 @@ const SessionDetail: React.FC = () => {
     }
   }, [session, announceToScreenReader]);
 
+  // Re-run session analysis
+  const handleRerunSession = useCallback(() => {
+    if (!session) return;
+    
+    const confirmed = window.confirm('Are you sure you want to re-run the analysis for this session? You will be redirected to the upload page with the session data pre-filled.');
+    if (!confirmed) return;
+
+    announceToScreenReader('Redirecting to upload page for re-run...');
+    
+    // Navigate to upload page with session data
+    navigate('/upload', {
+      state: {
+        originalSessionId: session.sessionId,
+        audioFileName: session.audioFileName,
+        audioUrl: session.audioUrl,
+        userMetadata: session.userMetadata
+      }
+    });
+  }, [session, navigate, announceToScreenReader]);
+
   // Status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     // For any unknown status that contains "error" or "fail", treat as error
@@ -293,6 +313,15 @@ const SessionDetail: React.FC = () => {
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
+          </button>
+          
+          <button type="button"
+            onClick={handleRerunSession}
+            className="btn btn--secondary"
+            aria-label="Re-run analysis for this session"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
+            Re-run
           </button>
           
           <button type="button"

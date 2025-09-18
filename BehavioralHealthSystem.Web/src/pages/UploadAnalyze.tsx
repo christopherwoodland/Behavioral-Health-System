@@ -106,6 +106,8 @@ const UploadAnalyze: React.FC = () => {
     sessionNotes?: string;
   }>({});
 
+  const [isCorrectingGrammar, setIsCorrectingGrammar] = useState(false);
+
   // User ID management state - REMOVED (now part of metadata)
   
   // Auto-generate user ID when component loads (for form metadata)
@@ -440,6 +442,43 @@ const UploadAnalyze: React.FC = () => {
       return newErrors;
     });
   }, [validateAge, validateWeight, validateZipcode, validateSessionNotes]);
+
+  const handleGrammarCorrection = useCallback(async () => {
+    if (!userMetadata.sessionNotes.trim()) {
+      return;
+    }
+
+    setIsCorrectingGrammar(true);
+    try {
+      const response = await apiService.correctGrammar(userMetadata.sessionNotes);
+      
+      // Update the session notes with the corrected text
+      setUserMetadata(prev => ({
+        ...prev,
+        sessionNotes: response.correctedText
+      }));
+      
+      // Show success toast
+      setToasts(prev => [...prev, {
+        id: Date.now(),
+        type: 'success',
+        message: 'Grammar and spelling corrected successfully'
+      }]);
+      
+    } catch (error) {
+      console.error('Grammar correction failed:', error);
+      const appError = error as AppError;
+      
+      // Show error toast
+      setToasts(prev => [...prev, {
+        id: Date.now(),
+        type: 'error',
+        message: appError.message || 'Failed to correct grammar. Please try again.'
+      }]);
+    } finally {
+      setIsCorrectingGrammar(false);
+    }
+  }, [userMetadata.sessionNotes]);
 
   const buildMetadata = useCallback(() => {
     const metadata: Partial<SessionMetadata> = {};
@@ -1495,6 +1534,34 @@ const UploadAnalyze: React.FC = () => {
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
               {userMetadata.sessionNotes.length}/500 characters
             </p>
+            
+            {/* Grammar Correction Button */}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => handleGrammarCorrection()}
+                disabled={!userMetadata.sessionNotes.trim() || isCorrectingGrammar}
+                className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 dark:text-blue-300 dark:bg-blue-900/20 dark:border-blue-700 dark:hover:bg-blue-900/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                aria-label="Correct grammar and spelling in session notes"
+                title="Correct grammar and spelling"
+              >
+                <svg 
+                  className="w-3.5 h-3.5 mr-1.5" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
+                  />
+                </svg>
+                {isCorrectingGrammar ? 'Correcting...' : 'Correct Grammar'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

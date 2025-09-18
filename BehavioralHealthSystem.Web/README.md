@@ -5,10 +5,15 @@ A productio### Environment Variables
 Create a `.env.local` file with:
 
 ```env
+# Authentication Configuration
+# Set to 'true' to enable Azure AD/Entra ID authentication
+# Set to 'false' or leave unset to run without authentication (uses mock auth)
+VITE_ENABLE_ENTRA_AUTH=true
+
 # API Configuration
 VITE_API_BASE=http://localhost:7071/api
 
-# Azure AD Configuration
+# Azure AD Configuration (required when VITE_ENABLE_ENTRA_AUTH=true)
 VITE_AZURE_CLIENT_ID=63e9b3fd-de9d-4083-879c-9c13f3aac54d
 VITE_AZURE_TENANT_ID=3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
@@ -44,6 +49,9 @@ VITE_ENABLE_DEBUG_LOGGING=false
 - **Azure Integration** - Direct upload to Azure Blob Storage with SAS tokens
 - **Real-time Updates** - Polling for prediction results with progress tracking
 - **Offline Support** - Progressive Web App capabilities
+- **Session Re-run Functionality** - Smart re-analysis with optimized audio processing
+- **Enhanced Modal System** - Improved information display replacing problematic tooltips
+- **Streamlined Navigation** - Intuitive user flow with consistent design patterns
 
 ## 🛠️ Tech Stack
 
@@ -115,6 +123,30 @@ VITE_ENABLE_DEBUG_LOGGING=false
 3. Set the SAS URL in your environment variables
 
 ### Azure AD Authentication Setup
+
+#### Conditional Authentication
+
+The application supports conditional authentication, allowing you to run with or without Azure AD integration:
+
+**With Authentication (Production/Secure Environment):**
+```env
+VITE_ENABLE_ENTRA_AUTH=true
+```
+- Full Azure AD authentication with role-based access control
+- Requires Azure AD app registration and configuration
+- Users must sign in to access the application
+
+**Without Authentication (Development/Testing):**
+```env
+VITE_ENABLE_ENTRA_AUTH=false
+# or leave the variable unset
+```
+- Uses mock authentication with a default admin user
+- No Azure AD configuration required
+- Useful for development, testing, or demo environments
+- All authorization checks pass automatically
+
+#### Full Azure AD Setup (when VITE_ENABLE_ENTRA_AUTH=true)
 
 1. **Register application in Azure AD:**
    - Go to Azure Portal > Azure Active Directory > App registrations
@@ -396,7 +428,36 @@ The application includes several UI improvements for better user experience:
 - **Keyboard Shortcuts** for common actions
 - **Focus Management** between page transitions
 
-## 🔍 Troubleshooting
+## � Latest Features & Enhancements
+
+### Session Re-run Functionality
+
+The application now includes sophisticated session re-run capabilities:
+
+- **🔁 Smart Re-run System** - Re-analyze previous sessions with navigation-based workflow
+- **⚡ Audio Processing Optimization** - Skip redundant audio conversion for existing files
+- **📱 Dual Access Points** - Re-run from both Sessions list and Session Detail pages
+- **🎯 Pre-filled Data** - Session information automatically populated on re-run
+- **🔄 Optimized Performance** - Intelligent file handling reduces processing time
+
+### Enhanced UI/UX Improvements
+
+Recent interface enhancements for better user experience:
+
+- **📱 Improved Modal System** - Replaced problematic tooltips with accessible modal dialogs
+- **🧠 Interactive Brain Animation** - Custom CSS keyframe animation with realistic throb effect
+- **📊 Enhanced Session Views** - Detailed session information with consistent styling
+- **🎨 Unified Design Language** - Consistent button styling and component patterns
+- **⚡ Responsive Interactions** - Smooth transitions and hover effects
+
+### Technical Optimizations
+
+- **📁 File Upload Intelligence** - Conditional audio processing based on file state
+- **🔄 Navigation-Based Workflow** - Uses React Router state for efficient data transfer
+- **🎯 Error Prevention** - Robust handling of edge cases during re-run operations
+- **♿ Accessibility Focus** - All new features maintain WCAG 2.2 Level AA compliance
+
+## �🔍 Troubleshooting
 
 ### Common Issues
 

@@ -1,19 +1,24 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye } from 'lucide-react';
-import { getUserId } from '@/utils';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
 import { useAuth } from '@/contexts/AuthContext';
+import { getUserId } from '@/utils';
 
 export const Dashboard: React.FC = () => {
-  const userId = getUserId();
   const { announce } = useAnnouncements();
-  const { canAccessControlPanel } = useAuth();
+  const { canAccessControlPanel, user } = useAuth();
+  
+  // Get authenticated user ID for API calls (matches blob storage folder structure)
+  const getAuthenticatedUserId = (): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  };
   
   // Fetch health status and recent sessions
   const { data: healthStatus, isLoading: isHealthLoading, error: healthError } = useHealthCheck();
-  const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions(userId);
+  const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions(getAuthenticatedUserId());
 
   useEffect(() => {
     announce('Dashboard page loaded', 'polite');
@@ -167,21 +172,6 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* User ID display */}
-      <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
-        <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
-          Patient User ID
-        </h2>
-        <div className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
-          <code className="text-sm font-mono text-text-primary-light dark:text-text-primary-dark break-all">
-            {userId}
-          </code>
-        </div>
-        <p className="mt-2 text-sm text-text-muted-light dark:text-text-muted-dark">
-          This ID is automatically generated and stored locally to track your sessions.
-        </p>
-      </div>
-
       {/* Recent activity */}
       <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
         <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
@@ -209,7 +199,10 @@ export const Dashboard: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {sessionsResponse.sessions.slice(0, 3).map((session) => (
+            {sessionsResponse.sessions
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              .slice(0, 3)
+              .map((session) => (
               <div
                 key={session.sessionId}
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-md"

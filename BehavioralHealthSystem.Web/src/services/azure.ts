@@ -60,7 +60,24 @@ export class AzureBlobService {
       });
 
       const containerClient = this.getContainerClient();
-      const blobName = fileName || this.generateBlobName(file.name, userId);
+      // When userId is provided, create proper folder structure with custom filename or generated filename
+      let blobName: string;
+      if (userId) {
+        const effectiveUserId = userId;
+        if (fileName) {
+          // Use custom filename (includes metadata user ID) within user folder structure
+          blobName = `users/${effectiveUserId}/audio/${fileName}`;
+        } else {
+          // Generate filename with timestamp and random ID
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const randomId = Math.random().toString(36).substring(2, 8);
+          const extension = file.name.split('.').pop() || 'wav';
+          blobName = `users/${effectiveUserId}/audio/${timestamp}-${randomId}.${extension}`;
+        }
+      } else {
+        // Fallback to original logic when no userId provided
+        blobName = fileName || this.generateBlobName(file.name);
+      }
       const blockBlobClient = containerClient.getBlockBlobClient(blobName);
 
       // Upload with progress tracking

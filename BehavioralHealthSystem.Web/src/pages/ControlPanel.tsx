@@ -1044,6 +1044,7 @@ const UserStatsTable: React.FC<{
   userStats: AnalyticsData['userStats'];
 }> = ({ userStats }) => {
   const [showConfidenceModal, setShowConfidenceModal] = useState(false);
+  const [showRiskModal, setShowRiskModal] = useState(false);
   
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -1148,7 +1149,19 @@ const UserStatsTable: React.FC<{
                   Sessions
                 </th>
                 <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white">
-                  Risk Distribution
+                  <div className="flex flex-col items-center">
+                    <div className="flex items-center space-x-1">
+                      <span>Risk Distribution</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowRiskModal(true)}
+                        className="focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                        aria-label="Show Risk Distribution information"
+                      >
+                        <Info className="h-3 w-3 text-gray-400 hover:text-blue-500 cursor-pointer" />
+                      </button>
+                    </div>
+                  </div>
                 </th>
                 <th className="text-center py-3 px-2 font-medium text-gray-900 dark:text-white relative">
                   <div className="flex flex-col items-center">
@@ -1252,6 +1265,39 @@ const UserStatsTable: React.FC<{
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
                 Analysis accuracy range: 0-100%
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Risk Distribution Modal */}
+      {showRiskModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowRiskModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Risk Distribution Information</h3>
+              <button
+                type="button"
+                onClick={() => setShowRiskModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              <div className="font-medium text-center text-gray-900 dark:text-white mb-3">Risk Distribution Explanation:</div>
+              <div className="space-y-2">
+                <div>• Shows the distribution of risk levels across all user sessions</div>
+                <div>• Visualized as colored dots representing risk categories</div>
+                <div>• <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1"></span>Low Risk: Minimal behavioral health concerns</div>
+                <div>• <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full mr-1"></span>Medium Risk: Moderate concerns requiring attention</div>
+                <div>• <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1"></span>High Risk: Significant concerns requiring intervention</div>
+                <div>• <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-1"></span>Unknown: Risk level could not be determined</div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
+                Analysis accuracy: 0-100% (higher confidence = more reliable risk assessment)
               </div>
             </div>
           </div>

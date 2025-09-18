@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { apiService } from '../api';
-import type { SessionData, SessionInitiateRequest, PredictionSubmitRequest } from '@/types';
+import type { SessionData, SessionInitiateRequest, PredictionSubmitRequest } from '../../types';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -14,7 +14,8 @@ describe('API Service', () => {
   describe('Session Storage API', () => {
     const mockSessionData: SessionData = {
       sessionId: 'test-session-123',
-      userId: 'test-user-456',
+      userId: 'test-user-456', // Authenticated user ID
+      metadata_user_id: 'patient-789', // Patient/metadata user ID
       userMetadata: {
         age: 25,
         gender: 'male',

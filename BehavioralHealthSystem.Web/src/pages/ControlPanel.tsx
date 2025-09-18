@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Heart, Target, Clock } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import type { SessionData as ImportedSessionData } from '../types';
+import { getUserId } from '../utils';
+import type { SessionData as ImportedSessionData, AppError } from '../types';
 
 // Types for analytics data
 interface AnalyticsData {
@@ -148,12 +150,15 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 
   completedSessions.forEach(session => {
     if (session.prediction) {
-      const depScore = session.prediction.predictedScoreDepression;
+      // Handle both camelCase and snake_case property names from API
+      const prediction = session.prediction as any;
+      
+      const depScore = prediction.predictedScoreDepression || prediction.predicted_score_depression;
       if (depScore && depScore in depressionCounts) {
         depressionCounts[depScore as keyof typeof depressionCounts]++;
       }
 
-      const anxScore = session.prediction.predictedScoreAnxiety;
+      const anxScore = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
       if (anxScore && anxScore in anxietyCounts) {
         anxietyCounts[anxScore as keyof typeof anxietyCounts]++;
       }
@@ -184,16 +189,19 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     sessions: ImportedSessionData[];
   }>();
 
-  // Group sessions by user
+  // Group sessions by metadata user ID (patient) when available, otherwise by authenticated user ID
   allSessions.forEach(session => {
-    if (!userStatsMap.has(session.userId)) {
-      userStatsMap.set(session.userId, {
+    // Use metadata_user_id (patient ID) for grouping if available, otherwise use userId (authenticated user)
+    const groupingUserId = session.metadata_user_id || session.userId;
+    
+    if (!userStatsMap.has(groupingUserId)) {
+      userStatsMap.set(groupingUserId, {
         totalSessions: 0,
         successfulSessions: 0,
         sessions: [],
       });
     }
-    const userStats = userStatsMap.get(session.userId)!;
+    const userStats = userStatsMap.get(groupingUserId)!;
     userStats.totalSessions++;
     userStats.sessions.push(session);
     if (session.status === 'succeeded' && session.prediction) {
@@ -246,12 +254,15 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 
     successfulSessions.forEach(session => {
       if (session.prediction) {
-        const depScore = session.prediction.predictedScoreDepression;
+        // Handle both camelCase and snake_case property names from API
+        const prediction = session.prediction as any;
+        
+        const depScore = prediction.predictedScoreDepression || prediction.predicted_score_depression;
         if (depScore && depScore in userDepressionScores) {
           userDepressionScores[depScore as keyof typeof userDepressionScores]++;
         }
 
-        const anxScore = session.prediction.predictedScoreAnxiety;
+        const anxScore = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
         if (anxScore && anxScore in userAnxietyScores) {
           userAnxietyScores[anxScore as keyof typeof userAnxietyScores]++;
         }
@@ -311,10 +322,6 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 };
 
 // Types for chart components
-interface AppError {
-  message: string;
-  code?: string;
-}
 
 // Metric card component
 const MetricCard: React.FC<{
@@ -859,6 +866,13 @@ export const ControlPanel: React.FC = () => {
   const [error, setError] = useState<AppError | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const { announceToScreenReader } = useAccessibility();
+  const { user } = useAuth();
+
+  // Get authenticated user ID for API calls (matches blob storage folder structure)
+  const getAuthenticatedUserId = useCallback((): string => {
+    // Use authenticated user ID if available, otherwise fall back to getUserId utility
+    return user?.id || getUserId();
+  }, [user?.id]);
 
   // Get refresh interval from environment variable (default to 69 seconds)
   const refreshInterval = parseInt(import.meta.env.VITE_CONTROL_PANEL_REFRESH_INTERVAL || '69') * 1000;
@@ -869,11 +883,12 @@ export const ControlPanel: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Try to get all sessions from the API
+      // Get sessions for the authenticated user from the API
       let allSessions: ImportedSessionData[] = [];
       
       try {
-        const allSessionsResponse = await apiService.getAllSessions();
+        const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
+        const allSessionsResponse = await apiService.getUserSessions(userId);
         allSessions = allSessionsResponse.sessions;
       } catch (apiError) {
         console.warn('getAllSessions endpoint not available, using mock data for demonstration:', apiError);
@@ -1033,7 +1048,7 @@ export const ControlPanel: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [announceToScreenReader]);
+  }, [announceToScreenReader, getAuthenticatedUserId]);
 
   // Load data on component mount
   useEffect(() => {

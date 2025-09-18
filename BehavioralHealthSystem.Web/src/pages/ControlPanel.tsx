@@ -1,9 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Heart, Target, Clock } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import { getUserId } from '../utils';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
 
 // Types for analytics data
@@ -866,13 +864,6 @@ export const ControlPanel: React.FC = () => {
   const [error, setError] = useState<AppError | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const { announceToScreenReader } = useAccessibility();
-  const { user } = useAuth();
-
-  // Get authenticated user ID for API calls (matches blob storage folder structure)
-  const getAuthenticatedUserId = useCallback((): string => {
-    // Use authenticated user ID if available, otherwise fall back to getUserId utility
-    return user?.id || getUserId();
-  }, [user?.id]);
 
   // Get refresh interval from environment variable (default to 69 seconds)
   const refreshInterval = parseInt(import.meta.env.VITE_CONTROL_PANEL_REFRESH_INTERVAL || '69') * 1000;
@@ -883,13 +874,27 @@ export const ControlPanel: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      // Get sessions for the authenticated user from the API
+      // Get all sessions from all users for system-wide analytics
       let allSessions: ImportedSessionData[] = [];
       
       try {
-        const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
-        const allSessionsResponse = await apiService.getUserSessions(userId);
+        // Add cache-busting timestamp to ensure fresh data
+        const timestamp = Date.now();
+        console.log('🔄 ControlPanel: Fetching data with cache-buster:', timestamp);
+        
+        const allSessionsResponse = await apiService.getAllSessions();
         allSessions = allSessionsResponse.sessions;
+        console.log('📊 ControlPanel: Fetched sessions data:', {
+          timestamp,
+          totalCount: allSessions.length,
+          responseCount: allSessionsResponse.count,
+          firstFewSessions: allSessions.slice(0, 3).map(s => ({
+            sessionId: s.sessionId,
+            userId: s.userId,
+            status: s.status,
+            createdAt: s.createdAt
+          }))
+        });
       } catch (apiError) {
         console.warn('getAllSessions endpoint not available, using mock data for demonstration:', apiError);
         
@@ -1037,6 +1042,12 @@ export const ControlPanel: React.FC = () => {
       }
       
       const aggregatedData = aggregateSessionData(allSessions);
+      console.log('📈 ControlPanel: Aggregated analytics:', {
+        totalSessions: aggregatedData.overview.totalSessions,
+        uniqueUsers: aggregatedData.overview.uniqueUsers,
+        successRate: aggregatedData.overview.successRate,
+        sessionStatusBreakdown: aggregatedData.sessionStatus
+      });
       setAnalytics(aggregatedData);
       setLastRefresh(new Date());
       
@@ -1048,7 +1059,7 @@ export const ControlPanel: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [announceToScreenReader, getAuthenticatedUserId]);
+  }, [announceToScreenReader]);
 
   // Load data on component mount
   useEffect(() => {
@@ -1057,19 +1068,32 @@ export const ControlPanel: React.FC = () => {
 
   // Auto-refresh data at specified interval
   useEffect(() => {
+    console.log('🔄 ControlPanel: Setting up auto-refresh with interval:', refreshInterval / 1000, 'seconds');
+    
     const interval = setInterval(() => {
-      if (!loading) { // Only refresh if not currently loading
-        loadAnalytics();
-      }
+      console.log('🔄 ControlPanel: Auto-refresh triggered, loading state:', loading);
+      // Remove loading check to ensure refresh happens
+      loadAnalytics();
     }, refreshInterval);
 
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, [loadAnalytics, loading, refreshInterval]);
+    return () => {
+      console.log('🔄 ControlPanel: Cleaning up auto-refresh interval');
+      clearInterval(interval);
+    }; // Cleanup on unmount
+  }, [loadAnalytics, refreshInterval]); // Keep loadAnalytics in dependencies but remove loading
 
   // Retry error handler
   const handleRetry = useCallback(() => {
     setError(null);
     loadAnalytics();
+  }, [loadAnalytics]);
+
+  // Force refresh handler that clears cache and reloads
+  const handleForceRefresh = useCallback(async () => {
+    console.log('🔄 ControlPanel: Force refresh triggered - clearing cache and reloading...');
+    setAnalytics(null); // Clear current data
+    setError(null);
+    await loadAnalytics();
   }, [loadAnalytics]);
 
   if (loading) {
@@ -1141,7 +1165,7 @@ export const ControlPanel: React.FC = () => {
                 Summary
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-2">
-                System-wide analytics and insights dashboard
+                System-wide analytics and insights from all users and sessions
               </p>
             </div>
             
@@ -1155,15 +1179,27 @@ export const ControlPanel: React.FC = () => {
                   Auto-refresh: {refreshInterval / 1000}s intervals
                 </div>
               </div>
-              <button
-                onClick={loadAnalytics}
-                disabled={loading}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                aria-label="Refresh control panel data"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </button>
+              <div className="flex space-x-2">
+                <button
+                  onClick={loadAnalytics}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm"
+                  aria-label="Refresh control panel data"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </button>
+                <button
+                  onClick={handleForceRefresh}
+                  disabled={loading}
+                  className="inline-flex items-center px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm"
+                  aria-label="Force refresh with cache clear"
+                  title="Clear cache and force refresh data"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                  Force Refresh
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,11 +1,5 @@
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.ClientModel;
 using System.Net.WebSockets;
-using System.Text;
-using System.Text.Json;
-using Microsoft.Extensions.Logging;
 
 namespace BehavioralHealthSystem.Agents.Services;
 

@@ -1,3 +1,5 @@
+#pragma warning disable SKEXP0110
+
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -19,7 +21,7 @@ public class SemanticKernelAgentCoordinator : IDisposable
     private readonly Kernel _kernel;
     private readonly SemanticKernelRealtimeService _realtimeService;
     private readonly ConcurrentDictionary<string, AgentSession> _sessions = new();
-    private readonly ConcurrentDictionary<string, ChatAgent> _agents = new();
+    private readonly ConcurrentDictionary<string, IChatAgent> _agents = new();
     
     // Agent definitions
     private readonly Dictionary<string, AgentDefinition> _agentDefinitions;

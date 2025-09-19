@@ -13,9 +13,21 @@
     "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key",
     "AZURE_OPENAI_DEPLOYMENT": "gpt-4o",
     "AZURE_OPENAI_ENABLED": "true",
+    "AzureSignalRConnectionString": "Endpoint=https://your-signalr-service.service.signalr.net;AccessKey=your-access-key;Version=1.0;",
+    "GPT_REALTIME_ENDPOINT": "https://cdc-traci-aif-002.cognitiveservices.azure.com/openai/realtime",
+    "GPT_REALTIME_API_KEY": "your-azure-openai-api-key",
+    "GPT_REALTIME_DEPLOYMENT": "gpt-realtime",
+    "GPT_REALTIME_API_VERSION": "2024-10-01-preview",
+    "AUDIO_SAMPLE_RATE": "24000",
+    "AUDIO_BITS_PER_SAMPLE": "16",
+    "AUDIO_CHANNELS": "1",
+    "AUDIO_ENABLE_VAD": "true",
+    "AUDIO_SILENCE_THRESHOLD": "0.01",
+    "AUDIO_SILENCE_DURATION_MS": "1000"
+  },
+  "ConnectionStrings": {
     "AzureSignalRConnectionString": "Endpoint=https://your-signalr-service.service.signalr.net;AccessKey=your-access-key;Version=1.0;"
   },
-  "ConnectionStrings": {},
   "Host": {
     "LocalHttpPort": 7071,
     "CORS": "*",

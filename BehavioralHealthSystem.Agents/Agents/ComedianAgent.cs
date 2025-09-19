@@ -1,5 +1,3 @@
-using BehavioralHealthSystem.Agents.Interfaces;
-
 namespace BehavioralHealthSystem.Agents.Agents;
 
 /// <summary>

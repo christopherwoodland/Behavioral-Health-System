@@ -1,9 +1,12 @@
+#pragma warning disable SKEXP0110
+
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 using System.Text.Json;
+using BehavioralHealthSystem.Agents.Models;
 
 namespace BehavioralHealthSystem.Agents.Specialized;
 

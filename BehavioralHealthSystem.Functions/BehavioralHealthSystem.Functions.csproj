@@ -19,13 +19,17 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Http.Polly" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.0" />
-  <PackageReference Include="Polly" Version="7.2.4" />
-  <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+    <PackageReference Include="Polly" Version="7.2.4" />
+    <PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
     <PackageReference Include="FluentValidation" Version="11.8.0" />
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.8.0" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.0.1" />
+    <PackageReference Include="Microsoft.SemanticKernel.Agents.Core" Version="1.0.1-alpha" />
+    <PackageReference Include="Microsoft.Azure.SignalR.Management" Version="1.22.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BehavioralHealthSystem.Helpers\BehavioralHealthSystem.Helpers.csproj" />
+    <ProjectReference Include="..\BehavioralHealthSystem.Agents\BehavioralHealthSystem.Agents.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

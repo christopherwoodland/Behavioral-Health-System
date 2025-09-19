@@ -1,9 +1,4 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker.Extensions.SignalRService;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Net;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -22,9 +17,10 @@ public class AgentCommunicationHub
     [Function("negotiate")]
     public SignalRConnectionInfo GetSignalRInfo(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "negotiate")] HttpRequestData req,
-        [SignalRConnectionInfoInput(HubName = "AgentHub")] SignalRConnectionInfo connectionInfo)
+        [SignalRConnectionInfoInput(HubName = "AgentHub", ConnectionStringSetting = "AzureSignalRConnectionString")] SignalRConnectionInfo connectionInfo)
     {
         _logger.LogInformation("SignalR connection negotiation requested");
+        _logger.LogInformation("Connection URL: {Url}", connectionInfo.Url);
         return connectionInfo;
     }
 
@@ -67,6 +63,77 @@ public class AgentCommunicationHub
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending agent message");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Join a SignalR group for a session
+    /// </summary>
+    [Function("JoinSession")]
+    [SignalROutput(HubName = "AgentHub")]
+    public async Task<SignalRGroupAction> JoinSession(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "session/{sessionId}/join")] HttpRequestData req,
+        string sessionId)
+    {
+        try
+        {
+            // Get the connection ID from the request body or headers
+            var requestBody = await req.ReadAsStringAsync();
+            var joinRequest = JsonSerializer.Deserialize<JoinSessionRequest>(requestBody ?? "{}");
+            
+            if (string.IsNullOrEmpty(joinRequest?.ConnectionId))
+            {
+                throw new ArgumentException("ConnectionId is required");
+            }
+
+            _logger.LogInformation("Adding connection {ConnectionId} to session group {SessionId}", 
+                joinRequest.ConnectionId, sessionId);
+
+            return new SignalRGroupAction(SignalRGroupActionType.Add)
+            {
+                GroupName = $"session_{sessionId}",
+                ConnectionId = joinRequest.ConnectionId
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error joining session {SessionId}", sessionId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Leave a SignalR group for a session
+    /// </summary>
+    [Function("LeaveSession")]
+    [SignalROutput(HubName = "AgentHub")]
+    public async Task<SignalRGroupAction> LeaveSession(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "session/{sessionId}/leave")] HttpRequestData req,
+        string sessionId)
+    {
+        try
+        {
+            var requestBody = await req.ReadAsStringAsync();
+            var leaveRequest = JsonSerializer.Deserialize<LeaveSessionRequest>(requestBody ?? "{}");
+            
+            if (string.IsNullOrEmpty(leaveRequest?.ConnectionId))
+            {
+                throw new ArgumentException("ConnectionId is required");
+            }
+
+            _logger.LogInformation("Removing connection {ConnectionId} from session group {SessionId}", 
+                leaveRequest.ConnectionId, sessionId);
+
+            return new SignalRGroupAction(SignalRGroupActionType.Remove)
+            {
+                GroupName = $"session_{sessionId}",
+                ConnectionId = leaveRequest.ConnectionId
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error leaving session {SessionId}", sessionId);
             throw;
         }
     }
@@ -125,6 +192,16 @@ public class UserMessageRequest
     public string? Timestamp { get; set; }
     public string? AudioData { get; set; }
     public MessageMetadata? Metadata { get; set; }
+}
+
+public class JoinSessionRequest
+{
+    public string? ConnectionId { get; set; }
+}
+
+public class LeaveSessionRequest
+{
+    public string? ConnectionId { get; set; }
 }
 
 public class MessageMetadata

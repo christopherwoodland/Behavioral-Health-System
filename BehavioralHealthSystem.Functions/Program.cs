@@ -1,6 +1,12 @@
 using Microsoft.Extensions.Hosting;
 using BehavioralHealthSystem.Validators;
 using BehavioralHealthSystem.Configuration;
+using BehavioralHealthSystem.Agents.Services;
+// using BehavioralHealthSystem.Agents.Coordinators;
+// using BehavioralHealthSystem.Agents.Specialized;
+using BehavioralHealthSystem.Agents.Models;
+using Microsoft.SemanticKernel;
+using Microsoft.Azure.SignalR.Management;
 using System.Net.Http.Headers;
 using Azure.Storage.Blobs;
 
@@ -97,6 +103,66 @@ var host = new HostBuilder()
             options.Temperature = config.GetValue<double>("AZURE_OPENAI_TEMPERATURE", 0.3);
             options.Enabled = config.GetValue<bool>("AZURE_OPENAI_ENABLED", false);
         });
+
+        // GPT-Realtime Configuration for Semantic Kernel
+        services.Configure<BehavioralHealthSystem.Agents.Models.RealtimeConfig>(options =>
+        {
+            var config = context.Configuration;
+            options.Endpoint = config["GPT_REALTIME_ENDPOINT"] ?? "https://cdc-traci-aif-002.cognitiveservices.azure.com/openai/realtime";
+            options.ApiKey = config["GPT_REALTIME_API_KEY"] ?? config["AZURE_OPENAI_API_KEY"] ?? string.Empty;
+            options.DeploymentId = config["GPT_REALTIME_DEPLOYMENT"] ?? "gpt-realtime";
+            options.ApiVersion = config["GPT_REALTIME_API_VERSION"] ?? "2024-10-01-preview";
+        });
+
+        // Audio Processing Configuration
+        services.Configure<BehavioralHealthSystem.Agents.Models.AudioConfig>(options =>
+        {
+            var config = context.Configuration;
+            options.SampleRate = config.GetValue<int>("AUDIO_SAMPLE_RATE", 24000);
+            options.BitsPerSample = config.GetValue<int>("AUDIO_BITS_PER_SAMPLE", 16);
+            options.Channels = config.GetValue<int>("AUDIO_CHANNELS", 1);
+            options.EnableVAD = config.GetValue<bool>("AUDIO_ENABLE_VAD", true);
+            options.SilenceThreshold = config.GetValue<double>("AUDIO_SILENCE_THRESHOLD", 0.01);
+            options.SilenceDurationMs = config.GetValue<int>("AUDIO_SILENCE_DURATION_MS", 1000);
+        });
+
+        // Semantic Kernel Setup
+        services.AddKernel()
+            .AddAzureOpenAIChatCompletion(
+                deploymentName: context.Configuration["AZURE_OPENAI_DEPLOYMENT"] ?? "gpt-4o",
+                endpoint: context.Configuration["AZURE_OPENAI_ENDPOINT"] ?? string.Empty,
+                apiKey: context.Configuration["AZURE_OPENAI_API_KEY"] ?? string.Empty,
+                modelId: "gpt-4o");
+
+        // SignalR Management Service - Configured for Serverless mode
+        services.AddSingleton(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var connectionString = config.GetConnectionString("AzureSignalRConnectionString") ?? 
+                                 config["AzureSignalRConnectionString"] ?? 
+                                 "Endpoint=https://your-signalr.service.signalr.net;AccessKey=your-access-key;Version=1.0;";
+            
+            return new ServiceManagerBuilder()
+                .WithOptions(option => 
+                {
+                    option.ConnectionString = connectionString;
+                    option.ServiceTransportType = ServiceTransportType.Transient;
+                })
+                .BuildServiceManager();
+        });
+
+        services.AddSingleton<IServiceHubContext>(provider =>
+        {
+            var serviceManager = provider.GetRequiredService<ServiceManager>();
+            return serviceManager.CreateHubContextAsync("AgentHub", default).Result;
+        });
+
+        // Semantic Kernel Agent Services (temporarily disabled)
+        services.AddScoped<SemanticKernelRealtimeService>();
+        // services.AddScoped<SemanticKernelAgentCoordinator>();
+        // services.AddScoped<SemanticKernelPhq2Agent>();
+        // services.AddScoped<SemanticKernelComedianAgent>();
+        services.AddScoped<SimpleAudioService>();
 
         // HTTP Client with policies - Force immediate configuration
         services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()

@@ -15,8 +15,12 @@ import {
 } from 'lucide-react';
 import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { announceToScreenReader } from '@/utils';
-import { RealtimeAgentCoordinator, ConversationMessage } from '@/services/realtimeAgentCoordinator';
-import { Phq2RealtimeAgent, Phq2Assessment } from '@/services/phq2RealtimeAgent';
+import { 
+  semanticKernelAgentService, 
+  ConversationMessage, 
+  Phq2Assessment,
+  SessionConfig
+} from '@/services/semanticKernelAgentService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
 
@@ -41,9 +45,8 @@ interface SessionStatus {
 export const RealtimeAgentExperience: React.FC = () => {
   const { handleEnterSpace } = useKeyboardNavigation();
   
-  // Core services
-  const [coordinator] = useState(() => new RealtimeAgentCoordinator());
-  const [phq2Agent] = useState(() => new Phq2RealtimeAgent());
+  // Core service - single instance that manages all agents via C# backend
+  const agentService = semanticKernelAgentService;
   
   // UI State
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -94,10 +97,8 @@ export const RealtimeAgentExperience: React.FC = () => {
       try {
         setSessionStatus(prev => ({ ...prev, connectionStatus: 'connecting' }));
         
-        // Initialize coordinator with API key (you'll need to provide this)
-        await coordinator.initialize({
-          apiKey: process.env.VITE_AZURE_OPENAI_API_KEY || 'your-api-key-here'
-        });
+        // Initialize connection to C# Semantic Kernel backend
+        await agentService.initialize();
         
         setupEventListeners();
         
@@ -107,10 +108,10 @@ export const RealtimeAgentExperience: React.FC = () => {
           hasAudioSupport: true
         }));
         
-        announceToScreenReader('Real-time agent services initialized');
+        announceToScreenReader('Semantic Kernel agent services initialized');
         
       } catch (error) {
-        console.error('Failed to initialize services:', error);
+        console.error('Failed to initialize agent services:', error);
         setSessionStatus(prev => ({ ...prev, connectionStatus: 'error' }));
         announceToScreenReader('Failed to initialize real-time services');
       }
@@ -123,12 +124,12 @@ export const RealtimeAgentExperience: React.FC = () => {
     };
   }, []);
 
-  // Voice activity monitoring
+  // Voice activity monitoring - simplified since backend handles this
   useEffect(() => {
     if (sessionStatus.isActive && !isSessionPaused) {
       voiceActivityIntervalRef.current = setInterval(() => {
-        const level = coordinator.getVoiceActivityLevel();
-        setVoiceActivityLevel(level);
+        // Voice activity is now handled by the backend via events
+        // This interval is kept for UI updates
       }, 100);
     } else {
       if (voiceActivityIntervalRef.current) {
@@ -145,74 +146,81 @@ export const RealtimeAgentExperience: React.FC = () => {
   }, [sessionStatus.isActive, isSessionPaused]);
 
   const setupEventListeners = useCallback(() => {
-    // Coordinator events
-    coordinator.addEventListener('session_started', (event: any) => {
-      const { sessionId } = event.detail;
+    // Backend service events
+    agentService.addEventListener('connected', () => {
+      setSessionStatus(prev => ({ ...prev, connectionStatus: 'connected' }));
+      announceToScreenReader('Connected to agent service');
+    });
+
+    agentService.addEventListener('sessionStarted', (event: any) => {
+      const { session } = event.detail;
       setSessionStatus(prev => ({
         ...prev,
         isActive: true,
-        sessionId,
-        startTime: new Date()
+        sessionId: session.sessionId,
+        startTime: new Date(session.startTime)
       }));
       setCurrentAgent(prev => ({ ...prev, isActive: true }));
       announceToScreenReader('Speech session started');
     });
 
-    coordinator.addEventListener('conversation_updated', (event: any) => {
+    agentService.addEventListener('messageReceived', (event: any) => {
       const { message } = event.detail;
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
     });
 
-    coordinator.addEventListener('agent_switched', (event: any) => {
-      const { currentAgent: agentName } = event.detail;
+    agentService.addEventListener('agentSwitched', (event: any) => {
+      const { toAgent } = event.detail;
       setCurrentAgent({
-        id: agentName,
-        name: getAgentDisplayName(agentName),
+        id: toAgent,
+        name: getAgentDisplayName(toAgent),
         isActive: true,
         isTyping: false,
         lastActivity: new Date()
       });
-      setSessionStatus(prev => ({ ...prev, currentAgent: agentName }));
-      
-      // Handle PHQ-2 specific setup
-      if (agentName === 'phq2') {
-        const assessment = phq2Agent.startAssessment(sessionStatus.sessionId || '', 'user');
-        setCurrentAssessment(assessment);
-        updateAssessmentProgress();
-      }
-      
-      announceToScreenReader(`Switched to ${getAgentDisplayName(agentName)} agent`);
+      setSessionStatus(prev => ({ ...prev, currentAgent: toAgent }));
+      announceToScreenReader(`Switched to ${getAgentDisplayName(toAgent)} agent`);
     });
 
-    coordinator.addEventListener('session_ended', () => {
+    agentService.addEventListener('sessionEnded', () => {
       setSessionStatus(prev => ({ ...prev, isActive: false }));
       setCurrentAgent(prev => ({ ...prev, isActive: false }));
       announceToScreenReader('Speech session ended');
     });
 
-    coordinator.addEventListener('error', (event: any) => {
-      console.error('Coordinator error:', event.detail);
-      announceToScreenReader('Agent service error occurred');
+    agentService.addEventListener('phq2QuestionAsked', (event: any) => {
+      const { questionNumber } = event.detail;
+      // Update progress
+      setAssessmentProgress({
+        current: questionNumber,
+        total: 2,
+        percentage: (questionNumber / 2) * 100
+      });
     });
 
-    // PHQ-2 Agent events
-    phq2Agent.addEventListener('response_recorded', () => {
-      updateAssessmentProgress();
-    });
-
-    phq2Agent.addEventListener('assessment_completed', (event: any) => {
+    agentService.addEventListener('phq2AssessmentCompleted', (event: any) => {
       const { assessment } = event.detail;
       setCurrentAssessment(assessment);
       announceToScreenReader('PHQ-2 assessment completed');
     });
 
-    phq2Agent.addEventListener('response_parse_error', (event: any) => {
-      const { responseText } = event.detail;
-      announceToScreenReader(`Could not understand response: ${responseText}. Please try again.`);
+    agentService.addEventListener('voiceActivityDetected', (event: any) => {
+      const { activity } = event.detail;
+      setVoiceActivityLevel(activity.volumeLevel);
     });
 
-  }, [sessionStatus.sessionId]);
+    agentService.addEventListener('error', (event: any) => {
+      console.error('Agent service error:', event.detail);
+      announceToScreenReader('Agent service error occurred');
+    });
+
+    agentService.addEventListener('disconnected', () => {
+      setSessionStatus(prev => ({ ...prev, connectionStatus: 'disconnected' }));
+      announceToScreenReader('Disconnected from agent service');
+    });
+
+  }, []);
 
   const getAgentDisplayName = (agentId: string): string => {
     switch (agentId) {
@@ -223,24 +231,27 @@ export const RealtimeAgentExperience: React.FC = () => {
     }
   };
 
-  const updateAssessmentProgress = () => {
-    if (phq2Agent.isAssessmentActive()) {
-      const progress = phq2Agent.getProgress();
-      setAssessmentProgress(progress);
-    }
-  };
 
   const startSession = async () => {
     try {
       setIsProcessing(true);
-      await coordinator.startSession();
+      
+      const sessionConfig: SessionConfig = {
+        enableAudio: true,
+        enableVAD: true,
+        preferredVoice: 'alloy',
+        temperature: 0.7,
+        maxTokens: 2048
+      };
+      
+      await agentService.startSession('user', sessionConfig);
       
       // Add welcome message
       const welcomeMessage: ConversationMessage = {
         id: `welcome-${Date.now()}`,
         role: 'assistant',
         content: "Hello! I'm Maestro, your behavioral health coordinator. I can help you with depression screenings, provide support, or connect you with specialized assistance. How can I help you today?",
-        timestamp: Date.now(),
+        timestamp: new Date().toISOString(),
         agent: 'coordinator'
       };
       
@@ -257,11 +268,10 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   const endSession = async () => {
     try {
-      await coordinator.endSession();
+      await agentService.endSession();
       setMessages([]);
       setCurrentAssessment(null);
       setAssessmentProgress({ current: 0, total: 2, percentage: 0 });
-      phq2Agent.reset();
       announceToScreenReader('Session ended and conversation cleared');
     } catch (error) {
       console.error('Failed to end session:', error);
@@ -269,13 +279,15 @@ export const RealtimeAgentExperience: React.FC = () => {
   };
 
   const pauseSession = () => {
-    coordinator.pauseSession();
+    // Pause functionality will be handled by the backend
+    // For now, just update the UI state
     setIsSessionPaused(true);
     announceToScreenReader('Session paused');
   };
 
   const resumeSession = async () => {
-    await coordinator.resumeSession();
+    // Resume functionality will be handled by the backend
+    // For now, just update the UI state
     setIsSessionPaused(false);
     announceToScreenReader('Session resumed');
   };
@@ -286,39 +298,8 @@ export const RealtimeAgentExperience: React.FC = () => {
     try {
       setIsProcessing(true);
       
-      // Add user message to local state
-      const userMessage: ConversationMessage = {
-        id: `user-${Date.now()}`,
-        role: 'user',
-        content: inputText.trim(),
-        timestamp: Date.now()
-      };
-      
-      setMessages(prev => [...prev, userMessage]);
-      
-      // Handle PHQ-2 responses if in assessment mode
-      if (currentAgent.id === 'phq2' && phq2Agent.isAssessmentActive()) {
-        const success = phq2Agent.recordResponse(inputText.trim());
-        if (success) {
-          // Get next question or results
-          const nextPrompt = phq2Agent.getNextResponsePrompt();
-          const assistantMessage: ConversationMessage = {
-            id: `phq2-${Date.now()}`,
-            role: 'assistant',
-            content: nextPrompt,
-            timestamp: Date.now(),
-            agent: 'phq2'
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-          
-          // If assessment is complete, offer to return to coordinator
-          if (phq2Agent.isAssessmentCompleted()) {
-            setTimeout(() => {
-              coordinator.manualHandoff('coordinator', 'PHQ-2 assessment completed');
-            }, 2000);
-          }
-        }
-      }
+      // Send message to backend service
+      await agentService.sendMessage(inputText.trim());
       
       setInputText('');
       textareaRef.current?.focus();
@@ -333,7 +314,7 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   const manualAgentHandoff = async (targetAgent: string) => {
     try {
-      await coordinator.manualHandoff(targetAgent, 'Manual agent selection');
+      await agentService.requestAgentHandoff(targetAgent, 'Manual agent selection');
       announceToScreenReader(`Switching to ${getAgentDisplayName(targetAgent)} agent`);
     } catch (error) {
       console.error('Failed to switch agent:', error);
@@ -349,7 +330,7 @@ export const RealtimeAgentExperience: React.FC = () => {
   };
 
   const cleanup = () => {
-    coordinator.dispose();
+    agentService.disconnect();
     if (voiceActivityIntervalRef.current) {
       clearInterval(voiceActivityIntervalRef.current);
     }
@@ -518,7 +499,7 @@ export const RealtimeAgentExperience: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Available Agents</h3>
             <div className="flex space-x-2">
-              {coordinator.getAvailableAgents().map(agentId => (
+              {['coordinator', 'phq2', 'comedian'].map((agentId: string) => (
                 <button
                   key={agentId}
                   onClick={() => manualAgentHandoff(agentId)}

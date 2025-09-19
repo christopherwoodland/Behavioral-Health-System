@@ -56,12 +56,82 @@ export class SignalRService {
     this.setupConnection();
   }
 
+  private async getNegotiationInfo(): Promise<any> {
+    try {
+      console.log(`Attempting to negotiate with: ${this.baseUrl}/api/negotiate`);
+      
+      const response = await fetch(`${this.baseUrl}/api/negotiate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log(`Negotiate response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Negotiate failed: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Negotiate failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('Negotiation successful:', result);
+      return result;
+    } catch (error) {
+      console.error('Error getting negotiation info:', error);
+      throw error;
+    }
+  }
+
   private setupConnection(): void {
-    this.connection = new HubConnectionBuilder()
-      .withUrl(`${this.baseUrl}/api`)
-      .withAutomaticReconnect()
-      .configureLogging(LogLevel.Information)
-      .build();
+    // Initialize as null - we'll set it up in start()
+    this.connection = null;
+  }
+
+  async start(): Promise<void> {
+    try {
+      // Get negotiation info from Azure Functions
+      const negotiateInfo = await this.getNegotiationInfo();
+      console.log('Negotiation info:', negotiateInfo);
+      
+      // Handle both possible response formats (url/Url and accessToken/AccessToken)
+      const signalRUrl = negotiateInfo.url || negotiateInfo.Url;
+      const accessToken = negotiateInfo.accessToken || negotiateInfo.AccessToken;
+      
+      if (!signalRUrl) {
+        throw new Error('No SignalR URL received from negotiation');
+      }
+      
+      if (!accessToken) {
+        throw new Error('No access token received from negotiation');
+      }
+      
+      console.log('Using SignalR URL:', signalRUrl);
+      console.log('Access token length:', accessToken.length);
+      
+      // Create connection with the negotiated URL and access token
+      this.connection = new HubConnectionBuilder()
+        .withUrl(signalRUrl, {
+          accessTokenFactory: () => accessToken
+        })
+        .withAutomaticReconnect()
+        .configureLogging(LogLevel.Information)
+        .build();
+
+      // Set up event listeners
+      this.setupEventListeners();
+
+      await this.connection.start();
+      console.log('SignalR connection started successfully');
+    } catch (error) {
+      console.error('Error starting SignalR connection:', error);
+      throw error;
+    }
+  }
+
+  private setupEventListeners(): void {
+    if (!this.connection) return;
 
     // Set up event listeners
     this.connection.on('AgentMessage', (message: AgentMessage) => {
@@ -91,30 +161,14 @@ export class SignalRService {
 
     this.connection.onreconnected(() => {
       console.log('SignalR reconnected');
-      // Rejoin session if we have one
-      if (this.sessionId) {
-        this.joinSession(this.sessionId);
-      }
+      // Note: We don't automatically rejoin session here since the connectionId changes
+      // The UI should handle rejoining if needed
     });
 
     this.connection.onclose((error?: Error) => {
       console.error('SignalR connection closed:', error);
       this.onErrorHandler?.(`Connection closed: ${error?.message || 'Unknown error'}`);
     });
-  }
-
-  async start(): Promise<void> {
-    if (!this.connection) {
-      throw new Error('SignalR connection not initialized');
-    }
-
-    try {
-      await this.connection.start();
-      console.log('SignalR connection started');
-    } catch (error) {
-      console.error('Error starting SignalR connection:', error);
-      throw error;
-    }
   }
 
   async stop(): Promise<void> {
@@ -131,7 +185,23 @@ export class SignalRService {
 
     try {
       this.sessionId = sessionId;
-      await this.connection.invoke('JoinSession', sessionId);
+      
+      // Use HTTP API to join session group instead of hub method
+      const joinResponse = await fetch(`${this.baseUrl}/api/session/${sessionId}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          connectionId: this.connection.connectionId
+        }),
+      });
+
+      if (!joinResponse.ok) {
+        const errorText = await joinResponse.text();
+        throw new Error(`Failed to join session: ${joinResponse.status} ${errorText}`);
+      }
+
       console.log(`Joined session: ${sessionId}`);
     } catch (error) {
       console.error('Error joining session:', error);
@@ -149,7 +219,26 @@ export class SignalRService {
     }
 
     try {
-      await this.connection.invoke('SendUserMessage', this.sessionId, message);
+      // Use HTTP API to send user message
+      const response = await fetch(`${this.baseUrl}/api/sendusermessage`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: this.sessionId,
+          content: message.content,
+          timestamp: message.timestamp,
+          audioData: message.audioData,
+          metadata: message.metadata
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to send message: ${response.status} ${errorText}`);
+      }
+
       console.log('User message sent:', message);
     } catch (error) {
       console.error('Error sending user message:', error);
@@ -167,7 +256,15 @@ export class SignalRService {
     }
 
     try {
-      const status = await this.connection.invoke('GetSessionStatus', this.sessionId);
+      // For now, return a mock status since we haven't implemented the backend yet
+      // TODO: Implement session status endpoint
+      const status: SessionStatus = {
+        sessionId: this.sessionId,
+        currentAgent: 'CoordinatorAgent',
+        status: 'active',
+        timestamp: new Date().toISOString(),
+        participants: ['user', 'CoordinatorAgent']
+      };
       return status;
     } catch (error) {
       console.error('Error getting session status:', error);

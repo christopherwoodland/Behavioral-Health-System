@@ -77,18 +77,27 @@ export const AgentExperience: React.FC = () => {
   useEffect(() => {
     const initializeSignalR = async () => {
       try {
+        console.log('Attempting to connect to SignalR...');
+        
         if (!signalR.isConnected) {
           await signalR.connect();
+          console.log('SignalR connected successfully');
           announceToScreenReader('Connected to real-time communication');
         }
         
+        // TODO: Re-enable after fixing session joining
         // Generate a session ID and join
-        const sessionId = `session-${Date.now()}`;
-        await signalR.joinSession(sessionId);
-        announceToScreenReader('Joined communication session');
+        // const sessionId = `session-${Date.now()}`;
+        // await signalR.joinSession(sessionId);
+        // console.log('Joined SignalR session:', sessionId);
+        // announceToScreenReader('Joined communication session');
       } catch (error) {
         console.error('Failed to initialize SignalR:', error);
-        announceToScreenReader('Failed to connect to real-time communication');
+        console.log('SignalR connection failed - using fallback mode');
+        announceToScreenReader('Using offline mode - real-time features unavailable');
+        
+        // The UI will continue to work with the fallback mock responses
+        // when signalR.isConnected is false
       }
     };
 
@@ -494,23 +503,35 @@ export const AgentExperience: React.FC = () => {
       {/* Input Area */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-end space-x-2">
-          {/* Voice Input Button */}
-          {speech.isAvailable && (
-            <button
-              onClick={toggleListening}
-              onKeyDown={handleEnterSpace(toggleListening)}
-              disabled={isProcessing}
-              className={`p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                speech.isListening
+          {/* Voice Input Button - Always show for debugging */}
+          <button
+            onClick={toggleListening}
+            onKeyDown={handleEnterSpace(toggleListening)}
+            disabled={isProcessing || !speech.isAvailable}
+            className={`p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              !speech.isAvailable
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : speech.isListening
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-gray-400'
-              }`}
-              aria-label={speech.isListening ? 'Stop voice input' : 'Start voice input'}
-              title={speech.isListening ? 'Stop voice input' : 'Start voice input'}
-            >
-              {speech.isListening ? <MicOff size={20} /> : <Mic size={20} />}
-            </button>
-          )}
+            }`}
+            aria-label={
+              !speech.isAvailable 
+                ? 'Voice input not available' 
+                : speech.isListening 
+                  ? 'Stop voice input' 
+                  : 'Start voice input'
+            }
+            title={
+              !speech.isAvailable 
+                ? `Voice input not available. Available: ${speech.isAvailable}, Initialized: ${speech.isInitialized}, Error: ${speech.error || 'None'}` 
+                : speech.isListening 
+                  ? 'Stop voice input' 
+                  : 'Start voice input'
+            }
+          >
+            {speech.isListening ? <MicOff size={20} /> : <Mic size={20} />}
+          </button>
 
           {/* Text Input */}
           <div className="flex-1">
@@ -557,9 +578,10 @@ export const AgentExperience: React.FC = () => {
               </span>
             )}
             
-            {speech.isAvailable && (
-              <span className="text-green-600 dark:text-green-400">Voice input available</span>
-            )}
+            {/* Speech Service Debug Info */}
+            <span className={`text-xs ${speech.isAvailable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              Speech: {speech.isAvailable ? 'Available' : 'Unavailable'} | Init: {speech.isInitialized ? 'Yes' : 'No'}
+            </span>
             
             {speech.error && (
               <span className="text-red-600 dark:text-red-400">Speech error: {speech.error}</span>

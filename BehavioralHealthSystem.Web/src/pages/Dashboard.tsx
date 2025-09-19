@@ -55,7 +55,7 @@ export const Dashboard: React.FC = () => {
       href: '/agent-experience',
       icon: '🤖',
       color: 'warning',
-      disabled: true
+      disabled: false
     }
   ];
 

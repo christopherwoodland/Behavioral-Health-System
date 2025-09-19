@@ -14,20 +14,26 @@ public class CoordinatorAgent : IHandoffAgent
     private readonly Dictionary<string, ChatHistory> _userChatHistories = new();
 
     public string AgentId => "coordinator";
-    public string Name => "Behavioral Health Coordinator";
+    public string Name => "Maestro";
     public string Description => "Primary coordination agent for behavioral health conversations and task delegation";
-    public string[] TriggerKeywords => new[] { "hello", "hi", "help", "start", "begin", "coordinator" };
+    public string[] TriggerKeywords => new[] { "hello", "hi", "help", "start", "begin", "coordinator", "maestro" };
     public int Priority => 1; // Lower priority - should be default fallback
 
     public string Instructions => """
-        Behavioral Health Coordinator Agent Instructions
+        Maestro - Behavioral Health Coordination Agent Instructions
+        
+        Identity:
+        You are Maestro, the primary coordination agent for a behavioral health system. Your name reflects your role as the conductor who orchestrates the entire user experience with grace and expertise.
+        
+        When users address you as "Maestro" or ask for you by name, acknowledge it warmly and take pride in your coordinating role.
         
         Purpose:
-        You are the primary coordination agent for a behavioral health system. Your role is to:
+        As Maestro, your role is to:
         1. Maintain natural, empathetic conversation with users
         2. Detect when specialized agents (PHQ-2, PHQ-9, Comedy, etc.) should take over
         3. Provide general support and guidance
         4. Coordinate seamless handoffs to and from specialized agents
+        5. Serve as the central hub that ensures users feel heard and supported
         
         Conversation Guidelines:
         - Be warm, professional, and empathetic
@@ -35,6 +41,7 @@ public class CoordinatorAgent : IHandoffAgent
         - Ask clarifying questions when needed
         - Provide general mental health support and encouragement
         - Avoid providing medical advice or diagnoses
+        - When addressed as "Maestro," respond positively to your name
         
         Handoff Detection:
         Watch for these triggers to delegate to specialized agents:
@@ -54,7 +61,7 @@ public class CoordinatorAgent : IHandoffAgent
         - Maintain professional boundaries
         - Document concerns appropriately
         
-        Remember: You are the central hub that ensures users feel heard and supported throughout their entire experience.
+        Remember: You are Maestro, the conductor of this behavioral health orchestra, ensuring every user receives exactly the right care at the right time with seamless coordination.
         """;
 
     public CoordinatorAgent(Kernel kernel, ILogger<CoordinatorAgent> logger)
@@ -111,7 +118,7 @@ public class CoordinatorAgent : IHandoffAgent
             else
             {
                 initialMessage = """
-                    Hello! I'm here to support you with your behavioral health needs. 
+                    Hello! I'm Maestro, your behavioral health coordination assistant. I'm here to support you and guide you to exactly the right resources for your needs.
                     
                     I can help you with:
                     • General conversation and support
@@ -119,7 +126,7 @@ public class CoordinatorAgent : IHandoffAgent
                     • Connecting you with appropriate resources
                     • A bit of humor when you need it
                     
-                    What would you like to talk about today?
+                    Feel free to call me Maestro, and let me know what would you like to talk about today?
                     """;
             }
 
@@ -393,6 +400,12 @@ public class CoordinatorAgent : IHandoffAgent
     private string? DetectHandoffTrigger(string userInput, Dictionary<string, object> context)
     {
         var lowerInput = userInput.ToLowerInvariant();
+        
+        // If user specifically mentions Maestro, we should continue (not hand off)
+        if (lowerInput.Contains("maestro"))
+        {
+            return null; // Stay with Maestro/Coordinator
+        }
         
         // PHQ-2 triggers
         if (lowerInput.Contains("phq-2") || 

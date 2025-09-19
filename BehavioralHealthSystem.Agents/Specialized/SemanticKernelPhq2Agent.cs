@@ -1,0 +1,637 @@
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Agents;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.Extensions.Logging;
+using BehavioralHealthSystem.Agents.Models;
+using System.Text.Json;
+using System.ComponentModel;
+
+namespace BehavioralHealthSystem.Agents.Specialized;
+
+/// <summary>
+/// Semantic Kernel PHQ-2 agent for conducting depression screenings through voice interaction
+/// Implements standardized PHQ-2 questionnaire with clinical scoring and recommendations
+/// </summary>
+public class SemanticKernelPhq2Agent : IDisposable
+{
+    private readonly ILogger<SemanticKernelPhq2Agent> _logger;
+    private readonly Kernel _kernel;
+    private readonly ChatCompletionAgent _agent;
+    private readonly Dictionary<string, Phq2ScreeningSession> _activeSessions = new();
+
+    // Events
+    public event EventHandler<Phq2QuestionAskedEventArgs>? QuestionAsked;
+    public event EventHandler<Phq2ResponseReceivedEventArgs>? ResponseReceived;
+    public event EventHandler<Phq2AssessmentCompletedEventArgs>? AssessmentCompleted;
+    public event EventHandler<Phq2ErrorEventArgs>? ErrorOccurred;
+
+    public SemanticKernelPhq2Agent(
+        ILogger<SemanticKernelPhq2Agent> logger,
+        Kernel kernel)
+    {
+        _logger = logger;
+        _kernel = kernel;
+        
+        // Initialize the specialized PHQ-2 agent
+        _agent = CreatePhq2Agent();
+    }
+
+    /// <summary>
+    /// Start a new PHQ-2 screening session
+    /// </summary>
+    public async Task<string> StartScreeningAsync(
+        string sessionId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var screeningId = Guid.NewGuid().ToString();
+            var screening = new Phq2ScreeningSession
+            {
+                ScreeningId = screeningId,
+                SessionId = sessionId,
+                UserId = userId,
+                StartTime = DateTime.UtcNow,
+                Status = Phq2ScreeningStatus.InProgress,
+                Questions = InitializePhq2Questions(),
+                CurrentQuestionIndex = 0,
+                Responses = new Dictionary<int, Phq2Response>()
+            };
+
+            _activeSessions[screeningId] = screening;
+
+            _logger.LogInformation("Started PHQ-2 screening {ScreeningId} for session {SessionId}", 
+                screeningId, sessionId);
+
+            // Ask the first question
+            await AskNextQuestionAsync(screeningId, cancellationToken);
+
+            return screeningId;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting PHQ-2 screening for session {SessionId}", sessionId);
+            ErrorOccurred?.Invoke(this, new Phq2ErrorEventArgs(ex.Message));
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Process a voice response to a PHQ-2 question
+    /// </summary>
+    public async Task ProcessVoiceResponseAsync(
+        string screeningId,
+        string transcript,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_activeSessions.TryGetValue(screeningId, out var screening))
+        {
+            _logger.LogWarning("PHQ-2 screening {ScreeningId} not found", screeningId);
+            return;
+        }
+
+        try
+        {
+            // Use Semantic Kernel to parse and validate the response
+            var response = await ParseResponseAsync(transcript, screening.CurrentQuestionIndex, cancellationToken);
+            
+            if (response == null)
+            {
+                // Ask for clarification
+                await RequestClarificationAsync(screeningId, transcript, cancellationToken);
+                return;
+            }
+
+            // Store the response
+            screening.Responses[screening.CurrentQuestionIndex] = response;
+            screening.LastActivity = DateTime.UtcNow;
+
+            _logger.LogInformation("Recorded PHQ-2 response for question {QuestionIndex}: {Score}", 
+                screening.CurrentQuestionIndex + 1, response.Score);
+
+            ResponseReceived?.Invoke(this, new Phq2ResponseReceivedEventArgs
+            {
+                ScreeningId = screeningId,
+                QuestionIndex = screening.CurrentQuestionIndex,
+                Response = response,
+                Transcript = transcript
+            });
+
+            // Move to next question or complete assessment
+            screening.CurrentQuestionIndex++;
+            
+            if (screening.CurrentQuestionIndex < screening.Questions.Count)
+            {
+                await AskNextQuestionAsync(screeningId, cancellationToken);
+            }
+            else
+            {
+                await CompleteAssessmentAsync(screeningId, cancellationToken);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing voice response for screening {ScreeningId}", screeningId);
+            ErrorOccurred?.Invoke(this, new Phq2ErrorEventArgs(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Ask the next PHQ-2 question
+    /// </summary>
+    private async Task AskNextQuestionAsync(string screeningId, CancellationToken cancellationToken)
+    {
+        if (!_activeSessions.TryGetValue(screeningId, out var screening))
+        {
+            return;
+        }
+
+        var question = screening.Questions[screening.CurrentQuestionIndex];
+        var questionText = FormatQuestionForVoice(question, screening.CurrentQuestionIndex);
+
+        _logger.LogInformation("Asking PHQ-2 question {QuestionIndex} for screening {ScreeningId}", 
+            screening.CurrentQuestionIndex + 1, screeningId);
+
+        QuestionAsked?.Invoke(this, new Phq2QuestionAskedEventArgs
+        {
+            ScreeningId = screeningId,
+            QuestionIndex = screening.CurrentQuestionIndex,
+            Question = question,
+            FormattedText = questionText
+        });
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Parse voice response using Semantic Kernel
+    /// </summary>
+    private async Task<Phq2Response?> ParseResponseAsync(
+        string transcript,
+        int questionIndex,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var parseFunction = _kernel.CreateFunctionFromMethod(
+                (string userResponse, int questionNumber) => ParsePhq2Response(userResponse, questionNumber),
+                "ParsePhq2Response",
+                "Parse a user's voice response to a PHQ-2 question and return the appropriate score"
+            );
+
+            var result = await parseFunction.InvokeAsync(_kernel, new()
+            {
+                ["userResponse"] = transcript,
+                ["questionNumber"] = questionIndex + 1
+            }, cancellationToken);
+
+            var responseText = result.GetValue<string>();
+            if (string.IsNullOrEmpty(responseText))
+            {
+                return null;
+            }
+
+            // Try to parse the JSON response
+            var responseData = JsonSerializer.Deserialize<Phq2ResponseData>(responseText);
+            if (responseData == null)
+            {
+                return null;
+            }
+
+            return new Phq2Response
+            {
+                Score = responseData.Score,
+                Text = responseData.Text,
+                Confidence = responseData.Confidence,
+                Timestamp = DateTime.UtcNow,
+                OriginalTranscript = transcript
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error parsing PHQ-2 response: {Transcript}", transcript);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Semantic Kernel function to parse PHQ-2 responses
+    /// </summary>
+    [KernelFunction("ParsePhq2Response")]
+    [Description("Parse a user's voice response to a PHQ-2 question and return the appropriate score")]
+    public string ParsePhq2Response(
+        [Description("The user's voice response transcribed to text")] string userResponse,
+        [Description("The PHQ-2 question number (1 or 2)")] int questionNumber)
+    {
+        try
+        {
+            var prompt = $@"
+You are a clinical assistant parsing responses to PHQ-2 depression screening questions.
+
+Question {questionNumber}: {GetPhq2QuestionText(questionNumber)}
+
+User Response: ""{userResponse}""
+
+Parse the user's response and return a JSON object with:
+- score: 0-3 based on PHQ-2 scoring (0=Not at all, 1=Several days, 2=More than half the days, 3=Nearly every day)
+- text: The standardized text for the chosen score
+- confidence: 0.0-1.0 confidence in the parsing
+
+Scoring Guidelines:
+- ""not at all"", ""never"", ""no"" → 0 (Not at all)
+- ""sometimes"", ""a few days"", ""occasionally"" → 1 (Several days)  
+- ""most days"", ""often"", ""frequently"" → 2 (More than half the days)
+- ""every day"", ""always"", ""constantly"" → 3 (Nearly every day)
+- Numbers: ""0"" → 0, ""1"" → 1, ""2"" → 2, ""3"" → 3
+
+Return only valid JSON. If unclear, return null.
+";
+
+            // This would normally use the completion service, but for this example we'll use simplified logic
+            var lowerResponse = userResponse.ToLowerInvariant();
+            
+            int score;
+            string text;
+            double confidence;
+
+            if (lowerResponse.Contains("not at all") || lowerResponse.Contains("never") || lowerResponse.Contains("no") || lowerResponse.Contains("0"))
+            {
+                score = 0;
+                text = "Not at all";
+                confidence = 0.9;
+            }
+            else if (lowerResponse.Contains("several days") || lowerResponse.Contains("sometimes") || lowerResponse.Contains("occasionally") || lowerResponse.Contains("1"))
+            {
+                score = 1;
+                text = "Several days";
+                confidence = 0.8;
+            }
+            else if (lowerResponse.Contains("more than half") || lowerResponse.Contains("most days") || lowerResponse.Contains("often") || lowerResponse.Contains("2"))
+            {
+                score = 2;
+                text = "More than half the days";
+                confidence = 0.8;
+            }
+            else if (lowerResponse.Contains("nearly every day") || lowerResponse.Contains("every day") || lowerResponse.Contains("always") || lowerResponse.Contains("3"))
+            {
+                score = 3;
+                text = "Nearly every day";
+                confidence = 0.9;
+            }
+            else
+            {
+                // Ambiguous response
+                return "null";
+            }
+
+            var result = new Phq2ResponseData
+            {
+                Score = score,
+                Text = text,
+                Confidence = confidence
+            };
+
+            return JsonSerializer.Serialize(result);
+        }
+        catch
+        {
+            return "null";
+        }
+    }
+
+    /// <summary>
+    /// Request clarification for ambiguous response
+    /// </summary>
+    private async Task RequestClarificationAsync(
+        string screeningId,
+        string originalResponse,
+        CancellationToken cancellationToken)
+    {
+        if (!_activeSessions.TryGetValue(screeningId, out var screening))
+        {
+            return;
+        }
+
+        var clarificationText = $@"
+I want to make sure I understand your response correctly. You said ""{originalResponse}"".
+
+For this question, I need to know how often this has happened over the last 2 weeks. 
+Could you please choose one of these options:
+
+0 - Not at all
+1 - Several days  
+2 - More than half the days
+3 - Nearly every day
+
+You can say the number or the full description.
+";
+
+        _logger.LogInformation("Requesting clarification for screening {ScreeningId}", screeningId);
+
+        // This would trigger a clarification response in the UI
+        QuestionAsked?.Invoke(this, new Phq2QuestionAskedEventArgs
+        {
+            ScreeningId = screeningId,
+            QuestionIndex = screening.CurrentQuestionIndex,
+            Question = screening.Questions[screening.CurrentQuestionIndex],
+            FormattedText = clarificationText,
+            IsClarification = true
+        });
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Complete the PHQ-2 assessment and calculate score
+    /// </summary>
+    private async Task CompleteAssessmentAsync(string screeningId, CancellationToken cancellationToken)
+    {
+        if (!_activeSessions.TryGetValue(screeningId, out var screening))
+        {
+            return;
+        }
+
+        try
+        {
+            var totalScore = screening.Responses.Values.Sum(r => r.Score);
+            var riskLevel = DetermineRiskLevel(totalScore);
+            var recommendations = GenerateRecommendations(totalScore, riskLevel);
+
+            var assessment = new Phq2Assessment
+            {
+                ScreeningId = screeningId,
+                SessionId = screening.SessionId,
+                UserId = screening.UserId,
+                CompletedAt = DateTime.UtcNow,
+                TotalScore = totalScore,
+                RiskLevel = riskLevel,
+                Responses = screening.Responses.Values.ToList(),
+                Recommendations = recommendations,
+                Duration = DateTime.UtcNow - screening.StartTime
+            };
+
+            screening.Status = Phq2ScreeningStatus.Completed;
+            screening.Assessment = assessment;
+
+            _logger.LogInformation("Completed PHQ-2 assessment {ScreeningId} with score {Score} and risk level {RiskLevel}", 
+                screeningId, totalScore, riskLevel);
+
+            AssessmentCompleted?.Invoke(this, new Phq2AssessmentCompletedEventArgs
+            {
+                Assessment = assessment,
+                ScreeningSession = screening
+            });
+
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing PHQ-2 assessment {ScreeningId}", screeningId);
+            ErrorOccurred?.Invoke(this, new Phq2ErrorEventArgs(ex.Message));
+        }
+    }
+
+    /// <summary>
+    /// Initialize PHQ-2 questions
+    /// </summary>
+    private List<Phq2Question> InitializePhq2Questions()
+    {
+        return new List<Phq2Question>
+        {
+            new Phq2Question
+            {
+                Id = 1,
+                Text = "Over the last 2 weeks, how often have you been bothered by little interest or pleasure in doing things?",
+                Category = "Interest"
+            },
+            new Phq2Question
+            {
+                Id = 2,
+                Text = "Over the last 2 weeks, how often have you been bothered by feeling down, depressed, or hopeless?",
+                Category = "Mood"
+            }
+        };
+    }
+
+    /// <summary>
+    /// Format question for voice interaction
+    /// </summary>
+    private string FormatQuestionForVoice(Phq2Question question, int index)
+    {
+        var intro = index == 0 
+            ? "I'm going to ask you 2 brief questions about how you've been feeling over the past 2 weeks. Please answer with how often each item has bothered you."
+            : "Here's the second question.";
+
+        return $@"{intro}
+
+{question.Text}
+
+Your options are:
+- Not at all (you can say 'not at all' or 'zero')
+- Several days (you can say 'several days' or 'one') 
+- More than half the days (you can say 'more than half the days' or 'two')
+- Nearly every day (you can say 'nearly every day' or 'three')
+
+Please take your time to think about it and give me your answer.";
+    }
+
+    /// <summary>
+    /// Get PHQ-2 question text by number
+    /// </summary>
+    private string GetPhq2QuestionText(int questionNumber)
+    {
+        return questionNumber switch
+        {
+            1 => "Over the last 2 weeks, how often have you been bothered by little interest or pleasure in doing things?",
+            2 => "Over the last 2 weeks, how often have you been bothered by feeling down, depressed, or hopeless?",
+            _ => ""
+        };
+    }
+
+    /// <summary>
+    /// Determine risk level based on total score
+    /// </summary>
+    private string DetermineRiskLevel(int totalScore)
+    {
+        return totalScore switch
+        {
+            0 or 1 or 2 => "Low",
+            3 or 4 or 5 or 6 => "Moderate",
+            _ => "Unknown"
+        };
+    }
+
+    /// <summary>
+    /// Generate recommendations based on score and risk level
+    /// </summary>
+    private List<string> GenerateRecommendations(int score, string riskLevel)
+    {
+        var recommendations = new List<string>();
+
+        if (score <= 2)
+        {
+            recommendations.AddRange(new[]
+            {
+                "Your responses suggest a low risk for depression.",
+                "Continue maintaining healthy lifestyle habits including regular exercise, good sleep, and social connections.",
+                "If you notice changes in your mood or interest levels, don't hesitate to reach out for support.",
+                "Consider mindfulness or stress management techniques if you're dealing with general stress."
+            });
+        }
+        else
+        {
+            recommendations.AddRange(new[]
+            {
+                "Your responses suggest you may be experiencing some symptoms that could benefit from further evaluation.",
+                "I recommend speaking with a healthcare provider or mental health professional for a more comprehensive assessment.",
+                "Consider reaching out to your primary care doctor, a counselor, or a mental health clinic.",
+                "Remember that seeking help is a sign of strength, and effective treatments are available.",
+                "In the meantime, try to maintain connections with supportive friends and family."
+            });
+
+            if (score >= 5)
+            {
+                recommendations.Add("Given your responses, it's particularly important to seek professional support soon.");
+            }
+        }
+
+        recommendations.Add("If you're having thoughts of self-harm, please contact emergency services or a crisis hotline immediately.");
+
+        return recommendations;
+    }
+
+    /// <summary>
+    /// Create the specialized PHQ-2 agent
+    /// </summary>
+    private ChatCompletionAgent CreatePhq2Agent()
+    {
+        return new ChatCompletionAgent()
+        {
+            Name = "PHQ2Agent",
+            Instructions = @"
+You are a specialized clinical assistant for conducting PHQ-2 depression screenings through voice interaction.
+
+Your responsibilities:
+1. Conduct standardized PHQ-2 questionnaires
+2. Parse and validate user responses
+3. Calculate clinical scores
+4. Provide appropriate recommendations
+5. Maintain professional, empathetic communication
+
+Always follow evidence-based clinical protocols and prioritize user safety.",
+            Kernel = _kernel
+        };
+    }
+
+    /// <summary>
+    /// Get screening status
+    /// </summary>
+    public Phq2ScreeningSession? GetScreening(string screeningId)
+    {
+        _activeSessions.TryGetValue(screeningId, out var screening);
+        return screening;
+    }
+
+    /// <summary>
+    /// Cancel a screening session
+    /// </summary>
+    public async Task CancelScreeningAsync(string screeningId, CancellationToken cancellationToken = default)
+    {
+        if (_activeSessions.TryRemove(screeningId, out var screening))
+        {
+            screening.Status = Phq2ScreeningStatus.Cancelled;
+            _logger.LogInformation("Cancelled PHQ-2 screening {ScreeningId}", screeningId);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            _activeSessions.Clear();
+            
+            if (_agent is IDisposable disposableAgent)
+            {
+                disposableAgent.Dispose();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disposing SemanticKernelPhq2Agent");
+        }
+    }
+}
+
+// Supporting Classes and Event Args
+public class Phq2ResponseData
+{
+    public int Score { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public double Confidence { get; set; }
+}
+
+public class Phq2ScreeningSession
+{
+    public string ScreeningId { get; set; } = string.Empty;
+    public string SessionId { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public DateTime StartTime { get; set; }
+    public DateTime LastActivity { get; set; }
+    public Phq2ScreeningStatus Status { get; set; }
+    public List<Phq2Question> Questions { get; set; } = new();
+    public int CurrentQuestionIndex { get; set; }
+    public Dictionary<int, Phq2Response> Responses { get; set; } = new();
+    public Phq2Assessment? Assessment { get; set; }
+}
+
+public enum Phq2ScreeningStatus
+{
+    InProgress,
+    Completed,
+    Cancelled
+}
+
+public class Phq2Response
+{
+    public int Score { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public double Confidence { get; set; }
+    public DateTime Timestamp { get; set; }
+    public string OriginalTranscript { get; set; } = string.Empty;
+}
+
+public class Phq2QuestionAskedEventArgs : EventArgs
+{
+    public string ScreeningId { get; set; } = string.Empty;
+    public int QuestionIndex { get; set; }
+    public Phq2Question Question { get; set; } = new();
+    public string FormattedText { get; set; } = string.Empty;
+    public bool IsClarification { get; set; }
+}
+
+public class Phq2ResponseReceivedEventArgs : EventArgs
+{
+    public string ScreeningId { get; set; } = string.Empty;
+    public int QuestionIndex { get; set; }
+    public Phq2Response Response { get; set; } = new();
+    public string Transcript { get; set; } = string.Empty;
+}
+
+public class Phq2AssessmentCompletedEventArgs : EventArgs
+{
+    public Phq2Assessment Assessment { get; set; } = new();
+    public Phq2ScreeningSession ScreeningSession { get; set; } = new();
+}
+
+public class Phq2ErrorEventArgs : EventArgs
+{
+    public string Message { get; set; }
+
+    public Phq2ErrorEventArgs(string message)
+    {
+        Message = message;
+    }
+}

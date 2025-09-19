@@ -93,11 +93,10 @@ export const AgentExperience: React.FC = () => {
         // announceToScreenReader('Joined communication session');
       } catch (error) {
         console.error('Failed to initialize SignalR:', error);
-        console.log('SignalR connection failed - using fallback mode');
-        announceToScreenReader('Using offline mode - real-time features unavailable');
+        announceToScreenReader('Failed to connect to real-time communication');
         
-        // The UI will continue to work with the fallback mock responses
-        // when signalR.isConnected is false
+        // Don't proceed without SignalR connection
+        throw error;
       }
     };
 
@@ -245,6 +244,19 @@ export const AgentExperience: React.FC = () => {
   const sendMessage = async () => {
     if (!inputText.trim() || isProcessing) return;
 
+    // Require SignalR connection - no fallback mode
+    if (!signalR.isConnected) {
+      announceToScreenReader('Real-time connection required but not available');
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Connection to real-time services is required. Please wait for the connection to be established.",
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputText.trim(),
@@ -260,70 +272,24 @@ export const AgentExperience: React.FC = () => {
 
     try {
       // Send message through SignalR for real-time processing
-      if (signalR.isConnected) {
-        const signalRMessage: UserMessage = {
-          content: messageText,
-          timestamp: new Date().toISOString(),
-          metadata: {
-            speechConfidence: 1.0, // Default confidence
-            voiceActivityLevel: speech.volume,
-            processingTime: 0
-          }
-        };
-
-        await signalR.sendMessage(signalRMessage);
-        announceToScreenReader('Message sent to agent');
-      } else {
-        // Fallback to mock behavior if SignalR is not connected
-        await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-
-        let responseContent = "I understand what you're saying. Let me help you with that.";
-        let newAgentId = currentAgent.id;
-        let newAgentName = currentAgent.name;
-
-        const lowerInput = messageText.toLowerCase();
-        
-        if (lowerInput.includes('phq') || lowerInput.includes('depression') || lowerInput.includes('screening')) {
-          responseContent = "I can help you with a depression screening. I'll start with the PHQ-2, which is a quick 2-question assessment. This will help determine if a more comprehensive evaluation might be helpful. Shall we begin?";
-          newAgentId = 'phq2';
-          newAgentName = 'PHQ-2 Agent';
-        } else if (lowerInput.includes('joke') || lowerInput.includes('funny') || lowerInput.includes('humor')) {
-          responseContent = "Hey there! 😄 I'm here to brighten your day with some wholesome humor! I can share clean jokes, funny stories, or just have some playful banter. What sounds good to you?";
-          newAgentId = 'comedian';
-          newAgentName = 'Comedy Agent';
-        } else if (lowerInput.includes('crisis') || lowerInput.includes('emergency') || lowerInput.includes('help')) {
-          responseContent = "I'm here to help. If you're experiencing a mental health crisis, please reach out for immediate support: Call 988 (Suicide & Crisis Lifeline) or contact your local emergency services. I'm also here to provide support and connect you with appropriate resources.";
+      const signalRMessage: UserMessage = {
+        content: messageText,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          speechConfidence: 1.0, // Default confidence
+          voiceActivityLevel: speech.volume,
+          processingTime: 0
         }
+      };
 
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: responseContent,
-          role: 'assistant',
-          timestamp: new Date()
-        };
-
-        setMessages(prev => [...prev, assistantMessage]);
-        
-        // Update current agent if it changed
-        if (newAgentId !== currentAgent.id) {
-          setCurrentAgent({
-            id: newAgentId,
-            name: newAgentName,
-            isActive: true,
-            isTyping: false
-          });
-          announceToScreenReader(`Agent changed to ${newAgentName}`);
-        }
-
-        // Speak the response if audio output is enabled
-        speakMessage(responseContent);
-      }
+      await signalR.sendMessage(signalRMessage);
+      announceToScreenReader('Message sent to agent');
 
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: "I'm sorry, I encountered an error processing your message. Please try again.",
+        content: "I'm sorry, I encountered an error processing your message. Please check your connection and try again.",
         role: 'assistant',
         timestamp: new Date()
       };
@@ -331,10 +297,7 @@ export const AgentExperience: React.FC = () => {
       announceToScreenReader('Error sending message');
     } finally {
       setIsProcessing(false);
-      if (!signalR.isConnected) {
-        // Only set typing to false for fallback mode; SignalR handles this via events
-        setCurrentAgent(prev => ({ ...prev, isTyping: false }));
-      }
+      // Note: SignalR handles typing indicator updates via events
     }
   };
 
@@ -413,7 +376,7 @@ export const AgentExperience: React.FC = () => {
                     ? 'text-green-600 dark:text-green-400' 
                     : 'text-red-600 dark:text-red-400'
                 }`}>
-                  {signalR.isConnected ? 'Connected' : 'Offline'}
+                  {signalR.isConnected ? 'Connected' : 'Connection Required'}
                 </span>
               </div>
             </div>
@@ -507,27 +470,31 @@ export const AgentExperience: React.FC = () => {
           <button
             onClick={toggleListening}
             onKeyDown={handleEnterSpace(toggleListening)}
-            disabled={isProcessing || !speech.isAvailable}
+            disabled={isProcessing || !speech.isAvailable || !signalR.isConnected}
             className={`p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              !speech.isAvailable
+              !speech.isAvailable || !signalR.isConnected
                 ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                 : speech.isListening
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-gray-400'
             }`}
             aria-label={
-              !speech.isAvailable 
-                ? 'Voice input not available' 
-                : speech.isListening 
-                  ? 'Stop voice input' 
-                  : 'Start voice input'
+              !signalR.isConnected
+                ? 'Real-time connection required'
+                : !speech.isAvailable 
+                  ? 'Voice input not available' 
+                  : speech.isListening 
+                    ? 'Stop voice input' 
+                    : 'Start voice input'
             }
             title={
-              !speech.isAvailable 
-                ? `Voice input not available. Available: ${speech.isAvailable}, Initialized: ${speech.isInitialized}, Error: ${speech.error || 'None'}` 
-                : speech.isListening 
-                  ? 'Stop voice input' 
-                  : 'Start voice input'
+              !signalR.isConnected
+                ? 'Real-time connection required for voice input'
+                : !speech.isAvailable 
+                  ? `Voice input not available. Available: ${speech.isAvailable}, Initialized: ${speech.isInitialized}, Error: ${speech.error || 'None'}` 
+                  : speech.isListening 
+                    ? 'Stop voice input' 
+                    : 'Start voice input'
             }
           >
             {speech.isListening ? <MicOff size={20} /> : <Mic size={20} />}
@@ -540,8 +507,8 @@ export const AgentExperience: React.FC = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type your message here or use voice input..."
-              disabled={isProcessing}
+              placeholder={signalR.isConnected ? "Type your message here or use voice input..." : "Waiting for real-time connection..."}
+              disabled={isProcessing || !signalR.isConnected}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 min-h-[44px] max-h-[120px]"
               rows={1}
               aria-label="Message input"
@@ -552,7 +519,7 @@ export const AgentExperience: React.FC = () => {
           <button
             onClick={sendMessage}
             onKeyDown={handleEnterSpace(sendMessage)}
-            disabled={!inputText.trim() || isProcessing}
+            disabled={!inputText.trim() || isProcessing || !signalR.isConnected}
             className="p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
             aria-label="Send message"
             title="Send message"

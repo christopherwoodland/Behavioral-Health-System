@@ -8,6 +8,7 @@ import { SpeechResult, VoiceActivityEvent } from '@/services/speechService';
 import { UserMessage } from '@/services/signalRService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
+import { runSpeechDiagnostics, formatDiagnosticsReport } from '@/utils/speechDiagnostics';
 
 interface Message {
   id: string;
@@ -319,6 +320,29 @@ export const AgentExperience: React.FC = () => {
     announceToScreenReader('Conversation cleared');
   };
 
+  const runDiagnostics = async () => {
+    try {
+      const diagnostics = await runSpeechDiagnostics();
+      const report = formatDiagnosticsReport(diagnostics);
+      console.log('Speech Diagnostics Report:');
+      console.log(report);
+      
+      // Also show in messages for easier viewing
+      const diagnosticMessage: Message = {
+        id: Date.now().toString(),
+        content: `Speech Diagnostics Report:\n\n${report}`,
+        role: 'assistant',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, diagnosticMessage]);
+      
+      announceToScreenReader('Speech diagnostics completed, check console and messages');
+    } catch (error) {
+      console.error('Diagnostics failed:', error);
+      announceToScreenReader('Speech diagnostics failed');
+    }
+  };
+
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
       {/* Header */}
@@ -419,6 +443,17 @@ export const AgentExperience: React.FC = () => {
             title="Clear conversation"
           >
             <Trash2 size={20} />
+          </button>
+
+          {/* Speech Diagnostics */}
+          <button
+            onClick={runDiagnostics}
+            onKeyDown={handleEnterSpace(runDiagnostics)}
+            className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+            aria-label="Run speech diagnostics"
+            title="Run speech diagnostics to troubleshoot speech issues"
+          >
+            🔧
           </button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel } from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel, HttpTransportType } from '@microsoft/signalr';
 
 export interface AgentMessage {
   agentName: string;
@@ -113,7 +113,8 @@ export class SignalRService {
       // Create connection with the negotiated URL and access token
       this.connection = new HubConnectionBuilder()
         .withUrl(signalRUrl, {
-          accessTokenFactory: () => accessToken
+          accessTokenFactory: () => accessToken,
+          transport: HttpTransportType.WebSockets | HttpTransportType.LongPolling
         })
         .withAutomaticReconnect()
         .configureLogging(LogLevel.Information)
@@ -122,8 +123,11 @@ export class SignalRService {
       // Set up event listeners
       this.setupEventListeners();
 
+      console.log('Starting SignalR connection...');
       await this.connection.start();
       console.log('SignalR connection started successfully');
+      console.log('Connection ID:', this.connection.connectionId);
+      console.log('Connection State:', this.connection.state);
     } catch (error) {
       console.error('Error starting SignalR connection:', error);
       throw error;

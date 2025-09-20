@@ -17,7 +17,7 @@ public class AgentCommunicationHub
     [Function("negotiate")]
     public SignalRConnectionInfo GetSignalRInfo(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "negotiate")] HttpRequestData req,
-        [SignalRConnectionInfoInput(HubName = "AgentHub", ConnectionStringSetting = "AzureSignalRConnectionString")] SignalRConnectionInfo connectionInfo)
+        [SignalRConnectionInfoInput(HubName = "agenthub", ConnectionStringSetting = "AzureSignalRConnectionString")] SignalRConnectionInfo connectionInfo)
     {
         _logger.LogInformation("SignalR connection negotiation requested");
         _logger.LogInformation("Connection URL: {Url}", connectionInfo.Url);
@@ -28,7 +28,7 @@ public class AgentCommunicationHub
     /// Send message from agent to client
     /// </summary>
     [Function("SendAgentMessage")]
-    [SignalROutput(HubName = "AgentHub")]
+    [SignalROutput(HubName = "agenthub")]
     public async Task<SignalRMessageAction> SendAgentMessage(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sendagentmessage")] HttpRequestData req)
     {
@@ -71,7 +71,7 @@ public class AgentCommunicationHub
     /// Join a SignalR group for a session
     /// </summary>
     [Function("JoinSession")]
-    [SignalROutput(HubName = "AgentHub")]
+    [SignalROutput(HubName = "agenthub")]
     public async Task<SignalRGroupAction> JoinSession(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "session/{sessionId}/join")] HttpRequestData req,
         string sessionId)
@@ -107,7 +107,7 @@ public class AgentCommunicationHub
     /// Leave a SignalR group for a session
     /// </summary>
     [Function("LeaveSession")]
-    [SignalROutput(HubName = "AgentHub")]
+    [SignalROutput(HubName = "agenthub")]
     public async Task<SignalRGroupAction> LeaveSession(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "session/{sessionId}/leave")] HttpRequestData req,
         string sessionId)

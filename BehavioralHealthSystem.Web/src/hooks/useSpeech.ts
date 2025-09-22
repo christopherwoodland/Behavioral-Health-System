@@ -23,6 +23,7 @@ export interface UseSpeechReturn {
   startListening: () => Promise<void>;
   stopListening: () => void;
   speak: (text: string, options?: any) => Promise<void>;
+  forceReinitialize: () => Promise<void>;
   
   // Configuration
   updateConfig: (config: Partial<SpeechConfig>) => void;
@@ -51,9 +52,12 @@ export const useSpeech = (options: UseSpeechOptions = {}): UseSpeechReturn => {
 
     // Set up event listeners
     service.on('initialized', (capabilities) => {
+      console.log('🎤 useSpeech: Received initialized event:', capabilities);
       setIsAvailable(capabilities.speechRecognition && capabilities.speechSynthesis);
       setIsInitialized(true);
       setAvailableVoices(service.getAvailableVoices());
+      console.log('🎤 useSpeech: Speech available:', capabilities.speechRecognition && capabilities.speechSynthesis);
+      console.log('🎤 useSpeech: Initialization complete');
     });
 
     service.on('listening', ({ started }) => {
@@ -138,6 +142,13 @@ export const useSpeech = (options: UseSpeechOptions = {}): UseSpeechReturn => {
     }
   }, []);
 
+  const forceReinitialize = useCallback(async () => {
+    if (serviceRef.current) {
+      console.log('🔄 useSpeech: Force reinitializing...');
+      await serviceRef.current.forceReinitialize();
+    }
+  }, []);
+
   const updateConfig = useCallback((config: Partial<SpeechConfig>) => {
     if (serviceRef.current) {
       serviceRef.current.updateConfig(config);
@@ -174,6 +185,7 @@ export const useSpeech = (options: UseSpeechOptions = {}): UseSpeechReturn => {
     startListening,
     stopListening,
     speak,
+    forceReinitialize,
     
     // Configuration
     updateConfig,

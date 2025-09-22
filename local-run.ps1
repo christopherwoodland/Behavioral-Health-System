@@ -57,7 +57,6 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-
 Write-Host "Starting Azure Functions host..."
 Push-Location $functionsPath
 Start-Process "cmd.exe" -ArgumentList '/c func start'

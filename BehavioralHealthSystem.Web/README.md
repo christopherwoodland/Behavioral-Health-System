@@ -41,7 +41,7 @@ VITE_ENABLE_DEBUG_LOGGING=false
 - **WCAG 2.2 Level AA Compliant** - Full accessibility support with screen readers, keyboard navigation, and high contrast
 - **Section 508 Compliant** - Meets government accessibility standards
 - **Azure AD Authentication** - Microsoft identity platform integration with role-based access control
-- **Real-time Communication** - SignalR-powered agent messaging with handoff capabilities
+- **Real-time Communication** - Speech Avatar powered agent conversations with handoff capabilities
 - **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
 - **Dark/Light Mode** - Automatic theme detection with manual toggle
 - **Interactive Animations** - Brain icon hover animations for enhanced user engagement
@@ -235,103 +235,51 @@ The application features an interactive brain throb animation that activates on 
 
 This subtle animation enhances user engagement while maintaining accessibility standards.
 
-## 🔄 Real-Time Communication System
+## 🎙️ Speech Avatar Experience
 
-The application features a comprehensive real-time communication system using SignalR for behavioral health agent interactions.
+The application features an advanced Speech Avatar experience using Azure Speech Voice Live API for natural, real-time conversations with behavioral health agents.
 
 ### Features
 
-- **Real-time messaging** between users and behavioral health agents
+- **Real-time speech interaction** with Azure Speech Voice Live API
+- **Visual avatar representation** for enhanced user engagement
 - **Agent handoff** with seamless transitions between specialized agents  
-- **Typing indicators** to show when agents are processing responses
+- **Speech-to-speech processing** with natural conversation flow
 - **Session management** with unique session IDs for each user interaction
-- **Speech integration** with voice input/output capabilities
 - **Crisis detection** and appropriate agent routing
+- **Behavioral health assessments** (PHQ-2, PHQ-9) integrated into conversation
 
 ### Architecture
 
 #### Backend Components
 
-**AgentCommunicationHub.cs** - SignalR hub handling real-time communication:
-- `GET /api/negotiate` - SignalR connection negotiation
-- `POST /api/sendagentmessage` - Send message from agent to client
-- `POST /api/notifyagenthandoff` - Notify client of agent handoff
-- `POST /api/notifyagenttyping` - Send typing indicators
-- `POST /api/joinsession` - Join a communication session
-- `POST /api/sendusermessage` - Process user messages
-
-**RealtimeAgentOrchestrator.cs** - Processes user input and coordinates agent responses:
-- Crisis detection and routing
-- Confidence scoring for agent responses
-- Mock agent simulation for development
-- Session status tracking
+**SpeechAvatarFunctions.cs** - Azure Functions handling Speech Avatar operations:
+- `POST /api/speech-avatar/create-session` - Initialize new avatar session
+- `POST /api/speech-avatar/end-session` - Terminate avatar session
+- `GET /api/speech-avatar/agents` - List available behavioral health agents
 
 #### Frontend Components
 
-**signalRService.ts** - TypeScript service for SignalR client communication:
-- Connection management with automatic reconnection
-- Event handling for messages, handoffs, typing indicators
-- Session management and status tracking
+**speechAvatarService.ts** - TypeScript service for Speech Avatar communication:
+- WebSocket connection to Azure Speech Voice Live API
+- Real-time audio streaming and processing
+- Session management and agent coordination
 - Error handling and connection state monitoring
 
-**useSignalR.ts** - React hook for managing SignalR state:
-- Connection status tracking
-- Real-time message collection
-- Agent handoff notifications
-- Typing indicators by agent
-- Session status and participants
-
-### Message Types
-
-```typescript
-interface UserMessage {
-  content: string;
-  timestamp: string;
-  audioData?: string;
-  metadata?: {
-    speechConfidence?: number;
-    voiceActivityLevel?: number;
-    processingTime?: number;
-  };
-}
-
-interface AgentMessage {
-  agentName: string;
-  content: string;
-  timestamp: string;
-  confidence?: number;
-  suggestedActions?: string[];
-}
-
-interface AgentHandoffNotification {
-  fromAgent: string;
-  toAgent: string;
-  reason: string;
-  timestamp: string;
-  userContext?: any;
-}
-```
-
-### Configuration
-
-#### Local Development
-- SignalR connection uses default local endpoint: `http://localhost:7071/api`
-- No Azure SignalR service required for local development
-- CORS enabled for cross-origin requests
-
-#### Production
-- Set `AzureSignalRConnectionString` environment variable
-- Configure Azure SignalR Service resource
-- Update frontend `signalRService.ts` baseUrl if needed
+**SpeechAvatarExperience.tsx** - React component for avatar interaction:
+- Agent selection interface
+- Real-time avatar visualization
+- Speech processing indicators
+- Session status and controls
 
 ### Session Flow
 
-1. **Connection:** Frontend establishes SignalR connection on load
-2. **Session Join:** Generates unique session ID and joins session
-3. **Messaging:** User sends messages through SignalR to backend
-4. **Processing:** RealtimeAgentOrchestrator processes message through agent system
-5. **Response:** Agents send responses back through SignalR hub
-6. **Handoff:** System automatically handles agent transitions with notifications
+1. **Agent Selection:** User chooses from available behavioral health agents
+2. **Session Creation:** Backend creates new session with Azure Speech Voice Live
+3. **WebSocket Connection:** Frontend establishes real-time audio connection
+4. **Speech Interaction:** User speaks directly to avatar with natural conversation
+5. **Agent Processing:** Backend processes audio through selected agent
+6. **Response:** Agent responds through Speech Avatar with natural voice
 
 ## 📁 Project Structure
 
@@ -409,7 +357,7 @@ The application includes several UI improvements for better user experience:
 - **Role-Based Access:** System Health and Agent Experience features require appropriate permissions
 - **Coming Soon Features:** Agent Experience functionality is disabled with visual overlay indication
 - **Consistent Button Styling:** System Health button matches View Summary styling (black text on white background)
-- **Real-time Agent Communication:** SignalR-powered messaging system with typing indicators and agent handoffs
+- **Real-time Agent Communication:** Speech Avatar powered conversation system with typing indicators and agent handoffs
 
 ### Audio Upload Workflow
 

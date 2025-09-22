@@ -7,7 +7,7 @@ A **production-ready** full-stack behavioral health assessment platform featurin
 ### **🏗️ Enterprise Architecture**
 
 - ✅ **Full-Stack Solution** - React frontend with Azure Functions backend
-- ✅ **Real-Time Communication** - SignalR integration for bidirectional communication
+- ✅ **Real-Time Communication** - Speech Avatar integration for natural conversation
 - ✅ **AI Agent Handoff System** - Multi-agent coordination for behavioral health assessments
 - ✅ **Direct HTTP Function Endpoints** - Simple, reliable HTTP functions for session management
 - ✅ **Dependency Injection & Configuration** - Proper service registration with typed configurations

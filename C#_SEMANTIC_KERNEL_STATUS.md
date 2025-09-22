@@ -18,7 +18,7 @@
 ### Configuration:
 - **GPT-Realtime Endpoint**: `https://cdc-traci-aif-002.cognitiveservices.azure.com/openai/realtime`
 - **Audio Settings**: 24kHz, 16-bit, mono with voice activity detection
-- **Dependency Injection**: Semantic Kernel, SignalR, and audio services properly configured
+- **Dependency Injection**: Semantic Kernel and audio services properly configured
 
 ## 🚧 TEMPORARILY DISABLED (Ready for Phase 2):
 
@@ -28,7 +28,7 @@
 - `SemanticKernelComedianAgent.cs.bak` - Therapeutic humor agent
 - `AudioProcessingService.cs.bak` - Full NAudio implementation
 - `SemanticKernelSpeechAgentFunctions.cs.bak` - Azure Functions integration
-- `RealtimeSpeechAgentFunctions.cs.bak` - SignalR Functions
+- `SemanticKernelSpeechAgentFunctions.cs.bak` - Azure Functions integration
 
 ### Why Temporarily Disabled:
 - Complex model mappings between existing PHQ-2 models and new Semantic Kernel models
@@ -47,12 +47,12 @@
 ### Phase 3 - Integration Testing:
 1. **Local Testing**: Start Azure Functions locally with `func start`
 2. **WebSocket Testing**: Test GPT-Realtime connection
-3. **SignalR Testing**: Verify real-time communication
+3. **Speech Avatar Testing**: Verify real-time speech interaction
 4. **End-to-End**: Test complete voice agent flow
 
 ### Phase 4 - Azure Deployment:
 1. **Configuration**: Set up actual API keys and endpoints
-2. **Resource Provisioning**: Azure Functions, SignalR, Storage
+2. **Resource Provisioning**: Azure Functions, Speech Services, Storage
 3. **Production Testing**: Full cloud deployment validation
 
 ## 📁 Current Working Files:
@@ -89,7 +89,7 @@
 - **Framework**: .NET 8.0 with Azure Functions v4
 - **AI**: Microsoft Semantic Kernel + Azure AI Foundry GPT-Realtime
 - **Audio**: NAudio foundation for real-time voice processing
-- **Communication**: SignalR for real-time client updates
+- **Communication**: Speech Avatar for real-time voice interaction
 - **Architecture**: Multi-agent system with coordinator pattern
 - **Status**: Phase 1 complete, Phase 2 ready to implement
 

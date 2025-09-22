@@ -56,6 +56,14 @@ export const Dashboard: React.FC = () => {
       icon: '🤖',
       color: 'warning',
       disabled: false
+    },
+    {
+      title: 'Speech Avatar Experience',
+      description: 'Real-time voice interaction with AI behavioral health agents using Azure Speech Avatar',
+      href: '/speech-avatar-experience',
+      icon: '🎙️',
+      color: 'accent',
+      disabled: false
     }
   ];
 

@@ -11,7 +11,7 @@ import { APP_ROLES } from '@/config/authConfig';
 
 // Page components
 import { Dashboard } from '@/pages/Dashboard';
-import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, AgentExperience, SystemHealth, NotFound } from '@/pages';
+import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, AgentExperience, SpeechAvatarExperience, SystemHealth, NotFound } from '@/pages';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -102,6 +102,14 @@ function App() {
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
                           <AgentExperience />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/speech-avatar-experience" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
+                          <SpeechAvatarExperience userId="current-user" />
                         </ProtectedRoute>
                       } 
                     />

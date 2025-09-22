@@ -17,6 +17,8 @@ export { default as ControlPanel } from './ControlPanel';
 
 export { default as AgentExperience } from './AgentExperience';
 
+export { default as SpeechAvatarExperience } from '../components/SpeechAvatarExperience';
+
 export const SystemHealth: React.FC = () => {
   const { data: healthStatus, isLoading, error, refetch } = useHealthCheck();
   const { announce } = useAnnouncements();

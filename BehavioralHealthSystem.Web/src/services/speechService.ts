@@ -31,6 +31,7 @@ export class AdvancedSpeechService extends EventEmitter {
   private analyzer: AnalyserNode | null = null;
   private vadProcessor: ScriptProcessorNode | null = null;
   private stream: MediaStream | null = null;
+  private isInitialized = false;
   
   private isListening = false;
   private isVADActive = false;
@@ -50,33 +51,52 @@ export class AdvancedSpeechService extends EventEmitter {
   constructor(config?: Partial<SpeechConfig>) {
     super();
     this.config = { ...this.config, ...config };
+    console.log('🎤 SpeechService constructor called, starting initialization...');
+    // Don't await here to avoid blocking constructor, but ensure proper event emission
     this.initializeServices();
   }
 
   private async initializeServices(): Promise<void> {
     try {
+      console.log('🎤 Starting speech service initialization...');
+      
       // Initialize Speech Recognition
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         this.recognition = new SpeechRecognition();
         this.setupSpeechRecognition();
+        console.log('✅ Speech Recognition initialized');
+      } else {
+        console.log('❌ Speech Recognition not supported');
       }
 
       // Initialize Speech Synthesis
       if ('speechSynthesis' in window) {
         this.synthesis = window.speechSynthesis;
+        console.log('✅ Speech Synthesis initialized');
+      } else {
+        console.log('❌ Speech Synthesis not supported');
       }
 
       // Initialize Audio Context for VAD
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      console.log('✅ Audio Context initialized');
       
-      this.emit('initialized', {
+      const capabilities = {
         speechRecognition: !!this.recognition,
         speechSynthesis: !!this.synthesis,
         voiceActivityDetection: !!this.audioContext
-      });
+      };
+      
+      console.log('🎤 Speech service capabilities:', capabilities);
+      console.log('🎤 Emitting initialized event...');
+      
+      this.isInitialized = true;
+      this.emit('initialized', capabilities);
+      
+      console.log('✅ Speech service initialization complete');
     } catch (error) {
-      console.error('Error initializing speech services:', error);
+      console.error('❌ Error initializing speech services:', error);
       this.emit('error', { type: 'initialization', error });
     }
   }
@@ -365,7 +385,26 @@ export class AdvancedSpeechService extends EventEmitter {
   }
 
   public isAvailable(): boolean {
-    return !!(this.recognition && this.synthesis);
+    const available = !!(this.recognition && this.synthesis);
+    console.log('🎤 isAvailable() called:', {
+      recognition: !!this.recognition,
+      synthesis: !!this.synthesis,
+      isInitialized: this.isInitialized,
+      available
+    });
+    return available;
+  }
+
+  public getInitializationStatus(): boolean {
+    return this.isInitialized;
+  }
+
+  public async forceReinitialize(): Promise<void> {
+    console.log('🔄 Force reinitializing speech service...');
+    this.isInitialized = false;
+    this.recognition = null;
+    this.synthesis = null;
+    await this.initializeServices();
   }
 
   public isCurrentlyListening(): boolean {

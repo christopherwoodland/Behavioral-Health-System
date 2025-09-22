@@ -4,7 +4,7 @@ This project contains AI agents built with Microsoft Semantic Kernel for behavio
 
 ## Overview
 
-The agents use the Group Chat multi-agent architecture to collaborate and provide comprehensive behavioral health services. The system includes sophisticated agent handoff mechanisms, real-time communication via SignalR, and crisis detection capabilities for emergency interventions.
+The agents use the Group Chat multi-agent architecture to collaborate and provide comprehensive behavioral health services. The system includes sophisticated agent handoff mechanisms, real-time communication via Speech Avatar, and crisis detection capabilities for emergency interventions.
 
 ## Core Architecture
 
@@ -12,7 +12,7 @@ The agents use the Group Chat multi-agent architecture to collaborate and provid
 
 The agent system features comprehensive real-time communication capabilities:
 
-- **SignalR Integration** - Bidirectional real-time messaging between agents and clients
+- **Speech Avatar Integration** - Real-time voice-based messaging between agents and clients
 - **Agent Handoff Notifications** - Seamless transitions between specialized agents
 - **Typing Indicators** - Real-time feedback when agents are processing responses
 - **Session Management** - Persistent session tracking with unique identifiers
@@ -65,8 +65,8 @@ The Coordinator Agent manages workflows and routes requests between specialized 
 
 The agent system includes sophisticated real-time communication capabilities:
 
-**SignalR Integration:**
-- **Live Messaging** - Real-time bidirectional communication
+**Speech Avatar Integration:**
+- **Live Voice Communication** - Real-time speech-to-speech interaction
 - **Typing Indicators** - Visual feedback during agent processing
 - **Handoff Notifications** - Seamless agent transition announcements
 - **Session Tracking** - Persistent session management across interactions
@@ -77,28 +77,25 @@ The agent system includes sophisticated real-time communication capabilities:
 - **Crisis Escalation** - Immediate routing to crisis intervention specialists
 - **Performance Monitoring** - Real-time tracking of agent response times
 
-## Agent Communication Hub
+## Speech Avatar Communication
 
-The system includes a comprehensive communication infrastructure:
+The system includes a comprehensive Speech Avatar communication infrastructure:
 
 ```csharp
-// SignalR Hub for real-time agent communication
-public class AgentCommunicationHub : Hub
+// Speech Avatar Functions for real-time agent communication
+public class SpeechAvatarFunctions
 {
-    // Real-time messaging endpoints
-    public async Task SendUserMessage(string sessionId, string message);
-    public async Task NotifyAgentHandoff(string sessionId, AgentHandoffInfo handoff);
-    public async Task SendTypingIndicator(string sessionId, string agentName);
+    // Real-time speech endpoints
+    public async Task<string> CreateSession(string agentType);
+    public async Task<string> EndSession(string sessionId);
+    public async Task<string> GetAgents();
 }
 ```
 
 **Available Endpoints:**
-- `GET /api/negotiate` - SignalR connection negotiation
-- `POST /api/sendagentmessage` - Agent-to-client messaging
-- `POST /api/notifyagenthandoff` - Agent handoff notifications
-- `POST /api/notifyagenttyping` - Typing indicator updates
-- `POST /api/joinsession` - Session management
-- `POST /api/sendusermessage` - User message processing
+- `POST /api/speech-avatar/create-session` - Initialize new avatar session
+- `POST /api/speech-avatar/end-session` - Terminate avatar session
+- `GET /api/speech-avatar/agents` - List available behavioral health agents
 
 ## PHQ-9 Questionnaire
 

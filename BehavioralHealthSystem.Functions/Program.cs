@@ -6,7 +6,6 @@ using BehavioralHealthSystem.Agents.Services;
 // using BehavioralHealthSystem.Agents.Specialized;
 using BehavioralHealthSystem.Agents.Models;
 using Microsoft.SemanticKernel;
-using Microsoft.Azure.SignalR.Management;
 using System.Net.Http.Headers;
 using Azure.Storage.Blobs;
 
@@ -134,35 +133,15 @@ var host = new HostBuilder()
                 apiKey: context.Configuration["AZURE_OPENAI_API_KEY"] ?? string.Empty,
                 modelId: "gpt-4o");
 
-        // SignalR Management Service - Configured for Serverless mode
-        services.AddSingleton(provider =>
-        {
-            var config = provider.GetRequiredService<IConfiguration>();
-            var connectionString = config.GetConnectionString("AzureSignalRConnectionString") ?? 
-                                 config["AzureSignalRConnectionString"] ?? 
-                                 "Endpoint=https://your-signalr.service.signalr.net;AccessKey=your-access-key;Version=1.0;";
-            
-            return new ServiceManagerBuilder()
-                .WithOptions(option => 
-                {
-                    option.ConnectionString = connectionString;
-                    option.ServiceTransportType = ServiceTransportType.Transient;
-                })
-                .BuildServiceManager();
-        });
-
-        services.AddSingleton<IServiceHubContext>(provider =>
-        {
-            var serviceManager = provider.GetRequiredService<ServiceManager>();
-            return serviceManager.CreateHubContextAsync("AgentHub", default).Result;
-        });
-
         // Semantic Kernel Agent Services (temporarily disabled)
         services.AddScoped<SemanticKernelRealtimeService>();
         // services.AddScoped<SemanticKernelAgentCoordinator>();
         // services.AddScoped<SemanticKernelPhq2Agent>();
         // services.AddScoped<SemanticKernelComedianAgent>();
         services.AddScoped<SimpleAudioService>();
+
+        // Behavioral Health Agent Service (required for Speech Avatar Functions)
+        services.AddScoped<BehavioralHealthAgentService>();
 
         // HTTP Client with policies - Force immediate configuration
         services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
@@ -242,9 +221,6 @@ var host = new HostBuilder()
         // Health checks
         services.AddHealthChecks()
             .AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
-            
-        // SignalR Service
-        services.AddSignalR();
     })
     .Build();
 

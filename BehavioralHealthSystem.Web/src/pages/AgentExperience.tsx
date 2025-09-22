@@ -1,631 +1,71 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, Trash2, Volume2, VolumeX, Settings } from 'lucide-react';
-import { useKeyboardNavigation } from '@/hooks/accessibility';
-import { announceToScreenReader } from '@/utils';
-import { useSpeech } from '@/hooks/useSpeech';
-import { useSignalR } from '@/hooks/useSignalR';
-import { SpeechResult, VoiceActivityEvent } from '@/services/speechService';
-import { UserMessage } from '@/services/signalRService';
-import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
-import SpeechSettings from '@/components/SpeechSettings';
-import { runSpeechDiagnostics, formatDiagnosticsReport } from '@/utils/speechDiagnostics';
+﻿import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, MessageCircle } from 'lucide-react';
 
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant';
-  timestamp: Date;
-  isTyping?: boolean;
-}
-
-interface AgentState {
-  id: string;
-  name: string;
-  isActive: boolean;
-  isTyping: boolean;
-}
-
+/**
+ * AgentExperience Component - Redirects to Speech Avatar Experience
+ * 
+ * This component now redirects users to the new Speech Avatar experience
+ * which provides real-time AI agent interactions using Azure Speech services.
+ */
 export const AgentExperience: React.FC = () => {
-  const { handleEnterSpace } = useKeyboardNavigation();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputText, setInputText] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [currentAgent, setCurrentAgent] = useState<AgentState>({
-    id: 'coordinator',
-    name: 'Coordinator Agent',
-    isActive: true,
-    isTyping: false
-  });
-  const [isAudioOutputEnabled, setIsAudioOutputEnabled] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | undefined>();
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const navigate = useNavigate();
 
-  // SignalR integration for real-time communication
-  const signalR = useSignalR();
-
-  // Use the advanced speech service
-  const speech = useSpeech({
-    config: {
-      continuous: true,
-      interimResults: true,
-      language: 'en-US',
-      maxAlternatives: 2
-    },
-    onFinalResult: (results: SpeechResult[]) => {
-      if (results.length > 0 && results[0].transcript.trim()) {
-        setInputText(results[0].transcript.trim());
-        announceToScreenReader(`Voice input captured: ${results[0].transcript}`);
-      }
-    },
-    onVoiceActivity: (_event: VoiceActivityEvent) => {
-      // Voice activity is handled by the visualizer
-    },
-    onError: (error) => {
-      console.error('Advanced speech error:', error);
-      announceToScreenReader('Voice input error occurred');
-    }
-  });
-
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    // Auto-redirect after a short delay to show the user what's happening
+    const timer = setTimeout(() => {
+      navigate('/speech-avatar-experience');
+    }, 3000);
 
-  // Initialize SignalR connection and session
-  useEffect(() => {
-    const initializeSignalR = async () => {
-      try {
-        console.log('Attempting to connect to SignalR...');
-        
-        if (!signalR.isConnected) {
-          await signalR.connect();
-          console.log('SignalR connected successfully');
-          announceToScreenReader('Connected to real-time communication');
-        }
-        
-        // TODO: Re-enable after fixing session joining
-        // Generate a session ID and join
-        // const sessionId = `session-${Date.now()}`;
-        // await signalR.joinSession(sessionId);
-        // console.log('Joined SignalR session:', sessionId);
-        // announceToScreenReader('Joined communication session');
-      } catch (error) {
-        console.error('Failed to initialize SignalR:', error);
-        announceToScreenReader('Failed to connect to real-time communication');
-        
-        // Don't proceed without SignalR connection
-        throw error;
-      }
-    };
+    return () => clearTimeout(timer);
+  }, [navigate]);
 
-    initializeSignalR();
-
-    // Cleanup on unmount
-    return () => {
-      signalR.disconnect();
-    };
-  }, [signalR]);
-
-  // Handle real-time agent messages
-  useEffect(() => {
-    if (signalR.agentMessages.length > 0) {
-      const latestMessage = signalR.agentMessages[signalR.agentMessages.length - 1];
-      
-      // Convert SignalR message to local message format
-      const message: Message = {
-        id: `signalr-${Date.now()}`,
-        content: latestMessage.content,
-        role: 'assistant',
-        timestamp: new Date(latestMessage.timestamp)
-      };
-
-      setMessages(prev => {
-        // Avoid duplicates by checking if message already exists
-        const exists = prev.some(m => 
-          m.content === message.content && 
-          Math.abs(m.timestamp.getTime() - message.timestamp.getTime()) < 1000
-        );
-        
-        if (!exists) {
-          return [...prev, message];
-        }
-        return prev;
-      });
-
-      // Update current agent based on message
-      setCurrentAgent(prev => ({
-        ...prev,
-        name: latestMessage.agentName,
-        id: latestMessage.agentName.toLowerCase().replace(/\s+/g, '-'),
-        isTyping: false
-      }));
-
-      // Speak the response if audio output is enabled
-      speakMessage(latestMessage.content);
-      
-      announceToScreenReader(`Message from ${latestMessage.agentName}: ${latestMessage.content}`);
-    }
-  }, [signalR.agentMessages]);
-
-  // Handle agent handoff notifications
-  useEffect(() => {
-    if (signalR.handoffNotifications.length > 0) {
-      const latestHandoff = signalR.handoffNotifications[signalR.handoffNotifications.length - 1];
-      
-      // Update current agent
-      setCurrentAgent(prev => ({
-        ...prev,
-        name: latestHandoff.toAgent,
-        id: latestHandoff.toAgent.toLowerCase().replace(/\s+/g, '-'),
-        isTyping: false
-      }));
-
-      // Add system message about handoff
-      const handoffMessage: Message = {
-        id: `handoff-${Date.now()}`,
-        content: `Agent handoff: ${latestHandoff.reason}. You are now speaking with ${latestHandoff.toAgent}.`,
-        role: 'assistant',
-        timestamp: new Date(latestHandoff.timestamp)
-      };
-
-      setMessages(prev => [...prev, handoffMessage]);
-      announceToScreenReader(`Agent handoff: You are now speaking with ${latestHandoff.toAgent}`);
-    }
-  }, [signalR.handoffNotifications]);
-
-  // Handle agent typing indicators
-  useEffect(() => {
-    const typingAgents = Object.keys(signalR.agentTyping).filter(agent => signalR.agentTyping[agent]);
-    
-    if (typingAgents.length > 0) {
-      setCurrentAgent(prev => ({ ...prev, isTyping: true }));
-    } else {
-      setCurrentAgent(prev => ({ ...prev, isTyping: false }));
-    }
-  }, [signalR.agentTyping]);
-
-  // Initialize with welcome message
-  useEffect(() => {
-    const welcomeMessage: Message = {
-      id: '1',
-      content: "Hello! I'm your behavioral health assistant. I can help you with depression screenings, provide support, or just have a friendly conversation. What would you like to explore today?",
-      role: 'assistant',
-      timestamp: new Date()
-    };
-    setMessages([welcomeMessage]);
-  }, []);
-
-  const toggleListening = async () => {
-    try {
-      if (speech.isListening) {
-        speech.stopListening();
-        announceToScreenReader('Voice input stopped');
-      } else {
-        await speech.startListening();
-        announceToScreenReader('Voice input started');
-      }
-    } catch (error) {
-      console.error('Error toggling speech:', error);
-      announceToScreenReader('Error with voice input');
-    }
-  };
-
-  const speakMessage = async (text: string) => {
-    if (isAudioOutputEnabled && speech.isAvailable) {
-      try {
-        await speech.speak(text, {
-          rate: 0.9,
-          pitch: 1.0,
-          volume: 0.8,
-          voice: selectedVoice,
-          interrupt: true
-        });
-      } catch (error) {
-        console.error('Error speaking message:', error);
-      }
-    }
-  };
-
-  const toggleAudioOutput = () => {
-    setIsAudioOutputEnabled(!isAudioOutputEnabled);
-    if (!isAudioOutputEnabled) {
-      announceToScreenReader('Audio output enabled');
-    } else {
-      announceToScreenReader('Audio output disabled');
-      // Cancel any ongoing speech using the advanced speech service
-      if (speech.isAvailable && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!inputText.trim() || isProcessing) return;
-
-    // Require SignalR connection - no fallback mode
-    if (!signalR.isConnected) {
-      announceToScreenReader('Real-time connection required but not available');
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "Connection to real-time services is required. Please wait for the connection to be established.",
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputText.trim(),
-      role: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    const messageText = inputText.trim();
-    setInputText('');
-    setIsProcessing(true);
-    setCurrentAgent(prev => ({ ...prev, isTyping: true }));
-
-    try {
-      // Send message through SignalR for real-time processing
-      const signalRMessage: UserMessage = {
-        content: messageText,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          speechConfidence: 1.0, // Default confidence
-          voiceActivityLevel: speech.volume,
-          processingTime: 0
-        }
-      };
-
-      await signalR.sendMessage(signalRMessage);
-      announceToScreenReader('Message sent to agent');
-
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'm sorry, I encountered an error processing your message. Please check your connection and try again.",
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-      announceToScreenReader('Error sending message');
-    } finally {
-      setIsProcessing(false);
-      // Note: SignalR handles typing indicator updates via events
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const clearConversation = () => {
-    setMessages([]);
-    setCurrentAgent({
-      id: 'coordinator',
-      name: 'Coordinator Agent',
-      isActive: true,
-      isTyping: false
-    });
-    announceToScreenReader('Conversation cleared');
-  };
-
-  const runDiagnostics = async () => {
-    try {
-      const diagnostics = await runSpeechDiagnostics();
-      const report = formatDiagnosticsReport(diagnostics);
-      console.log('Speech Diagnostics Report:');
-      console.log(report);
-      
-      // Also show in messages for easier viewing
-      const diagnosticMessage: Message = {
-        id: Date.now().toString(),
-        content: `Speech Diagnostics Report:\n\n${report}`,
-        role: 'assistant',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, diagnosticMessage]);
-      
-      announceToScreenReader('Speech diagnostics completed, check console and messages');
-    } catch (error) {
-      console.error('Diagnostics failed:', error);
-      announceToScreenReader('Speech diagnostics failed');
-    }
+  const handleRedirectNow = () => {
+    navigate('/speech-avatar-experience');
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
-          {/* Animated Bot Visualization with Voice Activity */}
-          <div className="relative">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-              currentAgent.isTyping 
-                ? 'bg-primary-500 animate-pulse' 
-                : currentAgent.isActive 
-                  ? 'bg-green-500' 
-                  : 'bg-gray-400'
-            }`}>
-              <span className="text-white text-lg">🤖</span>
-            </div>
-            {/* Pulsing indicator when agent is active */}
-            {currentAgent.isActive && (
-              <div className="absolute -inset-1 rounded-full bg-green-400 opacity-30 animate-ping"></div>
-            )}
-            {/* Voice activity indicator */}
-            {speech.isListening && (
-              <div className="absolute -bottom-1 -right-1">
-                <VoiceActivityVisualizer 
-                  volume={speech.volume}
-                  isVoiceActive={speech.isVoiceActive}
-                  isListening={speech.isListening}
-                  size="sm"
-                />
-              </div>
-            )}
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 text-center">
+        <div className="mb-6">
+          <div className="bg-blue-100 dark:bg-blue-900 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
-          
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Agent Experience
-            </h1>
-            <div className="flex items-center space-x-2">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Current Agent: {currentAgent.name}
-                {currentAgent.isTyping && (
-                  <span className="ml-2 text-primary-600 dark:text-primary-400">
-                    <span className="animate-pulse">Typing...</span>
-                  </span>
-                )}
-              </p>
-              
-              {/* Connection Status */}
-              <div className="flex items-center space-x-1">
-                <div className={`w-2 h-2 rounded-full ${
-                  signalR.isConnected ? 'bg-green-500' : 'bg-red-500'
-                }`}></div>
-                <span className={`text-xs ${
-                  signalR.isConnected 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
-                  {signalR.isConnected ? 'Connected' : 'Connection Required'}
-                </span>
-              </div>
-            </div>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+            Agent Experience Upgraded
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            We've upgraded the agent experience with our new Speech Avatar technology 
+            for more natural, real-time conversations.
+          </p>
         </div>
 
-        <div className="flex items-center space-x-2">
-          {/* Speech Settings */}
+        <div className="space-y-4">
           <button
-            onClick={() => setIsSettingsOpen(true)}
-            onKeyDown={handleEnterSpace(() => setIsSettingsOpen(true))}
-            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Open speech settings"
-            title="Speech settings"
+            onClick={handleRedirectNow}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center gap-2"
           >
-            <Settings size={20} />
+            Go to Speech Avatar Experience
+            <ArrowRight className="h-4 w-4" />
           </button>
 
-          {/* Audio Output Toggle */}
-          <button
-            onClick={toggleAudioOutput}
-            onKeyDown={handleEnterSpace(toggleAudioOutput)}
-            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              isAudioOutputEnabled
-                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-            }`}
-            aria-label={`${isAudioOutputEnabled ? 'Disable' : 'Enable'} audio output`}
-            title={`${isAudioOutputEnabled ? 'Disable' : 'Enable'} audio output`}
-          >
-            {isAudioOutputEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
-          </button>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Redirecting automatically in a few seconds...
+          </p>
+        </div>
 
-          {/* Clear Conversation */}
-          <button
-            onClick={clearConversation}
-            onKeyDown={handleEnterSpace(clearConversation)}
-            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Clear conversation"
-            title="Clear conversation"
-          >
-            <Trash2 size={20} />
-          </button>
-
-          {/* Speech Diagnostics */}
-          <button
-            onClick={runDiagnostics}
-            onKeyDown={handleEnterSpace(runDiagnostics)}
-            className="p-2 rounded-lg bg-yellow-100 text-yellow-600 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 dark:hover:bg-yellow-800 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Run speech diagnostics"
-            title="Run speech diagnostics to troubleshoot speech issues"
-          >
-            🔧
-          </button>
+        <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+          <h3 className="font-medium text-gray-900 dark:text-white mb-2">
+            What's New:
+          </h3>
+          <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1 text-left">
+            <li> Real-time speech interaction</li>
+            <li> Visual avatar representation</li>
+            <li> Enhanced behavioral health assessments</li>
+            <li> Improved agent coordination</li>
+          </ul>
         </div>
       </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              }`}
-            >
-              <p className="text-sm">{message.content}</p>
-              <p className={`text-xs mt-1 opacity-70 ${
-                message.role === 'user' ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'
-              }`}>
-                {message.timestamp.toLocaleTimeString()}
-              </p>
-            </div>
-          </div>
-        ))}
-        
-        {/* Typing indicator */}
-        {currentAgent.isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100"></div>
-                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200"></div>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-end space-x-2">
-          {/* Voice Input Button - Always show for debugging */}
-          <button
-            onClick={toggleListening}
-            onKeyDown={handleEnterSpace(toggleListening)}
-            disabled={isProcessing || !speech.isAvailable || !signalR.isConnected}
-            className={`p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              !speech.isAvailable || !signalR.isConnected
-                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                : speech.isListening
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'bg-primary-600 text-white hover:bg-primary-700 disabled:bg-gray-400'
-            }`}
-            aria-label={
-              !signalR.isConnected
-                ? 'Real-time connection required'
-                : !speech.isAvailable 
-                  ? 'Voice input not available' 
-                  : speech.isListening 
-                    ? 'Stop voice input' 
-                    : 'Start voice input'
-            }
-            title={
-              !signalR.isConnected
-                ? 'Real-time connection required for voice input'
-                : !speech.isAvailable 
-                  ? `Voice input not available. Available: ${speech.isAvailable}, Initialized: ${speech.isInitialized}, Error: ${speech.error || 'None'}` 
-                  : speech.isListening 
-                    ? 'Stop voice input' 
-                    : 'Start voice input'
-            }
-          >
-            {speech.isListening ? <MicOff size={20} /> : <Mic size={20} />}
-          </button>
-
-          {/* Text Input */}
-          <div className="flex-1">
-            <textarea
-              ref={textareaRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={signalR.isConnected ? "Type your message here or use voice input..." : "Waiting for real-time connection..."}
-              disabled={isProcessing || !signalR.isConnected}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 min-h-[44px] max-h-[120px]"
-              rows={1}
-              aria-label="Message input"
-            />
-          </div>
-
-          {/* Send Button */}
-          <button
-            onClick={sendMessage}
-            onKeyDown={handleEnterSpace(sendMessage)}
-            disabled={!inputText.trim() || isProcessing || !signalR.isConnected}
-            className="p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Send message"
-            title="Send message"
-          >
-            <Send size={20} />
-          </button>
-        </div>
-
-        {/* Status indicators */}
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center space-x-4">
-            {speech.isListening && (
-              <span className="flex items-center space-x-1 text-red-600 dark:text-red-400">
-                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></div>
-                <span>Listening...</span>
-              </span>
-            )}
-            
-            {speech.isVoiceActive && (
-              <span className="flex items-center space-x-1 text-green-600 dark:text-green-400">
-                <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-                <span>Voice detected</span>
-              </span>
-            )}
-            
-            {/* Speech Service Debug Info */}
-            <span className={`text-xs ${speech.isAvailable ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              Speech: {speech.isAvailable ? 'Available' : 'Unavailable'} | Init: {speech.isInitialized ? 'Yes' : 'No'}
-            </span>
-            
-            {speech.error && (
-              <span className="text-red-600 dark:text-red-400">Speech error: {speech.error}</span>
-            )}
-            
-            {signalR.error && (
-              <span className="text-red-600 dark:text-red-400">Connection error: {signalR.error}</span>
-            )}
-            
-            {isAudioOutputEnabled && (
-              <span className="text-blue-600 dark:text-blue-400">Audio output enabled</span>
-            )}
-            
-            {signalR.sessionId && (
-              <span className="text-gray-600 dark:text-gray-400">
-                Session: {signalR.sessionId.slice(-8)}
-              </span>
-            )}
-          </div>
-          
-          <span>Press Enter to send, Shift+Enter for new line</span>
-        </div>
-      </div>
-
-      {/* Speech Settings Modal */}
-      <SpeechSettings
-        config={{
-          language: 'en-US',
-          continuous: true,
-          interimResults: true,
-          maxAlternatives: 2,
-          audioTracks: true,
-          noiseReduction: true,
-          echoCancellation: true
-        }}
-        availableVoices={speech.availableVoices}
-        selectedVoice={selectedVoice}
-        onConfigUpdate={(config) => speech.updateConfig(config)}
-        onVoiceSelect={(voice) => setSelectedVoice(voice)}
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
     </div>
   );
 };

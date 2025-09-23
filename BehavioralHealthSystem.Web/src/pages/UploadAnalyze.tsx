@@ -230,6 +230,11 @@ const UploadAnalyze: React.FC = () => {
     }
   }, [userMetadata.userId]);
 
+  // Update isMultiMode based on processing mode
+  useEffect(() => {
+    setIsMultiMode(processingMode !== 'single');
+  }, [processingMode]);
+
   // Helper function to get authenticated user ID for blob storage
   const getAuthenticatedUserId = useCallback((): string => {
     // Use authenticated user ID if available, otherwise fall back to getUserId utility
@@ -319,6 +324,13 @@ const UploadAnalyze: React.FC = () => {
   };
 
   const addAudioFile = useCallback((file: File, metadata?: UserMetadata) => {
+    console.log('addAudioFile called', { 
+      fileName: file.name, 
+      processingMode, 
+      isMultiMode, 
+      metadata: !!metadata 
+    });
+    
     const id = generateFileId();
     const url = URL.createObjectURL(file);
     
@@ -368,7 +380,7 @@ const UploadAnalyze: React.FC = () => {
         setAudioFile(prev => prev ? { ...prev, duration: audio.duration } : null);
       }
     });
-  }, [isMultiMode, announceToScreenReader]);
+  }, [isMultiMode, announceToScreenReader, processingMode, userMetadata]);
 
   const removeAudioFile = useCallback((fileId: string) => {
     if (isMultiMode) {
@@ -728,11 +740,15 @@ const UploadAnalyze: React.FC = () => {
   }, [csvBatchData, addAudioFile, addToast, announceToScreenReader]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('handleFileSelect called', { processingMode, isMultiMode });
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
+    console.log('Files selected:', files.length, 'files');
+
     // Process multiple files or single file
     Array.from(files).forEach(file => {
+      console.log('Processing file:', file.name, file.type, file.size);
       // Validate file type - check both MIME type and file extension
       const supportedMimeTypes = [
         'audio/wav', 'audio/wave', 'audio/x-wav',

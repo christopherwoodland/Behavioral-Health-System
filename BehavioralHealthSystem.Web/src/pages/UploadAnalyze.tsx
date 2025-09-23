@@ -324,13 +324,6 @@ const UploadAnalyze: React.FC = () => {
   };
 
   const addAudioFile = useCallback((file: File, metadata?: UserMetadata) => {
-    console.log('addAudioFile called', { 
-      fileName: file.name, 
-      processingMode, 
-      isMultiMode, 
-      metadata: !!metadata 
-    });
-    
     const id = generateFileId();
     const url = URL.createObjectURL(file);
     
@@ -737,18 +730,14 @@ const UploadAnalyze: React.FC = () => {
         });
       }, 2000);
     }
-  }, [csvBatchData, addAudioFile, addToast, announceToScreenReader]);
+  }, [csvBatchData, addAudioFile, addToast, announceToScreenReader, audioFiles]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('handleFileSelect called', { processingMode, isMultiMode });
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    console.log('Files selected:', files.length, 'files');
-
     // Process multiple files or single file
     Array.from(files).forEach(file => {
-      console.log('Processing file:', file.name, file.type, file.size);
       // Validate file type - check both MIME type and file extension
       const supportedMimeTypes = [
         'audio/wav', 'audio/wave', 'audio/x-wav',
@@ -3043,9 +3032,15 @@ const UploadAnalyze: React.FC = () => {
       )}
 
       {/* Analyze Button */}
-      {((processingMode !== 'single' && audioFiles.length > 0) || (processingMode === 'single' && audioFile)) && 
-       !result && Object.keys(results).length === 0 && 
-       progress.stage === 'idle' && !isProcessing && (
+      {(() => {
+        const hasFiles = (processingMode !== 'single' && audioFiles.length > 0) || (processingMode === 'single' && audioFile);
+        const csvMode = processingMode === 'batch-csv' && csvBatchData && !csvProcessingProgress.isProcessing;
+        const shouldShowButton = (hasFiles || csvMode) && 
+               !result && Object.keys(results).length === 0 && 
+               progress.stage === 'idle' && !isProcessing;
+        
+        return shouldShowButton;
+      })() && (
         <div className="text-center">
           {processingMode !== 'single' ? (
             // Multi-file mode controls

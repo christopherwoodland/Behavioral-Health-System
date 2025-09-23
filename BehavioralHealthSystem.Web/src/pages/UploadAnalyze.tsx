@@ -6,7 +6,7 @@ import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
 import { apiService, PredictionPoller } from '../services/api';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { getStoredProcessingMode, setStoredProcessingMode, getUserId } from '../utils';
+import { getStoredProcessingMode, setStoredProcessingMode, getStoredProcessingModeBoolean, getUserId } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
@@ -133,9 +133,9 @@ const UploadAnalyze: React.FC = () => {
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [processingMode, setProcessingMode] = useState<ProcessingMode>(() => {
     const stored = getStoredProcessingMode();
-    return stored ? 'batch-files' : 'single';
+    return stored as ProcessingMode;
   });
-  const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingMode()); // Keep for backward compatibility
+  const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingModeBoolean()); // Keep for backward compatibility
   
   // Update isMultiMode based on processing mode
   const [processingProgress, setProcessingProgress] = useState<ProcessingProgress>({});
@@ -791,8 +791,9 @@ const UploadAnalyze: React.FC = () => {
   const toggleMode = useCallback(() => {
     setIsMultiMode(prev => {
       const newMode = !prev;
+      const processingModeString = newMode ? 'batch-files' : 'single';
       // Save to localStorage
-      setStoredProcessingMode(newMode);
+      setStoredProcessingMode(processingModeString);
       // Clear files when switching modes
       resetState();
       return newMode;
@@ -1987,7 +1988,7 @@ const UploadAnalyze: React.FC = () => {
                     type="button"
                     onClick={() => {
                       setProcessingMode(mode as ProcessingMode);
-                      setStoredProcessingMode(mode !== 'single'); // Convert to boolean for storage
+                      setStoredProcessingMode(mode); // Save the actual mode string
                       // Clear any existing files when switching modes
                       if (mode === 'single') {
                         setAudioFiles([]);

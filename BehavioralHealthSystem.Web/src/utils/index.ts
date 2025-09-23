@@ -78,18 +78,34 @@ export const setStoredTheme = (theme: Theme): void => {
 };
 
 // Processing mode management
-export const getStoredProcessingMode = (): boolean => {
+export const getStoredProcessingMode = (): string => {
   const stored = localStorage.getItem(STORAGE_KEYS.PROCESSING_MODE);
-  if (stored === 'true' || stored === 'false') {
-    return stored === 'true';
+  
+  // Handle new format with explicit mode values
+  if (stored === 'single' || stored === 'batch-files' || stored === 'batch-csv') {
+    return stored;
+  }
+  
+  // Handle legacy boolean format for backward compatibility
+  if (stored === 'true') {
+    return 'batch-files';
+  }
+  if (stored === 'false') {
+    return 'single';
   }
   
   // Default to single file mode
-  return false;
+  return 'single';
 };
 
-export const setStoredProcessingMode = (isMultiMode: boolean): void => {
-  localStorage.setItem(STORAGE_KEYS.PROCESSING_MODE, isMultiMode.toString());
+export const setStoredProcessingMode = (mode: string): void => {
+  localStorage.setItem(STORAGE_KEYS.PROCESSING_MODE, mode);
+};
+
+// Legacy function for backward compatibility
+export const getStoredProcessingModeBoolean = (): boolean => {
+  const mode = getStoredProcessingMode();
+  return mode !== 'single';
 };
 
 // File utilities

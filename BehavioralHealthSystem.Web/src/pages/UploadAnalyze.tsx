@@ -306,18 +306,81 @@ const UploadAnalyze: React.FC = () => {
   }, [prefilledData, addToast, isMultiMode]); // Include dependencies
 
   const resetState = useCallback(() => {
+    // Stop and reset audio player
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    
+    // Clean up any URL object references to prevent memory leaks
+    audioFiles.forEach(file => {
+      if (file.url) {
+        URL.revokeObjectURL(file.url);
+      }
+    });
+    if (audioFile?.url) {
+      URL.revokeObjectURL(audioFile.url);
+    }
+    
+    // Clear file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    // Clear all file-related state
     setAudioFiles([]);
     setAudioFile(null);
-    setProgress({ stage: 'idle', progress: 0, message: '' });
-    setResult(null);
     setResults({});
     setProcessingProgress({});
+    setFileStates({});
+    
+    // Clear single file progress and results
+    setProgress({ stage: 'idle', progress: 0, message: '' });
+    setResult(null);
     setError(null);
+    
+    // Clear processing states
+    setIsProcessing(false);
+    
+    // Clear CSV batch state
+    setCsvBatchData(null);
+    setCsvValidationErrors([]);
+    setCsvProcessingProgress({
+      isProcessing: false,
+      currentFile: 0,
+      totalFiles: 0,
+      currentFileName: '',
+      message: ''
+    });
+    
+    // Clear batch processing state
+    setBatchProcessingProgress({
+      isProcessing: false,
+      currentFile: 0,
+      totalFiles: 0,
+      currentFileName: '',
+      message: ''
+    });
+    
+    // Clear audio player state
     setIsPlaying(false);
     setCurrentTime(0);
     setPlayingFileId(null);
-    setIsProcessing(false);
-  }, []);
+    
+    // Clear validation errors
+    setValidationErrors({});
+    setTempValidationErrors({});
+    
+    // Clear modal and editing state
+    setEditingFileMetadata(null);
+    setTempMetadata(defaultUserMetadata);
+    
+    // Clear grammar correction state
+    setIsCorrectingGrammar(false);
+    
+    // Clear any toast messages
+    setToasts([]);
+  }, [audioFiles, audioFile]);
 
   const generateFileId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -1989,20 +2052,12 @@ const UploadAnalyze: React.FC = () => {
                     onClick={() => {
                       setProcessingMode(mode as ProcessingMode);
                       setStoredProcessingMode(mode); // Save the actual mode string
-                      // Clear any existing files when switching modes
-                      if (mode === 'single') {
-                        setAudioFiles([]);
-                        setFileStates({});
-                        setProcessingProgress({});
-                        setResults({});
-                      } else {
-                        setAudioFile(null);
-                      }
-                      // Clear CSV data when not in CSV mode
-                      if (mode !== 'batch-csv') {
-                        setCsvBatchData(null);
-                        setCsvValidationErrors([]);
-                      }
+                      
+                      // Completely reset all state when switching modes
+                      resetState();
+                      
+                      // Announce the mode change to screen readers
+                      announceToScreenReader(`Switched to ${mode === 'single' ? 'Single File' : mode === 'batch-files' ? 'Batch Files' : 'CSV Batch'} mode`);
                     }}
                     className={`px-3 py-1 text-xs font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                       processingMode === mode

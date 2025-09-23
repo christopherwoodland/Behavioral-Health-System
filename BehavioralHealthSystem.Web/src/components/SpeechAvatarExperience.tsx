@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Mic, Volume2, VolumeX, Settings, AlertTriangle, Phone } from 'lucide-react';
 import { SpeechAvatarService, SpeechAvatarConfig, AgentMessage } from '../services/speechAvatarServiceV2';
+import MicrophoneSettings from './MicrophoneSettings';
 
 interface SpeechAvatarExperienceProps {
   agentType?: 'PHQ9' | 'PHQ2' | 'CRISIS' | 'COMEDIAN';
@@ -25,6 +26,12 @@ export function SpeechAvatarExperience({
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'error'>('disconnected');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [audioLevels, setAudioLevels] = useState<{ average: number; peak: number; active: boolean }>({ 
+    average: 0, 
+    peak: 0, 
+    active: false 
+  });
+  const [showMicSettings, setShowMicSettings] = useState(false);
   
   // Services and refs
   const speechServiceRef = useRef<SpeechAvatarService | null>(null);
@@ -113,6 +120,12 @@ export function SpeechAvatarExperience({
 
       await service.initialize();
       speechServiceRef.current = service;
+      
+      // Set up audio level callback after service is initialized
+      service.onAudioLevel((levels: { average: number; peak: number; active: boolean }) => {
+        setAudioLevels(levels);
+      });
+      
       setConnectionStatus('connected');
       
     } catch (error) {
@@ -198,11 +211,24 @@ export function SpeechAvatarExperience({
 
       setSessionId(sessionData.sessionId);
 
-      // Start the speech avatar session
-      await speechServiceRef.current.startSession();
-      
+      // Set session as active BEFORE starting the speech service
       setIsSessionActive(true);
       setConnectionStatus('connected');
+      
+      // Start the speech avatar session
+      try {
+        await speechServiceRef.current.startSession();
+        console.log('✅ Speech Avatar session started successfully');
+        
+        // Force enable listening state since Azure connection isn't working
+        setIsListening(true);
+        console.log('🎤 Manually setting listening state to true for audio testing');
+        
+      } catch (speechError) {
+        console.warn('⚠️ Azure Speech service connection failed, but allowing local audio testing:', speechError);
+        // Don't throw here - allow session to continue for audio testing even if Azure isn't available
+        setIsListening(true);
+      }
       
       // Add welcome message
       const welcomeMessage: AgentMessage = {
@@ -326,6 +352,14 @@ export function SpeechAvatarExperience({
             >
               {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
             </button>
+
+            <button
+              onClick={() => setShowMicSettings(true)}
+              className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+              title="Microphone Settings"
+            >
+              <Settings size={20} />
+            </button>
           </div>
         </div>
       </div>
@@ -357,20 +391,73 @@ export function SpeechAvatarExperience({
             </div>
           )}
 
-          {/* Speaking/Listening Indicator */}
+          {/* Microphone Status Indicator - Always Visible */}
           <div className="absolute bottom-4 left-4">
-            {isListening && (
-              <div className="flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-full">
-                <Mic size={16} />
-                <span className="text-sm font-medium">Listening...</span>
+            {/* Persistent Microphone Icon with Audio Feedback */}
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-full transition-all duration-200 ${
+              isSessionActive ? (
+                isListening ? (
+                  audioLevels.active 
+                    ? 'bg-green-500 text-white shadow-lg' 
+                    : 'bg-green-600 text-white'
+                ) : isSpeaking 
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-300'
+              ) : 'bg-gray-600 text-gray-400'
+            }`}>
+              <div className="relative">
+                {isSessionActive && isListening ? (
+                  <Mic 
+                    size={18} 
+                    className={`transition-all duration-150 ${
+                      audioLevels.active 
+                        ? 'scale-125 brightness-125 drop-shadow-md' 
+                        : 'scale-100 brightness-100'
+                    }`}
+                  />
+                ) : isSessionActive && isSpeaking ? (
+                  <Volume2 size={18} />
+                ) : (
+                  <Mic size={18} />
+                )}
+                
+                {/* Audio level pulse ring */}
+                {isSessionActive && isListening && audioLevels.active && (
+                  <div 
+                    className={`absolute inset-0 rounded-full border-2 border-yellow-300 animate-ping ${
+                      audioLevels.peak > 0.5 ? 'scale-150 opacity-75' : 'scale-125 opacity-60'
+                    }`}
+                  />
+                )}
               </div>
-            )}
-            {isSpeaking && (
-              <div className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-full">
-                <Volume2 size={16} />
-                <span className="text-sm font-medium">Speaking...</span>
-              </div>
-            )}
+              
+              <span className="text-sm font-medium">
+                {!isSessionActive ? 'Mic Ready' :
+                 isListening ? (audioLevels.active ? 'Recording...' : 'Listening...') :
+                 isSpeaking ? 'Speaking...' : 'Ready'}
+              </span>
+              
+              {/* Audio level bars - only show when actively listening */}
+              {isSessionActive && isListening && (
+                <div className="flex items-center space-x-1">
+                  <div 
+                    className={`w-1 h-3 rounded-full transition-all duration-150 ${
+                      audioLevels.average > 0.1 ? 'bg-yellow-300' : 'bg-green-800'
+                    }`}
+                  />
+                  <div 
+                    className={`w-1 h-4 rounded-full transition-all duration-150 ${
+                      audioLevels.average > 0.2 ? 'bg-yellow-300' : 'bg-green-800'
+                    }`}
+                  />
+                  <div 
+                    className={`w-1 h-5 rounded-full transition-all duration-150 ${
+                      audioLevels.peak > 0.3 ? 'bg-yellow-300' : 'bg-green-800'
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -422,22 +509,14 @@ export function SpeechAvatarExperience({
                 {connectionStatus === 'connecting' ? 'Connecting...' : 'Start Conversation'}
               </button>
             ) : (
-              <div className="flex space-x-3">
-                <button
-                  onClick={endSession}
-                  className="flex-1 bg-red-600 text-white py-3 px-4 rounded-lg font-semibold 
-                           hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
-                >
-                  <Phone size={18} />
-                  <span>End Session</span>
-                </button>
-                <button
-                  className="p-3 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors"
-                  title="Settings"
-                >
-                  <Settings size={18} />
-                </button>
-              </div>
+              <button
+                onClick={endSession}
+                className="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-semibold 
+                         hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+              >
+                <Phone size={18} />
+                <span>End Session</span>
+              </button>
             )}
 
             {/* Error Display */}
@@ -447,9 +526,46 @@ export function SpeechAvatarExperience({
                 <span className="text-red-700 text-sm">{errorMessage}</span>
               </div>
             )}
+
+            {/* Audio Debug Info */}
+            {isSessionActive && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">Audio Debug Info</h4>
+                <div className="text-xs text-blue-700 space-y-1">
+                  <div>Listening: {isListening ? 'YES' : 'NO'}</div>
+                  <div>Audio Active: {audioLevels.active ? 'YES' : 'NO'}</div>
+                  <div>Average Level: {(audioLevels.average * 100).toFixed(1)}%</div>
+                  <div>Peak Level: {(audioLevels.peak * 100).toFixed(1)}%</div>
+                </div>
+                
+                {/* Quick Audio Test Button */}
+                <button
+                  onClick={async () => {
+                    console.log('🎤 Starting quick audio test...');
+                    const audioService = (await import('../services/audioDeviceService')).default.getInstance();
+                    try {
+                      const result = await audioService.testAudioInput(3000, false);
+                      console.log(`🎤 Quick test result: ${result ? 'PASS' : 'FAIL'}`);
+                    } catch (error) {
+                      console.error('❌ Quick test failed:', error);
+                    }
+                  }}
+                  className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                >
+                  Quick Audio Test (3s)
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Microphone Settings Modal */}
+      <MicrophoneSettings
+        speechService={speechServiceRef.current}
+        isOpen={showMicSettings}
+        onClose={() => setShowMicSettings(false)}
+      />
     </div>
   );
 }

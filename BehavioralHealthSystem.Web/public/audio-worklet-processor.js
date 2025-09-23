@@ -33,7 +33,7 @@ class AudioInputProcessor extends AudioWorkletProcessor {
             samples: inputChannel.length,
             average: average,
             peak: peak,
-            active: peak > 0.01
+            active: peak > 0.001 // Much lower threshold - 0.1% instead of 1%
           });
         }
         

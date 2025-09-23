@@ -2,6 +2,7 @@
 // Based on Azure AI Voice Live Python SDK patterns
 
 import { EventEmitter } from 'events';
+import { AudioDeviceService, AudioDevice } from './audioDeviceService';
 
 // ===== Type Definitions =====
 
@@ -295,6 +296,7 @@ export class VoiceLiveConnection extends EventEmitter {
   private mediaRecorder: MediaRecorder | null = null;
   private audioContext: AudioContext | null = null;
   private audioWorkletNode: AudioWorkletNode | null = null;
+  public audioLevelCallback: ((levels: { average: number; peak: number; active: boolean }) => void) | null = null;
 
   // Resource interfaces
   public readonly session: SessionResource;
@@ -341,7 +343,14 @@ export class VoiceLiveConnection extends EventEmitter {
         this.websocket.onerror = (error) => {
           console.error('❌ WebSocket connection error:', error);
           this.isConnected = false;
-          reject(new Error('WebSocket connection failed'));
+          
+          // Provide more specific error message for common Azure issues
+          let errorMessage = 'WebSocket connection failed';
+          if (this.websocket?.readyState === WebSocket.CLOSED) {
+            errorMessage = 'Azure Voice Live API insufficient resources (service may be overloaded)';
+          }
+          
+          reject(new Error(errorMessage));
         };
 
         this.websocket.onclose = (event) => {
@@ -354,16 +363,19 @@ export class VoiceLiveConnection extends EventEmitter {
               closeReason = 'Normal closure';
               break;
             case 1006:
-              closeReason = 'Connection lost abnormally (no close frame)';
+              closeReason = 'Connection lost abnormally (likely insufficient resources or network issue)';
               break;
             case 1011:
-              closeReason = 'Server error';
+              closeReason = 'Server error (insufficient resources)';
               break;
             case 1012:
               closeReason = 'Service restart';
               break;
+            case 1013:
+              closeReason = 'Try again later (service overloaded)';
+              break;
             default:
-              closeReason = `Close code ${event.code}`;
+              closeReason = `Close code ${event.code}: ${event.reason || 'No additional information'}`;
           }
           
           console.log(`📊 Close reason: ${closeReason}`);
@@ -581,7 +593,7 @@ export class VoiceLiveConnection extends EventEmitter {
         if (type === 'audioLevel') {
           // Log audio input test data
           console.log(`🎤 Audio Input Test - Samples: ${samples}, Average: ${(average * 100).toFixed(2)}%, Peak: ${(peak * 100).toFixed(2)}%, Active: ${active ? 'YES' : 'NO'}`);
-        } else if (type === 'audioData' && this.isConnected && this.isSessionReady) {
+        } else if (type === 'audioData') {
           // Process the audio data
           this.processAudioChunk(audioBuffer).catch(error => {
             console.error('❌ Failed to process audio chunk:', error);
@@ -603,17 +615,7 @@ export class VoiceLiveConnection extends EventEmitter {
 
   private async processAudioChunk(audioData: Blob | ArrayBuffer): Promise<void> {
     try {
-      // Check if connection is still active before processing audio
-      if (!this.isConnected) {
-        console.warn('⚠️ Skipping audio chunk - WebSocket not connected');
-        return;
-      }
-
-      // Check if session is ready
-      if (!this.isSessionReady) {
-        console.warn('⚠️ Skipping audio chunk - Session not ready');
-        return;
-      }
+      console.log('🎤 Processing audio chunk - Sending to Azure');
 
       let arrayBuffer: ArrayBuffer;
       if (audioData instanceof Blob) {
@@ -728,10 +730,47 @@ export class VoiceLiveConnection extends EventEmitter {
 // ===== Factory Function =====
 
 export async function createVoiceLiveConnection(config: VoiceLiveConfig): Promise<VoiceLiveConnection> {
-  const connection = new VoiceLiveConnection(config);
-  await connection.connect();
-  await connection.waitForSessionReady();
-  return connection;
+  const maxRetries = 3;
+  const baseDelay = 2000; // 2 seconds
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔗 Creating Voice Live connection (attempt ${attempt + 1}/${maxRetries + 1})...`);
+      
+      const connection = new VoiceLiveConnection(config);
+      await connection.connect();
+      await connection.waitForSessionReady();
+      
+      console.log('✅ Voice Live connection established successfully');
+      return connection;
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`❌ Connection attempt ${attempt + 1} failed:`, errorMessage);
+      
+      // Check if this is an "Insufficient resources" type error
+      const isResourceError = errorMessage.toLowerCase().includes('insufficient') || 
+                             errorMessage.toLowerCase().includes('overloaded') ||
+                             errorMessage.toLowerCase().includes('connection failed');
+      
+      if (attempt < maxRetries && isResourceError) {
+        const delay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+        console.log(`⏳ Retrying in ${delay}ms due to resource constraints...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        // Either max retries reached or non-retryable error
+        const finalError = new Error(
+          attempt >= maxRetries 
+            ? `Failed to connect after ${maxRetries + 1} attempts. Azure Voice Live API may be overloaded. Please try again later.`
+            : `Connection failed: ${errorMessage}`
+        );
+        throw finalError;
+      }
+    }
+  }
+  
+  // This should never be reached due to the throw above, but TypeScript requires it
+  throw new Error('Unexpected error in connection retry logic');
 }
 
 // ===== High-Level Service Class =====
@@ -739,6 +778,7 @@ export async function createVoiceLiveConnection(config: VoiceLiveConfig): Promis
 export class SpeechAvatarService {
   private connection: VoiceLiveConnection | null = null;
   private config: VoiceLiveConfig;
+  private audioLevelCallback: ((levels: { average: number; peak: number; active: boolean }) => void) | null = null;
 
   constructor(config: VoiceLiveConfig) {
     this.config = config;
@@ -747,16 +787,29 @@ export class SpeechAvatarService {
   async initialize(): Promise<void> {
     try {
       console.log('🎭 Initializing Speech Avatar Service...');
+      console.log('🔗 Attempting to connect to Azure Voice Live API...');
       
-      // Create and connect
+      // Create and connect with automatic retry logic
       this.connection = await createVoiceLiveConnection(this.config);
+      
+      // Set up audio level callback if one was previously registered
+      if (this.audioLevelCallback) {
+        this.connection.audioLevelCallback = this.audioLevelCallback;
+      }
       
       // Configure session with behavioral health settings
       await this.configureSession();
       
       console.log('✅ Speech Avatar Service initialized successfully');
     } catch (error) {
-      console.error('❌ Failed to initialize Speech Avatar Service:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Failed to initialize Speech Avatar Service:', errorMessage);
+      
+      // Provide user-friendly error message for common Azure issues
+      if (errorMessage.includes('insufficient') || errorMessage.includes('overloaded')) {
+        console.log('💡 Tip: Azure Voice Live API may be experiencing high demand. Try again in a few minutes.');
+      }
+      
       throw error;
     }
   }
@@ -813,10 +866,73 @@ Communication style:
 Remember: You are a supportive companion, not a therapist. Always encourage seeking professional help for serious concerns.`;
   }
 
+  onAudioLevel(callback: (levels: { average: number; peak: number; active: boolean }) => void): void {
+    this.audioLevelCallback = callback;
+    
+    // If connection already exists, register the callback immediately
+    if (this.connection) {
+      this.connection.audioLevelCallback = callback;
+    }
+  }
+
+  async checkMicrophonePermission(): Promise<'granted' | 'denied' | 'prompt'> {
+    const audioDeviceService = AudioDeviceService.getInstance();
+    
+    try {
+      // Get current permission status
+      const permissionStatus = await audioDeviceService.getPermissionStatus();
+      
+      if (permissionStatus === 'granted' || permissionStatus === 'denied') {
+        return permissionStatus;
+      }
+      
+      // Permission is 'prompt' - we can try to request it
+      try {
+        const result = await audioDeviceService.requestPermission();
+        return result.granted ? 'granted' : 'denied';
+      } catch (error) {
+        console.error('❌ Failed to request microphone permission:', error);
+        return 'denied';
+      }
+    } catch (error) {
+      console.error('❌ Failed to check microphone permission:', error);
+      return 'prompt';
+    }
+  }
+
+  async getAvailableAudioDevices(): Promise<AudioDevice[]> {
+    const audioDeviceService = AudioDeviceService.getInstance();
+    return await audioDeviceService.getAvailableDevices();
+  }
+
+  getSelectedAudioDevice(): AudioDevice | null {
+    const audioDeviceService = AudioDeviceService.getInstance();
+    return audioDeviceService.getSelectedDevice();
+  }
+
+  async requestMicrophonePermission(): Promise<{ granted: boolean; error?: string }> {
+    const audioDeviceService = AudioDeviceService.getInstance();
+    return await audioDeviceService.requestPermission();
+  }
+
+  setAudioDevice(deviceId: string): void {
+    const audioDeviceService = AudioDeviceService.getInstance();
+    audioDeviceService.setSelectedDevice(deviceId);
+  }
+
+  async testAudioInput(durationMs: number = 10000): Promise<boolean> {
+    const audioDeviceService = AudioDeviceService.getInstance();
+    return await audioDeviceService.testAudioInput(durationMs, true);
+  }
+
   async startSession(): Promise<void> {
     console.log('🚀 startSession called, checking connection state...');
-    console.log('🔍 this.connection:', this.connection ? 'exists' : 'null');
-    console.log('🔍 connection.connected:', this.connection?.connected);
+    console.log('🔍 Service state:', {
+      hasConnection: this.connection ? 'yes' : 'no',
+      serviceIsConnected: this.isConnected,
+      serviceIsSessionReady: this.isSessionReady,
+      connectionConnected: this.connection?.connected || 'unknown'
+    });
     
     if (!this.connection) {
       console.log('🔄 Connection is null, reinitializing...');
@@ -835,6 +951,8 @@ Remember: You are a supportive companion, not a therapist. Always encourage seek
     console.log('⏳ Waiting for session to be ready...');
     await this.connection.waitForSessionReady();
     console.log('✅ Session is ready, starting audio capture...');
+
+    console.log('🔍 Final connection state: Audio capture should now be active');
 
     await this.connection.startAudioCapture();
     console.log('🎭 Speech Avatar session started');

@@ -825,6 +825,13 @@ const UploadAnalyze: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
+  // Safe parsing helper to handle potential NaN values
+  const safeParseFloat = useCallback((value: string | undefined | null, defaultValue: number = 0): number => {
+    if (!value) return defaultValue;
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+  }, []);
+
   const validateMetadata = useCallback(() => {
     const errors: string[] = [];
 
@@ -970,8 +977,11 @@ const UploadAnalyze: React.FC = () => {
     let hasMetadata = false;
 
     if (userMetadata.age) {
-      metadata.age = parseInt(userMetadata.age);
-      hasMetadata = true;
+      const ageNum = parseInt(userMetadata.age);
+      if (!isNaN(ageNum)) {
+        metadata.age = ageNum;
+        hasMetadata = true;
+      }
     }
     if (userMetadata.gender) {
       metadata.gender = userMetadata.gender as SessionMetadata['gender'];
@@ -1001,8 +1011,11 @@ const UploadAnalyze: React.FC = () => {
       hasMetadata = true;
     }
     if (userMetadata.weight) {
-      metadata.weight = parseInt(userMetadata.weight);
-      hasMetadata = true;
+      const weightNum = parseInt(userMetadata.weight);
+      if (!isNaN(weightNum)) {
+        metadata.weight = weightNum;
+        hasMetadata = true;
+      }
     }
 
     return hasMetadata ? metadata : undefined;
@@ -1014,12 +1027,18 @@ const UploadAnalyze: React.FC = () => {
 
     // Optional fields
     if (userData.age) {
-      metadata.age = parseInt(userData.age);
-      hasMetadata = true;
+      const ageNum = parseInt(userData.age);
+      if (!isNaN(ageNum)) {
+        metadata.age = ageNum;
+        hasMetadata = true;
+      }
     }
     if (userData.weight) {
-      metadata.weight = parseInt(userData.weight);
-      hasMetadata = true;
+      const weightNum = parseInt(userData.weight);
+      if (!isNaN(weightNum)) {
+        metadata.weight = weightNum;
+        hasMetadata = true;
+      }
     }
     if (userData.language === 'true' || userData.language === 'false') {
       metadata.language = userData.language === 'true';
@@ -1360,9 +1379,11 @@ const UploadAnalyze: React.FC = () => {
             // Analysis complete successfully
             const analysisResult: AnalysisResult = {
               sessionId: sessionData.sessionId,
-              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : 0,
-              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
+              riskLevel: (() => {
+                const score = safeParseFloat(result.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })(),
               confidence: 0.85, // This would come from the API in a real scenario
               insights: [
                 'Analysis completed using Kintsugi Health API',
@@ -1381,10 +1402,12 @@ const UploadAnalyze: React.FC = () => {
               audioUrl: audioUrl,
               prediction: result, // Store the complete API response
               analysisResults: {
-                depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
-                anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
-                riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                          result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+                depressionScore: safeParseFloat(result.predictedScoreDepression),
+                anxietyScore: safeParseFloat(result.predictedScoreAnxiety),
+                riskLevel: (() => {
+                  const score = safeParseFloat(result.predictedScoreDepression, 0);
+                  return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+                })(),
                 confidence: 0.85, // This would come from the API in a real scenario
                 insights: [
                   'Analysis completed using Kintsugi Health API',
@@ -1513,7 +1536,7 @@ const UploadAnalyze: React.FC = () => {
       }));
       throw err; // Re-throw to be handled by the calling function
     }
-  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast]);
+  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast, safeParseFloat]);
 
   const processMultipleFiles = useCallback(async () => {
     setIsProcessing(true);
@@ -1861,9 +1884,11 @@ const UploadAnalyze: React.FC = () => {
             // Analysis complete successfully
             const analysisResult: AnalysisResult = {
               sessionId: sessionData.sessionId,
-              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : 0,
-              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
+              riskLevel: (() => {
+                const score = safeParseFloat(result.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })(),
               confidence: 0.85, // This would come from the API in a real scenario
             insights: [
               'Analysis completed using Kintsugi Health API',
@@ -1882,10 +1907,12 @@ const UploadAnalyze: React.FC = () => {
             audioUrl: audioUrl,
             prediction: result, // Store the complete API response
             analysisResults: {
-              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
-              anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
-              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              depressionScore: safeParseFloat(result.predictedScoreDepression),
+              anxietyScore: safeParseFloat(result.predictedScoreAnxiety),
+              riskLevel: (() => {
+                const score = safeParseFloat(result.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })(),
               confidence: 0.85, // This would come from the API in a real scenario
               insights: [
                 'Analysis completed using Kintsugi Health API',
@@ -1934,7 +1961,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {

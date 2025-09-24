@@ -548,7 +548,7 @@ const UploadAnalyze: React.FC = () => {
 
   const validateGender = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
-    const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer'];
+    const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to specify'];
     if (!validGenders.includes(value)) {
       return 'Please select a valid gender option';
     }
@@ -727,7 +727,7 @@ const UploadAnalyze: React.FC = () => {
 
             // Validate gender options
             if (row.gender && row.gender.trim()) {
-              const validGenders = ["female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer"];
+              const validGenders = ["female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer not to specify"];
               if (!validGenders.includes(row.gender.toLowerCase().trim())) {
                 errors.push(`Row ${i + 1}: Invalid gender "${row.gender}". Must be one of: ${validGenders.join(', ')}`);
                 hasFieldErrors = true;
@@ -1021,9 +1021,9 @@ const UploadAnalyze: React.FC = () => {
 
     // Gender validation
     if (userMetadata.gender) {
-      const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer'];
+      const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to specify'];
       if (!validGenders.includes(userMetadata.gender)) {
-        errors.push('Invalid gender. Must be: female, male, non-binary, transgender female, transgender male, other, or prefer');
+        errors.push('Invalid gender. Must be: female, male, non-binary, transgender female, transgender male, other, or prefer not to specify');
       }
     }
 
@@ -2412,7 +2412,7 @@ const UploadAnalyze: React.FC = () => {
               <option value="male">Male</option>
               <option value="non-binary">Non-binary</option>
               <option value="other">Other</option>
-              <option value="prefer">Prefer not to specify</option>
+              <option value="prefer not to specify">Prefer Not to Specify</option>
               <option value="transgender female">Transgender Female</option>
               <option value="transgender male">Transgender Male</option>
             </select>
@@ -3617,7 +3617,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="male">Male</option>
                   <option value="non-binary">Non-binary</option>
                   <option value="other">Other</option>
-                  <option value="prefer">Prefer not to specify</option>
+                  <option value="prefer not to specify">Prefer Not to Specify</option>
                   <option value="transgender female">Transgender Female</option>
                   <option value="transgender male">Transgender Male</option>
                 </select>

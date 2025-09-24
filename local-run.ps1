@@ -89,6 +89,16 @@ Push-Location $functionsPath
 Start-Process "cmd.exe" -ArgumentList '/c func start'
 Pop-Location
 
+Write-Host "Installing npm dependencies for web project..."
+Push-Location $webPath
+npm install
+Pop-Location
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "npm install failed. Exiting."
+    exit $LASTEXITCODE
+}
+
 Write-Host "Starting frontend dev server..."
 Push-Location $webPath
 Start-Process "cmd.exe" -ArgumentList '/c npm run dev'

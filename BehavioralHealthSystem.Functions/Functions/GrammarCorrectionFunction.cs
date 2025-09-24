@@ -22,7 +22,7 @@ public class GrammarCorrectionFunction
 
     [Function("CorrectGrammar")]
     public async Task<HttpResponseData> CorrectGrammar(
-        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
         _logger.LogInformation("[{FunctionName}] Grammar correction request received", nameof(CorrectGrammar));
 

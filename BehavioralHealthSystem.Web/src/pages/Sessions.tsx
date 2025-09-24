@@ -116,14 +116,14 @@ const Sessions: React.FC = () => {
           fileName: session.audioFileName || `Audio_${session.sessionId.slice(-8)}.wav`,
           fileSize: Math.floor(Math.random() * 5000000) + 1000000, // Mock file size for now
           riskLevel: analysisResults?.riskLevel || 'unknown',
-          // Prioritize analysisResults, then fall back to prediction data
-          depressionScore: analysisResults?.depressionScore?.toString() ||
-                          prediction?.predicted_score_depression || 
+          // Prioritize descriptive string values from prediction over numeric values from analysisResults
+          depressionScore: prediction?.predicted_score_depression || 
                           prediction?.predictedScoreDepression ||
+                          (analysisResults?.depressionScore?.toString()) ||
                           undefined,
-          anxietyScore: analysisResults?.anxietyScore?.toString() ||
-                       prediction?.predicted_score_anxiety || 
+          anxietyScore: prediction?.predicted_score_anxiety || 
                        prediction?.predictedScoreAnxiety ||
+                       (analysisResults?.anxietyScore?.toString()) ||
                        undefined,
         };
       });

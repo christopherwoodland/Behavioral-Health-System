@@ -29,7 +29,7 @@ type UserMetadata = {
   gender?: string;
   race?: string;
   ethnicity?: string;
-  language?: string;
+  language?: boolean;
   weight?: string;
   zipcode?: string;
   sessionNotes?: string;
@@ -42,7 +42,7 @@ const defaultUserMetadata: UserMetadata = {
   gender: '',
   race: '',
   ethnicity: '',
-  language: '',
+  language: undefined,
   weight: '',
   zipcode: '',
   sessionNotes: ''
@@ -76,7 +76,7 @@ interface CsvBatchRow {
   gender?: string;
   race?: string;
   ethnicity?: string;
-  language?: string;
+  language?: boolean;
   weight?: string;
   zipcode?: string;
   sessionNotes?: string;
@@ -184,7 +184,7 @@ const UploadAnalyze: React.FC = () => {
     gender: prefilledData?.userMetadata?.gender || '',
     race: prefilledData?.userMetadata?.race || '',
     ethnicity: prefilledData?.userMetadata?.ethnicity || '',
-    language: prefilledData?.userMetadata?.language?.toString() || '',
+    language: prefilledData?.userMetadata?.language,
     weight: prefilledData?.userMetadata?.weight?.toString() || '',
     zipcode: prefilledData?.userMetadata?.zipcode || '',
     sessionNotes: prefilledData?.userMetadata?.sessionNotes || ''
@@ -557,7 +557,7 @@ const UploadAnalyze: React.FC = () => {
 
   const validateRace = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
-    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
+    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
     if (!validRaces.includes(value)) {
       return 'Please select a valid race option';
     }
@@ -686,12 +686,124 @@ const UploadAnalyze: React.FC = () => {
             }
           });
 
+          // Basic required field validation
           if (!row.userId || !row.fileUrl) {
             errors.push(`Row ${i + 1}: Missing required values for userId or fileUrl`);
           } else if (!row.fileUrl.startsWith('http')) {
             errors.push(`Row ${i + 1}: fileUrl must be a valid URL`);
           } else {
-            parsedRows.push(row);
+            // Validate optional fields that have specific requirements
+            let hasFieldErrors = false;
+
+            // Validate ethnicity format
+            if (row.ethnicity && row.ethnicity.trim()) {
+              const validEthnicities = [
+                "Hispanic, Latino, or Spanish Origin", 
+                "Not Hispanic, Latino, or Spanish Origin"
+              ];
+              if (!validEthnicities.includes(row.ethnicity.trim())) {
+                errors.push(`Row ${i + 1}: Invalid ethnicity "${row.ethnicity}". Must be: "Hispanic, Latino, or Spanish Origin" or "Not Hispanic, Latino, or Spanish Origin"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate weight range
+            if (row.weight && row.weight.trim()) {
+              const weightNum = parseInt(row.weight.trim());
+              if (isNaN(weightNum) || weightNum < 10 || weightNum > 1000) {
+                errors.push(`Row ${i + 1}: Weight must be between 10 and 1000 pounds, got "${row.weight}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate age range
+            if (row.age && row.age.trim()) {
+              const ageNum = parseInt(row.age.trim());
+              if (isNaN(ageNum) || ageNum < 1 || ageNum > 149) {
+                errors.push(`Row ${i + 1}: Age must be between 1 and 149 years, got "${row.age}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate gender options
+            if (row.gender && row.gender.trim()) {
+              const validGenders = ["female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer"];
+              if (!validGenders.includes(row.gender.toLowerCase().trim())) {
+                errors.push(`Row ${i + 1}: Invalid gender "${row.gender}". Must be one of: ${validGenders.join(', ')}`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate race options
+            if (row.race && row.race.trim()) {
+              const validRaces = [
+                "white", 
+                "black or african-american", 
+                "asian", 
+                "american indian or alaskan native", 
+                "native Hawaiian or pacific islander", 
+                "two or more races", 
+                "other", 
+                "prefer not to say"
+              ];
+              // Special case: preserve capital H in "Hawaiian"
+              let normalizedInputRace = row.race.toLowerCase().trim();
+              if (normalizedInputRace === 'native hawaiian or pacific islander') {
+                normalizedInputRace = 'native Hawaiian or pacific islander';
+              }
+              if (!validRaces.includes(normalizedInputRace)) {
+                errors.push(`Row ${i + 1}: Invalid race "${row.race}". Must be one of: ${validRaces.join(', ')}`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate zipcode format
+            if (row.zipcode && row.zipcode.trim()) {
+              if (!/^[0-9]{5}$/.test(row.zipcode.trim())) {
+                errors.push(`Row ${i + 1}: Zipcode must be exactly 5 digits, got "${row.zipcode}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate language
+            if (row.language !== undefined && row.language !== null) {
+              if (typeof row.language === 'string') {
+                const langValue = (row.language as string).toLowerCase().trim();
+                if (!['true', 'false'].includes(langValue)) {
+                  errors.push(`Row ${i + 1}: Language must be boolean (true/false), got "${row.language}"`);
+                  hasFieldErrors = true;
+                }
+              } else if (typeof row.language !== 'boolean') {
+                errors.push(`Row ${i + 1}: Language must be boolean, got ${typeof row.language}`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate sessionNotes length (optional but reasonable limit)
+            if (row.sessionNotes && row.sessionNotes.trim()) {
+              if (row.sessionNotes.trim().length > 500) {
+                errors.push(`Row ${i + 1}: Session notes must be 500 characters or less, got ${row.sessionNotes.trim().length} characters`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate fileName format (optional but should be reasonable)
+            if (row.fileName && row.fileName.trim()) {
+              if (row.fileName.trim().length > 255) {
+                errors.push(`Row ${i + 1}: File name must be 255 characters or less, got ${row.fileName.trim().length} characters`);
+                hasFieldErrors = true;
+              }
+              // Check for potentially problematic characters in filename
+              const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
+              if (invalidChars.test(row.fileName.trim())) {
+                errors.push(`Row ${i + 1}: File name contains invalid characters, got "${row.fileName}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            if (!hasFieldErrors) {
+              parsedRows.push(row);
+            }
           }
         }
 
@@ -917,9 +1029,9 @@ const UploadAnalyze: React.FC = () => {
 
     // Race validation
     if (userMetadata.race) {
-      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
+      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
       if (!validRaces.includes(userMetadata.race)) {
-        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native hawaiian or pacific islander, two or more races, other, prefer not to say');
+        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to say');
       }
     }
 
@@ -1048,20 +1160,20 @@ const UploadAnalyze: React.FC = () => {
       }
     }
     if (userMetadata.gender) {
-      metadata.gender = userMetadata.gender as SessionMetadata['gender'];
-      hasMetadata = true;
-    }
-    // Required fields - always include these if provided
-    if (userMetadata.gender) {
-      metadata.gender = userMetadata.gender as SessionMetadata['gender'];
+      metadata.gender = userMetadata.gender.toLowerCase().trim() as SessionMetadata['gender'];
       hasMetadata = true;
     }
     if (userMetadata.race) {
-      metadata.race = userMetadata.race as SessionMetadata['race'];
+      // Special case: preserve capital H in "Hawaiian"
+      let normalizedRace = userMetadata.race.toLowerCase().trim();
+      if (normalizedRace === 'native hawaiian or pacific islander') {
+        normalizedRace = 'native Hawaiian or pacific islander';
+      }
+      metadata.race = normalizedRace as SessionMetadata['race'];
       hasMetadata = true;
     }
     if (userMetadata.ethnicity) {
-      metadata.ethnicity = userMetadata.ethnicity as SessionMetadata['ethnicity'];
+      metadata.ethnicity = userMetadata.ethnicity.trim() as SessionMetadata['ethnicity'];
       hasMetadata = true;
     }
     if (userMetadata.zipcode) {
@@ -1070,8 +1182,8 @@ const UploadAnalyze: React.FC = () => {
     }
     
     // Optional fields
-    if (userMetadata.language === 'true' || userMetadata.language === 'false') {
-      metadata.language = userMetadata.language === 'true';
+    if (userMetadata.language !== undefined) {
+      metadata.language = userMetadata.language;
       hasMetadata = true;
     }
     if (userMetadata.weight) {
@@ -1104,22 +1216,38 @@ const UploadAnalyze: React.FC = () => {
         hasMetadata = true;
       }
     }
-    if (userData.language === 'true' || userData.language === 'false') {
-      metadata.language = userData.language === 'true';
-      hasMetadata = true;
+    if (userData.language !== undefined) {
+      if (typeof userData.language === 'boolean') {
+        metadata.language = userData.language;
+        hasMetadata = true;
+      } else if (typeof userData.language === 'string') {
+        const langValue = (userData.language as string).toLowerCase().trim();
+        if (['true', '1', 'yes'].includes(langValue)) {
+          metadata.language = true;
+          hasMetadata = true;
+        } else if (['false', '0', 'no'].includes(langValue)) {
+          metadata.language = false;
+          hasMetadata = true;
+        }
+      }
     }
     
     // Required fields - always include these if provided
     if (userData.gender) {
-      metadata.gender = userData.gender as SessionMetadata['gender'];
+      metadata.gender = userData.gender.toLowerCase().trim() as SessionMetadata['gender'];
       hasMetadata = true;
     }
     if (userData.race) {
-      metadata.race = userData.race as SessionMetadata['race'];
+      // Special case: preserve capital H in "Hawaiian"
+      let normalizedRace = userData.race.toLowerCase().trim();
+      if (normalizedRace === 'native hawaiian or pacific islander') {
+        normalizedRace = 'native Hawaiian or pacific islander';
+      }
+      metadata.race = normalizedRace as SessionMetadata['race'];
       hasMetadata = true;
     }
     if (userData.ethnicity) {
-      metadata.ethnicity = userData.ethnicity as SessionMetadata['ethnicity'];
+      metadata.ethnicity = userData.ethnicity.trim() as SessionMetadata['ethnicity'];
       hasMetadata = true;
     }
     if (userData.zipcode) {
@@ -1146,7 +1274,7 @@ const UploadAnalyze: React.FC = () => {
           gender: userMetadata.gender || file.userMetadata?.gender || '',
           race: userMetadata.race || file.userMetadata?.race || '',
           ethnicity: userMetadata.ethnicity || file.userMetadata?.ethnicity || '',
-          language: userMetadata.language || file.userMetadata?.language || '',
+          language: userMetadata.language !== undefined ? userMetadata.language : file.userMetadata?.language,
           weight: userMetadata.weight || file.userMetadata?.weight || '',
           zipcode: userMetadata.zipcode || file.userMetadata?.zipcode || '',
           sessionNotes: userMetadata.sessionNotes || file.userMetadata?.sessionNotes || ''
@@ -1169,7 +1297,7 @@ const UploadAnalyze: React.FC = () => {
       'gender',
       'race',
       'ethnicity',
-      'primary language',
+      'language',
       'weight',
       'zipcode',
       'sessionNotes',
@@ -1185,7 +1313,7 @@ const UploadAnalyze: React.FC = () => {
         gender: userMetadata.gender || 'male',
         race: userMetadata.race || 'white',
         ethnicity: userMetadata.ethnicity || 'not hispanic or latino',
-        'primary language': userMetadata.language === 'true' ? 'english' : userMetadata.language === 'false' ? 'other' : userMetadata.language || 'english',
+        language: userMetadata.language !== undefined ? userMetadata.language : true,
         weight: userMetadata.weight || '150',
         zipcode: userMetadata.zipcode || '12345',
         sessionNotes: userMetadata.sessionNotes || 'Sample session notes',
@@ -1198,7 +1326,7 @@ const UploadAnalyze: React.FC = () => {
         gender: userMetadata.gender || 'female',
         race: userMetadata.race || 'asian',
         ethnicity: userMetadata.ethnicity || 'not hispanic or latino',
-        'primary language': userMetadata.language === 'true' ? 'english' : userMetadata.language === 'false' ? 'other' : userMetadata.language || 'other',
+        language: userMetadata.language !== undefined ? userMetadata.language : false,
         weight: userMetadata.weight || '120',
         zipcode: userMetadata.zipcode || '54321',
         sessionNotes: userMetadata.sessionNotes || 'Another sample session',
@@ -1211,7 +1339,8 @@ const UploadAnalyze: React.FC = () => {
       headers.join(','),
       ...sampleRows.map(row => 
         headers.map(header => {
-          const value = row[header as keyof typeof row] || '';
+          const rawValue = row[header as keyof typeof row];
+          const value = rawValue === undefined || rawValue === null ? '' : String(rawValue);
           // Escape values containing commas or quotes
           return value.includes(',') || value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
         }).join(',')
@@ -2303,7 +2432,7 @@ const UploadAnalyze: React.FC = () => {
               <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
               <option value="asian">Asian</option>
               <option value="black or african-american">Black or African-American</option>
-              <option value="native hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
+              <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
               <option value="other">Other</option>
               <option value="prefer not to say">Prefer not to say</option>
               <option value="two or more races">Two or more races</option>
@@ -2329,17 +2458,20 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Primary Language
+              English as Primary Language?
             </label>
             <select
               id="language"
-              value={userMetadata.language}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, language: e.target.value }))}
+              value={userMetadata.language === undefined ? '' : userMetadata.language.toString()}
+              onChange={(e) => setUserMetadata(prev => ({ 
+                ...prev, 
+                language: e.target.value === '' ? undefined : e.target.value === 'true'
+              }))}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">Select language</option>
-              <option value="true">English</option>
-              <option value="false">Other</option>
+              <option value="">Select answer</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
 
@@ -2505,7 +2637,7 @@ const UploadAnalyze: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
           {processingMode === 'batch-csv' ? 'CSV File Upload' : 'Audio File Upload'} 
-          {processingMode === 'batch-files' && <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Batch Files Mode)</span>}
+          {processingMode === 'batch-files' && <span className="text-sm font-normal text-gray-500 dark:text-gray-400"> (Batch Files Mode)</span>}
         </h2>
 
         {/* CSV Upload Section */}
@@ -2770,19 +2902,8 @@ const UploadAnalyze: React.FC = () => {
                             </div>
                           </div>
                           
-                          {/* Metadata summary and edit button */}
-                          <div className="flex items-center space-x-2">
-                            {file.userMetadata?.userId ? (
-                              <div className="text-xs text-gray-600 dark:text-gray-400">
-                                ID: {file.userMetadata.userId.slice(0, 8)}...
-                                {file.userMetadata.age && ` • Age: ${file.userMetadata.age}`}
-                                {file.userMetadata.gender && ` • ${file.userMetadata.gender}`}
-                              </div>
-                            ) : (
-                              <div className="text-xs text-amber-600 dark:text-amber-400">
-                                No metadata set
-                              </div>
-                            )}
+                          {/* Action buttons with equal spacing */}
+                          <div className="flex items-center justify-end space-x-2 flex-shrink-0">
                             <button
                               onClick={() => openMetadataEditor(file.id, file.userMetadata)}
                               className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -2791,9 +2912,7 @@ const UploadAnalyze: React.FC = () => {
                               <Edit className="h-3 w-3 mr-1" />
                               Edit Info
                             </button>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2">
+                            
                             {/* Start button for individual file */}
                             {fileState === 'ready' && (
                               <button type="button"
@@ -3518,7 +3637,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
                   <option value="asian">Asian</option>
                   <option value="black or african-american">Black or African-American</option>
-                  <option value="native hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
+                  <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
                   <option value="other">Other</option>
                   <option value="prefer not to say">Prefer not to say</option>
                   <option value="two or more races">Two or more races</option>
@@ -3544,17 +3663,20 @@ const UploadAnalyze: React.FC = () => {
               
               <div>
                 <label htmlFor="temp-language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Primary Language
+                  English as Primary Language?
                 </label>
                 <select
                   id="temp-language"
-                  value={tempMetadata.language}
-                  onChange={(e) => setTempMetadata(prev => ({ ...prev, language: e.target.value }))}
+                  value={tempMetadata.language === undefined ? '' : tempMetadata.language.toString()}
+                  onChange={(e) => setTempMetadata(prev => ({ 
+                    ...prev, 
+                    language: e.target.value === '' ? undefined : e.target.value === 'true'
+                  }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Select language</option>
-                  <option value="true">English</option>
-                  <option value="false">Other</option>
+                  <option value="">Select answer</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
                 </select>
               </div>
               

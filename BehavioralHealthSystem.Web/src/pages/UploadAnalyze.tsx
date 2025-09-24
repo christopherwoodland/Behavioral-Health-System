@@ -386,6 +386,18 @@ const UploadAnalyze: React.FC = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
   };
 
+  // Helper function to normalize ethnicity values for backend API
+  const normalizeEthnicityForBackend = (ethnicity: string): string => {
+    const normalizedInput = ethnicity.toLowerCase().trim();
+    if (normalizedInput === 'hispanic, latino, or spanish origin') {
+      return 'Hispanic, Latino, or Spanish Origin';
+    } else if (normalizedInput === 'not hispanic, latino, or spanish origin') {
+      return 'Not Hispanic, Latino, or Spanish Origin';
+    }
+    // Return original value if no normalization needed
+    return ethnicity;
+  };
+
   const addAudioFile = useCallback((file: File, metadata?: UserMetadata) => {
     const id = generateFileId();
     const url = URL.createObjectURL(file);
@@ -660,7 +672,46 @@ const UploadAnalyze: React.FC = () => {
           return;
         }
 
-        const headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        // Proper CSV parsing function that handles quoted values and commas
+        const parseCsvRow = (row: string): string[] => {
+          const result: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          let i = 0;
+          
+          while (i < row.length) {
+            const char = row[i];
+            const nextChar = row[i + 1];
+            
+            if (char === '"' && !inQuotes) {
+              // Start of quoted field
+              inQuotes = true;
+            } else if (char === '"' && inQuotes) {
+              if (nextChar === '"') {
+                // Escaped quote inside quoted field
+                current += '"';
+                i++; // Skip next quote
+              } else {
+                // End of quoted field
+                inQuotes = false;
+              }
+            } else if (char === ',' && !inQuotes) {
+              // Field separator outside quotes
+              result.push(current.trim());
+              current = '';
+            } else {
+              // Regular character
+              current += char;
+            }
+            i++;
+          }
+          
+          // Add the last field
+          result.push(current.trim());
+          return result;
+        };
+
+        const headers = parseCsvRow(rows[0]).map(h => h.replace(/^"|"$/g, '').trim());
         const requiredHeaders = ['userId', 'fileUrl'];
         const optionalHeaders = ['age', 'gender', 'race', 'ethnicity', 'language', 'weight', 'zipcode', 'sessionNotes', 'fileName'];
         
@@ -674,7 +725,7 @@ const UploadAnalyze: React.FC = () => {
         const errors: string[] = [];
 
         for (let i = 1; i < rows.length; i++) {
-          const values = rows[i].split(',').map(v => v.trim().replace(/"/g, ''));
+          const values = parseCsvRow(rows[i]).map(v => v.replace(/^"|"$/g, '').trim());
           const row: CsvBatchRow = { userId: '', fileUrl: '' };
 
           headers.forEach((header, index) => {
@@ -698,10 +749,11 @@ const UploadAnalyze: React.FC = () => {
             // Validate ethnicity format
             if (row.ethnicity && row.ethnicity.trim()) {
               const validEthnicities = [
-                "Hispanic, Latino, or Spanish Origin", 
-                "Not Hispanic, Latino, or Spanish Origin"
+                "hispanic, latino, or spanish origin", 
+                "not hispanic, latino, or spanish origin"
               ];
-              if (!validEthnicities.includes(row.ethnicity.trim())) {
+              const normalizedEthnicity = row.ethnicity.toLowerCase().trim();
+              if (!validEthnicities.includes(normalizedEthnicity)) {
                 errors.push(`Row ${i + 1}: Invalid ethnicity "${row.ethnicity}". Must be: "Hispanic, Latino, or Spanish Origin" or "Not Hispanic, Latino, or Spanish Origin"`);
                 hasFieldErrors = true;
               }
@@ -863,7 +915,7 @@ const UploadAnalyze: React.FC = () => {
             age: row.age,
             gender: row.gender,
             race: row.race,
-            ethnicity: row.ethnicity,
+            ethnicity: row.ethnicity ? normalizeEthnicityForBackend(row.ethnicity) : row.ethnicity,
             language: row.language,
             weight: row.weight,
             zipcode: row.zipcode,
@@ -1173,7 +1225,7 @@ const UploadAnalyze: React.FC = () => {
       hasMetadata = true;
     }
     if (userMetadata.ethnicity) {
-      metadata.ethnicity = userMetadata.ethnicity.trim() as SessionMetadata['ethnicity'];
+      metadata.ethnicity = normalizeEthnicityForBackend(userMetadata.ethnicity) as SessionMetadata['ethnicity'];
       hasMetadata = true;
     }
     if (userMetadata.zipcode) {
@@ -1247,7 +1299,7 @@ const UploadAnalyze: React.FC = () => {
       hasMetadata = true;
     }
     if (userData.ethnicity) {
-      metadata.ethnicity = userData.ethnicity.trim() as SessionMetadata['ethnicity'];
+      metadata.ethnicity = normalizeEthnicityForBackend(userData.ethnicity) as SessionMetadata['ethnicity'];
       hasMetadata = true;
     }
     if (userData.zipcode) {
@@ -1312,7 +1364,7 @@ const UploadAnalyze: React.FC = () => {
         age: userMetadata.age || '30',
         gender: userMetadata.gender || 'male',
         race: userMetadata.race || 'white',
-        ethnicity: userMetadata.ethnicity || 'not hispanic or latino',
+        ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
         language: userMetadata.language !== undefined ? userMetadata.language : true,
         weight: userMetadata.weight || '150',
         zipcode: userMetadata.zipcode || '12345',
@@ -1325,7 +1377,7 @@ const UploadAnalyze: React.FC = () => {
         age: userMetadata.age || '25',
         gender: userMetadata.gender || 'female',
         race: userMetadata.race || 'asian',
-        ethnicity: userMetadata.ethnicity || 'not hispanic or latino',
+        ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
         language: userMetadata.language !== undefined ? userMetadata.language : false,
         weight: userMetadata.weight || '120',
         zipcode: userMetadata.zipcode || '54321',

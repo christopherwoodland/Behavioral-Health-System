@@ -19,7 +19,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
         RuleFor(x => x.Gender)
             .Must(BeValidGender)
             .When(x => !string.IsNullOrEmpty(x.Gender))
-            .WithMessage("Gender must be: female, male, non-binary, transgender female, transgender male, other, or prefer");
+            .WithMessage("Gender must be: female, male, non-binary, transgender female, transgender male, other, or prefer not to specify");
 
         // Ethnicity is optional, but when provided must be valid
         RuleFor(x => x.Ethnicity)
@@ -31,7 +31,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
         RuleFor(x => x.Race)
             .Must(BeValidRace)
             .When(x => !string.IsNullOrEmpty(x.Race))
-            .WithMessage("Race must be: white, black or african-american, asian, american indian or alaskan native, native hawaiian or pacific islander, two or more races, other, or prefer not to say");
+            .WithMessage("Race must be: white, black or african-american, asian, american indian or alaskan native, native hawaiian or pacific islander, two or more races, other, or prefer not to specify");
 
         // Zipcode is optional, but when provided must be 5 digits
         RuleFor(x => x.Zipcode)
@@ -48,19 +48,24 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
 
     private static bool BeValidGender(string gender)
     {
-        var validGenders = new[] { "female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer" };
+        var validGenders = new[] { "female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer not to specify" };
         return validGenders.Contains(gender);
     }
 
     private static bool BeValidRace(string race)
     {
-        var validRaces = new[] { "white", "black or african-american", "asian", "american indian or alaskan native", "native Hawaiian or pacific islander", "two or more races", "other", "prefer not to say" };
+        var validRaces = new[] { "white", "black or african-american", "asian", "american indian or alaskan native", "native Hawaiian or pacific islander", "two or more races", "other", "prefer not to specify" };
         return validRaces.Contains(race);
     }
 
     private static bool BeValidEthnicity(string ethnicity)
     {
-        var validEthnicities = new[] { "Hispanic, Latino, or Spanish Origin", "Not Hispanic, Latino, or Spanish Origin" };
+        var validEthnicities = new[] { 
+            "Hispanic, Latino, or Spanish Origin", 
+            "Not Hispanic, Latino, or Spanish Origin",
+            "hispanic, latino, or spanish origin", 
+            "not hispanic, latino, or spanish origin"
+        };
         return validEthnicities.Contains(ethnicity);
     }
 }

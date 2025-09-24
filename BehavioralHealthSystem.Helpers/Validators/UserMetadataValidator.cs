@@ -4,7 +4,8 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
 {
     private const int MinAge = 1;
     private const int MaxAge = 149;
-    private const int MaxWeight = 999;
+    private const int MinWeight = 10;
+    private const int MaxWeight = 1000;
 
     public UserMetadataValidator()
     {
@@ -39,8 +40,8 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
             .WithMessage("Zipcode must be exactly 5 digits");
 
         RuleFor(x => x.Weight)
-            .GreaterThan(0)
-            .WithMessage("Weight must be greater than 0")
+            .GreaterThan(MinWeight - 1)
+            .WithMessage($"Weight must be greater than {MinWeight - 1}")
             .LessThan(MaxWeight + 1)
             .WithMessage($"Weight must be less than {MaxWeight + 1}");
     }
@@ -53,7 +54,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
 
     private static bool BeValidRace(string race)
     {
-        var validRaces = new[] { "white", "black or african-american", "asian", "american indian or alaskan native", "native hawaiian or pacific islander", "two or more races", "other", "prefer not to say" };
+        var validRaces = new[] { "white", "black or african-american", "asian", "american indian or alaskan native", "native Hawaiian or pacific islander", "two or more races", "other", "prefer not to say" };
         return validRaces.Contains(race);
     }
 

@@ -557,7 +557,7 @@ const UploadAnalyze: React.FC = () => {
 
   const validateRace = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
-    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
+    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
     if (!validRaces.includes(value)) {
       return 'Please select a valid race option';
     }
@@ -741,10 +741,10 @@ const UploadAnalyze: React.FC = () => {
                 "black or african-american", 
                 "asian", 
                 "american indian or alaskan native", 
-                "native Hawaiian or pacific islander", 
+                "native Hawaiian or Pacific Islander", 
                 "two or more races", 
                 "other", 
-                "prefer not to say"
+                "prefer not to specify"
               ];
               // Special case: preserve capital H in "Hawaiian"
               let normalizedInputRace = row.race.toLowerCase().trim();
@@ -1029,9 +1029,9 @@ const UploadAnalyze: React.FC = () => {
 
     // Race validation
     if (userMetadata.race) {
-      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
+      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
       if (!validRaces.includes(userMetadata.race)) {
-        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to say');
+        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to specify');
       }
     }
 
@@ -2434,7 +2434,7 @@ const UploadAnalyze: React.FC = () => {
               <option value="black or african-american">Black or African-American</option>
               <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
               <option value="other">Other</option>
-              <option value="prefer not to say">Prefer not to say</option>
+              <option value="prefer not to specify">Prefer Not to Specify</option>
               <option value="two or more races">Two or more races</option>
               <option value="white">White</option>
             </select>
@@ -3639,7 +3639,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="black or african-american">Black or African-American</option>
                   <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
                   <option value="other">Other</option>
-                  <option value="prefer not to say">Prefer not to say</option>
+                  <option value="prefer not to specify">Prefer Not to Specify</option>
                   <option value="two or more races">Two or more races</option>
                   <option value="white">White</option>
                 </select>

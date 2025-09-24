@@ -612,7 +612,7 @@ const SessionDetail: React.FC = () => {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Depression Score */}
-                  {(session.analysisResults?.depressionScore || (session.prediction as any)?.predicted_score_depression) && (
+                  {((session.prediction as any)?.predicted_score_depression || session.prediction?.predictedScoreDepression || session.analysisResults?.depressionScore) && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -621,16 +621,20 @@ const SessionDetail: React.FC = () => {
                         <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
                       </div>
                       <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                        {session.analysisResults?.depressionScore?.toFixed(2) || 
-                         ((session.prediction as any)?.predicted_score_depression ? 
+                        {/* Prioritize descriptive string values over numeric values */}
+                        {(session.prediction as any)?.predicted_score_depression ? 
                            (session.prediction as any).predicted_score_depression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
-                           'N/A')}
+                         session.prediction?.predictedScoreDepression ? 
+                           session.prediction.predictedScoreDepression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                         session.analysisResults?.depressionScore ? 
+                           session.analysisResults.depressionScore.toFixed(2) : 
+                           'N/A'}
                       </div>
                     </div>
                   )}
                   
                   {/* Anxiety Score */}
-                  {(session.analysisResults?.anxietyScore || (session.prediction as any)?.predicted_score_anxiety) && (
+                  {((session.prediction as any)?.predicted_score_anxiety || session.prediction?.predictedScoreAnxiety || session.analysisResults?.anxietyScore) && (
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
@@ -639,10 +643,14 @@ const SessionDetail: React.FC = () => {
                         <Heart className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
                       </div>
                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                        {session.analysisResults?.anxietyScore?.toFixed(2) || 
-                         ((session.prediction as any)?.predicted_score_anxiety ? 
+                        {/* Prioritize descriptive string values over numeric values */}
+                        {(session.prediction as any)?.predicted_score_anxiety ? 
                            (session.prediction as any).predicted_score_anxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
-                           'N/A')}
+                         session.prediction?.predictedScoreAnxiety ? 
+                           session.prediction.predictedScoreAnxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                         session.analysisResults?.anxietyScore ? 
+                           session.analysisResults.anxietyScore.toFixed(2) : 
+                           'N/A'}
                       </div>
                     </div>
                   )}

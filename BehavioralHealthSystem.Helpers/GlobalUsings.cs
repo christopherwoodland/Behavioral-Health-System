@@ -13,6 +13,7 @@ global using System.Threading;
 global using System.Threading.Tasks;
 
 // Microsoft namespaces
+global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Options;
 
@@ -25,4 +26,5 @@ global using Polly.Timeout;
 // Project namespaces
 global using BehavioralHealthSystem.Models;
 global using BehavioralHealthSystem.Configuration;
+global using BehavioralHealthSystem.Services;
 global using BehavioralHealthSystem.Services.Interfaces;

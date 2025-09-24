@@ -156,6 +156,14 @@ var host = new HostBuilder()
         // Grammar Correction Service
         services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();
         
+        // Error Handling Services
+        services.AddScoped<GenericErrorHandlingService>();
+        services.AddScoped<ExceptionHandlingService>();
+        services.AddScoped<BehavioralHealthSystem.Functions.Services.FunctionErrorHandlingService>();
+        
+        // Configure structured logging
+        LoggingConfiguration.ConfigureStructuredLogging(services, context.HostingEnvironment.IsDevelopment());
+        
         // Blob Storage Service
         services.AddSingleton(serviceProvider =>
         {

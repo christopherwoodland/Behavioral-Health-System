@@ -15,11 +15,7 @@ public class HealthCheckFunction
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _healthCheckService = healthCheckService ?? throw new ArgumentNullException(nameof(healthCheckService));
         
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            PropertyNameCaseInsensitive = true
-        };
+        _jsonOptions = JsonSerializerOptionsFactory.Default;
     }
 
     [Function("HealthCheck")]

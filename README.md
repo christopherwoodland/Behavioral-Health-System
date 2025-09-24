@@ -49,7 +49,6 @@ BehavioralHealthSystem/
 ├── 📁 BehavioralHealthSystem.Functions/         # Azure Functions backend
 │   ├── 📁 Functions/                            # Function endpoints
 │   │   ├── HealthCheckFunction.cs                # Health monitoring endpoint
-│   │   ├── KintsugiActivityFunctions.cs          # Kintsugi API integration functions
 │   │   ├── RiskAssessmentFunctions.cs            # Risk assessment endpoints
 │   │   ├── SessionStorageFunctions.cs            # Session data management endpoints
 │   │   └── TestFunctions.cs                      # Testing and utility endpoints
@@ -122,7 +121,6 @@ BehavioralHealthSystem/
 ├── 📁 BehavioralHealthSystem.Tests/            # Unit test project
 │   ├── 📁 Functions/                            # Function tests
 │   │   ├── HealthCheckFunctionTests.cs
-│   │   ├── KintsugiActivityFunctionsTests.cs    # Kintsugi API integration tests
 │   │   ├── RiskAssessmentFunctionsTests.cs      # Risk assessment tests
 │   │   ├── SessionStorageFunctionsTests.cs      # Session storage tests
 │   │   ├── TestFunctionsTests.cs
@@ -982,7 +980,6 @@ dotnet watch test
 
 - ✅ **Function Tests** - Complete constructor validation for all function classes with dependency injection
   - HealthCheckFunction, TestFunctions, RiskAssessmentFunctions, SessionStorageFunctions
-  - KintsugiActivityFunctions (deprecated but tested for backward compatibility)
 - ✅ **Model Tests** - Constructor validation for all model classes
 - ✅ **Service Tests** - Business logic and API integration tests  
 - ✅ **Validator Tests** - FluentValidation rule verification

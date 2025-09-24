@@ -40,7 +40,7 @@ public class TestFunctions
                     Language = true,
                     Race = "white",
                     Weight = 170,
-                    Zipcode = "12345"
+                    Zipcode = ApplicationConstants.TestData.DefaultZipCode
                 },
                 UserId = "test-user-" + Guid.NewGuid().ToString()[..8]
             };

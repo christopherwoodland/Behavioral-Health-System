@@ -8,6 +8,73 @@ Set-StrictMode -Version Latest
 $functionsPath = "./BehavioralHealthSystem.Functions"
 $webPath = "./BehavioralHealthSystem.Web"
 
+Write-Host "Stopping existing processes..."
+
+# Kill existing Vite processes (frontend dev server)
+Write-Host "Killing existing Vite processes..."
+Get-Process | Where-Object { $_.ProcessName -eq "node" } | ForEach-Object {
+    try {
+        $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+        if ($cmdLine -and ($cmdLine -like "*vite*" -or $cmdLine -like "*dev*" -or $cmdLine -like "*npm*run*dev*")) {
+            Write-Host "Stopping Node.js process running Vite: $($_.Id)"
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        # Ignore errors when checking command line
+    }
+}
+
+# Kill existing Azure Functions processes
+Write-Host "Killing existing Azure Functions processes..."
+Get-Process | Where-Object { 
+    $_.ProcessName -eq "func" -or 
+    $_.ProcessName -eq "dotnet" -or
+    $_.ProcessName -like "*Azure*" -or
+    $_.ProcessName -like "*Function*"
+} | ForEach-Object {
+    try {
+        # For dotnet processes, check if they're running Azure Functions
+        if ($_.ProcessName -eq "dotnet") {
+            $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+            if ($cmdLine -and ($cmdLine -like "*func*" -or $cmdLine -like "*BehavioralHealthSystem.Functions*")) {
+                Write-Host "Stopping .NET process running Functions: $($_.Id)"
+                Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+            }
+        } else {
+            Write-Host "Stopping Functions process: $($_.Id)"
+            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch {
+        # Ignore errors when checking command line
+    }
+}
+
+# Kill processes by common ports used by these services
+Write-Host "Killing processes using common development ports..."
+$commonPorts = @(3000, 5173, 7071, 7072, 4200, 8080)
+foreach ($port in $commonPorts) {
+    try {
+        $connections = netstat -ano | Select-String ":$port\s"
+        foreach ($connection in $connections) {
+            $processId = ($connection -split '\s+')[-1]
+            if ($processId -and $processId -ne "0") {
+                Write-Host "Stopping process on port ${port}: $processId"
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    catch {
+        # Ignore errors when checking ports
+    }
+}
+
+Write-Host "Process cleanup completed."
+
+# Wait a moment for processes to fully terminate
+Start-Sleep -Seconds 2
+
 Write-Host "Building .NET Azure Functions project..."
 dotnet build $functionsPath
 

@@ -3,52 +3,47 @@ namespace BehavioralHealthSystem.Agents.Services;
 /// <summary>
 /// Service for managing behavioral health agents and their configuration
 /// </summary>
-public class BehavioralHealthAgentService
+public class BehavioralHealthAgentService : BaseService
 {
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<BehavioralHealthAgentService> _logger;
     private readonly IServiceProvider _serviceProvider;
     private BehavioralHealthGroupChat? _groupChat;
     private Kernel? _kernel;
 
     public BehavioralHealthAgentService(
-        IConfiguration configuration,
         ILogger<BehavioralHealthAgentService> logger,
+        IConfiguration configuration,
         IServiceProvider serviceProvider)
+        : base(logger, configuration)
     {
-        _configuration = configuration;
-        _logger = logger;
         _serviceProvider = serviceProvider;
     }
 
     /// <summary>
-    /// Initializes the agent service with Semantic Kernel
+    /// Initialize service with async operations - override from BaseService
     /// </summary>
-    public async Task InitializeAsync()
+    protected override async Task OnInitializeAsync(CancellationToken cancellationToken = default)
     {
-        try
+        await ExecuteWithLoggingAsync(async () =>
         {
-            _logger.LogInformation("Initializing Behavioral Health Agent Service");
-
             // Build kernel with OpenAI configuration
             var kernelBuilder = Kernel.CreateBuilder();
             
             // Add OpenAI chat completion service
-            var openAiEndpoint = _configuration["OpenAI:Endpoint"];
-            var openAiApiKey = _configuration["OpenAI:ApiKey"];
-            var deploymentName = _configuration["OpenAI:DeploymentName"] ?? "gpt-4";
+            var openAiEndpoint = GetConfigurationValue<string>("OpenAI:Endpoint");
+            var openAiApiKey = GetConfigurationValue<string>("OpenAI:ApiKey");
+            var deploymentName = GetConfigurationValue<string>("OpenAI:DeploymentName", "gpt-4");
 
             if (!string.IsNullOrEmpty(openAiEndpoint) && !string.IsNullOrEmpty(openAiApiKey))
             {
                 kernelBuilder.AddAzureOpenAIChatCompletion(
-                    deploymentName: deploymentName,
+                    deploymentName: deploymentName!,
                     endpoint: openAiEndpoint,
                     apiKey: openAiApiKey);
             }
             else
             {
                 // Fallback to regular OpenAI
-                var apiKey = _configuration["OpenAI:ApiKey"];
+                var apiKey = GetConfigurationValue<string>("OpenAI:ApiKey");
                 if (!string.IsNullOrEmpty(apiKey))
                 {
                     kernelBuilder.AddOpenAIChatCompletion(
@@ -74,13 +69,17 @@ public class BehavioralHealthAgentService
             
             await _groupChat.InitializeAsync();
 
-            _logger.LogInformation("Behavioral Health Agent Service initialized successfully");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to initialize Behavioral Health Agent Service");
-            throw;
-        }
+            IsInitialized = true;
+
+            LogServiceConfiguration("Behavioral Health Agents", new Dictionary<string, object?>
+            {
+                ["OpenAI Endpoint"] = openAiEndpoint,
+                ["Deployment"] = deploymentName,
+                ["Kernel Configured"] = _kernel != null,
+                ["GroupChat Initialized"] = _groupChat != null
+            });
+
+        }, "Behavioral Health Agent Service Initialization");
     }
 
     /// <summary>
@@ -88,21 +87,12 @@ public class BehavioralHealthAgentService
     /// </summary>
     public async Task<string> ProcessUserMessageAsync(string userId, string message)
     {
-        if (_groupChat == null)
-        {
-            throw new InvalidOperationException("Agent service not initialized. Call InitializeAsync first.");
-        }
+        EnsureInitialized();
 
-        try
+        return await ExecuteWithLoggingAsync(async () =>
         {
-            _logger.LogInformation("Processing user message for {UserId}", userId);
-            return await _groupChat.ProcessMessageAsync(userId, message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing user message for {UserId}", userId);
-            return "I apologize, but I encountered an error processing your request. Please try again later.";
-        }
+            return await _groupChat!.ProcessMessageAsync(userId, message);
+        }, "Process User Message", new Dictionary<string, object> { ["UserId"] = userId });
     }
 
     /// <summary>
@@ -110,12 +100,9 @@ public class BehavioralHealthAgentService
     /// </summary>
     public async Task<string> ProcessPhq2RequestAsync(string userId, string operation, Dictionary<string, object>? parameters = null)
     {
-        if (_groupChat == null)
-        {
-            throw new InvalidOperationException("Agent service not initialized. Call InitializeAsync first.");
-        }
+        EnsureInitialized();
 
-        try
+        return await ExecuteWithLoggingAsync(async () =>
         {
             parameters ??= new Dictionary<string, object>();
             parameters["userId"] = userId;
@@ -130,13 +117,8 @@ public class BehavioralHealthAgentService
                 _ => $"PHQ-2 operation: {operation}"
             };
 
-            return await _groupChat.InvokeAgentDirectlyAsync("PHQ2Agent", userId, message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PHQ-2 request for {UserId}", userId);
-            return "Error processing PHQ-2 request. Please try again.";
-        }
+            return await _groupChat!.InvokeAgentDirectlyAsync("PHQ2Agent", userId, message);
+        }, "Process PHQ-2 Request", new Dictionary<string, object> { ["UserId"] = userId, ["Operation"] = operation });
     }
 
     /// <summary>
@@ -144,12 +126,9 @@ public class BehavioralHealthAgentService
     /// </summary>
     public async Task<string> ProcessPhq9RequestAsync(string userId, string operation, Dictionary<string, object>? parameters = null)
     {
-        if (_groupChat == null)
-        {
-            throw new InvalidOperationException("Agent service not initialized. Call InitializeAsync first.");
-        }
+        EnsureInitialized();
 
-        try
+        return await ExecuteWithLoggingAsync(async () =>
         {
             parameters ??= new Dictionary<string, object>();
             parameters["userId"] = userId;
@@ -163,13 +142,8 @@ public class BehavioralHealthAgentService
                 _ => $"PHQ-9 operation: {operation}"
             };
 
-            return await _groupChat.InvokeAgentDirectlyAsync("PHQ9Agent", userId, message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PHQ-9 request for {UserId}", userId);
-            return "Error processing PHQ-9 request. Please try again.";
-        }
+            return await _groupChat!.InvokeAgentDirectlyAsync("PHQ9Agent", userId, message);
+        }, "Process PHQ-9 Request", new Dictionary<string, object> { ["UserId"] = userId, ["Operation"] = operation });
     }
 
     /// <summary>
@@ -177,21 +151,18 @@ public class BehavioralHealthAgentService
     /// </summary>
     public async Task<string> RecordPhq2ResponseAsync(string userId, int questionNumber, int score)
     {
-        if (_groupChat == null)
-        {
-            throw new InvalidOperationException("Agent service not initialized. Call InitializeAsync first.");
-        }
+        EnsureInitialized();
 
-        try
+        return await ExecuteWithLoggingAsync(async () =>
         {
             var message = $"Record response: Question {questionNumber}, Score {score}";
-            return await _groupChat.InvokeAgentDirectlyAsync("PHQ2Agent", userId, message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error recording PHQ-2 response for {UserId}", userId);
-            return "Error recording response. Please try again.";
-        }
+            return await _groupChat!.InvokeAgentDirectlyAsync("PHQ2Agent", userId, message);
+        }, "Record PHQ-2 Response", new Dictionary<string, object> 
+        { 
+            ["UserId"] = userId, 
+            ["QuestionNumber"] = questionNumber, 
+            ["Score"] = score 
+        });
     }
 
     /// <summary>
@@ -199,21 +170,18 @@ public class BehavioralHealthAgentService
     /// </summary>
     public async Task<string> RecordPhq9ResponseAsync(string userId, int questionNumber, int score)
     {
-        if (_groupChat == null)
-        {
-            throw new InvalidOperationException("Agent service not initialized. Call InitializeAsync first.");
-        }
+        EnsureInitialized();
 
-        try
+        return await ExecuteWithLoggingAsync(async () =>
         {
             var message = $"Record response: Question {questionNumber}, Score {score}";
-            return await _groupChat.InvokeAgentDirectlyAsync("PHQ9Agent", userId, message);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error recording PHQ-9 response for {UserId}", userId);
-            return "Error recording response. Please try again.";
-        }
+            return await _groupChat!.InvokeAgentDirectlyAsync("PHQ9Agent", userId, message);
+        }, "Record PHQ-9 Response", new Dictionary<string, object> 
+        { 
+            ["UserId"] = userId, 
+            ["QuestionNumber"] = questionNumber, 
+            ["Score"] = score 
+        });
     }
 
     /// <summary>
@@ -225,9 +193,9 @@ public class BehavioralHealthAgentService
     }
 
     /// <summary>
-    /// Checks if the service is properly initialized
+    /// Checks if the service is properly initialized - override from BaseService
     /// </summary>
-    public bool IsInitialized => _groupChat != null && _kernel != null;
+    public override bool IsInitialized => base.IsInitialized && _groupChat != null && _kernel != null;
 }
 
 /// <summary>

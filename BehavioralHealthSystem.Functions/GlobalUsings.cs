@@ -25,5 +25,6 @@ global using FluentValidation;
 
 // Project-specific namespaces
 global using BehavioralHealthSystem.Models;
+global using BehavioralHealthSystem.Configuration;
 global using BehavioralHealthSystem.Services;
 global using BehavioralHealthSystem.Services.Interfaces;

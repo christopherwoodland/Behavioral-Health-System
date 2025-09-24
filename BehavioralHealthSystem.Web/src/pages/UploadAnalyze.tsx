@@ -1,11 +1,12 @@
+// Enhanced Batch Processing with CSV Support - Updated: Sept 23, 2025
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Files, File } from 'lucide-react';
+import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Edit } from 'lucide-react';
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
 import { apiService, PredictionPoller } from '../services/api';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { getStoredProcessingMode, setStoredProcessingMode, getUserId } from '../utils';
+import { getStoredProcessingMode, setStoredProcessingMode, getStoredProcessingModeBoolean, getUserId } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
@@ -22,11 +23,38 @@ interface UploadProgress {
   };
 }
 
+type UserMetadata = {
+  userId: string;
+  age?: string;
+  gender?: string;
+  race?: string;
+  ethnicity?: string;
+  language?: boolean;
+  weight?: string;
+  zipcode?: string;
+  sessionNotes?: string;
+};
+
+// Default user metadata for new files
+const defaultUserMetadata: UserMetadata = {
+  userId: '',
+  age: '',
+  gender: '',
+  race: '',
+  ethnicity: '',
+  language: undefined,
+  weight: '',
+  zipcode: '',
+  sessionNotes: ''
+};
+
 interface AudioFile {
   id: string;
   file: File;
   url: string;
   duration?: number;
+  // Individual patient metadata for each file in batch mode
+  userMetadata?: UserMetadata;
 }
 
 interface ProcessingProgress {
@@ -40,6 +68,29 @@ interface FileResults {
 interface FileProcessingState {
   [fileId: string]: 'ready' | 'processing' | 'complete' | 'error';
 }
+
+// CSV batch processing types
+interface CsvBatchRow {
+  userId: string;
+  age?: string;
+  gender?: string;
+  race?: string;
+  ethnicity?: string;
+  language?: boolean;
+  weight?: string;
+  zipcode?: string;
+  sessionNotes?: string;
+  fileUrl: string; // URL to file in blob storage
+  fileName?: string; // Optional friendly name
+}
+
+interface CsvBatchData {
+  rows: CsvBatchRow[];
+  fileName: string;
+}
+
+// Processing modes
+type ProcessingMode = 'single' | 'batch-files' | 'batch-csv';
 
 interface SessionInfo {
   sessionId: string;
@@ -80,11 +131,37 @@ const UploadAnalyze: React.FC = () => {
   const location = useLocation();
   
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
-  const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingMode());
+  const [processingMode, setProcessingMode] = useState<ProcessingMode>(() => {
+    const stored = getStoredProcessingMode();
+    return stored as ProcessingMode;
+  });
+  const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingModeBoolean()); // Keep for backward compatibility
+  
+  // Update isMultiMode based on processing mode
   const [processingProgress, setProcessingProgress] = useState<ProcessingProgress>({});
   const [results, setResults] = useState<FileResults>({});
   const [fileStates, setFileStates] = useState<FileProcessingState>({});
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // CSV batch processing state
+  const [csvBatchData, setCsvBatchData] = useState<CsvBatchData | null>(null);
+  const [csvValidationErrors, setCsvValidationErrors] = useState<string[]>([]);
+  const [csvProcessingProgress, setCsvProcessingProgress] = useState({
+    isProcessing: false,
+    currentFile: 0,
+    totalFiles: 0,
+    currentFileName: '',
+    message: ''
+  });
+
+  // Batch files processing progress state
+  const [batchProcessingProgress, setBatchProcessingProgress] = useState({
+    isProcessing: false,
+    currentFile: 0,
+    totalFiles: 0,
+    currentFileName: '',
+    message: ''
+  });
   
   // Legacy single file state for backward compatibility
   const [audioFile, setAudioFile] = useState<AudioFile | null>(null);
@@ -107,7 +184,7 @@ const UploadAnalyze: React.FC = () => {
     gender: prefilledData?.userMetadata?.gender || '',
     race: prefilledData?.userMetadata?.race || '',
     ethnicity: prefilledData?.userMetadata?.ethnicity || '',
-    language: prefilledData?.userMetadata?.language?.toString() || '',
+    language: prefilledData?.userMetadata?.language,
     weight: prefilledData?.userMetadata?.weight?.toString() || '',
     zipcode: prefilledData?.userMetadata?.zipcode || '',
     sessionNotes: prefilledData?.userMetadata?.sessionNotes || ''
@@ -131,6 +208,18 @@ const UploadAnalyze: React.FC = () => {
 
   const [isCorrectingGrammar, setIsCorrectingGrammar] = useState(false);
 
+  // Individual file metadata editing state
+  const [editingFileMetadata, setEditingFileMetadata] = useState<string | null>(null);
+  const [tempMetadata, setTempMetadata] = useState<UserMetadata>(defaultUserMetadata);
+  
+  // Validation state for individual file metadata editing
+  const [tempValidationErrors, setTempValidationErrors] = useState<{
+    age?: string;
+    weight?: string;
+    zipcode?: string;
+    sessionNotes?: string;
+  }>({});
+
   // User ID management state - REMOVED (now part of metadata)
   
   // Auto-generate user ID when component loads (for form metadata)
@@ -140,6 +229,11 @@ const UploadAnalyze: React.FC = () => {
       setUserMetadata(prev => ({ ...prev, userId: newUserId }));
     }
   }, [userMetadata.userId]);
+
+  // Update isMultiMode based on processing mode
+  useEffect(() => {
+    setIsMultiMode(processingMode !== 'single');
+  }, [processingMode]);
 
   // Helper function to get authenticated user ID for blob storage
   const getAuthenticatedUserId = useCallback((): string => {
@@ -212,27 +306,126 @@ const UploadAnalyze: React.FC = () => {
   }, [prefilledData, addToast, isMultiMode]); // Include dependencies
 
   const resetState = useCallback(() => {
+    // Stop and reset audio player
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    
+    // Clean up any URL object references to prevent memory leaks
+    audioFiles.forEach(file => {
+      if (file.url) {
+        URL.revokeObjectURL(file.url);
+      }
+    });
+    if (audioFile?.url) {
+      URL.revokeObjectURL(audioFile.url);
+    }
+    
+    // Clear file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    // Clear all file-related state
     setAudioFiles([]);
     setAudioFile(null);
-    setProgress({ stage: 'idle', progress: 0, message: '' });
-    setResult(null);
     setResults({});
     setProcessingProgress({});
+    setFileStates({});
+    
+    // Clear single file progress and results
+    setProgress({ stage: 'idle', progress: 0, message: '' });
+    setResult(null);
     setError(null);
+    
+    // Clear processing states
+    setIsProcessing(false);
+    
+    // Clear CSV batch state
+    setCsvBatchData(null);
+    setCsvValidationErrors([]);
+    setCsvProcessingProgress({
+      isProcessing: false,
+      currentFile: 0,
+      totalFiles: 0,
+      currentFileName: '',
+      message: ''
+    });
+    
+    // Clear batch processing state
+    setBatchProcessingProgress({
+      isProcessing: false,
+      currentFile: 0,
+      totalFiles: 0,
+      currentFileName: '',
+      message: ''
+    });
+    
+    // Clear audio player state
     setIsPlaying(false);
     setCurrentTime(0);
     setPlayingFileId(null);
-    setIsProcessing(false);
-  }, []);
+    
+    // Clear validation errors
+    setValidationErrors({});
+    setTempValidationErrors({});
+    
+    // Clear modal and editing state
+    setEditingFileMetadata(null);
+    setTempMetadata(defaultUserMetadata);
+    
+    // Clear grammar correction state
+    setIsCorrectingGrammar(false);
+    
+    // Clear any toast messages
+    setToasts([]);
+  }, [audioFiles, audioFile]);
 
   const generateFileId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
   };
 
-  const addAudioFile = useCallback((file: File) => {
+  // Helper function to normalize ethnicity values for backend API
+  const normalizeEthnicityForBackend = (ethnicity: string): string => {
+    const normalizedInput = ethnicity.toLowerCase().trim();
+    if (normalizedInput === 'hispanic, latino, or spanish origin') {
+      return 'Hispanic, Latino, or Spanish Origin';
+    } else if (normalizedInput === 'not hispanic, latino, or spanish origin') {
+      return 'Not Hispanic, Latino, or Spanish Origin';
+    }
+    // Return original value if no normalization needed
+    return ethnicity;
+  };
+
+  const addAudioFile = useCallback((file: File, metadata?: UserMetadata) => {
     const id = generateFileId();
     const url = URL.createObjectURL(file);
-    const audioFile: AudioFile = { id, file, url };
+    
+    // Create individual userMetadata for this file
+    let fileUserMetadata: UserMetadata;
+    if (processingMode === 'batch-csv' && metadata) {
+      // Use provided metadata for CSV mode
+      fileUserMetadata = metadata;
+    } else if (processingMode === 'batch-files') {
+      // Generate individual metadata for batch files mode
+      fileUserMetadata = {
+        userId: generateFileId(),
+        age: userMetadata.age,
+        gender: userMetadata.gender,
+        race: userMetadata.race,
+        ethnicity: userMetadata.ethnicity,
+        language: userMetadata.language,
+        weight: userMetadata.weight,
+        zipcode: userMetadata.zipcode,
+        sessionNotes: userMetadata.sessionNotes
+      };
+    } else {
+      // For single mode, use the existing userMetadata structure
+      fileUserMetadata = userMetadata;
+    }
+    
+    const audioFile: AudioFile = { id, file, url, userMetadata: fileUserMetadata };
     
     if (isMultiMode) {
       setAudioFiles(prev => [...prev, audioFile]);
@@ -255,7 +448,7 @@ const UploadAnalyze: React.FC = () => {
         setAudioFile(prev => prev ? { ...prev, duration: audio.duration } : null);
       }
     });
-  }, [isMultiMode, announceToScreenReader]);
+  }, [isMultiMode, announceToScreenReader, processingMode, userMetadata]);
 
   const removeAudioFile = useCallback((fileId: string) => {
     if (isMultiMode) {
@@ -281,6 +474,490 @@ const UploadAnalyze: React.FC = () => {
       });
     }
   }, [isMultiMode]);
+
+  // Individual file metadata editing
+  const updateFileMetadata = useCallback((fileId: string, newMetadata: UserMetadata) => {
+    if (processingMode !== 'single') {
+      setAudioFiles(prev => prev.map(file => 
+        file.id === fileId ? { ...file, userMetadata: newMetadata } : file
+      ));
+    } else if (audioFile && audioFile.id === fileId) {
+      setAudioFile(prev => prev ? { ...prev, userMetadata: newMetadata } : null);
+    }
+  }, [processingMode, audioFile]);
+
+  // Temp metadata validation functions for individual file editing
+  const validateTempMetadata = useCallback(() => {
+    const errors: string[] = [];
+
+    // Age validation
+    if (tempMetadata.age) {
+      const age = parseInt(tempMetadata.age);
+      if (isNaN(age) || age < 18 || age > 130) {
+        errors.push('Age must be between 18 and 130');
+      }
+    }
+
+    // Weight validation
+    if (tempMetadata.weight) {
+      const weight = parseInt(tempMetadata.weight);
+      if (isNaN(weight) || weight < 10 || weight > 1000) {
+        errors.push('Weight must be between 10 and 1000 pounds (lbs)');
+      }
+    }
+
+    // Zipcode validation
+    if (tempMetadata.zipcode) {
+      const zipcodeRegex = /^[a-zA-Z0-9]{1,10}$/;
+      if (!zipcodeRegex.test(tempMetadata.zipcode)) {
+        errors.push('Zipcode must be alphanumeric and contain no more than 10 characters');
+      }
+    }
+
+    // Session notes validation
+    if (tempMetadata.sessionNotes && tempMetadata.sessionNotes.length > 500) {
+      errors.push('Session notes must be 500 characters or less');
+    }
+
+    return errors;
+  }, [tempMetadata]);
+
+  // Individual field validation functions for real-time validation
+  const validateAge = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const age = parseInt(value);
+    if (isNaN(age) || age < 18 || age > 130) {
+      return 'Age must be between 18 and 130';
+    }
+    return undefined;
+  }, []);
+
+  const validateWeight = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    const weight = parseInt(value);
+    if (isNaN(weight) || weight < 10 || weight > 1000) {
+      return 'Weight must be between 10 and 1000 pounds (lbs)';
+    }
+    return undefined;
+  }, []);
+
+  const validateZipcode = useCallback((value: string): string | undefined => {
+    if (!value) return undefined; // Optional field
+    const zipcodeRegex = /^[0-9]{5}$/;
+    if (!zipcodeRegex.test(value)) {
+      return 'Zipcode must be 5 digits (e.g., 12345)';
+    }
+    return undefined;
+  }, []);
+
+  const validateSessionNotes = useCallback((value: string): string | undefined => {
+    if (!value) return undefined;
+    if (value.length > 500) {
+      return 'Session notes must be 500 characters or less';
+    }
+    return undefined;
+  }, []);
+
+  const validateGender = useCallback((value: string): string | undefined => {
+    if (!value) return undefined; // Optional field
+    const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to specify'];
+    if (!validGenders.includes(value)) {
+      return 'Please select a valid gender option';
+    }
+    return undefined;
+  }, []);
+
+  const validateRace = useCallback((value: string): string | undefined => {
+    if (!value) return undefined; // Optional field
+    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
+    if (!validRaces.includes(value)) {
+      return 'Please select a valid race option';
+    }
+    return undefined;
+  }, []);
+
+  const validateEthnicity = useCallback((value: string): string | undefined => {
+    if (!value) return undefined; // Optional field
+    return undefined;
+  }, []);
+
+  // Real-time field validation handler for temp metadata
+  const handleTempFieldValidation = useCallback((field: string, value: string) => {
+    let error: string | undefined;
+    
+    switch (field) {
+      case 'age':
+        error = validateAge(value);
+        break;
+      case 'weight':
+        error = validateWeight(value);
+        break;
+      case 'zipcode':
+        error = validateZipcode(value);
+        break;
+      case 'sessionNotes':
+        error = validateSessionNotes(value);
+        break;
+      case 'gender':
+        error = validateGender(value);
+        break;
+      case 'race':
+        error = validateRace(value);
+        break;
+      case 'ethnicity':
+        error = validateEthnicity(value);
+        break;
+      default:
+        return;
+    }
+
+    setTempValidationErrors(prev => ({
+      ...prev,
+      [field]: error
+    }));
+  }, [validateAge, validateWeight, validateZipcode, validateSessionNotes, validateGender, validateRace, validateEthnicity]);
+
+  // Open metadata editor for a specific file
+  const openMetadataEditor = useCallback((fileId: string, currentMetadata?: UserMetadata) => {
+    setEditingFileMetadata(fileId);
+    setTempMetadata(currentMetadata || { ...defaultUserMetadata, userId: crypto.randomUUID() });
+    setTempValidationErrors({}); // Clear validation errors when opening
+  }, []);
+
+  // Save metadata changes
+  const saveMetadataChanges = useCallback(() => {
+    if (editingFileMetadata) {
+      // Validate temp metadata before saving
+      const validationErrors = validateTempMetadata();
+      
+      if (validationErrors.length > 0) {
+        // Show validation errors as toast messages
+        validationErrors.forEach(error => {
+          addToast('error', 'Validation Error', error);
+        });
+        return; // Don't save if there are validation errors
+      }
+      
+      updateFileMetadata(editingFileMetadata, tempMetadata);
+      setEditingFileMetadata(null);
+      setTempMetadata(defaultUserMetadata);
+      setTempValidationErrors({}); // Clear validation errors
+    }
+  }, [editingFileMetadata, tempMetadata, updateFileMetadata, validateTempMetadata, addToast]);
+
+  // Cancel metadata editing
+  const cancelMetadataEdit = useCallback(() => {
+    setEditingFileMetadata(null);
+    setTempMetadata(defaultUserMetadata);
+    setTempValidationErrors({}); // Clear validation errors when canceling
+  }, []);
+
+  const handleCsvFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setCsvValidationErrors(['Please select a valid CSV file']);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const csvText = e.target?.result as string;
+        const rows = csvText.split('\n').filter(row => row.trim());
+        
+        if (rows.length < 2) {
+          setCsvValidationErrors(['CSV must contain at least a header row and one data row']);
+          return;
+        }
+
+        // Proper CSV parsing function that handles quoted values and commas
+        const parseCsvRow = (row: string): string[] => {
+          const result: string[] = [];
+          let current = '';
+          let inQuotes = false;
+          let i = 0;
+          
+          while (i < row.length) {
+            const char = row[i];
+            const nextChar = row[i + 1];
+            
+            if (char === '"' && !inQuotes) {
+              // Start of quoted field
+              inQuotes = true;
+            } else if (char === '"' && inQuotes) {
+              if (nextChar === '"') {
+                // Escaped quote inside quoted field
+                current += '"';
+                i++; // Skip next quote
+              } else {
+                // End of quoted field
+                inQuotes = false;
+              }
+            } else if (char === ',' && !inQuotes) {
+              // Field separator outside quotes
+              result.push(current.trim());
+              current = '';
+            } else {
+              // Regular character
+              current += char;
+            }
+            i++;
+          }
+          
+          // Add the last field
+          result.push(current.trim());
+          return result;
+        };
+
+        const headers = parseCsvRow(rows[0]).map(h => h.replace(/^"|"$/g, '').trim());
+        const requiredHeaders = ['userId', 'fileUrl'];
+        const optionalHeaders = ['age', 'gender', 'race', 'ethnicity', 'language', 'weight', 'zipcode', 'sessionNotes', 'fileName'];
+        
+        const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+          setCsvValidationErrors([`Missing required columns: ${missingHeaders.join(', ')}`]);
+          return;
+        }
+
+        const parsedRows: CsvBatchRow[] = [];
+        const errors: string[] = [];
+
+        for (let i = 1; i < rows.length; i++) {
+          const values = parseCsvRow(rows[i]).map(v => v.replace(/^"|"$/g, '').trim());
+          const row: CsvBatchRow = { userId: '', fileUrl: '' };
+
+          headers.forEach((header, index) => {
+            const value = values[index] || '';
+            if (header === 'userId' || header === 'fileUrl') {
+              (row as any)[header] = value;
+            } else if (optionalHeaders.includes(header)) {
+              (row as any)[header] = value;
+            }
+          });
+
+          // Basic required field validation
+          if (!row.userId || !row.fileUrl) {
+            errors.push(`Row ${i + 1}: Missing required values for userId or fileUrl`);
+          } else if (!row.fileUrl.startsWith('http')) {
+            errors.push(`Row ${i + 1}: fileUrl must be a valid URL`);
+          } else {
+            // Validate optional fields that have specific requirements
+            let hasFieldErrors = false;
+
+            // Validate ethnicity format
+            if (row.ethnicity && row.ethnicity.trim()) {
+              const validEthnicities = [
+                "hispanic, latino, or spanish origin", 
+                "not hispanic, latino, or spanish origin"
+              ];
+              const normalizedEthnicity = row.ethnicity.toLowerCase().trim();
+              if (!validEthnicities.includes(normalizedEthnicity)) {
+                errors.push(`Row ${i + 1}: Invalid ethnicity "${row.ethnicity}". Must be: "Hispanic, Latino, or Spanish Origin" or "Not Hispanic, Latino, or Spanish Origin"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate weight range
+            if (row.weight && row.weight.trim()) {
+              const weightNum = parseInt(row.weight.trim());
+              if (isNaN(weightNum) || weightNum < 10 || weightNum > 1000) {
+                errors.push(`Row ${i + 1}: Weight must be between 10 and 1000 pounds, got "${row.weight}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate age range
+            if (row.age && row.age.trim()) {
+              const ageNum = parseInt(row.age.trim());
+              if (isNaN(ageNum) || ageNum < 1 || ageNum > 149) {
+                errors.push(`Row ${i + 1}: Age must be between 1 and 149 years, got "${row.age}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate gender options
+            if (row.gender && row.gender.trim()) {
+              const validGenders = ["female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer not to specify"];
+              if (!validGenders.includes(row.gender.toLowerCase().trim())) {
+                errors.push(`Row ${i + 1}: Invalid gender "${row.gender}". Must be one of: ${validGenders.join(', ')}`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate race options
+            if (row.race && row.race.trim()) {
+              const validRaces = [
+                "white", 
+                "black or african-american", 
+                "asian", 
+                "american indian or alaskan native", 
+                "native Hawaiian or Pacific Islander", 
+                "two or more races", 
+                "other", 
+                "prefer not to specify"
+              ];
+              // Special case: preserve capital H in "Hawaiian"
+              let normalizedInputRace = row.race.toLowerCase().trim();
+              if (normalizedInputRace === 'native hawaiian or pacific islander') {
+                normalizedInputRace = 'native Hawaiian or pacific islander';
+              }
+              if (!validRaces.includes(normalizedInputRace)) {
+                errors.push(`Row ${i + 1}: Invalid race "${row.race}". Must be one of: ${validRaces.join(', ')}`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate zipcode format
+            if (row.zipcode && row.zipcode.trim()) {
+              if (!/^[0-9]{5}$/.test(row.zipcode.trim())) {
+                errors.push(`Row ${i + 1}: Zipcode must be exactly 5 digits, got "${row.zipcode}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate language
+            if (row.language !== undefined && row.language !== null) {
+              if (typeof row.language === 'string') {
+                const langValue = (row.language as string).toLowerCase().trim();
+                if (!['true', 'false'].includes(langValue)) {
+                  errors.push(`Row ${i + 1}: Language must be boolean (true/false), got "${row.language}"`);
+                  hasFieldErrors = true;
+                }
+              } else if (typeof row.language !== 'boolean') {
+                errors.push(`Row ${i + 1}: Language must be boolean, got ${typeof row.language}`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate sessionNotes length (optional but reasonable limit)
+            if (row.sessionNotes && row.sessionNotes.trim()) {
+              if (row.sessionNotes.trim().length > 500) {
+                errors.push(`Row ${i + 1}: Session notes must be 500 characters or less, got ${row.sessionNotes.trim().length} characters`);
+                hasFieldErrors = true;
+              }
+            }
+
+            // Validate fileName format (optional but should be reasonable)
+            if (row.fileName && row.fileName.trim()) {
+              if (row.fileName.trim().length > 255) {
+                errors.push(`Row ${i + 1}: File name must be 255 characters or less, got ${row.fileName.trim().length} characters`);
+                hasFieldErrors = true;
+              }
+              // Check for potentially problematic characters in filename
+              const invalidChars = /[<>:"/\\|?*\x00-\x1f]/;
+              if (invalidChars.test(row.fileName.trim())) {
+                errors.push(`Row ${i + 1}: File name contains invalid characters, got "${row.fileName}"`);
+                hasFieldErrors = true;
+              }
+            }
+
+            if (!hasFieldErrors) {
+              parsedRows.push(row);
+            }
+          }
+        }
+
+        if (errors.length > 0) {
+          setCsvValidationErrors(errors);
+          return;
+        }
+
+        setCsvBatchData({ rows: parsedRows, fileName: file.name });
+        setCsvValidationErrors([]);
+        announceToScreenReader(`CSV file loaded with ${parsedRows.length} valid rows`);
+      } catch (error) {
+        setCsvValidationErrors(['Error parsing CSV file. Please check file format.']);
+      }
+    };
+
+    reader.readAsText(file);
+  }, [announceToScreenReader]);
+
+  const processCsvBatch = useCallback(async () => {
+    if (!csvBatchData) return;
+
+    const totalFiles = csvBatchData.rows.length;
+    setCsvProcessingProgress({
+      isProcessing: true,
+      currentFile: 0,
+      totalFiles,
+      currentFileName: '',
+      message: 'Starting CSV batch processing...'
+    });
+
+    try {
+      for (let i = 0; i < csvBatchData.rows.length; i++) {
+        const row = csvBatchData.rows[i];
+        const filename = row.fileName || row.fileUrl.split('/').pop() || 'audio-file.wav';
+        
+        setCsvProcessingProgress(prev => ({
+          ...prev,
+          currentFile: i + 1,
+          currentFileName: filename,
+          message: `Processing file ${i + 1} of ${totalFiles}: ${filename}`
+        }));
+
+        try {
+          // Fetch audio file from URL
+          const response = await fetch(row.fileUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch audio file: ${response.statusText}`);
+          }
+
+          const blob = await response.blob();
+          const file = new (window as any).File([blob], filename, { type: blob.type || 'audio/wav' }) as File;
+
+          // Create metadata from CSV row
+          const metadata: UserMetadata = {
+            userId: row.userId,
+            age: row.age,
+            gender: row.gender,
+            race: row.race,
+            ethnicity: row.ethnicity ? normalizeEthnicityForBackend(row.ethnicity) : row.ethnicity,
+            language: row.language,
+            weight: row.weight,
+            zipcode: row.zipcode,
+            sessionNotes: row.sessionNotes
+          };
+
+          // Add the file with its metadata
+          addAudioFile(file, metadata);
+        } catch (error) {
+          console.error(`Error processing CSV row for ${row.userId}:`, error);
+          addToast('error', 'File Processing Error', `Failed to process ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          // Continue with other files even if one fails
+        }
+
+        // Small delay to allow UI updates
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      setCsvProcessingProgress(prev => ({
+        ...prev,
+        message: `Successfully processed ${totalFiles} files from CSV`
+      }));
+
+      addToast('success', 'CSV Processing Complete', `Successfully loaded ${totalFiles} files from CSV for batch processing`);
+      announceToScreenReader(`CSV batch processing complete. ${totalFiles} files loaded successfully.`);
+
+    } catch (error) {
+      console.error('CSV batch processing error:', error);
+      addToast('error', 'CSV Processing Failed', 'An error occurred during CSV batch processing');
+    } finally {
+      // Reset progress after a short delay to show completion
+      setTimeout(() => {
+        setCsvProcessingProgress({
+          isProcessing: false,
+          currentFile: 0,
+          totalFiles: 0,
+          currentFileName: '',
+          message: ''
+        });
+      }, 2000);
+    }
+  }, [csvBatchData, addAudioFile, addToast, announceToScreenReader, audioFiles]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -337,11 +1014,13 @@ const UploadAnalyze: React.FC = () => {
     }
   }, [handleFileSelect]);
 
+  // @ts-ignore - Will be used for backward compatibility
   const toggleMode = useCallback(() => {
     setIsMultiMode(prev => {
       const newMode = !prev;
+      const processingModeString = newMode ? 'batch-files' : 'single';
       // Save to localStorage
-      setStoredProcessingMode(newMode);
+      setStoredProcessingMode(processingModeString);
       // Clear files when switching modes
       resetState();
       return newMode;
@@ -374,6 +1053,13 @@ const UploadAnalyze: React.FC = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
+  // Safe parsing helper to handle potential NaN values
+  const safeParseFloat = useCallback((value: string | undefined | null, defaultValue: number = 0): number => {
+    if (!value) return defaultValue;
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+  }, []);
+
   const validateMetadata = useCallback(() => {
     const errors: string[] = [];
 
@@ -387,21 +1073,21 @@ const UploadAnalyze: React.FC = () => {
 
     // Gender validation
     if (userMetadata.gender) {
-      const validGenders = ['male', 'female', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer'];
+      const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to specify'];
       if (!validGenders.includes(userMetadata.gender)) {
-        errors.push('Invalid gender. Must be: male, female, non-binary, transgender female, transgender male, other, or prefer');
+        errors.push('Invalid gender. Must be: female, male, non-binary, transgender female, transgender male, other, or prefer not to specify');
       }
     }
 
     // Race validation
     if (userMetadata.race) {
-      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
+      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
       if (!validRaces.includes(userMetadata.race)) {
-        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to say');
+        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to specify');
       }
     }
 
-    // Ethnicity validation
+    // Ethnicity validation - optional field
     if (userMetadata.ethnicity) {
       const validEthnicities = ['Hispanic, Latino, or Spanish Origin', 'Not Hispanic, Latino, or Spanish Origin'];
       if (!validEthnicities.includes(userMetadata.ethnicity)) {
@@ -428,42 +1114,6 @@ const UploadAnalyze: React.FC = () => {
     return errors;
   }, [userMetadata]);
 
-  // Individual field validation functions for real-time validation
-  const validateAge = useCallback((value: string): string | undefined => {
-    if (!value) return undefined;
-    const age = parseInt(value);
-    if (isNaN(age) || age < 18 || age > 130) {
-      return 'Age must be between 18 and 130';
-    }
-    return undefined;
-  }, []);
-
-  const validateWeight = useCallback((value: string): string | undefined => {
-    if (!value) return undefined;
-    const weight = parseInt(value);
-    if (isNaN(weight) || weight < 10 || weight > 1000) {
-      return 'Weight must be between 10 and 1000 pounds (lbs)';
-    }
-    return undefined;
-  }, []);
-
-  const validateZipcode = useCallback((value: string): string | undefined => {
-    if (!value) return undefined;
-    const zipcodeRegex = /^[a-zA-Z0-9]{1,10}$/;
-    if (!zipcodeRegex.test(value)) {
-      return 'Zipcode must be alphanumeric and contain no more than 10 characters';
-    }
-    return undefined;
-  }, []);
-
-  const validateSessionNotes = useCallback((value: string): string | undefined => {
-    if (!value) return undefined;
-    if (value.length > 500) {
-      return 'Session notes must be 500 characters or less';
-    }
-    return undefined;
-  }, []);
-
   // Real-time field validation handler
   const handleFieldValidation = useCallback((field: string, value: string) => {
     let error: string | undefined;
@@ -480,6 +1130,15 @@ const UploadAnalyze: React.FC = () => {
         break;
       case 'sessionNotes':
         error = validateSessionNotes(value);
+        break;
+      case 'gender':
+        error = validateGender(value);
+        break;
+      case 'race':
+        error = validateRace(value);
+        break;
+      case 'ethnicity':
+        error = validateEthnicity(value);
         break;
       default:
         return;
@@ -510,7 +1169,7 @@ const UploadAnalyze: React.FC = () => {
       
       return newErrors;
     });
-  }, [validateAge, validateWeight, validateZipcode, validateSessionNotes]);
+  }, [validateAge, validateWeight, validateZipcode, validateSessionNotes, validateGender, validateRace, validateEthnicity]);
 
   const handleGrammarCorrection = useCallback(async () => {
     if (!userMetadata.sessionNotes.trim()) {
@@ -546,36 +1205,216 @@ const UploadAnalyze: React.FC = () => {
     let hasMetadata = false;
 
     if (userMetadata.age) {
-      metadata.age = parseInt(userMetadata.age);
-      hasMetadata = true;
+      const ageNum = parseInt(userMetadata.age);
+      if (!isNaN(ageNum)) {
+        metadata.age = ageNum;
+        hasMetadata = true;
+      }
     }
     if (userMetadata.gender) {
-      metadata.gender = userMetadata.gender as SessionMetadata['gender'];
+      metadata.gender = userMetadata.gender.toLowerCase().trim() as SessionMetadata['gender'];
       hasMetadata = true;
     }
     if (userMetadata.race) {
-      metadata.race = userMetadata.race as SessionMetadata['race'];
+      // Special case: preserve capital H in "Hawaiian"
+      let normalizedRace = userMetadata.race.toLowerCase().trim();
+      if (normalizedRace === 'native hawaiian or pacific islander') {
+        normalizedRace = 'native Hawaiian or pacific islander';
+      }
+      metadata.race = normalizedRace as SessionMetadata['race'];
       hasMetadata = true;
     }
     if (userMetadata.ethnicity) {
-      metadata.ethnicity = userMetadata.ethnicity as SessionMetadata['ethnicity'];
-      hasMetadata = true;
-    }
-    if (userMetadata.language === 'true' || userMetadata.language === 'false') {
-      metadata.language = userMetadata.language === 'true';
-      hasMetadata = true;
-    }
-    if (userMetadata.weight) {
-      metadata.weight = parseInt(userMetadata.weight);
+      metadata.ethnicity = normalizeEthnicityForBackend(userMetadata.ethnicity) as SessionMetadata['ethnicity'];
       hasMetadata = true;
     }
     if (userMetadata.zipcode) {
       metadata.zipcode = userMetadata.zipcode;
       hasMetadata = true;
     }
+    
+    // Optional fields
+    if (userMetadata.language !== undefined) {
+      metadata.language = userMetadata.language;
+      hasMetadata = true;
+    }
+    if (userMetadata.weight) {
+      const weightNum = parseInt(userMetadata.weight);
+      if (!isNaN(weightNum)) {
+        metadata.weight = weightNum;
+        hasMetadata = true;
+      }
+    }
 
     return hasMetadata ? metadata : undefined;
   }, [userMetadata]);
+
+  const buildMetadataFromUserData = useCallback((userData: UserMetadata) => {
+    const metadata: Partial<SessionMetadata> = {};
+    let hasMetadata = false;
+
+    // Optional fields
+    if (userData.age) {
+      const ageNum = parseInt(userData.age);
+      if (!isNaN(ageNum)) {
+        metadata.age = ageNum;
+        hasMetadata = true;
+      }
+    }
+    if (userData.weight) {
+      const weightNum = parseInt(userData.weight);
+      if (!isNaN(weightNum)) {
+        metadata.weight = weightNum;
+        hasMetadata = true;
+      }
+    }
+    if (userData.language !== undefined) {
+      if (typeof userData.language === 'boolean') {
+        metadata.language = userData.language;
+        hasMetadata = true;
+      } else if (typeof userData.language === 'string') {
+        const langValue = (userData.language as string).toLowerCase().trim();
+        if (['true', '1', 'yes'].includes(langValue)) {
+          metadata.language = true;
+          hasMetadata = true;
+        } else if (['false', '0', 'no'].includes(langValue)) {
+          metadata.language = false;
+          hasMetadata = true;
+        }
+      }
+    }
+    
+    // Required fields - always include these if provided
+    if (userData.gender) {
+      metadata.gender = userData.gender.toLowerCase().trim() as SessionMetadata['gender'];
+      hasMetadata = true;
+    }
+    if (userData.race) {
+      // Special case: preserve capital H in "Hawaiian"
+      let normalizedRace = userData.race.toLowerCase().trim();
+      if (normalizedRace === 'native hawaiian or pacific islander') {
+        normalizedRace = 'native Hawaiian or pacific islander';
+      }
+      metadata.race = normalizedRace as SessionMetadata['race'];
+      hasMetadata = true;
+    }
+    if (userData.ethnicity) {
+      metadata.ethnicity = normalizeEthnicityForBackend(userData.ethnicity) as SessionMetadata['ethnicity'];
+      hasMetadata = true;
+    }
+    if (userData.zipcode) {
+      metadata.zipcode = userData.zipcode;
+      hasMetadata = true;
+    }
+
+    return hasMetadata ? metadata : undefined;
+  }, []);
+
+  // Apply to All Files function for batch-files mode
+  const applyToAllFiles = useCallback(() => {
+    if (processingMode !== 'batch-files' || audioFiles.length === 0) {
+      return;
+    }
+
+    // Apply the current userMetadata (from the main form) to all files' userMetadata
+    setAudioFiles(prevFiles => 
+      prevFiles.map(file => ({
+        ...file,
+        userMetadata: {
+          userId: userMetadata.userId || file.userMetadata?.userId || crypto.randomUUID(),
+          age: userMetadata.age || file.userMetadata?.age || '',
+          gender: userMetadata.gender || file.userMetadata?.gender || '',
+          race: userMetadata.race || file.userMetadata?.race || '',
+          ethnicity: userMetadata.ethnicity || file.userMetadata?.ethnicity || '',
+          language: userMetadata.language !== undefined ? userMetadata.language : file.userMetadata?.language,
+          weight: userMetadata.weight || file.userMetadata?.weight || '',
+          zipcode: userMetadata.zipcode || file.userMetadata?.zipcode || '',
+          sessionNotes: userMetadata.sessionNotes || file.userMetadata?.sessionNotes || ''
+        }
+      }))
+    );
+
+    // Show success message
+    addToast('success', 'Applied to All Files', 'Patient information has been applied to all uploaded files');
+    announceToScreenReader('Patient information has been applied to all uploaded files');
+  }, [processingMode, audioFiles, userMetadata, addToast, announceToScreenReader]);
+
+  // Download CSV template function for batch-csv mode
+  const downloadCsvTemplate = useCallback(() => {
+    // Define all CSV columns
+    const headers = [
+      'userId',
+      'fileUrl',
+      'age',
+      'gender',
+      'race',
+      'ethnicity',
+      'language',
+      'weight',
+      'zipcode',
+      'sessionNotes',
+      'fileName'
+    ];
+
+    // Create sample rows with default patient information if available
+    const sampleRows = [
+      {
+        userId: userMetadata.userId || 'user-sample-1',
+        fileUrl: 'https://yourstorageaccount.blob.core.windows.net/audio/sample1.wav',
+        age: userMetadata.age || '30',
+        gender: userMetadata.gender || 'male',
+        race: userMetadata.race || 'white',
+        ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
+        language: userMetadata.language !== undefined ? userMetadata.language : true,
+        weight: userMetadata.weight || '150',
+        zipcode: userMetadata.zipcode || '12345',
+        sessionNotes: userMetadata.sessionNotes || 'Sample session notes',
+        fileName: 'sample1.wav'
+      },
+      {
+        userId: userMetadata.userId ? `${userMetadata.userId}-2` : 'user-sample-2',
+        fileUrl: 'https://yourstorageaccount.blob.core.windows.net/audio/sample2.wav',
+        age: userMetadata.age || '25',
+        gender: userMetadata.gender || 'female',
+        race: userMetadata.race || 'asian',
+        ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
+        language: userMetadata.language !== undefined ? userMetadata.language : false,
+        weight: userMetadata.weight || '120',
+        zipcode: userMetadata.zipcode || '54321',
+        sessionNotes: userMetadata.sessionNotes || 'Another sample session',
+        fileName: 'sample2.wav'
+      }
+    ];
+
+    // Convert to CSV format
+    const csvContent = [
+      headers.join(','),
+      ...sampleRows.map(row => 
+        headers.map(header => {
+          const rawValue = row[header as keyof typeof row];
+          const value = rawValue === undefined || rawValue === null ? '' : String(rawValue);
+          // Escape values containing commas or quotes
+          return value.includes(',') || value.includes('"') ? `"${value.replace(/"/g, '""')}"` : value;
+        }).join(',')
+      )
+    ].join('\n');
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'batch-processing-template.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success message
+    addToast('success', 'CSV Template Downloaded', 'CSV template file has been downloaded with sample data');
+    announceToScreenReader('CSV template file downloaded successfully');
+  }, [userMetadata, addToast, announceToScreenReader]);
 
   const processAndAnalyze = useCallback(async () => {
     if (isMultiMode) {
@@ -603,9 +1442,12 @@ const UploadAnalyze: React.FC = () => {
         [fileId]: { stage: 'initiating', progress: 5, message: 'Initiating session...' }
       }));
 
-      const metadata = buildMetadata();
+      // Use individual file metadata or fall back to shared metadata
+      const fileMetadata = audioFile.userMetadata || userMetadata;
+      const metadata = audioFile.userMetadata ? buildMetadataFromUserData(audioFile.userMetadata) : buildMetadata();
+      
       const sessionRequest: any = {
-        userid: userMetadata.userId.trim(),
+        userid: fileMetadata.userId.trim(),
         is_initiated: true
       };
 
@@ -618,7 +1460,7 @@ const UploadAnalyze: React.FC = () => {
 
       const sessionData: SessionInfo = {
         sessionId: sessionResponse.sessionId,
-        userId: userMetadata.userId.trim()
+        userId: fileMetadata.userId.trim()
       };
 
       // Save initial session data to blob storage so it appears in Analysis Sessions UI
@@ -630,7 +1472,7 @@ const UploadAnalyze: React.FC = () => {
       const initialSessionData = {
         sessionId: sessionResponse.sessionId,
         userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
-        metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
+        metadata_user_id: fileMetadata.userId.trim(), // Store metadata user ID separately
         ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -782,9 +1624,11 @@ const UploadAnalyze: React.FC = () => {
             // Analysis complete successfully
             const analysisResult: AnalysisResult = {
               sessionId: sessionData.sessionId,
-              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : 0,
-              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
+              riskLevel: (() => {
+                const score = safeParseFloat(result.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })(),
               confidence: 0.85, // This would come from the API in a real scenario
               insights: [
                 'Analysis completed using Kintsugi Health API',
@@ -803,10 +1647,12 @@ const UploadAnalyze: React.FC = () => {
               audioUrl: audioUrl,
               prediction: result, // Store the complete API response
               analysisResults: {
-                depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
-                anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
-                riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                          result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+                depressionScore: safeParseFloat(result.predictedScoreDepression),
+                anxietyScore: safeParseFloat(result.predictedScoreAnxiety),
+                riskLevel: (() => {
+                  const score = safeParseFloat(result.predictedScoreDepression, 0);
+                  return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+                })(),
                 confidence: 0.85, // This would come from the API in a real scenario
                 insights: [
                   'Analysis completed using Kintsugi Health API',
@@ -935,19 +1781,31 @@ const UploadAnalyze: React.FC = () => {
       }));
       throw err; // Re-throw to be handled by the calling function
     }
-  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast]);
+  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast, safeParseFloat]);
 
   const processMultipleFiles = useCallback(async () => {
     setIsProcessing(true);
     setError(null);
     
-    // Validate metadata once for all files
-    const validationErrors = validateMetadata();
-    if (validationErrors.length > 0) {
-      setError(`Validation error: ${validationErrors.join(', ')}`);
-      addToast('error', 'Validation Error', validationErrors.join(', '));
-      setIsProcessing(false);
-      return;
+    // For batch processing modes, validate individual file metadata if needed
+    if (processingMode === 'batch-files' || processingMode === 'batch-csv') {
+      // Check that all files have userMetadata
+      const filesWithoutMetadata = audioFiles.filter(file => !file.userMetadata);
+      if (filesWithoutMetadata.length > 0) {
+        setError('Some files are missing user metadata');
+        addToast('error', 'Validation Error', 'All files must have user metadata in batch mode');
+        setIsProcessing(false);
+        return;
+      }
+    } else {
+      // Original validation for shared metadata mode
+      const validationErrors = validateMetadata();
+      if (validationErrors.length > 0) {
+        setError(`Validation error: ${validationErrors.join(', ')}`);
+        addToast('error', 'Validation Error', validationErrors.join(', '));
+        setIsProcessing(false);
+        return;
+      }
     }
 
     // Only process files that are in 'ready' state
@@ -962,10 +1820,29 @@ const UploadAnalyze: React.FC = () => {
     const totalFiles = filesToProcess.length;
     let completedFiles = 0;
 
+    // Initialize batch processing progress
+    setBatchProcessingProgress({
+      isProcessing: true,
+      currentFile: 0,
+      totalFiles,
+      currentFileName: '',
+      message: 'Starting batch file processing...'
+    });
+
     try {
       for (const audioFile of filesToProcess) {
         completedFiles++;
-        addToast('info', 'Processing File', `Processing ${audioFile.file.name} (${completedFiles}/${totalFiles})`);
+        const fileName = audioFile.file.name;
+        
+        // Update progress
+        setBatchProcessingProgress(prev => ({
+          ...prev,
+          currentFile: completedFiles,
+          currentFileName: fileName,
+          message: `Processing file ${completedFiles} of ${totalFiles}: ${fileName}`
+        }));
+
+        addToast('info', 'Processing File', `Processing ${fileName} (${completedFiles}/${totalFiles})`);
         
         // Set file state to processing
         setFileStates(prev => ({ ...prev, [audioFile.id]: 'processing' }));
@@ -973,7 +1850,10 @@ const UploadAnalyze: React.FC = () => {
         try {
           await processSingleFileById(audioFile.id, audioFile);
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
-          addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
+          addToast('success', 'File Complete', `${fileName} processed successfully`);
+          
+          // Small delay to allow UI updates and make progress visible
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           // Extract detailed error information
           let errorCode = 'FILE_PROCESSING_ERROR';
@@ -1017,6 +1897,13 @@ const UploadAnalyze: React.FC = () => {
       
       addToast('success', 'Batch Complete', `Processed ${completedFiles} file${completedFiles !== 1 ? 's' : ''}`);
       announceToScreenReader(`Batch processing complete. ${completedFiles} files processed.`);
+      
+      // Update progress with completion message
+      setBatchProcessingProgress(prev => ({
+        ...prev,
+        message: `Successfully processed ${completedFiles} files`
+      }));
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
@@ -1024,6 +1911,17 @@ const UploadAnalyze: React.FC = () => {
       announceToScreenReader(`Error: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
+      
+      // Reset batch processing progress after a short delay to show completion
+      setTimeout(() => {
+        setBatchProcessingProgress({
+          isProcessing: false,
+          currentFile: 0,
+          totalFiles: 0,
+          currentFileName: '',
+          message: ''
+        });
+      }, 2000);
     }
   }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById]);
 
@@ -1231,9 +2129,11 @@ const UploadAnalyze: React.FC = () => {
             // Analysis complete successfully
             const analysisResult: AnalysisResult = {
               sessionId: sessionData.sessionId,
-              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : 0,
-              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
+              riskLevel: (() => {
+                const score = safeParseFloat(result.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })(),
               confidence: 0.85, // This would come from the API in a real scenario
             insights: [
               'Analysis completed using Kintsugi Health API',
@@ -1252,10 +2152,12 @@ const UploadAnalyze: React.FC = () => {
             audioUrl: audioUrl,
             prediction: result, // Store the complete API response
             analysisResults: {
-              depressionScore: result.predictedScoreDepression ? parseFloat(result.predictedScoreDepression) : undefined,
-              anxietyScore: result.predictedScoreAnxiety ? parseFloat(result.predictedScoreAnxiety) : undefined,
-              riskLevel: result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.7 ? 'high' :
-                        result.predictedScoreDepression && parseFloat(result.predictedScoreDepression) > 0.4 ? 'medium' : 'low',
+              depressionScore: safeParseFloat(result.predictedScoreDepression),
+              anxietyScore: safeParseFloat(result.predictedScoreAnxiety),
+              riskLevel: (() => {
+                const score = safeParseFloat(result.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })(),
               confidence: 0.85, // This would come from the API in a real scenario
               insights: [
                 'Analysis completed using Kintsugi Health API',
@@ -1304,7 +2206,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {
@@ -1323,58 +2225,63 @@ const UploadAnalyze: React.FC = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Processing Mode:</span>
-              <div className="relative inline-flex items-center">
-                <button type="button"
-                  onClick={toggleMode}
-                  className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
-                    isMultiMode 
-                      ? 'bg-blue-600 hover:bg-blue-700' 
-                      : 'bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500'
-                  }`}
-                  aria-label={`Switch to ${isMultiMode ? 'single file' : 'multi-file'} mode`}
-                >
-                  <span
-                    className={`inline-flex h-6 w-6 transform rounded-full bg-white items-center justify-center transition-transform ${
-                      isMultiMode ? 'translate-x-9' : 'translate-x-1'
+              <div className="flex items-center space-x-2">
+                {['single', 'batch-files', 'batch-csv'].map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => {
+                      setProcessingMode(mode as ProcessingMode);
+                      setStoredProcessingMode(mode); // Save the actual mode string
+                      
+                      // Completely reset all state when switching modes
+                      resetState();
+                      
+                      // Announce the mode change to screen readers
+                      announceToScreenReader(`Switched to ${mode === 'single' ? 'Single File' : mode === 'batch-files' ? 'Batch Files' : 'CSV Batch'} mode`);
+                    }}
+                    className={`px-3 py-1 text-xs font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                      processingMode === mode
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
                     }`}
                   >
-                    {isMultiMode ? (
-                      <Files className="h-3 w-3 text-blue-600" />
-                    ) : (
-                      <File className="h-3 w-3 text-gray-600" />
-                    )}
-                  </span>
-                </button>
-                <div className="ml-3 flex items-center space-x-4">
-                  <span className={`text-sm font-medium ${!isMultiMode ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                    Single
-                  </span>
-                  <span className={`text-sm font-medium ${isMultiMode ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                    Multi
-                  </span>
-                </div>
+                    {mode === 'single' && 'Single File'}
+                    {mode === 'batch-files' && 'Batch Files'}
+                    {mode === 'batch-csv' && 'CSV Batch'}
+                  </button>
+                ))}
               </div>
             </div>
             
             {/* Status Badge */}
             <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-              isMultiMode 
+              processingMode === 'single'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                : processingMode === 'batch-files'
                 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
-                : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
             }`}>
-              {isMultiMode ? (
+              {processingMode === 'single' ? (
+                <>
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 2H4v8h12V6z" clipRule="evenodd" />
+                  </svg>
+                  Single File Processing
+                </>
+              ) : processingMode === 'batch-files' ? (
                 <>
                   <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                   </svg>
-                  Batch Processing
+                  Batch File Processing
                 </>
               ) : (
                 <>
                   <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
-                  Single File
+                  CSV Batch Processing
                 </>
               )}
             </div>
@@ -1385,29 +2292,38 @@ const UploadAnalyze: React.FC = () => {
           Upload & Analyze Audio
         </h1>
         <p className="text-gray-600 dark:text-gray-300 mb-4">
-          Upload {isMultiMode ? 'multiple audio files' : 'an audio file'} for behavioral health analysis using AI-powered speech pattern recognition
+          Upload {processingMode === 'single' ? 'an audio file' : processingMode === 'batch-files' ? 'multiple audio files' : 'audio files via CSV'} for behavioral health analysis using AI-powered speech pattern recognition
         </p>
         
         {/* Mode Description */}
         <div className={`inline-flex items-center px-4 py-2 rounded-lg text-sm ${
-          isMultiMode 
+          processingMode === 'single'
+            ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+            : processingMode === 'batch-files'
             ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' 
-            : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
+            : 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300'
         }`}>
-          {isMultiMode ? (
+          {processingMode === 'single' ? (
+            <>
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              Upload and analyze one file at a time with detailed progress tracking
+            </>
+          ) : processingMode === 'batch-files' ? (
             <>
               <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 12a1 1 0 000 2h2a1 1 0 100-2H9z" />
                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clipRule="evenodd" />
               </svg>
-              Process multiple files with individual controls and batch options
+              Process multiple files with individual patient metadata for each file
             </>
           ) : (
             <>
               <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
-              Upload and analyze one file at a time with detailed progress tracking
+              Upload CSV file with patient data and blob storage URLs for batch processing
             </>
           )}
         </div>
@@ -1416,8 +2332,31 @@ const UploadAnalyze: React.FC = () => {
       {/* User Metadata Form */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Patient Information (Optional)
+          {processingMode === 'batch-files' 
+            ? 'Patient Information (Optional, Apply to All Files)' 
+            : processingMode === 'batch-csv'
+            ? 'Default Patient Information (Optional, Override with CSV Data)'
+            : 'Patient Information (Optional)'
+          }
         </h2>
+        
+        {/* Explanatory text for batch modes */}
+        {processingMode === 'batch-files' && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>Note:</strong> Information entered here will be applied to all uploaded files. 
+              After uploading, you can click "Edit Info" on individual files to customize their metadata.
+            </p>
+          </div>
+        )}
+        
+        {processingMode === 'batch-csv' && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>Note:</strong> This serves as default information. Data from your CSV file will override these values for each row.
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label htmlFor="userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1521,13 +2460,13 @@ const UploadAnalyze: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">Select gender</option>
-              <option value="male">Male</option>
               <option value="female">Female</option>
+              <option value="male">Male</option>
               <option value="non-binary">Non-binary</option>
-              <option value="transgender female">Transgender female</option>
-              <option value="transgender male">Transgender male</option>
               <option value="other">Other</option>
-              <option value="prefer">Prefer</option>
+              <option value="prefer not to specify">Prefer Not to Specify</option>
+              <option value="transgender female">Transgender Female</option>
+              <option value="transgender male">Transgender Male</option>
             </select>
           </div>
 
@@ -1542,14 +2481,14 @@ const UploadAnalyze: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             >
               <option value="">Select race</option>
-              <option value="white">White</option>
-              <option value="black or african-american">Black or African-American</option>
-              <option value="asian">Asian</option>
               <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
+              <option value="asian">Asian</option>
+              <option value="black or african-american">Black or African-American</option>
               <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
-              <option value="two or more races">Two or more races</option>
               <option value="other">Other</option>
-              <option value="prefer not to say">Prefer not to say</option>
+              <option value="prefer not to specify">Prefer Not to Specify</option>
+              <option value="two or more races">Two or more races</option>
+              <option value="white">White</option>
             </select>
           </div>
 
@@ -1571,17 +2510,20 @@ const UploadAnalyze: React.FC = () => {
 
           <div>
             <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Primary Language
+              English as Primary Language?
             </label>
             <select
               id="language"
-              value={userMetadata.language}
-              onChange={(e) => setUserMetadata(prev => ({ ...prev, language: e.target.value }))}
+              value={userMetadata.language === undefined ? '' : userMetadata.language.toString()}
+              onChange={(e) => setUserMetadata(prev => ({ 
+                ...prev, 
+                language: e.target.value === '' ? undefined : e.target.value === 'true'
+              }))}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">Select language</option>
-              <option value="true">English</option>
-              <option value="false">Other</option>
+              <option value="">Select answer</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
             </select>
           </div>
 
@@ -1684,6 +2626,60 @@ const UploadAnalyze: React.FC = () => {
                 )}
                 {isCorrectingGrammar ? 'Correcting...' : 'Correct Grammar'}
               </button>
+
+              {/* Download CSV Template Button for batch-csv mode */}
+              {processingMode === 'batch-csv' && (
+                <button
+                  type="button"
+                  onClick={downloadCsvTemplate}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-purple-700 bg-purple-50 border border-purple-200 hover:bg-purple-100 hover:border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 dark:text-purple-300 dark:bg-purple-900/20 dark:border-purple-700 dark:hover:bg-purple-900/30 transition-colors ml-2"
+                  aria-label="Download CSV template file with sample data"
+                  title="Download CSV template"
+                >
+                  <svg 
+                    className="w-3.5 h-3.5 mr-1.5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                    />
+                  </svg>
+                  Download CSV Template
+                </button>
+              )}
+
+              {/* Apply to All Files Button for batch-files mode */}
+              {processingMode === 'batch-files' && audioFiles.length > 0 && (
+                <button
+                  type="button"
+                  onClick={applyToAllFiles}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-green-700 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1 dark:text-green-300 dark:bg-green-900/20 dark:border-green-700 dark:hover:bg-green-900/30 transition-colors ml-2"
+                  aria-label="Apply patient information to all uploaded files"
+                  title="Apply to all files"
+                >
+                  <svg 
+                    className="w-3.5 h-3.5 mr-1.5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" 
+                    />
+                  </svg>
+                  Apply to All Files
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1692,10 +2688,125 @@ const UploadAnalyze: React.FC = () => {
       {/* File Upload Area */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Audio File Upload {isMultiMode && <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Multi-File Mode)</span>}
+          {processingMode === 'batch-csv' ? 'CSV File Upload' : 'Audio File Upload'} 
+          {processingMode === 'batch-files' && <span className="text-sm font-normal text-gray-500 dark:text-gray-400"> (Batch Files Mode)</span>}
         </h2>
-        
-        {(!isMultiMode && !audioFile) || (isMultiMode && audioFiles.length === 0) ? (
+
+        {/* CSV Upload Section */}
+        {processingMode === 'batch-csv' && (
+          <div className="space-y-4">
+            {!csvBatchData ? (
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
+                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
+                <div className="mb-4">
+                  <button type="button"
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.csv';
+                      input.onchange = (e) => handleCsvFileSelect(e as any);
+                      input.click();
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Select CSV File
+                  </button>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                    Upload a CSV file with patient data and file URLs
+                  </p>
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2">
+                  <p>Required columns: userId, fileUrl</p>
+                  <p>Optional columns: age, gender, race, ethnicity, language, weight, zipcode, sessionNotes, fileName</p>
+                  <p>Example: userId,fileUrl,age,gender,zipcode</p>
+                </div>
+              </div>
+            ) : (
+              <div className="border border-green-200 dark:border-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="font-medium text-green-800 dark:text-green-200">CSV Loaded Successfully</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setCsvBatchData(null);
+                      setCsvValidationErrors([]);
+                    }}
+                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mb-3">
+                  {csvBatchData.rows.length} valid records found in {csvBatchData.fileName}
+                </p>
+                
+                {/* CSV Processing Status Bar */}
+                {csvProcessingProgress.isProcessing && (
+                  <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        Processing CSV Files
+                      </span>
+                      <span className="text-sm text-blue-700 dark:text-blue-300">
+                        {csvProcessingProgress.currentFile} of {csvProcessingProgress.totalFiles}
+                      </span>
+                    </div>
+                    <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2">
+                      <div 
+                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0}%` 
+                        }}
+                        role="progressbar"
+                        aria-valuenow={csvProcessingProgress.currentFile}
+                        aria-valuemin={0}
+                        aria-valuemax={csvProcessingProgress.totalFiles}
+                        aria-label="CSV processing progress"
+                      ></div>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {csvProcessingProgress.message}
+                    </p>
+                    {csvProcessingProgress.currentFileName && (
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                        Current file: {csvProcessingProgress.currentFileName}
+                      </p>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={processCsvBatch}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:focus:ring-offset-gray-800"
+                >
+                  Load Audio Files from CSV
+                </button>
+              </div>
+            )}
+
+            {/* CSV Validation Errors */}
+            {csvValidationErrors.length > 0 && (
+              <div className="border border-red-200 dark:border-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  <span className="font-medium text-red-800 dark:text-red-200">CSV Validation Errors</span>
+                </div>
+                <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
+                  {csvValidationErrors.map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Audio File Upload Section */}
+        {processingMode !== 'batch-csv' && (
+          <div>
+            {(processingMode === 'single' && !audioFile) || (processingMode === 'batch-files' && audioFiles.length === 0) ? (
           <div
             className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
             onDragOver={handleDragOver}
@@ -1708,16 +2819,16 @@ const UploadAnalyze: React.FC = () => {
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Select Audio File{isMultiMode ? 's' : ''}
+                Select Audio File{processingMode !== 'single' ? 's' : ''}
               </button>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                or drag and drop {isMultiMode ? 'files' : 'file'} here
+                or drag and drop {processingMode !== 'single' ? 'files' : 'file'} here
               </p>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Supported formats: WAV, MP3, M4A, AAC, FLAC (max 50MB each)
-              {isMultiMode && <br />}
-              {isMultiMode && 'You can select multiple files at once'}
+              {processingMode !== 'single' && <br />}
+              {processingMode !== 'single' && 'You can select multiple files at once'}
             </p>
             <input
               ref={fileInputRef}
@@ -1725,14 +2836,14 @@ const UploadAnalyze: React.FC = () => {
               className="hidden"
               accept=".wav,.mp3,.m4a,.aac,.flac,audio/*"
               onChange={handleFileSelect}
-              multiple={isMultiMode}
-              aria-label={`Select audio file${isMultiMode ? 's' : ''} for analysis`}
+              multiple={processingMode !== 'single'}
+              aria-label={`Select audio file${processingMode !== 'single' ? 's' : ''} for analysis`}
             />
           </div>
         ) : (
           <div className="space-y-4">
             {/* Single File Display */}
-            {!isMultiMode && audioFile && (
+            {processingMode === 'single' && audioFile && (
               <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -1807,7 +2918,7 @@ const UploadAnalyze: React.FC = () => {
             )}
 
             {/* Multi-File Display */}
-            {isMultiMode && audioFiles.length > 0 && (
+            {processingMode !== 'single' && audioFiles.length > 0 && (
               <>
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -1842,7 +2953,18 @@ const UploadAnalyze: React.FC = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2">
+                          
+                          {/* Action buttons with equal spacing */}
+                          <div className="flex items-center justify-end space-x-2 flex-shrink-0">
+                            <button
+                              onClick={() => openMetadataEditor(file.id, file.userMetadata)}
+                              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              aria-label={`Edit metadata for ${file.file.name}`}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit Info
+                            </button>
+                            
                             {/* Start button for individual file */}
                             {fileState === 'ready' && (
                               <button type="button"
@@ -1911,7 +3033,7 @@ const UploadAnalyze: React.FC = () => {
                   className="hidden"
                   accept=".wav,.mp3,.m4a,.aac,.flac,audio/*"
                   onChange={handleFileSelect}
-                  multiple={isMultiMode}
+                  multiple={processingMode === 'batch-files' || processingMode === 'batch-csv'}
                   aria-label="Select additional audio files for analysis"
                 />
               </>
@@ -1919,6 +3041,7 @@ const UploadAnalyze: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -1931,7 +3054,7 @@ const UploadAnalyze: React.FC = () => {
       )}
 
       {/* Progress Display - Only show in single-file mode */}
-      {!isMultiMode && progress.stage !== 'idle' && !result && (
+      {processingMode === 'single' && progress.stage !== 'idle' && !result && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Processing Status
@@ -2163,13 +3286,54 @@ const UploadAnalyze: React.FC = () => {
       )}
 
       {/* Analyze Button */}
-      {((isMultiMode && audioFiles.length > 0) || (!isMultiMode && audioFile)) && 
-       !result && Object.keys(results).length === 0 && 
-       progress.stage === 'idle' && !isProcessing && (
+      {(() => {
+        const hasFiles = (processingMode !== 'single' && audioFiles.length > 0) || (processingMode === 'single' && audioFile);
+        const csvMode = processingMode === 'batch-csv' && csvBatchData && !csvProcessingProgress.isProcessing;
+        const shouldShowButton = (hasFiles || csvMode) && 
+               !result && Object.keys(results).length === 0 && 
+               progress.stage === 'idle' && !isProcessing;
+        
+        return shouldShowButton;
+      })() && (
         <div className="text-center">
-          {isMultiMode ? (
+          {processingMode !== 'single' ? (
             // Multi-file mode controls
             <div className="space-y-4">
+              {/* Batch Processing Status Bar */}
+              {batchProcessingProgress.isProcessing && (
+                <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                      Processing Batch Files
+                    </span>
+                    <span className="text-sm text-green-700 dark:text-green-300">
+                      {batchProcessingProgress.currentFile} of {batchProcessingProgress.totalFiles}
+                    </span>
+                  </div>
+                  <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mb-2">
+                    <div 
+                      className="bg-green-600 dark:bg-green-400 h-2 rounded-full transition-all duration-300"
+                      style={{ 
+                        width: `${batchProcessingProgress.totalFiles > 0 ? (batchProcessingProgress.currentFile / batchProcessingProgress.totalFiles) * 100 : 0}%` 
+                      }}
+                      role="progressbar"
+                      aria-valuenow={batchProcessingProgress.currentFile}
+                      aria-valuemin={0}
+                      aria-valuemax={batchProcessingProgress.totalFiles}
+                      aria-label="Batch processing progress"
+                    ></div>
+                  </div>
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    {batchProcessingProgress.message}
+                  </p>
+                  {batchProcessingProgress.currentFileName && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      Current file: {batchProcessingProgress.currentFileName}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button type="button"
                   onClick={processMultipleFiles}
@@ -2209,7 +3373,7 @@ const UploadAnalyze: React.FC = () => {
       )}
 
       {/* Multi-File Results */}
-      {isMultiMode && Object.keys(results).length > 0 && (
+      {processingMode !== 'single' && Object.keys(results).length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <div className="flex items-center mb-4">
             <CheckCircle className="h-6 w-6 text-green-500 mr-2" aria-hidden="true" />
@@ -2427,6 +3591,248 @@ const UploadAnalyze: React.FC = () => {
           ))}
         </div>
       )}
+      
+      {/* Metadata Editing Modal */}
+      {editingFileMetadata && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Edit Patient Metadata
+                </h3>
+                <button
+                  onClick={cancelMetadataEdit}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  aria-label="Close metadata editor"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label htmlFor="temp-userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  User ID
+                </label>
+                <input
+                  id="temp-userId"
+                  type="text"
+                  value={tempMetadata.userId}
+                  onChange={(e) => setTempMetadata(prev => ({ ...prev, userId: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter user ID"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="temp-age" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Age
+                </label>
+                <input
+                  id="temp-age"
+                  type="number"
+                  value={tempMetadata.age}
+                  onChange={(e) => {
+                    setTempMetadata(prev => ({ ...prev, age: e.target.value }));
+                    handleTempFieldValidation('age', e.target.value);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                    tempValidationErrors.age 
+                      ? 'border-red-500 dark:border-red-400' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder="Enter age"
+                  min="18"
+                  max="130"
+                />
+                {tempValidationErrors.age && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {tempValidationErrors.age}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="temp-gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Gender
+                </label>
+                <select
+                  id="temp-gender"
+                  value={tempMetadata.gender}
+                  onChange={(e) => setTempMetadata(prev => ({ ...prev, gender: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select gender</option>
+                  <option value="female">Female</option>
+                  <option value="male">Male</option>
+                  <option value="non-binary">Non-binary</option>
+                  <option value="other">Other</option>
+                  <option value="prefer not to specify">Prefer Not to Specify</option>
+                  <option value="transgender female">Transgender Female</option>
+                  <option value="transgender male">Transgender Male</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="temp-race" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Race
+                </label>
+                <select
+                  id="temp-race"
+                  value={tempMetadata.race}
+                  onChange={(e) => setTempMetadata(prev => ({ ...prev, race: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select race</option>
+                  <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
+                  <option value="asian">Asian</option>
+                  <option value="black or african-american">Black or African-American</option>
+                  <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
+                  <option value="other">Other</option>
+                  <option value="prefer not to specify">Prefer Not to Specify</option>
+                  <option value="two or more races">Two or more races</option>
+                  <option value="white">White</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="temp-ethnicity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Ethnicity
+                </label>
+                <select
+                  id="temp-ethnicity"
+                  value={tempMetadata.ethnicity}
+                  onChange={(e) => setTempMetadata(prev => ({ ...prev, ethnicity: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select ethnicity</option>
+                  <option value="Hispanic, Latino, or Spanish Origin">Hispanic, Latino, or Spanish Origin</option>
+                  <option value="Not Hispanic, Latino, or Spanish Origin">Not Hispanic, Latino, or Spanish Origin</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="temp-language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  English as Primary Language?
+                </label>
+                <select
+                  id="temp-language"
+                  value={tempMetadata.language === undefined ? '' : tempMetadata.language.toString()}
+                  onChange={(e) => setTempMetadata(prev => ({ 
+                    ...prev, 
+                    language: e.target.value === '' ? undefined : e.target.value === 'true'
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">Select answer</option>
+                  <option value="true">Yes</option>
+                  <option value="false">No</option>
+                </select>
+              </div>
+              
+              <div>
+                <label htmlFor="temp-weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Weight (lbs)
+                </label>
+                <input
+                  id="temp-weight"
+                  type="number"
+                  value={tempMetadata.weight}
+                  onChange={(e) => {
+                    setTempMetadata(prev => ({ ...prev, weight: e.target.value }));
+                    handleTempFieldValidation('weight', e.target.value);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                    tempValidationErrors.weight 
+                      ? 'border-red-500 dark:border-red-400' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder="Weight in pounds"
+                  min="10"
+                  max="1000"
+                />
+                {tempValidationErrors.weight && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {tempValidationErrors.weight}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="temp-zipcode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  ZIP Code
+                </label>
+                <input
+                  id="temp-zipcode"
+                  type="text"
+                  value={tempMetadata.zipcode}
+                  onChange={(e) => {
+                    setTempMetadata(prev => ({ ...prev, zipcode: e.target.value }));
+                    handleTempFieldValidation('zipcode', e.target.value);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                    tempValidationErrors.zipcode 
+                      ? 'border-red-500 dark:border-red-400' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder="ZIP code"
+                  maxLength={10}
+                />
+                {tempValidationErrors.zipcode && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {tempValidationErrors.zipcode}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor="temp-sessionNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Session Notes
+                </label>
+                <textarea
+                  id="temp-sessionNotes"
+                  value={tempMetadata.sessionNotes}
+                  onChange={(e) => {
+                    setTempMetadata(prev => ({ ...prev, sessionNotes: e.target.value }));
+                    handleTempFieldValidation('sessionNotes', e.target.value);
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
+                    tempValidationErrors.sessionNotes 
+                      ? 'border-red-500 dark:border-red-400' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder="Session notes or comments"
+                  rows={3}
+                  maxLength={500}
+                />
+                {tempValidationErrors.sessionNotes && (
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {tempValidationErrors.sessionNotes}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex justify-end space-x-3">
+              <button
+                onClick={cancelMetadataEdit}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveMetadataChanges}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     </div>
   );
 };

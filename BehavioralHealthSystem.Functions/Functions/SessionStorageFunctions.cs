@@ -12,11 +12,7 @@ public class SessionStorageFunctions
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _sessionStorageService = sessionStorageService ?? throw new ArgumentNullException(nameof(sessionStorageService));
-        _jsonOptions = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = true
-        };
+        _jsonOptions = JsonSerializerOptionsFactory.PrettyPrint;
     }
 
     [Function("SaveSessionData")]

@@ -75,7 +75,7 @@ public class KintsugiApiService : BaseHttpService, IKintsugiApiService
                         is_initiated = request.IsInitiated,
                         consent = true,
                         consent_timestamp = DateTimeOffset.UtcNow.ToUniversalTime().ToString("o"),
-                        metadata = request.Metadata
+                        metadata = GetFilteredMetadata(request.Metadata)
                     };
                 }
                 else
@@ -98,7 +98,7 @@ public class KintsugiApiService : BaseHttpService, IKintsugiApiService
                     {
                         user_id = request.UserId,
                         is_initiated = request.IsInitiated,
-                        metadata = request.Metadata
+                        metadata = GetFilteredMetadata(request.Metadata)
                     };
                 }
                 else
@@ -239,5 +239,36 @@ public class KintsugiApiService : BaseHttpService, IKintsugiApiService
                !string.IsNullOrWhiteSpace(metadata.Zipcode);
         // Note: Language is a bool with default false, so we can't distinguish 
         // between explicitly set false vs not provided. We'll include it if any other field is set.
+    }
+
+    private static object GetFilteredMetadata(UserMetadata? metadata)
+    {
+        if (metadata == null) return new { };
+        
+        var filteredMetadata = new Dictionary<string, object>();
+        
+        if (metadata.Age > 0)
+            filteredMetadata["age"] = metadata.Age;
+            
+        if (!string.IsNullOrWhiteSpace(metadata.Gender))
+            filteredMetadata["gender"] = metadata.Gender;
+            
+        if (!string.IsNullOrWhiteSpace(metadata.Race))
+            filteredMetadata["race"] = metadata.Race;
+            
+        if (!string.IsNullOrWhiteSpace(metadata.Ethnicity))
+            filteredMetadata["ethnicity"] = metadata.Ethnicity;
+            
+        if (metadata.Weight > 0)
+            filteredMetadata["weight"] = metadata.Weight;
+            
+        if (!string.IsNullOrWhiteSpace(metadata.Zipcode))
+            filteredMetadata["zipcode"] = metadata.Zipcode;
+            
+        // Include language if any other metadata is present
+        if (filteredMetadata.Any())
+            filteredMetadata["language"] = metadata.Language;
+            
+        return filteredMetadata;
     }
 }

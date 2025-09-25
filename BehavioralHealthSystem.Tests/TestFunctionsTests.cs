@@ -1,6 +1,8 @@
 using BehavioralHealthSystem.Functions;
 using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;
+using FluentValidation;
+using BehavioralHealthSystem.Models;
 using Moq;
 
 namespace BehavioralHealthSystem.Tests
@@ -15,9 +17,10 @@ namespace BehavioralHealthSystem.Tests
             var loggerMock = new Mock<ILogger<TestFunctions>>();
             var apiServiceMock = new Mock<IKintsugiApiService>();
             var sessionStorageServiceMock = new Mock<ISessionStorageService>();
+            var validatorMock = new Mock<IValidator<InitiateRequest>>();
             
             // Act
-            var function = new TestFunctions(loggerMock.Object, apiServiceMock.Object, sessionStorageServiceMock.Object);
+            var function = new TestFunctions(loggerMock.Object, apiServiceMock.Object, sessionStorageServiceMock.Object, validatorMock.Object);
             
             // Assert
             Assert.IsNotNull(function);
@@ -29,10 +32,11 @@ namespace BehavioralHealthSystem.Tests
             // Arrange
             var apiServiceMock = new Mock<IKintsugiApiService>();
             var sessionStorageServiceMock = new Mock<ISessionStorageService>();
+            var validatorMock = new Mock<IValidator<InitiateRequest>>();
             
             // Act & Assert
             Assert.ThrowsException<ArgumentNullException>(() => 
-                new TestFunctions(null!, apiServiceMock.Object, sessionStorageServiceMock.Object));
+                new TestFunctions(null!, apiServiceMock.Object, sessionStorageServiceMock.Object, validatorMock.Object));
         }
 
         [TestMethod]
@@ -41,10 +45,11 @@ namespace BehavioralHealthSystem.Tests
             // Arrange
             var loggerMock = new Mock<ILogger<TestFunctions>>();
             var sessionStorageServiceMock = new Mock<ISessionStorageService>();
+            var validatorMock = new Mock<IValidator<InitiateRequest>>();
             
             // Act & Assert
             Assert.ThrowsException<ArgumentNullException>(() => 
-                new TestFunctions(loggerMock.Object, null!, sessionStorageServiceMock.Object));
+                new TestFunctions(loggerMock.Object, null!, sessionStorageServiceMock.Object, validatorMock.Object));
         }
 
         [TestMethod]
@@ -53,10 +58,11 @@ namespace BehavioralHealthSystem.Tests
             // Arrange
             var loggerMock = new Mock<ILogger<TestFunctions>>();
             var apiServiceMock = new Mock<IKintsugiApiService>();
+            var validatorMock = new Mock<IValidator<InitiateRequest>>();
             
             // Act & Assert
             Assert.ThrowsException<ArgumentNullException>(() => 
-                new TestFunctions(loggerMock.Object, apiServiceMock.Object, null!));
+                new TestFunctions(loggerMock.Object, apiServiceMock.Object, null!, validatorMock.Object));
         }
     }
 }

@@ -569,7 +569,7 @@ const UploadAnalyze: React.FC = () => {
 
   const validateRace = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
-    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
+    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
     if (!validRaces.includes(value)) {
       return 'Please select a valid race option';
     }
@@ -578,6 +578,10 @@ const UploadAnalyze: React.FC = () => {
 
   const validateEthnicity = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
+    const validEthnicities = ['Hispanic, Latino, or Spanish Origin', 'Not Hispanic, Latino, or Spanish Origin'];
+    if (!validEthnicities.includes(value)) {
+      return 'Please select a valid ethnicity option';
+    }
     return undefined;
   }, []);
 
@@ -1085,7 +1089,7 @@ const UploadAnalyze: React.FC = () => {
     if (userMetadata.race) {
       const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
       if (!validRaces.includes(userMetadata.race)) {
-        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to specify');
+        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native hawaiian or pacific islander, two or more races, other, prefer not to specify');
       }
     }
 
@@ -2486,7 +2490,7 @@ const UploadAnalyze: React.FC = () => {
               <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
               <option value="asian">Asian</option>
               <option value="black or african-american">Black or African-American</option>
-              <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
+              <option value="native hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
               <option value="other">Other</option>
               <option value="prefer not to specify">Prefer Not to Specify</option>
               <option value="two or more races">Two or more races</option>

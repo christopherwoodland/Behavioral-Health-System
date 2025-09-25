@@ -243,6 +243,14 @@ export const apiService = {
       { text }
     );
   },
+
+  // Transcription API methods
+  async saveTranscription(sessionId: string, transcription: string): Promise<{ success: boolean; sessionId: string; message: string }> {
+    return apiClient.post<{ success: boolean; sessionId: string; message: string }>(
+      'SaveTranscription',
+      { sessionId, transcription }
+    );
+  },
 };
 
 // Polling utilities

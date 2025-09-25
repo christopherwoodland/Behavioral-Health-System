@@ -25,6 +25,7 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
 import { formatDateTime, formatRelativeTime } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
+import TranscriptionComponent from '../components/TranscriptionComponent';
 import type { SessionData, AppError } from '../types';
 
 // Status configuration for consistent styling
@@ -492,6 +493,14 @@ const SessionDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Audio Transcription */}
+      <TranscriptionComponent
+        audioUrl={session.audioUrl}
+        sessionId={session.sessionId}
+        audioFileName={session.audioFileName}
+        existingTranscription={session.transcription}
+      />
 
       {/* User Metadata */}
       {session.userMetadata && (

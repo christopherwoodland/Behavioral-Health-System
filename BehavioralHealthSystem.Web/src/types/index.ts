@@ -85,6 +85,7 @@ export interface SessionData {
   };
   audioUrl?: string;
   audioFileName?: string;
+  transcription?: string; // Audio transcription text
   createdAt: string;
   updatedAt: string;
   status: string;

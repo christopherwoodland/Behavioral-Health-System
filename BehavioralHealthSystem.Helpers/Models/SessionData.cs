@@ -23,6 +23,9 @@ public class SessionData
     [JsonPropertyName("audioFileName")]
     public string AudioFileName { get; set; } = string.Empty;
     
+    [JsonPropertyName("transcription")]
+    public string? Transcription { get; set; }
+    
     [JsonPropertyName("createdAt")]
     public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("O");
     

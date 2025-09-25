@@ -5,13 +5,19 @@ public class TestFunctions
     private readonly ILogger<TestFunctions> _logger;
     private readonly IKintsugiApiService _kintsugiApiService;
     private readonly ISessionStorageService _sessionStorageService;
+    private readonly IValidator<InitiateRequest> _initiateRequestValidator;
     private readonly JsonSerializerOptions _jsonOptions;
 
-    public TestFunctions(ILogger<TestFunctions> logger, IKintsugiApiService kintsugiApiService, ISessionStorageService sessionStorageService)
+    public TestFunctions(
+        ILogger<TestFunctions> logger, 
+        IKintsugiApiService kintsugiApiService, 
+        ISessionStorageService sessionStorageService,
+        IValidator<InitiateRequest> initiateRequestValidator)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _kintsugiApiService = kintsugiApiService ?? throw new ArgumentNullException(nameof(kintsugiApiService));
         _sessionStorageService = sessionStorageService ?? throw new ArgumentNullException(nameof(sessionStorageService));
+        _initiateRequestValidator = initiateRequestValidator ?? throw new ArgumentNullException(nameof(initiateRequestValidator));
         
         _jsonOptions = new JsonSerializerOptions
         {
@@ -126,6 +132,32 @@ public class TestFunctions
             }
 
             _logger.LogInformation("[{FunctionName}] Initiating session for user: {UserId}", nameof(InitiateSession), initiateRequest.UserId);
+
+            // Validate the request before sending to Kintsugi API
+            var validationResult = await _initiateRequestValidator.ValidateAsync(initiateRequest);
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("[{FunctionName}] Validation failed for user: {UserId}, Errors: {ValidationErrors}", 
+                    nameof(InitiateSession), initiateRequest.UserId, 
+                    string.Join("; ", validationResult.Errors.Select(e => $"{e.PropertyName}: {e.ErrorMessage}")));
+                
+                var validationResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+                var validationErrors = validationResult.Errors.Select(e => new 
+                { 
+                    field = e.PropertyName.ToLowerInvariant().Replace("metadata.", ""), 
+                    error = e.ErrorMessage 
+                }).ToArray();
+                
+                var validationResult_Response = new
+                {
+                    success = false,
+                    message = "Error initiating session",
+                    error = $"Validation error: {{\"message\":[{string.Join(",", validationErrors.Select(e => JsonSerializer.Serialize(e, _jsonOptions)))}]}}"
+                };
+                
+                await validationResponse.WriteStringAsync(JsonSerializer.Serialize(validationResult_Response, _jsonOptions));
+                return validationResponse;
+            }
 
             var sessionResponse = await _kintsugiApiService.InitiateSessionAsync(initiateRequest);
 

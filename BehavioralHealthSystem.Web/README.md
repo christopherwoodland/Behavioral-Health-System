@@ -420,6 +420,36 @@ The application includes several UI improvements for better user experience:
 5. **Real-time Updates** - Progress tracking with accessibility announcements
 6. **Results Display** - View prediction results with detailed metrics
 
+### User Metadata Validation
+
+The application includes comprehensive client-side and server-side validation for user metadata:
+
+#### **Validation Rules (Updated)**
+
+**👤 Gender Options:**
+- `male`, `female`, `non-binary`, `transgender female`, `transgender male`, `other`, `prefer not to specify`
+
+**🏃 Race Options:**
+- `white`, `black or african-american`, `asian`, `american indian or alaskan native`, `native hawaiian or pacific islander`, `two or more races`, `other`, `prefer not to specify`
+
+**🌎 Ethnicity Options:**
+- `Hispanic, Latino, or Spanish Origin`, `Not Hispanic, Latino, or Spanish Origin`
+- **Note:** No "prefer not to specify" option for ethnicity
+
+**Other Fields:**
+- **Age:** 1-149 years (optional)
+- **Weight:** 10-1000 pounds (optional)  
+- **Zipcode:** Alphanumeric, 1-10 characters (optional)
+- **Language:** Boolean indicating English as primary language
+
+#### **CSV Upload Validation**
+
+When uploading CSV files, the same validation rules apply with additional formatting requirements:
+- Headers must match expected field names
+- Empty fields are treated as optional
+- Invalid values trigger detailed error messages with row numbers
+- All validation is case-insensitive for user convenience
+
 ### Accessibility Features in Use
 
 - **Screen Reader Announcements** for all major state changes

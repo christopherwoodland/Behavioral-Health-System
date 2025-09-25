@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using BehavioralHealthSystem.Services.Interfaces;
 using BehavioralHealthSystem.Functions;
 using BehavioralHealthSystem.Models;
+using FluentValidation;
 
 namespace BehavioralHealthSystem.Tests
 {
@@ -23,7 +24,8 @@ namespace BehavioralHealthSystem.Tests
             _mockLogger = new Mock<ILogger<TestFunctions>>();
             _mockKintsugiApiService = new Mock<IKintsugiApiService>();
             _mockSessionStorageService = new Mock<ISessionStorageService>();
-            _testFunctions = new TestFunctions(_mockLogger.Object, _mockKintsugiApiService.Object, _mockSessionStorageService.Object);
+            var mockValidator = new Mock<IValidator<InitiateRequest>>();
+            _testFunctions = new TestFunctions(_mockLogger.Object, _mockKintsugiApiService.Object, _mockSessionStorageService.Object, mockValidator.Object);
         }
 
         [TestMethod]

@@ -342,6 +342,39 @@ if (!validationResult.IsValid)
 }
 ```
 
+#### **User Metadata Validation Rules**
+
+The system includes comprehensive validation for user metadata fields:
+
+**📋 Age Validation:**
+- Optional field (can be empty)
+- When provided: Must be between 1 and 149 years
+
+**👤 Gender Validation:**
+- Optional field (can be empty)
+- Valid options: `male`, `female`, `non-binary`, `transgender female`, `transgender male`, `other`, `prefer not to specify`
+
+**🏃 Race Validation:**
+- Optional field (can be empty)  
+- Valid options: `white`, `black or african-american`, `asian`, `american indian or alaskan native`, `native hawaiian or pacific islander`, `two or more races`, `other`, `prefer not to specify`
+
+**🌎 Ethnicity Validation:**
+- Optional field (can be empty)
+- Valid options: `Hispanic, Latino, or Spanish Origin`, `Not Hispanic, Latino, or Spanish Origin`
+- Note: No "prefer not to specify" option for ethnicity
+
+**📍 Zipcode Validation:**
+- Optional field (can be empty)
+- When provided: Must be alphanumeric, 1-10 characters
+
+**⚖️ Weight Validation:**
+- Optional field (can be 0)
+- When provided: Must be between 10 and 1000 pounds
+
+**🗣️ Language Validation:**
+- Boolean field indicating English as primary language
+- `true` = English is primary language, `false` = English is not primary language
+
 ### **2. Resilient API Calls**
 
 ```csharp
@@ -1313,7 +1346,83 @@ Set up Azure Monitor alerts for:
 - 🎯 [VS Code Azure Functions Extension](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
 - 📱 [Azure Storage Explorer](https://azure.microsoft.com/en-us/features/storage-explorer/)
 
-## 🆕 Recent Updates & Features
+## �️ Audio Transcription Feature
+
+This feature adds automatic transcription capabilities to the Behavioral Health System using Azure Speech Services Fast Transcription API.
+
+### **🎯 Transcription Features**
+
+- ✅ **Automatic Transcription** - Convert uploaded audio files to text using Azure Speech Services
+- ✅ **Fast Transcription API** - Uses the latest Azure Speech Services Fast Transcription API for improved accuracy and speed
+- ✅ **Session Integration** - Transcriptions are saved to session data for future reference
+- ✅ **User Interface** - Easy-to-use transcription component in the Session Details page
+- ✅ **Copy & Download** - Users can copy transcription text to clipboard or download as text file
+- ✅ **Fixed Response Format** - Corrected OpenAI transcription format from 'verbose_json' to 'json'
+
+### **🔧 Transcription Configuration**
+
+#### Environment Variables
+
+The following environment variables must be configured:
+
+```bash
+# Azure Speech Service Configuration
+VITE_AZURE_SPEECH_ENDPOINT=https://your-region.api.cognitive.microsoft.com/
+VITE_AZURE_SPEECH_API_KEY=your-speech-api-key
+```
+
+#### Azure Speech Service Setup
+
+1. Create an Azure Speech Service resource
+2. Get the endpoint URL and API key
+3. Ensure the service has access to the audio files (proper CORS/SAS tokens)
+
+### **🎯 Transcription Usage**
+
+1. **Navigate to Session Details** - Go to any session with an uploaded audio file
+2. **Generate Transcription** - Click the "Generate Transcription" button in the Audio Transcription section
+3. **Wait for Completion** - The transcription process may take a few minutes depending on audio length
+4. **View Results** - Once complete, the transcription text will be displayed with confidence score
+5. **Copy or Download** - Use the Copy or Download buttons to save the transcription
+
+### **📡 API Integration**
+
+The transcription uses Azure Speech Services Fast Transcription API v3.1:
+
+- **Create Job** - `POST /speechtotext/v3.1/transcriptions`
+- **Check Status** - `GET /speechtotext/v3.1/transcriptions/{id}`
+- **Get Results** - `GET /speechtotext/v3.1/transcriptions/{id}/files`
+- **Cleanup** - `DELETE /speechtotext/v3.1/transcriptions/{id}`
+
+### **⚠️ Error Handling**
+
+- Network connectivity issues
+- Azure Speech Service API errors  
+- Audio file format compatibility
+- Timeout handling for long transcriptions
+- Graceful fallback for missing audio files
+
+## �🆕 Recent Updates & Features
+
+### **✅ Recent Updates & Fixes (September 2025)**
+
+#### **OpenAI Transcription Fix**
+- **Issue**: OpenAI API was rejecting transcription requests due to incorrect `response_format` parameter
+- **Root Cause**: Frontend was sending `'verbose_json'` format which is not supported by gpt-4o-transcribe model
+- **Solution**: Updated `transcriptionService.ts` to use `'json'` format instead
+- **Files Updated**: `BehavioralHealthSystem.Web/src/services/transcriptionService.ts`
+
+#### **Metadata Validation Consistency**
+- **Issue**: Inconsistent validation rules between frontend and backend for gender, race, and ethnicity fields
+- **Key Changes**:
+  - **Gender**: "prefer not to specify" ✅ (consistent across all systems)
+  - **Race**: "prefer not to specify" ✅ (was "prefer not to say" in some places)
+  - **Ethnicity**: Removed "prefer not to specify" option ✅ (only two valid options now)
+- **Files Updated**: 
+  - `BehavioralHealthSystem.Helpers/Validators/UserMetadataValidator.cs`
+  - `BehavioralHealthSystem.Web/src/pages/UploadAnalyze.tsx` 
+  - `BehavioralHealthSystem.Tests/GenderEthnicityValidationTests.cs`
+- **Testing**: All validation tests passing (6/6) with updated rules
 
 ### **🎭 AI Agent Experience (Latest)**
 

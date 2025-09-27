@@ -216,6 +216,9 @@ const UploadAnalyze: React.FC = () => {
   
   // Check if transcription is enabled via feature flag
   const isTranscriptionEnabled = transcriptionService.isTranscriptionEnabled();
+  
+  // Check if Kintsugi assessment is enabled via feature flag
+  const isKintsugiEnabled = transcriptionService.isKintsugiEnabled();
 
   // Individual file metadata editing state
   const [editingFileMetadata, setEditingFileMetadata] = useState<string | null>(null);
@@ -1899,12 +1902,21 @@ const UploadAnalyze: React.FC = () => {
     setIsProcessing(true);
     setError(null);
     
-    // Validate processing options (account for disabled transcription)
+    // Validate processing options (account for disabled services)
+    const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+    
+    if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
-      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      if (availableOptions.length === 0) {
+        setError('No processing options are currently enabled. Please check your configuration.');
+        addToast('error', 'No Services Available', 'All processing services are disabled in configuration.');
+        setIsProcessing(false);
+        return;
+      }
       
       const optionsText = availableOptions.length > 1 
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
@@ -1977,7 +1989,10 @@ const UploadAnalyze: React.FC = () => {
         setFileStates(prev => ({ ...prev, [audioFile.id]: 'processing' }));
         
         try {
-          await processSingleFileById(audioFile.id, audioFile, { runKintsugiAssessment, transcribeAudio: transcribeAudio && isTranscriptionEnabled });
+          await processSingleFileById(audioFile.id, audioFile, { 
+            runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled, 
+            transcribeAudio: transcribeAudio && isTranscriptionEnabled 
+          });
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
           addToast('success', 'File Complete', `${fileName} processed successfully`);
           
@@ -2052,18 +2067,26 @@ const UploadAnalyze: React.FC = () => {
         });
       }, 2000);
     }
-  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled]);
+  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled]);
 
   const startSingleFile = useCallback(async (fileId: string) => {
     const audioFile = audioFiles.find(f => f.id === fileId);
     if (!audioFile) return;
 
-    // Validate processing options (account for disabled transcription)
+    // Validate processing options (account for disabled services)
+    const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+    
+    if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
-      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      if (availableOptions.length === 0) {
+        setError('No processing options are currently enabled. Please check your configuration.');
+        addToast('error', 'No Services Available', 'All processing services are disabled in configuration.');
+        return;
+      }
       
       const optionsText = availableOptions.length > 1 
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
@@ -2085,7 +2108,10 @@ const UploadAnalyze: React.FC = () => {
     setFileStates(prev => ({ ...prev, [fileId]: 'processing' }));
     
     try {
-      await processSingleFileById(fileId, audioFile, { runKintsugiAssessment, transcribeAudio: transcribeAudio && isTranscriptionEnabled });
+      await processSingleFileById(fileId, audioFile, { 
+        runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled, 
+        transcribeAudio: transcribeAudio && isTranscriptionEnabled 
+      });
       setFileStates(prev => ({ ...prev, [fileId]: 'complete' }));
       addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
     } catch (error) {
@@ -2099,7 +2125,7 @@ const UploadAnalyze: React.FC = () => {
         [fileId]: { stage: 'error', progress: 0, message: `Failed: ${errorMessage}` }
       }));
     }
-  }, [audioFiles, validateMetadata, addToast, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled]);
+  }, [audioFiles, validateMetadata, addToast, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled]);
 
   const processSingleFile = useCallback(async () => {
     if (!audioFile || !userMetadata.userId.trim()) {
@@ -2108,12 +2134,20 @@ const UploadAnalyze: React.FC = () => {
       return;
     }
 
-    // Validate processing options (account for disabled transcription)
+    // Validate processing options (account for disabled services)
+    const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+    
+    if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
-      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      if (availableOptions.length === 0) {
+        setError('No processing options are currently enabled. Please check your configuration.');
+        addToast('error', 'No Services Available', 'All processing services are disabled in configuration.');
+        return;
+      }
       
       const optionsText = availableOptions.length > 1 
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
@@ -2504,16 +2538,35 @@ const UploadAnalyze: React.FC = () => {
             <input
               id="kintsugiAssessment"
               type="checkbox"
-              checked={runKintsugiAssessment}
+              checked={runKintsugiAssessment && isKintsugiEnabled}
+              disabled={!isKintsugiEnabled}
               onChange={(e) => setRunKintsugiAssessment(e.target.checked)}
-              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+              className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 ${
+                !isKintsugiEnabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             />
             <div className="ml-3">
-              <label htmlFor="kintsugiAssessment" className="text-sm font-medium text-gray-900 dark:text-white">
+              <label htmlFor="kintsugiAssessment" className={`text-sm font-medium ${
+                !isKintsugiEnabled 
+                  ? 'text-gray-400 dark:text-gray-500' 
+                  : 'text-gray-900 dark:text-white'
+              }`}>
                 Run Kintsugi Assessment
+                {!isKintsugiEnabled && (
+                  <span className="ml-2 text-xs text-red-500 dark:text-red-400">
+                    (Disabled)
+                  </span>
+                )}
               </label>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Analyze audio for depression and anxiety indicators using Kintsugi Health's AI model
+              <p className={`text-sm ${
+                !isKintsugiEnabled 
+                  ? 'text-gray-400 dark:text-gray-500' 
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
+                {!isKintsugiEnabled 
+                  ? 'Kintsugi assessment service is disabled in configuration' 
+                  : 'Analyze audio for depression and anxiety indicators using Kintsugi Health\'s AI model'
+                }
               </p>
             </div>
           </div>
@@ -2557,15 +2610,24 @@ const UploadAnalyze: React.FC = () => {
         </div>
 
         {/* Validation message if no options selected */}
-        {!runKintsugiAssessment && !(transcribeAudio && isTranscriptionEnabled) && (
+        {!(runKintsugiAssessment && isKintsugiEnabled) && !(transcribeAudio && isTranscriptionEnabled) && (
           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
             <div className="flex items-center">
               <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
               <p className="text-sm text-amber-800 dark:text-amber-200">
-                {isTranscriptionEnabled 
-                  ? 'Please select at least one processing option to continue.'
-                  : 'Please select the Kintsugi Assessment option to continue (transcription is disabled).'
-                }
+                {(() => {
+                  const availableOptions = [];
+                  if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
+                  if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+                  
+                  if (availableOptions.length === 0) {
+                    return 'No processing options are currently enabled. Please check your configuration.';
+                  } else if (availableOptions.length === 1) {
+                    return `Please select the ${availableOptions[0]} option to continue.`;
+                  } else {
+                    return 'Please select at least one processing option to continue.';
+                  }
+                })()}
               </p>
             </div>
           </div>

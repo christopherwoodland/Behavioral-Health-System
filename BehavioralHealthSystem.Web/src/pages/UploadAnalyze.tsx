@@ -5,6 +5,7 @@ import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plu
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
 import { apiService, PredictionPoller } from '../services/api';
+import { transcriptionService, TranscriptionResult } from '../services/transcriptionService';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { getStoredProcessingMode, setStoredProcessingMode, getStoredProcessingModeBoolean, getUserId } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
@@ -106,6 +107,7 @@ interface AnalysisResult {
   timestamp: string;
   audioUrl?: string;
   rawApiResponse?: any; // Store the complete API response
+  transcriptionText?: string; // Store transcription text if available
 }
 
 // Interface for pre-filled data from re-run functionality
@@ -207,6 +209,13 @@ const UploadAnalyze: React.FC = () => {
   }>({});
 
   const [isCorrectingGrammar, setIsCorrectingGrammar] = useState(false);
+
+  // Processing options state
+  const [runKintsugiAssessment, setRunKintsugiAssessment] = useState(true); // Default checked
+  const [transcribeAudio, setTranscribeAudio] = useState(false); // Default unchecked
+  
+  // Check if transcription is enabled via feature flag
+  const isTranscriptionEnabled = transcriptionService.isTranscriptionEnabled();
 
   // Individual file metadata editing state
   const [editingFileMetadata, setEditingFileMetadata] = useState<string | null>(null);
@@ -1423,6 +1432,22 @@ const UploadAnalyze: React.FC = () => {
   }, [userMetadata, addToast, announceToScreenReader]);
 
   const processAndAnalyze = useCallback(async () => {
+    // Validate processing options (account for disabled transcription)
+    const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
+    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+      const availableOptions = [];
+      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      const optionsText = availableOptions.length > 1 
+        ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
+        : `Please select the ${availableOptions[0]} processing option.`;
+      
+      setError(optionsText);
+      addToast('error', 'Missing Processing Options', optionsText);
+      return;
+    }
+
     if (isMultiMode) {
       if (audioFiles.length === 0 || !userMetadata.userId.trim()) {
         setError('Please select audio files. User ID is automatically generated.');
@@ -1438,9 +1463,9 @@ const UploadAnalyze: React.FC = () => {
       }
       await processSingleFile();
     }
-  }, [audioFile, audioFiles, userMetadata.userId, isMultiMode]);
+  }, [audioFile, audioFiles, userMetadata.userId, isMultiMode, runKintsugiAssessment, transcribeAudio]);
 
-  const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile) => {
+  const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile, options: { runKintsugiAssessment: boolean; transcribeAudio: boolean }) => {
     try {
       // Step 1: Initiate session
       setProcessingProgress(prev => ({
@@ -1500,6 +1525,7 @@ const UploadAnalyze: React.FC = () => {
 
       let audioUrl: string;
       let fileName: string;
+      let convertedBlob: Blob | null = null; // For transcription service
 
       // Check if this is a pre-filled session with existing audio URL (re-run scenario)
       // Ensure the URL is a valid Azure Storage URL, not a blob URL
@@ -1527,7 +1553,7 @@ const UploadAnalyze: React.FC = () => {
         }));
 
         // Step 2: Convert audio using FFmpeg
-        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+        convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
           setProcessingProgress(prev => ({
             ...prev,
             [fileId]: {
@@ -1577,130 +1603,210 @@ const UploadAnalyze: React.FC = () => {
         // Continue with the process even if updating fails
       }
 
-      // Step 4: Submit prediction with URL to /predictions/submit endpoint
-      await apiService.submitPrediction({
-        userId: userMetadata.userId.trim(),
-        sessionid: sessionData.sessionId,
-        audioFileUrl: audioUrl,
-        audioFileName: fileName
-      });
-
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'analyzing', progress: 70, message: 'Analyzing audio with Kintsugi Health API...' }
-      }));
-
-      // Step 5: Poll for results
-      const poller = new PredictionPoller(sessionData.sessionId);
+      // Step 4: Execute selected processing options
+      let kintsugiResult: PredictionResult | null = null;
+      let transcriptionText: string | null = null;
       
-      await new Promise<void>((resolve, reject) => {
-        poller.start(
-          (result: PredictionResult) => {
-            // Update progress during polling
-            const progressPercent = result.status === 'processing' ? 80 : 
-                                  result.status === 'success' ? 95 : 70;
-            setProcessingProgress(prev => ({
-              ...prev,
-              [fileId]: { 
-                stage: 'analyzing', 
-                progress: progressPercent, 
-                message: `Analysis ${result.status}...` 
-              }
-            }));
+      // Process Kintsugi Assessment if selected
+      if (options.runKintsugiAssessment) {
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'analyzing', progress: 70, message: 'Analyzing audio with Kintsugi Health API...' }
+        }));
 
-            // Check for predict_error and show toast
-            if (result.predictError) {
-              addToast('error', 'Prediction Error', 
-                `${result.predictError.error}: ${result.predictError.message}`);
-            }
-          },
-          (result: PredictionResult) => {
-            // Check for final errors before completing
-            if (result.predictError) {
-              addToast('error', 'Analysis Failed', 
-                `The analysis completed with an error: ${result.predictError.error} - ${result.predictError.message}`);
+        // Submit prediction with URL to /predictions/submit endpoint
+        await apiService.submitPrediction({
+          userId: userMetadata.userId.trim(),
+          sessionid: sessionData.sessionId,
+          audioFileUrl: audioUrl,
+          audioFileName: fileName
+        });
+
+        // Poll for Kintsugi results
+        const poller = new PredictionPoller(sessionData.sessionId);
+        
+        kintsugiResult = await new Promise<PredictionResult>((resolve, reject) => {
+          poller.start(
+            (result: PredictionResult) => {
+              // Update progress during polling
+              const progressPercent = result.status === 'processing' ? 80 : 
+                                    result.status === 'success' ? 95 : 70;
               setProcessingProgress(prev => ({
                 ...prev,
-                [fileId]: { stage: 'error', progress: 0, message: 'Analysis failed with errors' }
+                [fileId]: { 
+                  stage: 'analyzing', 
+                  progress: progressPercent, 
+                  message: `Kintsugi analysis ${result.status}...` 
+                }
               }));
-              reject(new Error(`Prediction error: ${result.predictError.error}`));
-              return;
-            }
 
-            // Analysis complete successfully
-            const analysisResult: AnalysisResult = {
-              sessionId: sessionData.sessionId,
-              depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
-              riskLevel: (() => {
-                const score = safeParseFloat(result.predictedScoreDepression, 0);
-                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
-              })(),
-              confidence: 0.85, // This would come from the API in a real scenario
-              insights: [
-                'Analysis completed using Kintsugi Health API',
-                result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
-                result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
-                'Results should be reviewed by a qualified healthcare professional'
-              ].filter(insight => insight.trim() !== ''),
-              timestamp: result.updatedAt,
-              audioUrl: audioUrl,
-              rawApiResponse: result // Store the complete API response
-            };
+              // Check for predict_error and show toast
+              if (result.predictError) {
+                addToast('error', 'Prediction Error', 
+                  `${result.predictError.error}: ${result.predictError.message}`);
+              }
+            },
+            (result: PredictionResult) => {
+              // Check for final errors before completing
+              if (result.predictError) {
+                addToast('error', 'Analysis Failed', 
+                  `The Kintsugi analysis completed with an error: ${result.predictError.error} - ${result.predictError.message}`);
+                setProcessingProgress(prev => ({
+                  ...prev,
+                  [fileId]: { stage: 'error', progress: 0, message: 'Kintsugi analysis failed with errors' }
+                }));
+                reject(new Error(`Prediction error: ${result.predictError.error}`));
+                return;
+              }
+
+              resolve(result);
+            },
+            (error: AppError) => {
+              reject(error);
+            }
+          );
+        });
+      }
+
+      // Process Audio Transcription if selected
+      if (options.transcribeAudio) {
+        const transcriptionProgress = options.runKintsugiAssessment ? 85 : 70;
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'analyzing', progress: transcriptionProgress, message: 'Transcribing audio...' }
+        }));
+
+        try {
+          // Check if transcription service is enabled (with fallback)
+          const isEnabled = transcriptionService.isTranscriptionEnabled();
+          
+          if (!isEnabled) {
+            console.warn('Transcription service is disabled via VITE_ENABLE_TRANSCRIPTION flag');
+            addToast('warning', 'Transcription Disabled', 'Transcription service is not enabled in configuration. Set VITE_ENABLE_TRANSCRIPTION=true to enable.');
+            transcriptionText = null;
+          } else {
+            console.log('Transcription service is enabled, proceeding with transcription...');
             
-            // Update session data with final analysis results (fire-and-forget)
-            const finalSessionData = {
-              ...initialSessionData,
-              audioUrl: audioUrl,
-              prediction: result, // Store the complete API response
-              analysisResults: {
-                depressionScore: safeParseFloat(result.predictedScoreDepression),
-                anxietyScore: safeParseFloat(result.predictedScoreAnxiety),
-                riskLevel: (() => {
-                  const score = safeParseFloat(result.predictedScoreDepression, 0);
-                  return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
-                })(),
-                confidence: 0.85, // This would come from the API in a real scenario
-                insights: [
-                  'Analysis completed using Kintsugi Health API',
-                  result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
-                  result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
-                  'Results should be reviewed by a qualified healthcare professional'
-                ].filter(insight => insight.trim() !== ''),
-                completedAt: new Date().toISOString()
-              },
-              status: 'completed',
-              completedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
+            // Get audio blob for transcription
+            let audioBlob: Blob;
             
-            // Save analysis results to session storage (async, non-blocking)
-            apiService.saveSessionData(finalSessionData)
-              .then((result) => {
-                console.log('Multi-file session data saved with analysis results for session:', sessionData.sessionId);
-                console.log('Save result:', result);
-                addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
-              })
-              .catch((error) => {
-                console.error('Failed to save multi-file analysis results to session storage:', error);
-                console.error('Session data that failed to save:', finalSessionData);
-                addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
-              });
-              
-            setProcessingProgress(prev => ({
-              ...prev,
-              [fileId]: { stage: 'complete', progress: 100, message: 'Analysis complete!' }
-            }));
-            setResults(prev => ({
-              ...prev,
-              [fileId]: analysisResult
-            }));
-            resolve();
-          },
-          (error: AppError) => {
-            reject(error);
+            if (audioFile.url && !audioFile.url.startsWith('blob:')) {
+              // Re-run scenario: fetch audio from existing URL
+              const audioResponse = await fetch(audioUrl);
+              if (!audioResponse.ok) {
+                throw new Error(`Failed to fetch audio from URL: ${audioResponse.statusText}`);
+              }
+              audioBlob = await audioResponse.blob();
+            } else {
+              // New file scenario: use the converted blob
+              if (!convertedBlob) {
+                throw new Error('Audio conversion failed - no converted blob available');
+              }
+              audioBlob = convertedBlob;
+            }
+            
+            // Call the actual transcription service
+            console.log('Calling transcription service with audio blob of size:', audioBlob.size);
+            const transcriptionResult: TranscriptionResult = await transcriptionService.transcribeAudio(audioBlob);
+            
+            console.log('Transcription result:', transcriptionResult);
+            
+            if (transcriptionResult.error) {
+              throw new Error(transcriptionResult.error);
+            }
+            
+            if (!transcriptionResult.text || transcriptionResult.text.trim() === '') {
+              console.warn('Transcription returned empty text');
+            }
+            
+            transcriptionText = transcriptionResult.text;
+            
+            // Save transcription to session storage
+            console.log('Saving transcription to session storage...');
+            await apiService.saveTranscription(sessionData.sessionId, transcriptionText);
+            
+            addToast('success', 'Transcription Complete', 
+              `Audio transcription completed with ${Math.round(transcriptionResult.confidence * 100)}% confidence.`);
           }
-        );
-      });
+        } catch (transcriptionError) {
+          console.error('Transcription failed:', transcriptionError);
+          addToast('warning', 'Transcription Failed', 
+            `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Other processing will continue.`);
+          transcriptionText = null;
+        }
+      }
+
+      // Step 5: Prepare and save final results
+      setProcessingProgress(prev => ({
+        ...prev,
+        [fileId]: { stage: 'complete', progress: 100, message: 'Processing complete!' }
+      }));
+
+      // Create analysis result based on what was processed
+      const analysisResult: AnalysisResult = {
+        sessionId: sessionData.sessionId,
+        depressionScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreDepression, 0) : undefined,
+        riskLevel: kintsugiResult ? (() => {
+                const score = safeParseFloat(kintsugiResult.predictedScoreDepression, 0);
+                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+              })() : undefined,
+        confidence: kintsugiResult ? 0.85 : undefined, // This would come from the API in a real scenario
+        insights: kintsugiResult ? [
+          'Analysis completed using Kintsugi Health API',
+          kintsugiResult.predictedScoreDepression ? `Depression score: ${kintsugiResult.predictedScoreDepression}` : '',
+          kintsugiResult.predictedScoreAnxiety ? `Anxiety score: ${kintsugiResult.predictedScoreAnxiety}` : '',
+          'Results should be reviewed by a qualified healthcare professional'
+        ].filter(insight => insight.trim() !== '') : undefined,
+        timestamp: kintsugiResult ? kintsugiResult.updatedAt : new Date().toISOString(),
+        audioUrl: audioUrl,
+        rawApiResponse: kintsugiResult, // Store the complete API response
+        transcriptionText: transcriptionText || undefined
+      };
+      
+      // Update session data with final analysis results (fire-and-forget)
+      const finalSessionData = {
+        ...initialSessionData,
+        audioUrl: audioUrl,
+        prediction: kintsugiResult || undefined, // Store the complete API response if available
+        transcription: transcriptionText || undefined,
+        analysisResults: {
+          depressionScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreDepression) : undefined,
+          anxietyScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreAnxiety) : undefined,
+          riskLevel: kintsugiResult ? (() => {
+            const score = safeParseFloat(kintsugiResult.predictedScoreDepression, 0);
+            return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+          })() : 'unknown',
+          confidence: kintsugiResult ? 0.85 : undefined,
+          insights: kintsugiResult ? [
+            'Analysis completed using Kintsugi Health API',
+            kintsugiResult.predictedScoreDepression ? `Depression score: ${kintsugiResult.predictedScoreDepression}` : '',
+            kintsugiResult.predictedScoreAnxiety ? `Anxiety score: ${kintsugiResult.predictedScoreAnxiety}` : '',
+            'Results should be reviewed by a qualified healthcare professional'
+          ].filter(insight => insight.trim() !== '') : ['No Kintsugi analysis performed'],
+          transcriptionText: transcriptionText || undefined,
+          completedAt: new Date().toISOString()
+        },
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      // Save analysis results to session storage (async, non-blocking)
+      try {
+        const result = await apiService.saveSessionData(finalSessionData);
+        console.log('Multi-file session data saved with analysis results for session:', sessionData.sessionId);
+        console.log('Save result:', result);
+        addToast('success', 'Session Saved', 'Analysis results have been saved to session storage.');
+      } catch (error) {
+        console.error('Failed to save multi-file analysis results to session storage:', error);
+        console.error('Session data that failed to save:', finalSessionData);
+        addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
+      }
+      
+      setResults(prev => ({
+        ...prev,
+        [fileId]: analysisResult
+      }));
 
     } catch (err) {
       console.error(`Error processing file ${fileId}:`, err);
@@ -1793,6 +1899,23 @@ const UploadAnalyze: React.FC = () => {
     setIsProcessing(true);
     setError(null);
     
+    // Validate processing options (account for disabled transcription)
+    const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
+    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+      const availableOptions = [];
+      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      const optionsText = availableOptions.length > 1 
+        ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
+        : `Please select the ${availableOptions[0]} processing option.`;
+      
+      setError(optionsText);
+      addToast('error', 'Missing Processing Options', optionsText);
+      setIsProcessing(false);
+      return;
+    }
+    
     // For batch processing modes, validate individual file metadata if needed
     if (processingMode === 'batch-files' || processingMode === 'batch-csv') {
       // Check that all files have userMetadata
@@ -1854,7 +1977,7 @@ const UploadAnalyze: React.FC = () => {
         setFileStates(prev => ({ ...prev, [audioFile.id]: 'processing' }));
         
         try {
-          await processSingleFileById(audioFile.id, audioFile);
+          await processSingleFileById(audioFile.id, audioFile, { runKintsugiAssessment, transcribeAudio: transcribeAudio && isTranscriptionEnabled });
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
           addToast('success', 'File Complete', `${fileName} processed successfully`);
           
@@ -1929,11 +2052,27 @@ const UploadAnalyze: React.FC = () => {
         });
       }, 2000);
     }
-  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById]);
+  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled]);
 
   const startSingleFile = useCallback(async (fileId: string) => {
     const audioFile = audioFiles.find(f => f.id === fileId);
     if (!audioFile) return;
+
+    // Validate processing options (account for disabled transcription)
+    const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
+    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+      const availableOptions = [];
+      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      const optionsText = availableOptions.length > 1 
+        ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
+        : `Please select the ${availableOptions[0]} processing option.`;
+      
+      setError(optionsText);
+      addToast('error', 'Missing Processing Options', optionsText);
+      return;
+    }
 
     // Validate metadata
     const validationErrors = validateMetadata();
@@ -1946,7 +2085,7 @@ const UploadAnalyze: React.FC = () => {
     setFileStates(prev => ({ ...prev, [fileId]: 'processing' }));
     
     try {
-      await processSingleFileById(fileId, audioFile);
+      await processSingleFileById(fileId, audioFile, { runKintsugiAssessment, transcribeAudio: transcribeAudio && isTranscriptionEnabled });
       setFileStates(prev => ({ ...prev, [fileId]: 'complete' }));
       addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
     } catch (error) {
@@ -1960,12 +2099,28 @@ const UploadAnalyze: React.FC = () => {
         [fileId]: { stage: 'error', progress: 0, message: `Failed: ${errorMessage}` }
       }));
     }
-  }, [audioFiles, validateMetadata, addToast, processSingleFileById]);
+  }, [audioFiles, validateMetadata, addToast, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled]);
 
   const processSingleFile = useCallback(async () => {
     if (!audioFile || !userMetadata.userId.trim()) {
       setError('Please select an audio file. User ID is automatically generated.');
       addToast('error', 'Missing Information', 'Please select an audio file. User ID is automatically generated.');
+      return;
+    }
+
+    // Validate processing options (account for disabled transcription)
+    const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
+    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+      const availableOptions = [];
+      if (true) availableOptions.push('Kintsugi Assessment'); // Always available
+      if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      
+      const optionsText = availableOptions.length > 1 
+        ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
+        : `Please select the ${availableOptions[0]} processing option.`;
+      
+      setError(optionsText);
+      addToast('error', 'Missing Processing Options', optionsText);
       return;
     }
 
@@ -2212,7 +2367,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat, runKintsugiAssessment, transcribeAudio]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {
@@ -2333,6 +2488,88 @@ const UploadAnalyze: React.FC = () => {
             </>
           )}
         </div>
+      </div>
+
+      {/* Processing Options */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          Processing Options
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">
+          Choose which analysis options to run on your audio files.
+        </p>
+        
+        <div className="space-y-4">
+          <div className="flex items-start">
+            <input
+              id="kintsugiAssessment"
+              type="checkbox"
+              checked={runKintsugiAssessment}
+              onChange={(e) => setRunKintsugiAssessment(e.target.checked)}
+              className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+            />
+            <div className="ml-3">
+              <label htmlFor="kintsugiAssessment" className="text-sm font-medium text-gray-900 dark:text-white">
+                Run Kintsugi Assessment
+              </label>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Analyze audio for depression and anxiety indicators using Kintsugi Health's AI model
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start">
+            <input
+              id="transcribeAudio"
+              type="checkbox"
+              checked={transcribeAudio && isTranscriptionEnabled}
+              disabled={!isTranscriptionEnabled}
+              onChange={(e) => setTranscribeAudio(e.target.checked)}
+              className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 ${
+                !isTranscriptionEnabled ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            />
+            <div className="ml-3">
+              <label htmlFor="transcribeAudio" className={`text-sm font-medium ${
+                !isTranscriptionEnabled 
+                  ? 'text-gray-400 dark:text-gray-500' 
+                  : 'text-gray-900 dark:text-white'
+              }`}>
+                Transcribe Audio
+                {!isTranscriptionEnabled && (
+                  <span className="ml-2 text-xs text-red-500 dark:text-red-400">
+                    (Disabled)
+                  </span>
+                )}
+              </label>
+              <p className={`text-sm ${
+                !isTranscriptionEnabled 
+                  ? 'text-gray-400 dark:text-gray-500' 
+                  : 'text-gray-600 dark:text-gray-400'
+              }`}>
+                {!isTranscriptionEnabled 
+                  ? 'Transcription service is disabled in configuration' 
+                  : 'Convert audio to text using speech recognition technology'
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Validation message if no options selected */}
+        {!runKintsugiAssessment && !(transcribeAudio && isTranscriptionEnabled) && (
+          <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+            <div className="flex items-center">
+              <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {isTranscriptionEnabled 
+                  ? 'Please select at least one processing option to continue.'
+                  : 'Please select the Kintsugi Assessment option to continue (transcription is disabled).'
+                }
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* User Metadata Form */}
@@ -3358,7 +3595,8 @@ const UploadAnalyze: React.FC = () => {
                   onClick={processMultipleFiles}
                   disabled={audioFiles.length === 0 || !userMetadata.userId.trim() || 
                            !audioFiles.some(file => fileStates[file.id] === 'ready') ||
-                           !!error || Object.values(validationErrors).some(err => err !== undefined)}
+                           !!error || Object.values(validationErrors).some(err => err !== undefined) ||
+                           (!runKintsugiAssessment && !transcribeAudio)}
                   className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
                 >
                   <Play className="h-5 w-5 mr-2" aria-hidden="true" />
@@ -3377,7 +3615,8 @@ const UploadAnalyze: React.FC = () => {
               <button type="button"
                 onClick={processAndAnalyze}
                 disabled={!audioFile || !userMetadata.userId.trim() || 
-                         !!error || Object.values(validationErrors).some(err => err !== undefined)}
+                         !!error || Object.values(validationErrors).some(err => err !== undefined) ||
+                         (!runKintsugiAssessment && !transcribeAudio)}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
               >
                 <Play className="h-5 w-5 mr-2" aria-hidden="true" />

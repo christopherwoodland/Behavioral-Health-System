@@ -90,7 +90,19 @@ class TranscriptionService {
    * @returns boolean
    */
   isTranscriptionEnabled(): boolean {
-    return import.meta.env.VITE_ENABLE_TRANSCRIPTION === 'true';
+    // Enable transcription by default unless explicitly disabled
+    const enableFlag = import.meta.env.VITE_ENABLE_TRANSCRIPTION;
+    return enableFlag !== 'false' && enableFlag !== '0';
+  }
+
+  /**
+   * Check if Kintsugi assessment is enabled via feature flag
+   * @returns boolean
+   */
+  isKintsugiEnabled(): boolean {
+    // Enable Kintsugi by default unless explicitly disabled
+    const enableFlag = import.meta.env.VITE_ENABLE_KINTSUGI;
+    return enableFlag !== 'false' && enableFlag !== '0';
   }
 }
 

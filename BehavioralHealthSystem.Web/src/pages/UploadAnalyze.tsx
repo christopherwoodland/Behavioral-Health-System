@@ -1672,7 +1672,9 @@ const UploadAnalyze: React.FC = () => {
       }
 
       // Process Audio Transcription if selected
+      console.log('DEBUG: Checking if should transcribe audio. options.transcribeAudio =', options.transcribeAudio);
       if (options.transcribeAudio) {
+        console.log('DEBUG: ✅ ENTERING TRANSCRIPTION SECTION - transcription will be attempted');
         const transcriptionProgress = options.runKintsugiAssessment ? 85 : 70;
         setProcessingProgress(prev => ({
           ...prev,
@@ -1737,6 +1739,8 @@ const UploadAnalyze: React.FC = () => {
             `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Other processing will continue.`);
           transcriptionText = null;
         }
+      } else {
+        console.log('DEBUG: ❌ SKIPPING TRANSCRIPTION SECTION - options.transcribeAudio is false');
       }
 
       // Step 5: Prepare and save final results
@@ -1989,10 +1993,14 @@ const UploadAnalyze: React.FC = () => {
         setFileStates(prev => ({ ...prev, [audioFile.id]: 'processing' }));
         
         try {
-          await processSingleFileById(audioFile.id, audioFile, { 
+          const optionsToPass = { 
             runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled, 
             transcribeAudio: transcribeAudio && isTranscriptionEnabled 
-          });
+          };
+          console.log('DEBUG: Calling processSingleFileById with options:', optionsToPass);
+          console.log('DEBUG: transcribeAudio checkbox state:', transcribeAudio);
+          console.log('DEBUG: isTranscriptionEnabled:', isTranscriptionEnabled);
+          await processSingleFileById(audioFile.id, audioFile, optionsToPass);
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
           addToast('success', 'File Complete', `${fileName} processed successfully`);
           
@@ -2108,10 +2116,14 @@ const UploadAnalyze: React.FC = () => {
     setFileStates(prev => ({ ...prev, [fileId]: 'processing' }));
     
     try {
-      await processSingleFileById(fileId, audioFile, { 
+      const optionsToPass = { 
         runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled, 
         transcribeAudio: transcribeAudio && isTranscriptionEnabled 
-      });
+      };
+      console.log('DEBUG: Calling processSingleFileById with options:', optionsToPass);
+      console.log('DEBUG: transcribeAudio checkbox state:', transcribeAudio);
+      console.log('DEBUG: isTranscriptionEnabled:', isTranscriptionEnabled);
+      await processSingleFileById(fileId, audioFile, optionsToPass);
       setFileStates(prev => ({ ...prev, [fileId]: 'complete' }));
       addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
     } catch (error) {
@@ -2219,6 +2231,7 @@ const UploadAnalyze: React.FC = () => {
 
       let audioUrl: string;
       let fileName: string;
+      let convertedBlob: Blob | null = null; // For transcription service
 
       // Check if this is a pre-filled session with existing audio URL (re-run scenario)
       // Ensure the URL is a valid Azure Storage URL, not a blob URL
@@ -2239,7 +2252,7 @@ const UploadAnalyze: React.FC = () => {
         announceToScreenReader('Session created successfully, now converting audio');
 
         // Step 2: Convert audio using FFmpeg
-        const convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
+        convertedBlob = await convertAudioToWav(audioFile.file, (progressPercent: number) => {
           setProgress({
             stage: 'converting',
             progress: 15 + (progressPercent * 0.25), // 15-40% for conversion
@@ -2279,66 +2292,144 @@ const UploadAnalyze: React.FC = () => {
         // Continue with the process even if updating fails
       }
 
-      // Step 4: Submit prediction with URL to /predictions/submit endpoint
-      await apiService.submitPrediction({
-        userId: userMetadata.userId.trim(),
-        sessionid: sessionData.sessionId,
-        audioFileUrl: audioUrl,
-        audioFileName: fileName
-      });
+      // Step 4: Process transcription if requested
+      let transcriptionText: string | null = null;
+      if (effectiveTranscribeAudio) {
+        console.log('🎵 processSingleFile: TRANSCRIPTION SECTION - Starting transcription processing');
+        const transcriptionProgress = effectiveKintsugiAssessment ? 67 : 70;
+        setProgress({ stage: 'analyzing', progress: transcriptionProgress, message: 'Transcribing audio...' });
+        announceToScreenReader('Starting audio transcription');
 
-      setProgress({ stage: 'analyzing', progress: 70, message: 'Analyzing audio with Kintsugi Health API...' });
-      announceToScreenReader('Prediction submitted, analysis in progress');
-
-      // Step 5: Poll for results
-      const poller = new PredictionPoller(sessionData.sessionId);
-      
-      await new Promise<void>((resolve, reject) => {
-        poller.start(
-          (result: PredictionResult) => {
-            // Update progress during polling
-            const progressPercent = result.status === 'processing' ? 80 : 
-                                  result.status === 'success' ? 95 : 70;
-            setProgress({ 
-              stage: 'analyzing', 
-              progress: progressPercent, 
-              message: `Analysis ${result.status}...` 
-            });
-
-            // Check for predict_error and show toast
-            if (result.predictError) {
-              addToast('error', 'Prediction Error', 
-                `${result.predictError.error}: ${result.predictError.message}`);
+        try {
+          // Check if transcription service is enabled (with fallback)
+          const isEnabled = transcriptionService.isTranscriptionEnabled();
+          
+          if (!isEnabled) {
+            console.warn('🎵 processSingleFile: Transcription service is disabled via VITE_ENABLE_TRANSCRIPTION flag');
+            addToast('warning', 'Transcription Disabled', 'Transcription service is not enabled in configuration. Set VITE_ENABLE_TRANSCRIPTION=true to enable.');
+            transcriptionText = null;
+          } else {
+            console.log('🎵 processSingleFile: Transcription service is enabled, proceeding with transcription...');
+            
+            // Get audio blob for transcription
+            let audioBlob: Blob;
+            
+            if (audioFile.url && !audioFile.url.startsWith('blob:')) {
+              // Re-run scenario: fetch audio from existing URL
+              console.log('🎵 processSingleFile: Fetching audio from existing URL for transcription...');
+              const audioResponse = await fetch(audioUrl);
+              if (!audioResponse.ok) {
+                throw new Error(`Failed to fetch audio from URL: ${audioResponse.statusText}`);
+              }
+              audioBlob = await audioResponse.blob();
+            } else {
+              // New file scenario: use the converted WAV blob
+              console.log('🎵 processSingleFile: Using converted WAV blob for transcription...');
+              if (!convertedBlob) {
+                throw new Error('Audio conversion failed - no converted blob available for transcription');
+              }
+              audioBlob = convertedBlob;
             }
-          },
-          (result: PredictionResult) => {
-            // Check for final errors before completing
-            if (result.predictError) {
-              addToast('error', 'Analysis Failed', 
-                `The analysis completed with an error: ${result.predictError.error} - ${result.predictError.message}`);
-              setProgress({ stage: 'error', progress: 0, message: 'Analysis failed with errors' });
-              reject(new Error(`Prediction error: ${result.predictError.error}`));
-              return;
+            
+            // Call the actual transcription service
+            console.log('🎵 processSingleFile: Calling transcription service with audio blob of size:', audioBlob.size);
+            const transcriptionResult: TranscriptionResult = await transcriptionService.transcribeAudio(audioBlob);
+            
+            console.log('🎵 processSingleFile: Transcription result:', transcriptionResult);
+            
+            if (transcriptionResult.error) {
+              throw new Error(transcriptionResult.error);
             }
+            
+            if (!transcriptionResult.text || transcriptionResult.text.trim() === '') {
+              console.warn('🎵 processSingleFile: Transcription returned empty text');
+            }
+            
+            transcriptionText = transcriptionResult.text;
+            
+            // Save transcription to session storage
+            console.log('🎵 processSingleFile: Saving transcription to session storage...');
+            await apiService.saveTranscription(sessionData.sessionId, transcriptionText);
+            
+            addToast('success', 'Transcription Complete', 
+              `Audio transcription completed with ${Math.round(transcriptionResult.confidence * 100)}% confidence.`);
+          }
+        } catch (transcriptionError) {
+          console.error('🎵 processSingleFile: Transcription failed:', transcriptionError);
+          addToast('warning', 'Transcription Failed', 
+            `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Other processing will continue.`);
+          transcriptionText = null;
+        }
+      } else {
+        console.log('🎵 processSingleFile: TRANSCRIPTION SECTION - Skipping transcription (not requested)');
+      }
 
-            // Analysis complete successfully
-            const analysisResult: AnalysisResult = {
-              sessionId: sessionData.sessionId,
-              depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
-              riskLevel: (() => {
-                const score = safeParseFloat(result.predictedScoreDepression, 0);
-                return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
-              })(),
-              confidence: 0.85, // This would come from the API in a real scenario
+      // Handle Kintsugi processing if requested, otherwise create transcription-only result
+      if (effectiveKintsugiAssessment) {
+        console.log('🎵 processSingleFile: KINTSUGI SECTION - Starting Kintsugi assessment');
+        
+        // Step 5: Submit prediction with URL to /predictions/submit endpoint
+        await apiService.submitPrediction({
+          userId: userMetadata.userId.trim(),
+          sessionid: sessionData.sessionId,
+          audioFileUrl: audioUrl,
+          audioFileName: fileName
+        });
+
+        setProgress({ stage: 'analyzing', progress: 70, message: 'Analyzing audio with Kintsugi Health API...' });
+        announceToScreenReader('Prediction submitted, analysis in progress');
+
+        // Step 6: Poll for results
+        const poller = new PredictionPoller(sessionData.sessionId);
+        
+        await new Promise<void>((resolve, reject) => {
+          poller.start(
+            (result: PredictionResult) => {
+              // Update progress during polling
+              const progressPercent = result.status === 'processing' ? 80 : 
+                                    result.status === 'success' ? 95 : 70;
+              setProgress({ 
+                stage: 'analyzing', 
+                progress: progressPercent, 
+                message: `Analysis ${result.status}...` 
+              });
+
+              // Check for predict_error and show toast
+              if (result.predictError) {
+                addToast('error', 'Prediction Error', 
+                  `${result.predictError.error}: ${result.predictError.message}`);
+              }
+            },
+            (result: PredictionResult) => {
+              // Check for final errors before completing
+              if (result.predictError) {
+                addToast('error', 'Analysis Failed', 
+                  `The analysis completed with an error: ${result.predictError.error} - ${result.predictError.message}`);
+                setProgress({ stage: 'error', progress: 0, message: 'Analysis failed with errors' });
+                reject(new Error(`Prediction error: ${result.predictError.error}`));
+                return;
+              }
+
+              // Kintsugi analysis complete successfully
+              const analysisResult: AnalysisResult = {
+                sessionId: sessionData.sessionId,
+                depressionScore: safeParseFloat(result.predictedScoreDepression, 0),
+                riskLevel: (() => {
+                  const score = safeParseFloat(result.predictedScoreDepression, 0);
+                  return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+                })(),
+                confidence: 0.85, // This would come from the API in a real scenario
             insights: [
               'Analysis completed using Kintsugi Health API',
               result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
               result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
+              transcriptionText ? `Transcription: ${transcriptionText}` : '',
               'Results should be reviewed by a qualified healthcare professional'
             ].filter(insight => insight.trim() !== ''),
             timestamp: result.updatedAt,
             audioUrl: audioUrl,
-            rawApiResponse: result // Store the complete API response
+            rawApiResponse: result, // Store the complete API response
+            transcriptionText: transcriptionText || undefined
           };
           
           // Update session data with final analysis results (fire-and-forget)
@@ -2358,10 +2449,12 @@ const UploadAnalyze: React.FC = () => {
                 'Analysis completed using Kintsugi Health API',
                 result.predictedScoreDepression ? `Depression score: ${result.predictedScoreDepression}` : '',
                 result.predictedScoreAnxiety ? `Anxiety score: ${result.predictedScoreAnxiety}` : '',
+                transcriptionText ? `Transcription: ${transcriptionText}` : '',
                 'Results should be reviewed by a qualified healthcare professional'
               ].filter(insight => insight.trim() !== ''),
               completedAt: new Date().toISOString()
             },
+            transcription: transcriptionText || undefined,
             status: 'completed',
             completedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -2392,6 +2485,54 @@ const UploadAnalyze: React.FC = () => {
           }
         );
       });
+      
+      } else {
+        // Transcription-only processing (no Kintsugi assessment)
+        console.log('🎵 processSingleFile: TRANSCRIPTION-ONLY SECTION - Creating transcription-only result');
+        
+        const analysisResult: AnalysisResult = {
+          sessionId: sessionData.sessionId,
+          depressionScore: undefined,
+          riskLevel: undefined,
+          confidence: undefined,
+          insights: [
+            'Audio transcription completed',
+            transcriptionText ? `Transcription: ${transcriptionText}` : 'Transcription was requested but no text was generated',
+            'No behavioral health analysis was performed'
+          ].filter(insight => insight.trim() !== ''),
+          timestamp: new Date().toISOString(),
+          audioUrl: audioUrl,
+          transcriptionText: transcriptionText || undefined
+        };
+        
+        // Update session data with transcription results (fire-and-forget)
+        const finalSessionData = {
+          ...initialSessionData,
+          audioUrl: audioUrl,
+          transcription: transcriptionText,
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        // Save transcription results to session storage (async, non-blocking)
+        apiService.saveSessionData(finalSessionData)
+          .then((result) => {
+            console.log('Session data saved with transcription results for session:', sessionData.sessionId);
+            console.log('Save result:', result);
+            addToast('success', 'Session Saved', 'Transcription results have been saved to session storage.');
+          })
+          .catch((error) => {
+            console.error('Failed to save transcription results to session storage:', error);
+            console.error('Session data that failed to save:', finalSessionData);
+            addToast('warning', 'Save Warning', 'Transcription completed but failed to save to session storage. Results are still available.');
+          });
+          
+        setProgress({ stage: 'complete', progress: 100, message: 'Transcription complete!' });
+        setResult(analysisResult);
+        addToast('success', 'Transcription Complete', 'Your audio transcription has been completed successfully.');
+        announceToScreenReader('Audio transcription completed successfully');
+      }
 
     } catch (err) {
       console.error('Processing error:', err);
@@ -2577,7 +2718,10 @@ const UploadAnalyze: React.FC = () => {
               type="checkbox"
               checked={transcribeAudio && isTranscriptionEnabled}
               disabled={!isTranscriptionEnabled}
-              onChange={(e) => setTranscribeAudio(e.target.checked)}
+              onChange={(e) => {
+                console.log('DEBUG: Transcribe Audio checkbox changed to:', e.target.checked);
+                setTranscribeAudio(e.target.checked);
+              }}
               className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 ${
                 !isTranscriptionEnabled ? 'opacity-50 cursor-not-allowed' : ''
               }`}

@@ -192,6 +192,13 @@ const UploadAnalyze: React.FC = () => {
     sessionNotes: prefilledData?.userMetadata?.sessionNotes || ''
   });
   const [error, setError] = useState<string | null>(null);
+  // State for collapsible sections
+  const [collapsedSections, setCollapsedSections] = useState({
+    processingOptions: false,
+    patientInfo: false,
+    fileUpload: false
+  });
+
   const [toasts, setToasts] = useState<Array<{
     id: string;
     type: 'error' | 'warning' | 'info' | 'success';
@@ -396,6 +403,19 @@ const UploadAnalyze: React.FC = () => {
 
   const generateFileId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  };
+
+  // Helper function to determine if patient info should be hidden
+  const shouldHidePatientInfo = () => {
+    return transcribeAudio && !runKintsugiAssessment;
+  };
+
+  // Helper function to toggle section collapse state
+  const toggleSectionCollapse = (section: keyof typeof collapsedSections) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   // Helper function to normalize ethnicity values for backend API
@@ -2666,13 +2686,33 @@ const UploadAnalyze: React.FC = () => {
       </div>
 
       {/* Processing Options */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          Processing Options
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-4">
-          Choose which analysis options to run on your audio files.
-        </p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div 
+          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" 
+          onClick={() => toggleSectionCollapse('processingOptions')}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              Processing Options
+            </h2>
+            <svg 
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                collapsedSections.processingOptions ? 'rotate-180' : ''
+              }`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        
+        {!collapsedSections.processingOptions && (
+          <div className="px-6 pb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              Choose which analysis options to run on your audio files.
+            </p>
         
         <div className="space-y-4">
           <div className="flex items-start">
@@ -2776,18 +2816,21 @@ const UploadAnalyze: React.FC = () => {
             </div>
           </div>
         )}
+          </div>
+        )}
       </div>
 
       {/* User Metadata Form */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          {processingMode === 'batch-files' 
-            ? 'Patient Information (Optional, Apply to All Files)' 
-            : processingMode === 'batch-csv'
-            ? 'Default Patient Information (Optional, Override with CSV Data)'
-            : 'Patient Information (Optional)'
-          }
-        </h2>
+      {!shouldHidePatientInfo() && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            {processingMode === 'batch-files' 
+              ? 'Patient Information (Optional, Apply to All Files)' 
+              : processingMode === 'batch-csv'
+              ? 'Default Patient Information (Optional, Override with CSV Data)'
+              : 'Patient Information (Optional)'
+            }
+          </h2>
         
         {/* Explanatory text for batch modes */}
         {processingMode === 'batch-files' && (
@@ -3104,7 +3147,7 @@ const UploadAnalyze: React.FC = () => {
               )}
 
               {/* Apply to All Files Button for batch-files mode */}
-              {processingMode === 'batch-files' && audioFiles.length > 0 && (
+              {processingMode === 'batch-files' && audioFiles.length > 0 && !shouldHidePatientInfo() && (
                 <button
                   type="button"
                   onClick={applyToAllFiles}
@@ -3133,13 +3176,34 @@ const UploadAnalyze: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* File Upload Area */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-          {processingMode === 'batch-csv' ? 'CSV File Upload' : 'Audio File Upload'} 
-          {processingMode === 'batch-files' && <span className="text-sm font-normal text-gray-500 dark:text-gray-400"> (Batch Files Mode)</span>}
-        </h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div 
+          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" 
+          onClick={() => toggleSectionCollapse('fileUpload')}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {processingMode === 'batch-csv' ? 'CSV File Upload' : 'Audio File Upload'} 
+              {processingMode === 'batch-files' && <span className="text-sm font-normal text-gray-500 dark:text-gray-400"> (Batch Files Mode)</span>}
+            </h2>
+            <svg 
+              className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                collapsedSections.fileUpload ? 'rotate-180' : ''
+              }`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        
+        {!collapsedSections.fileUpload && (
+          <div className="px-6 pb-6">
 
         {/* CSV Upload Section */}
         {processingMode === 'batch-csv' && (
@@ -3418,14 +3482,16 @@ const UploadAnalyze: React.FC = () => {
                           
                           {/* Action buttons with equal spacing */}
                           <div className="flex items-center justify-end space-x-2 flex-shrink-0">
-                            <button
-                              onClick={() => openMetadataEditor(file.id, file.userMetadata)}
-                              className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                              aria-label={`Edit metadata for ${file.file.name}`}
-                            >
-                              <Edit className="h-3 w-3 mr-1" />
-                              Edit Info
-                            </button>
+                            {!shouldHidePatientInfo() && (
+                              <button
+                                onClick={() => openMetadataEditor(file.id, file.userMetadata)}
+                                className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:text-blue-200 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                aria-label={`Edit metadata for ${file.file.name}`}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Edit Info
+                              </button>
+                            )}
                             
                             {/* Start button for individual file */}
                             {fileState === 'ready' && (
@@ -4055,9 +4121,12 @@ const UploadAnalyze: React.FC = () => {
           ))}
         </div>
       )}
+          </div>
+        )}
+      </div>
       
       {/* Metadata Editing Modal */}
-      {editingFileMetadata && (
+      {editingFileMetadata && !shouldHidePatientInfo() && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600">
@@ -4296,7 +4365,6 @@ const UploadAnalyze: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 };

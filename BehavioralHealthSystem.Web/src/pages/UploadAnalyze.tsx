@@ -2529,7 +2529,7 @@ const UploadAnalyze: React.FC = () => {
         const finalSessionData = {
           ...initialSessionData,
           audioUrl: audioUrl,
-          transcription: transcriptionText,
+          transcription: transcriptionText || undefined,
           status: 'completed',
           completedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()

@@ -37,7 +37,9 @@ class TranscriptionService {
 
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.wav');
+      // Ensure the file is named as .wav for the API
+      const file = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
+      formData.append('file', file);
       formData.append('model', this.model);
       formData.append('response_format', 'json');
       formData.append('language', 'en');

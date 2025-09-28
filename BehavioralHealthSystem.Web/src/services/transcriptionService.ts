@@ -37,7 +37,9 @@ class TranscriptionService {
 
     try {
       const formData = new FormData();
-      formData.append('file', audioBlob, 'audio.wav');
+      // Ensure the file is named as .wav for the API
+      const file = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
+      formData.append('file', file);
       formData.append('model', this.model);
       formData.append('response_format', 'json');
       formData.append('language', 'en');
@@ -90,7 +92,19 @@ class TranscriptionService {
    * @returns boolean
    */
   isTranscriptionEnabled(): boolean {
-    return import.meta.env.VITE_ENABLE_TRANSCRIPTION === 'true';
+    // Enable transcription by default unless explicitly disabled
+    const enableFlag = import.meta.env.VITE_ENABLE_TRANSCRIPTION;
+    return enableFlag !== 'false' && enableFlag !== '0';
+  }
+
+  /**
+   * Check if Kintsugi assessment is enabled via feature flag
+   * @returns boolean
+   */
+  isKintsugiEnabled(): boolean {
+    // Enable Kintsugi by default unless explicitly disabled
+    const enableFlag = import.meta.env.VITE_ENABLE_KINTSUGI;
+    return enableFlag !== 'false' && enableFlag !== '0';
   }
 }
 

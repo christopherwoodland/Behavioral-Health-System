@@ -46,6 +46,14 @@ public interface IFileGroupStorageService
     Task<bool> ArchiveFileGroupAsync(string groupId, CancellationToken cancellationToken = default);
     
     /// <summary>
+    /// Delete a file group and all its associated sessions (hard delete)
+    /// </summary>
+    /// <param name="groupId">The group ID to delete</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if deleted successfully, false otherwise</returns>
+    Task<bool> DeleteFileGroupAsync(string groupId, CancellationToken cancellationToken = default);
+    
+    /// <summary>
     /// Search file groups by name or description
     /// </summary>
     /// <param name="userId">The user ID to search within</param>

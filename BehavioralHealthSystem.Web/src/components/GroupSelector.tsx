@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Users, Search, Calendar } from 'lucide-react';
+import { Plus, Users, Search, Calendar, Trash2 } from 'lucide-react';
 import { fileGroupService } from '../services/fileGroupService';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserId } from '../utils';
@@ -9,9 +9,11 @@ interface GroupSelectorProps {
   selectedGroupId?: string;
   onGroupChange: (groupId: string | undefined) => void;
   onCreateGroup?: (groupName: string, description?: string) => Promise<string>;
+  onDeleteGroup?: (groupId: string, groupName: string) => Promise<void>;
   className?: string;
   disabled?: boolean;
   required?: boolean;
+  showDeleteButton?: boolean;
 }
 
 interface NewGroupData {
@@ -23,9 +25,11 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
   selectedGroupId,
   onGroupChange,
   onCreateGroup,
+  onDeleteGroup,
   className = '',
   disabled = false,
-  required = false
+  required = false,
+  showDeleteButton = false
 }) => {
   const [groups, setGroups] = useState<FileGroup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,6 +41,8 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
   });
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // Track which group is being deleted
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null); // Track which group confirmation is shown
   
   const { user } = useAuth();
 
@@ -68,35 +74,72 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       setCreateError(null); // Clear previous errors
       
       const userId = user?.id || getUserId();
-      const response = await fileGroupService.createFileGroup({
-        groupName: newGroupData.name.trim(),
-        description: newGroupData.description.trim() || undefined,
-        createdBy: userId
-      }, userId);
+      let createdGroupId: string;
       
-      if (response.success && response.fileGroup) {
-        onGroupChange(response.fileGroup.groupId);
-        
-        if (onCreateGroup) {
-          await onCreateGroup(newGroupData.name.trim(), newGroupData.description.trim() || undefined);
+      if (onCreateGroup) {
+        // If onCreateGroup callback is provided, use it for creation
+        try {
+          createdGroupId = await onCreateGroup(newGroupData.name.trim(), newGroupData.description.trim() || undefined);
+        } catch (error) {
+          // Handle errors from the callback
+          setCreateError(error instanceof Error ? error.message : 'Failed to create group');
+          return;
         }
-        
-        // Reset form
-        setNewGroupData({ name: '', description: '' });
-        setShowCreateForm(false);
-        
-        // Reload groups
-        await loadGroups();
       } else {
-        // Show error message from the response
-        setCreateError(response.message || 'Failed to create group');
+        // If no callback provided, handle creation internally
+        const response = await fileGroupService.createFileGroup({
+          groupName: newGroupData.name.trim(),
+          description: newGroupData.description.trim() || undefined,
+          createdBy: userId
+        }, userId);
+        
+        if (response.success && response.fileGroup) {
+          createdGroupId = response.fileGroup.groupId;
+        } else {
+          setCreateError(response.message || 'Failed to create group');
+          return;
+        }
       }
+      
+      // Set the newly created group as selected
+      onGroupChange(createdGroupId);
+      
+      // Reset form
+      setNewGroupData({ name: '', description: '' });
+      setShowCreateForm(false);
+      
+      // Reload groups to ensure UI is in sync
+      await loadGroups();
       
     } catch (error) {
       console.error('Failed to create group:', error);
       setCreateError('Failed to create group. Please try again.');
     } finally {
       setCreateLoading(false);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    if (!onDeleteGroup) return;
+    
+    try {
+      setDeleteLoading(groupId);
+      await onDeleteGroup(groupId, groupName);
+      
+      // If the deleted group was selected, clear the selection
+      if (selectedGroupId === groupId) {
+        onGroupChange(undefined);
+      }
+      
+      // Reload groups to ensure UI is in sync
+      await loadGroups();
+      
+    } catch (error) {
+      console.error('Failed to delete group:', error);
+      // Could add error handling here if needed
+    } finally {
+      setDeleteLoading(null);
+      setShowDeleteConfirm(null);
     }
   };
 
@@ -183,6 +226,53 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                       <span>Created {new Date(group.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
+                  
+                  {/* Delete Button */}
+                  {showDeleteButton && onDeleteGroup && (
+                    <div className="flex-shrink-0">
+                      {showDeleteConfirm === group.groupId ? (
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDeleteGroup(group.groupId, group.groupName);
+                            }}
+                            disabled={deleteLoading === group.groupId}
+                            className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                          >
+                            {deleteLoading === group.groupId ? 'Deleting...' : 'Confirm'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setShowDeleteConfirm(null);
+                            }}
+                            className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowDeleteConfirm(group.groupId);
+                          }}
+                          disabled={disabled || deleteLoading === group.groupId}
+                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50"
+                          title={`Delete group "${group.groupName}"`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </label>
               ))}
             </div>

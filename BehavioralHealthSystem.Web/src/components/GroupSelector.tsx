@@ -50,7 +50,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       const userId = user?.id || getUserId();
       const response = await fileGroupService.getFileGroups(userId);
       if (response.success) {
-        setGroups(response.groups);
+        setGroups(response.fileGroups);
       }
     } catch (error) {
       console.error('Failed to load file groups:', error);

@@ -68,29 +68,42 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       setCreateError(null); // Clear previous errors
       
       const userId = user?.id || getUserId();
-      const response = await fileGroupService.createFileGroup({
-        groupName: newGroupData.name.trim(),
-        description: newGroupData.description.trim() || undefined,
-        createdBy: userId
-      }, userId);
+      let createdGroupId: string;
       
-      if (response.success && response.fileGroup) {
-        onGroupChange(response.fileGroup.groupId);
-        
-        if (onCreateGroup) {
-          await onCreateGroup(newGroupData.name.trim(), newGroupData.description.trim() || undefined);
+      if (onCreateGroup) {
+        // If onCreateGroup callback is provided, use it for creation
+        try {
+          createdGroupId = await onCreateGroup(newGroupData.name.trim(), newGroupData.description.trim() || undefined);
+        } catch (error) {
+          // Handle errors from the callback
+          setCreateError(error instanceof Error ? error.message : 'Failed to create group');
+          return;
         }
-        
-        // Reset form
-        setNewGroupData({ name: '', description: '' });
-        setShowCreateForm(false);
-        
-        // Reload groups
-        await loadGroups();
       } else {
-        // Show error message from the response
-        setCreateError(response.message || 'Failed to create group');
+        // If no callback provided, handle creation internally
+        const response = await fileGroupService.createFileGroup({
+          groupName: newGroupData.name.trim(),
+          description: newGroupData.description.trim() || undefined,
+          createdBy: userId
+        }, userId);
+        
+        if (response.success && response.fileGroup) {
+          createdGroupId = response.fileGroup.groupId;
+        } else {
+          setCreateError(response.message || 'Failed to create group');
+          return;
+        }
       }
+      
+      // Set the newly created group as selected
+      onGroupChange(createdGroupId);
+      
+      // Reset form
+      setNewGroupData({ name: '', description: '' });
+      setShowCreateForm(false);
+      
+      // Reload groups to ensure UI is in sync
+      await loadGroups();
       
     } catch (error) {
       console.error('Failed to create group:', error);

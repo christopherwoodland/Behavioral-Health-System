@@ -36,6 +36,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
     description: ''
   });
   const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   
   const { user } = useAuth();
 
@@ -64,6 +65,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
     
     try {
       setCreateLoading(true);
+      setCreateError(null); // Clear previous errors
       
       const userId = user?.id || getUserId();
       const response = await fileGroupService.createFileGroup({
@@ -78,17 +80,21 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
         if (onCreateGroup) {
           await onCreateGroup(newGroupData.name.trim(), newGroupData.description.trim() || undefined);
         }
+        
+        // Reset form
+        setNewGroupData({ name: '', description: '' });
+        setShowCreateForm(false);
+        
+        // Reload groups
+        await loadGroups();
+      } else {
+        // Show error message from the response
+        setCreateError(response.message || 'Failed to create group');
       }
-      
-      // Reset form
-      setNewGroupData({ name: '', description: '' });
-      setShowCreateForm(false);
-      
-      // Reload groups
-      await loadGroups();
       
     } catch (error) {
       console.error('Failed to create group:', error);
+      setCreateError('Failed to create group. Please try again.');
     } finally {
       setCreateLoading(false);
     }
@@ -224,6 +230,13 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                   />
                 </div>
                 
+                {/* Error Message */}
+                {createError && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                    <p className="text-sm text-red-700 dark:text-red-300">{createError}</p>
+                  </div>
+                )}
+                
                 <div className="flex space-x-2">
                   <button
                     type="button"
@@ -238,6 +251,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                     onClick={() => {
                       setShowCreateForm(false);
                       setNewGroupData({ name: '', description: '' });
+                      setCreateError(null); // Clear error when cancelling
                     }}
                     disabled={createLoading}
                     className="btn btn--secondary text-sm"

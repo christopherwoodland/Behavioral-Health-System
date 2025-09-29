@@ -3,20 +3,16 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   RefreshCw, 
-  Download, 
   AlertCircle, 
   CheckCircle, 
   Clock, 
   XCircle,
   Eye,
-  Trash2,
   Users,
-  Activity,
   TrendingUp,
   TrendingDown,
   Brain,
   Heart,
-  Calendar,
   FileAudio,
   BarChart3
 } from 'lucide-react';
@@ -24,8 +20,39 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime, formatDateTime } from '../utils';
+import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory } from '../utils';
 import type { SessionData, AppError, FileGroup } from '../types';
+
+// Sort configuration interface
+interface SortConfig {
+  sortBy: 'date' | 'status' | 'depressionScore' | 'anxietyScore' | 'session';
+  sortOrder: 'asc' | 'desc';
+}
+
+// Utility function to get severity level for sorting
+const getSeverityLevel = (category?: string): number => {
+  if (!category) return 0;
+  switch (category.toLowerCase()) {
+    // Depression categories: no_to_mild, mild_to_moderate, moderate_to_severe
+    case 'no_to_mild':
+      return 1;
+    case 'mild_to_moderate':
+      return 2;
+    case 'moderate_to_severe':
+      return 3;
+    // Anxiety categories: no_or_minimal, moderate, moderately_severe, severe
+    case 'no_or_minimal':
+      return 1;
+    case 'moderate':
+      return 2;
+    case 'moderately_severe':
+      return 3;
+    case 'severe':
+      return 4;
+    default:
+      return 0;
+  }
+};
 
 // Status configuration for consistent styling
 const statusConfig = {
@@ -81,6 +108,10 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
   const [loadingGroup, setLoadingGroup] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    sortBy: 'date',
+    sortOrder: 'desc'
+  });
 
   // Get authenticated user ID for API calls
   const getAuthenticatedUserId = useCallback((): string => {
@@ -197,6 +228,70 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
       anxietyTrend: 0 // Keep for future trend analysis
     };
   }, [sessions]);
+
+  // Sort sessions based on current sort configuration
+  const sortedSessions = useMemo(() => {
+    const sessionsCopy = [...sessions];
+    
+    sessionsCopy.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortConfig.sortBy) {
+        case 'date':
+          comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'session':
+          comparison = (a.audioFileName || '').localeCompare(b.audioFileName || '');
+          break;
+        case 'depressionScore':
+          const predictionA = a.prediction as any;
+          const predictionB = b.prediction as any;
+          const depressionA = predictionA?.predicted_score_depression || 
+                             predictionA?.predictedScoreDepression ||
+                             a.analysisResults?.depressionScore;
+          const depressionB = predictionB?.predicted_score_depression || 
+                             predictionB?.predictedScoreDepression ||
+                             b.analysisResults?.depressionScore;
+          comparison = getSeverityLevel(depressionA) - getSeverityLevel(depressionB);
+          break;
+        case 'anxietyScore':
+          const predictionA2 = a.prediction as any;
+          const predictionB2 = b.prediction as any;
+          const anxietyA = predictionA2?.predicted_score_anxiety || 
+                          predictionA2?.predictedScoreAnxiety ||
+                          a.analysisResults?.anxietyScore;
+          const anxietyB = predictionB2?.predicted_score_anxiety || 
+                          predictionB2?.predictedScoreAnxiety ||
+                          b.analysisResults?.anxietyScore;
+          comparison = getSeverityLevel(anxietyA) - getSeverityLevel(anxietyB);
+          break;
+      }
+      
+      return sortConfig.sortOrder === 'desc' ? -comparison : comparison;
+    });
+
+    return sessionsCopy;
+  }, [sessions, sortConfig]);
+
+  // Handle column header click for sorting
+  const handleColumnSort = useCallback((column: 'date' | 'status' | 'depressionScore' | 'anxietyScore' | 'session') => {
+    setSortConfig(prev => ({
+      sortBy: column,
+      sortOrder: prev.sortBy === column && prev.sortOrder === 'asc' ? 'desc' : 'asc'
+    }));
+    announceToScreenReader(`Sorted by ${column} ${sortConfig.sortBy === column && sortConfig.sortOrder === 'asc' ? 'descending' : 'ascending'}`);
+  }, [announceToScreenReader, sortConfig.sortBy, sortConfig.sortOrder]);
+
+  // Get sort indicator icon
+  const getSortIcon = useCallback((column: string) => {
+    if (sortConfig.sortBy !== column) {
+      return null;
+    }
+    return sortConfig.sortOrder === 'asc' ? '↑' : '↓';
+  }, [sortConfig.sortBy, sortConfig.sortOrder]);
 
   if (!groupId) {
     return (
@@ -323,7 +418,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {groupAnalytics.mostCommonDepression ? 
-              groupAnalytics.mostCommonDepression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+              formatScoreCategory(groupAnalytics.mostCommonDepression) : 
               '—'
             }
           </div>
@@ -350,7 +445,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {groupAnalytics.mostCommonAnxiety ? 
-              groupAnalytics.mostCommonAnxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+              formatScoreCategory(groupAnalytics.mostCommonAnxiety) : 
               '—'
             }
           </div>
@@ -399,19 +494,69 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Session
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('session')}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by session name ${sortConfig.sortBy === 'session' && sortConfig.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Session
+                      {getSortIcon('session') && (
+                        <span className="ml-1 text-xs">{getSortIcon('session')}</span>
+                      )}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('status')}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by status ${sortConfig.sortBy === 'status' && sortConfig.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Status
+                      {getSortIcon('status') && (
+                        <span className="ml-1 text-xs">{getSortIcon('status')}</span>
+                      )}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Depression Score
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('depressionScore')}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by depression score ${sortConfig.sortBy === 'depressionScore' && sortConfig.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Depression Score
+                      {getSortIcon('depressionScore') && (
+                        <span className="ml-1 text-xs">{getSortIcon('depressionScore')}</span>
+                      )}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Anxiety Score
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('anxietyScore')}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by anxiety score ${sortConfig.sortBy === 'anxietyScore' && sortConfig.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Anxiety Score
+                      {getSortIcon('anxietyScore') && (
+                        <span className="ml-1 text-xs">{getSortIcon('anxietyScore')}</span>
+                      )}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Date
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('date')}
+                      className="flex items-center hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by date ${sortConfig.sortBy === 'date' && sortConfig.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Date
+                      {getSortIcon('date') && (
+                        <span className="ml-1 text-xs">{getSortIcon('date')}</span>
+                      )}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
@@ -419,7 +564,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
-                {sessions.map((session) => {
+                {sortedSessions.map((session) => {
                   const prediction = session.prediction as any;
                   const analysisResults = session.analysisResults;
                   const depressionScore = prediction?.predicted_score_depression || 
@@ -451,7 +596,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                         <div className="text-sm">
                           {depressionScore ? (
                             <span className="text-gray-900 dark:text-white font-medium">
-                              {typeof depressionScore === 'string' ? depressionScore : depressionScore.toFixed(1)}
+                              {typeof depressionScore === 'string' ? formatScoreCategory(depressionScore) : depressionScore.toFixed(1)}
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">—</span>
@@ -462,7 +607,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                         <div className="text-sm">
                           {anxietyScore ? (
                             <span className="text-gray-900 dark:text-white font-medium">
-                              {typeof anxietyScore === 'string' ? anxietyScore : anxietyScore.toFixed(1)}
+                              {typeof anxietyScore === 'string' ? formatScoreCategory(anxietyScore) : anxietyScore.toFixed(1)}
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">—</span>

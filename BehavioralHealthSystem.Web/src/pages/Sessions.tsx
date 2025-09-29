@@ -1,10 +1,11 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Filter, ChevronDown, ChevronUp, Eye, Download, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Search, Filter, ChevronDown, ChevronUp, Eye, Download, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, XCircle, ArrowUpDown } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
-import { getUserId, formatRelativeTime, formatDateTime } from '../utils';
+import { fileGroupService } from '../services/fileGroupService';
+import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory } from '../utils';
 import type { SessionData, AppError } from '../types';
 
 // Session interface for UI with additional computed fields
@@ -15,6 +16,8 @@ interface SessionWithUI extends SessionData {
   riskLevel?: string;
   depressionScore?: string;
   anxietyScore?: string;
+  groupName?: string;
+  groupDescription?: string;
 }
 
 // Filter and sort types
@@ -22,7 +25,7 @@ interface SessionFilters {
   search: string;
   status: string | 'all';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'year';
-  sortBy: 'date' | 'status' | 'depressionScore' | 'anxietyScore';
+  sortBy: 'date' | 'status' | 'depressionScore' | 'anxietyScore' | 'session' | 'group';
   sortOrder: 'asc' | 'desc';
 }
 
@@ -37,14 +40,6 @@ const statusConfig = {
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
   error: { color: 'red', icon: XCircle, label: 'Error' },
 } as const;
-
-// Utility function to format score categories
-const formatScoreCategory = (category?: string): string => {
-  if (!category) return '—';
-  return category
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (l: string) => l.toUpperCase());
-};
 
 // Utility function to get severity level for sorting
 const getSeverityLevel = (category?: string): number => {
@@ -105,28 +100,47 @@ const Sessions: React.FC = () => {
       const response = await apiService.getUserSessions(userId);
       
       // Transform session data to include computed UI fields
-      const transformedSessions: SessionWithUI[] = response.sessions.map(session => {
-        // Handle both camelCase and snake_case property names from API
-        const prediction = session.prediction as any;
-        const analysisResults = session.analysisResults;
-        
-        return {
-          ...session,
-          uploadedAt: session.createdAt,
-          fileName: session.audioFileName || `Audio_${session.sessionId.slice(-8)}.wav`,
-          fileSize: Math.floor(Math.random() * 5000000) + 1000000, // Mock file size for now
-          riskLevel: analysisResults?.riskLevel || 'unknown',
-          // Prioritize descriptive string values from prediction over numeric values from analysisResults
-          depressionScore: prediction?.predicted_score_depression || 
-                          prediction?.predictedScoreDepression ||
-                          (analysisResults?.depressionScore?.toString()) ||
-                          undefined,
-          anxietyScore: prediction?.predicted_score_anxiety || 
-                       prediction?.predictedScoreAnxiety ||
-                       (analysisResults?.anxietyScore?.toString()) ||
-                       undefined,
-        };
-      });
+      const transformedSessions: SessionWithUI[] = await Promise.all(
+        response.sessions.map(async (session) => {
+          // Handle both camelCase and snake_case property names from API
+          const prediction = session.prediction as any;
+          const analysisResults = session.analysisResults;
+          
+          // Fetch group information if session has a groupId
+          let groupName: string | undefined;
+          let groupDescription: string | undefined;
+          if (session.groupId) {
+            try {
+              const group = await fileGroupService.getFileGroup(session.groupId);
+              if (group) {
+                groupName = group.groupName;
+                groupDescription = group.description;
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch group info for session ${session.sessionId}:`, error);
+            }
+          }
+          
+          return {
+            ...session,
+            uploadedAt: session.createdAt,
+            fileName: session.audioFileName || `Audio_${session.sessionId.slice(-8)}.wav`,
+            fileSize: Math.floor(Math.random() * 5000000) + 1000000, // Mock file size for now
+            riskLevel: analysisResults?.riskLevel || 'unknown',
+            // Prioritize descriptive string values from prediction over numeric values from analysisResults
+            depressionScore: prediction?.predicted_score_depression || 
+                            prediction?.predictedScoreDepression ||
+                            (analysisResults?.depressionScore?.toString()) ||
+                            undefined,
+            anxietyScore: prediction?.predicted_score_anxiety || 
+                         prediction?.predictedScoreAnxiety ||
+                         (analysisResults?.anxietyScore?.toString()) ||
+                         undefined,
+            groupName,
+            groupDescription,
+          };
+        })
+      );
 
       setSessions(transformedSessions);
       announceToScreenReader(`${transformedSessions.length} sessions loaded successfully`);
@@ -154,6 +168,7 @@ const Sessions: React.FC = () => {
       filtered = filtered.filter(session => 
         session.sessionId.toLowerCase().includes(searchLower) ||
         session.fileName?.toLowerCase().includes(searchLower) ||
+        session.groupName?.toLowerCase().includes(searchLower) ||
         statusConfig[session.status as keyof typeof statusConfig]?.label.toLowerCase().includes(searchLower)
       );
     }
@@ -199,6 +214,12 @@ const Sessions: React.FC = () => {
         case 'status':
           comparison = a.status.localeCompare(b.status);
           break;
+        case 'session':
+          comparison = (a.fileName || '').localeCompare(b.fileName || '');
+          break;
+        case 'group':
+          comparison = (a.groupName || '').localeCompare(b.groupName || '');
+          break;
         case 'depressionScore':
           const depressionA = getSeverityLevel(a.depressionScore);
           const depressionB = getSeverityLevel(b.depressionScore);
@@ -222,6 +243,26 @@ const Sessions: React.FC = () => {
     setFilters(prev => ({ ...prev, [key]: value }));
     announceToScreenReader(`Filter ${key} changed to ${value}`);
   }, [announceToScreenReader]);
+
+  // Handle column header click for sorting
+  const handleColumnSort = useCallback((column: 'date' | 'status' | 'depressionScore' | 'anxietyScore' | 'session' | 'group') => {
+    setFilters(prev => ({
+      ...prev,
+      sortBy: column,
+      sortOrder: prev.sortBy === column && prev.sortOrder === 'asc' ? 'desc' : 'asc'
+    }));
+    announceToScreenReader(`Sorted by ${column} ${filters.sortBy === column && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`);
+  }, [announceToScreenReader, filters.sortBy, filters.sortOrder]);
+
+  // Get sort indicator icon
+  const getSortIcon = (column: 'date' | 'status' | 'depressionScore' | 'anxietyScore' | 'session' | 'group') => {
+    if (filters.sortBy !== column) {
+      return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
+    }
+    return filters.sortOrder === 'asc' ? 
+      <ChevronUp className="w-4 h-4 text-blue-600" /> : 
+      <ChevronDown className="w-4 h-4 text-blue-600" />;
+  };
 
   // Handle session selection
   const toggleSessionSelection = useCallback((sessionId: string) => {
@@ -479,7 +520,7 @@ const Sessions: React.FC = () => {
               <input
                 id="search-sessions"
                 type="text"
-                placeholder="Search by session ID, filename, or status..."
+                placeholder="Search by session ID, filename, group, or status..."
                 value={filters.search}
                 onChange={(e) => updateFilter('search', e.target.value)}
                 className="form__input w-full pl-10 pr-4 py-2"
@@ -561,6 +602,8 @@ const Sessions: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option value="date">Date</option>
+                <option value="session">Session Name</option>
+                <option value="group">Group</option>
                 <option value="status">Status</option>
                 <option value="depressionScore">Depression Score</option>
                 <option value="anxietyScore">Anxiety Score</option>
@@ -578,8 +621,8 @@ const Sessions: React.FC = () => {
                 onChange={(e) => updateFilter('sortOrder', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="desc">Newest First</option>
-                <option value="asc">Oldest First</option>
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
               </select>
             </div>
           </div>
@@ -628,20 +671,71 @@ const Sessions: React.FC = () => {
                       aria-label="Select all sessions"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Session
+                  <th className="px-6 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('session')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by session name ${filters.sortBy === 'session' && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Session
+                      {getSortIcon('session')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Status
+                  <th className="px-6 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('group')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by group ${filters.sortBy === 'group' && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Group
+                      {getSortIcon('group')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Depression Score
+                  <th className="px-6 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('status')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by status ${filters.sortBy === 'status' && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Status
+                      {getSortIcon('status')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Anxiety Score
+                  <th className="px-6 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('depressionScore')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by depression score ${filters.sortBy === 'depressionScore' && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Depression Score
+                      {getSortIcon('depressionScore')}
+                    </button>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Date
+                  <th className="px-6 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('anxietyScore')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by anxiety score ${filters.sortBy === 'anxietyScore' && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Anxiety Score
+                      {getSortIcon('anxietyScore')}
+                    </button>
+                  </th>
+                  <th className="px-6 py-3 text-left">
+                    <button
+                      type="button"
+                      onClick={() => handleColumnSort('date')}
+                      className="flex items-center gap-1 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hover:text-gray-700 dark:hover:text-gray-100 transition-colors"
+                      aria-label={`Sort by date ${filters.sortBy === 'date' && filters.sortOrder === 'asc' ? 'descending' : 'ascending'}`}
+                    >
+                      Date
+                      {getSortIcon('date')}
+                    </button>
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Actions
@@ -674,6 +768,24 @@ const Sessions: React.FC = () => {
                         <div className="text-xs text-gray-400 dark:text-gray-500">
                           {formatFileSize(session.fileSize || 0)}
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm">
+                        {session.groupName ? (
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {session.groupName}
+                            </div>
+                            {session.groupDescription && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {session.groupDescription}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -771,6 +883,11 @@ const Sessions: React.FC = () => {
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         ID: {session.sessionId.slice(-12)}
                       </p>
+                      {session.groupName && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          Group: {session.groupName}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <StatusBadge status={session.status} />

@@ -14,6 +14,7 @@ import {
   Pause,
   Calendar,
   User,
+  Users,
   FileAudio,
   Activity,
   TrendingUp,
@@ -23,10 +24,11 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
-import { formatDateTime, formatRelativeTime } from '../utils';
+import { fileGroupService } from '../services/fileGroupService';
+import { formatDateTime, formatRelativeTime, formatScoreCategory } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
-import type { SessionData, AppError } from '../types';
+import type { SessionData, AppError, FileGroup } from '../types';
 
 // Status configuration for consistent styling
 const statusConfig = {
@@ -47,12 +49,28 @@ const SessionDetail: React.FC = () => {
   const { announceToScreenReader } = useAccessibility();
 
   const [session, setSession] = useState<SessionData | null>(null);
+  const [fileGroup, setFileGroup] = useState<FileGroup | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingGroup, setLoadingGroup] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
   const [showRawJson, setShowRawJson] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Load group data when session has a groupId
+  const loadGroupData = useCallback(async (groupId: string) => {
+    try {
+      setLoadingGroup(true);
+      const groupData = await fileGroupService.getFileGroup(groupId);
+      setFileGroup(groupData);
+    } catch (err) {
+      console.error('Error loading group data:', err);
+      // Don't show error to user for group loading failure, just log it
+    } finally {
+      setLoadingGroup(false);
+    }
+  }, []);
 
   // Load session data
   const loadSession = useCallback(async () => {
@@ -64,6 +82,14 @@ const SessionDetail: React.FC = () => {
       
       const sessionData = await apiService.getSessionData(sessionId);
       setSession(sessionData);
+      
+      // Load group data if session belongs to a group
+      if (sessionData.groupId) {
+        loadGroupData(sessionData.groupId);
+      } else {
+        setFileGroup(null);
+      }
+      
       announceToScreenReader(`Session ${sessionId} loaded successfully`);
     } catch (err) {
       const appError = err as AppError;
@@ -72,7 +98,7 @@ const SessionDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, announceToScreenReader]);
+  }, [sessionId, announceToScreenReader, loadGroupData]);
 
   // Refresh session data
   const refreshSession = useCallback(async () => {
@@ -421,6 +447,65 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {session.groupId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Activity className="w-4 h-4 inline mr-1" aria-hidden="true" />
+                  File Group
+                </label>
+                
+                {/* Group Name (if available) */}
+                {fileGroup ? (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-2 rounded">
+                      {fileGroup.groupName}
+                      {fileGroup.description && (
+                        <div className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                          {fileGroup.description}
+                        </div>
+                      )}
+                    </div>
+                    <div className="font-mono text-xs bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded border text-gray-600 dark:text-gray-400">
+                      ID: {session.groupId}
+                    </div>
+                    <Link
+                      to={`/groups/${session.groupId}/sessions`}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      aria-label={`View all sessions in group ${fileGroup.groupName}`}
+                    >
+                      <Users className="w-4 h-4 mr-2" aria-hidden="true" />
+                      View All Sessions in Group
+                    </Link>
+                  </div>
+                ) : loadingGroup ? (
+                  <div className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded border">
+                    Loading group information...
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded border">
+                      Group information not available
+                    </div>
+                    <div className="font-mono text-xs bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded border text-gray-600 dark:text-gray-400">
+                      ID: {session.groupId}
+                    </div>
+                    <Link
+                      to={`/groups/${session.groupId}/sessions`}
+                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      aria-label={`View all sessions in this group`}
+                    >
+                      <Users className="w-4 h-4 mr-2" aria-hidden="true" />
+                      View All Sessions in Group
+                    </Link>
+                  </div>
+                )}
+                
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  This session belongs to a file group. Click above to see all related sessions.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -632,9 +717,9 @@ const SessionDetail: React.FC = () => {
                       <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                         {/* Prioritize descriptive string values over numeric values */}
                         {(session.prediction as any)?.predicted_score_depression ? 
-                           (session.prediction as any).predicted_score_depression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory((session.prediction as any).predicted_score_depression) : 
                          session.prediction?.predictedScoreDepression ? 
-                           session.prediction.predictedScoreDepression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory(session.prediction.predictedScoreDepression) : 
                          session.analysisResults?.depressionScore ? 
                            session.analysisResults.depressionScore.toFixed(2) : 
                            'N/A'}
@@ -654,9 +739,9 @@ const SessionDetail: React.FC = () => {
                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                         {/* Prioritize descriptive string values over numeric values */}
                         {(session.prediction as any)?.predicted_score_anxiety ? 
-                           (session.prediction as any).predicted_score_anxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory((session.prediction as any).predicted_score_anxiety) : 
                          session.prediction?.predictedScoreAnxiety ? 
-                           session.prediction.predictedScoreAnxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory(session.prediction.predictedScoreAnxiety) : 
                          session.analysisResults?.anxietyScore ? 
                            session.analysisResults.anxietyScore.toFixed(2) : 
                            'N/A'}

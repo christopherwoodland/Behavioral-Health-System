@@ -272,6 +272,50 @@ public class FileGroupFunctions
         }
     }
 
+    [Function("DeleteFileGroup")]
+    public async Task<HttpResponseData> DeleteFileGroup(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "filegroups/{groupId}/delete")] HttpRequestData req,
+        string groupId)
+    {
+        try
+        {
+            _logger.LogInformation("[{FunctionName}] Deleting file group: {GroupId}", nameof(DeleteFileGroup), groupId);
+
+            var success = await _fileGroupStorageService.DeleteFileGroupAsync(groupId);
+            
+            if (success)
+            {
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteStringAsync(JsonSerializer.Serialize(new { 
+                    success = true, 
+                    message = "File group and associated sessions deleted successfully" 
+                }, _jsonOptions));
+                return response;
+            }
+            else
+            {
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
+                    success = false, 
+                    message = $"File group not found: {groupId}" 
+                }, _jsonOptions));
+                return notFoundResponse;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{FunctionName}] Error deleting file group: {GroupId}", nameof(DeleteFileGroup), groupId);
+            
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
+                success = false, 
+                message = "Error deleting file group",
+                error = ex.Message 
+            }, _jsonOptions));
+            return errorResponse;
+        }
+    }
+
     [Function("SearchFileGroups")]
     public async Task<HttpResponseData> SearchFileGroups(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "filegroups/users/{userId}/search")] HttpRequestData req,

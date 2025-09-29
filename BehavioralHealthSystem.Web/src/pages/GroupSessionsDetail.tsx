@@ -151,36 +151,50 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
     const completedSessions = sessions.filter(s => s.status === 'succeeded' || s.status === 'completed');
     const withPredictions = completedSessions.filter(s => s.prediction || s.analysisResults);
     
-    // Extract depression scores
-    const depressionScores = withPredictions.map(session => {
+    // Extract depression categories (categorical data, not numeric)
+    const depressionCategories = withPredictions.map(session => {
       const prediction = session.prediction as any;
-      const analysisResults = session.analysisResults;
       return prediction?.predicted_score_depression || 
-             prediction?.predictedScoreDepression ||
-             analysisResults?.depressionScore;
-    }).filter(score => score !== undefined && score !== null);
+             prediction?.predictedScoreDepression;
+    }).filter(category => category !== undefined && category !== null);
 
-    // Extract anxiety scores
-    const anxietyScores = withPredictions.map(session => {
+    // Extract anxiety categories (categorical data, not numeric)
+    const anxietyCategories = withPredictions.map(session => {
       const prediction = session.prediction as any;
-      const analysisResults = session.analysisResults;
       return prediction?.predicted_score_anxiety || 
-             prediction?.predictedScoreAnxiety ||
-             analysisResults?.anxietyScore;
-    }).filter(score => score !== undefined && score !== null);
+             prediction?.predictedScoreAnxiety;
+    }).filter(category => category !== undefined && category !== null);
+
+    // Calculate most common depression category
+    let mostCommonDepression = null;
+    if (depressionCategories.length > 0) {
+      const depressionCounts: Record<string, number> = {};
+      depressionCategories.forEach(cat => {
+        depressionCounts[cat] = (depressionCounts[cat] || 0) + 1;
+      });
+      mostCommonDepression = Object.entries(depressionCounts)
+        .sort(([,a], [,b]) => b - a)[0][0];
+    }
+
+    // Calculate most common anxiety category
+    let mostCommonAnxiety = null;
+    if (anxietyCategories.length > 0) {
+      const anxietyCounts: Record<string, number> = {};
+      anxietyCategories.forEach(cat => {
+        anxietyCounts[cat] = (anxietyCounts[cat] || 0) + 1;
+      });
+      mostCommonAnxiety = Object.entries(anxietyCounts)
+        .sort(([,a], [,b]) => b - a)[0][0];
+    }
 
     return {
       totalSessions: sessions.length,
       completedSessions: completedSessions.length,
       withPredictions: withPredictions.length,
-      avgDepression: depressionScores.length > 0 ? 
-        depressionScores.reduce((a, b) => Number(a) + Number(b), 0) / depressionScores.length : null,
-      avgAnxiety: anxietyScores.length > 0 ? 
-        anxietyScores.reduce((a, b) => Number(a) + Number(b), 0) / anxietyScores.length : null,
-      depressionTrend: depressionScores.length >= 2 ? 
-        (Number(depressionScores[depressionScores.length - 1]) - Number(depressionScores[0])) : 0,
-      anxietyTrend: anxietyScores.length >= 2 ? 
-        (Number(anxietyScores[anxietyScores.length - 1]) - Number(anxietyScores[0])) : 0
+      mostCommonDepression,
+      mostCommonAnxiety,
+      depressionTrend: 0, // Keep for future trend analysis
+      anxietyTrend: 0 // Keep for future trend analysis
     };
   }, [sessions]);
 
@@ -303,12 +317,15 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Avg Depression
+              Depression (Most Common)
             </span>
             <Brain className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {groupAnalytics.avgDepression !== null ? groupAnalytics.avgDepression.toFixed(1) : '—'}
+            {groupAnalytics.mostCommonDepression ? 
+              groupAnalytics.mostCommonDepression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+              '—'
+            }
           </div>
           {groupAnalytics.depressionTrend !== 0 && (
             <div className={`flex items-center text-xs mt-1 ${
@@ -327,12 +344,15 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-              Avg Anxiety
+              Anxiety (Most Common)
             </span>
             <Heart className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {groupAnalytics.avgAnxiety !== null ? groupAnalytics.avgAnxiety.toFixed(1) : '—'}
+            {groupAnalytics.mostCommonAnxiety ? 
+              groupAnalytics.mostCommonAnxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+              '—'
+            }
           </div>
           {groupAnalytics.anxietyTrend !== 0 && (
             <div className={`flex items-center text-xs mt-1 ${

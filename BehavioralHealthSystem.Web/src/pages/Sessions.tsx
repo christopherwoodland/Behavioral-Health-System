@@ -5,7 +5,7 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime, formatDateTime } from '../utils';
+import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory } from '../utils';
 import type { SessionData, AppError } from '../types';
 
 // Session interface for UI with additional computed fields
@@ -40,14 +40,6 @@ const statusConfig = {
   failed: { color: 'red', icon: XCircle, label: 'Failed' },
   error: { color: 'red', icon: XCircle, label: 'Error' },
 } as const;
-
-// Utility function to format score categories
-const formatScoreCategory = (category?: string): string => {
-  if (!category) return '—';
-  return category
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (l: string) => l.toUpperCase());
-};
 
 // Utility function to get severity level for sorting
 const getSeverityLevel = (category?: string): number => {

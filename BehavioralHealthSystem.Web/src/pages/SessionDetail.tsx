@@ -25,7 +25,7 @@ import {
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { formatDateTime, formatRelativeTime } from '../utils';
+import { formatDateTime, formatRelativeTime, formatScoreCategory } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
 import type { SessionData, AppError, FileGroup } from '../types';
@@ -717,9 +717,9 @@ const SessionDetail: React.FC = () => {
                       <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                         {/* Prioritize descriptive string values over numeric values */}
                         {(session.prediction as any)?.predicted_score_depression ? 
-                           (session.prediction as any).predicted_score_depression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory((session.prediction as any).predicted_score_depression) : 
                          session.prediction?.predictedScoreDepression ? 
-                           session.prediction.predictedScoreDepression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory(session.prediction.predictedScoreDepression) : 
                          session.analysisResults?.depressionScore ? 
                            session.analysisResults.depressionScore.toFixed(2) : 
                            'N/A'}
@@ -739,9 +739,9 @@ const SessionDetail: React.FC = () => {
                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                         {/* Prioritize descriptive string values over numeric values */}
                         {(session.prediction as any)?.predicted_score_anxiety ? 
-                           (session.prediction as any).predicted_score_anxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory((session.prediction as any).predicted_score_anxiety) : 
                          session.prediction?.predictedScoreAnxiety ? 
-                           session.prediction.predictedScoreAnxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) : 
+                           formatScoreCategory(session.prediction.predictedScoreAnxiety) : 
                          session.analysisResults?.anxietyScore ? 
                            session.analysisResults.anxietyScore.toFixed(2) : 
                            'N/A'}

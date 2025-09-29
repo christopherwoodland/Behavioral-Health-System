@@ -60,12 +60,28 @@ public class FileGroupFunctions
             }
             else
             {
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Failed to create file group" 
-                }, _jsonOptions));
-                return errorResponse;
+                // Check if it was a duplicate name by trying to find existing group with same name
+                var existingGroups = await _fileGroupStorageService.GetUserFileGroupsAsync(createRequest.CreatedBy);
+                var duplicateExists = existingGroups.Any(g => string.Equals(g.GroupName, createRequest.GroupName, StringComparison.OrdinalIgnoreCase));
+                
+                if (duplicateExists)
+                {
+                    var conflictResponse = req.CreateResponse(HttpStatusCode.Conflict);
+                    await conflictResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
+                        success = false, 
+                        message = $"A group with the name '{createRequest.GroupName}' already exists. Please choose a different name." 
+                    }, _jsonOptions));
+                    return conflictResponse;
+                }
+                else
+                {
+                    var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                    await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
+                        success = false, 
+                        message = "Failed to create file group" 
+                    }, _jsonOptions));
+                    return errorResponse;
+                }
             }
         }
         catch (Exception ex)

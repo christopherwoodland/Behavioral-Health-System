@@ -32,6 +32,14 @@ public class FileGroupStorageService : IFileGroupStorageService
         {
             _logger.LogInformation("Creating file group: {GroupName} for user: {UserId}", request.GroupName, request.CreatedBy);
 
+            // First check if a group with this name already exists for the user
+            var nameExists = await DoesGroupNameExistAsync(request.CreatedBy, request.GroupName, cancellationToken);
+            if (nameExists)
+            {
+                _logger.LogWarning("Attempted to create duplicate group name '{GroupName}' for user {UserId}", request.GroupName, request.CreatedBy);
+                return null; // Return null to indicate duplicate name
+            }
+
             var fileGroup = new FileGroup
             {
                 GroupId = Guid.NewGuid().ToString(),
@@ -68,7 +76,7 @@ public class FileGroupStorageService : IFileGroupStorageService
                 }, 
                 cancellationToken);
 
-            _logger.LogInformation("Successfully created file group: {GroupId}", fileGroup.GroupId);
+            _logger.LogInformation("Successfully created file group: {GroupId} with name '{GroupName}'", fileGroup.GroupId, fileGroup.GroupName);
             return fileGroup;
         }
         catch (Exception ex)
@@ -350,6 +358,28 @@ public class FileGroupStorageService : IFileGroupStorageService
         {
             _logger.LogError(ex, "Error getting session count for group: {GroupId}", groupId);
             return 0;
+        }
+    }
+
+    public async Task<bool> DoesGroupNameExistAsync(string userId, string groupName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Checking if group name exists: {GroupName} for user: {UserId}", groupName, userId);
+
+            // Get all groups for the user
+            var existingGroups = await GetUserFileGroupsAsync(userId, cancellationToken);
+            
+            // Check if any group has the same name (case-insensitive comparison)
+            var nameExists = existingGroups.Any(g => string.Equals(g.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
+            
+            _logger.LogInformation("Group name '{GroupName}' exists for user {UserId}: {Exists}", groupName, userId, nameExists);
+            return nameExists;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if group name exists for user {UserId}: {Error}", userId, ex.Message);
+            return false; // Return false on error to avoid blocking group creation
         }
     }
 

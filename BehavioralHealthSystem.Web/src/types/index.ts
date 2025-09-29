@@ -68,10 +68,40 @@ export interface HealthCheckResponse {
   }>;
 }
 
+export interface FileGroup {
+  groupId: string;
+  groupName: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string; // User ID who created the group
+  sessionCount: number; // Number of sessions in this group
+  status: 'active' | 'archived';
+}
+
+export interface CreateFileGroupRequest {
+  groupName: string;
+  description?: string;
+  createdBy: string;
+}
+
+export interface FileGroupResponse {
+  success: boolean;
+  message: string;
+  fileGroup?: FileGroup;
+}
+
+export interface FileGroupListResponse {
+  success: boolean;
+  fileGroups: FileGroup[];
+  count: number;
+}
+
 export interface SessionData {
   sessionId: string;
   userId: string; // Authenticated user ID (for session filtering/access control)
   metadata_user_id?: string; // Patient/metadata user ID
+  groupId?: string; // Optional group ID this session belongs to
   prediction?: PredictionResult;
   userMetadata?: {
     age?: number;

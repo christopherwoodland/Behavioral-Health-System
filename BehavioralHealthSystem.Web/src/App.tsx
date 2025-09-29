@@ -12,6 +12,7 @@ import { APP_ROLES } from '@/config/authConfig';
 // Page components
 import { Dashboard } from '@/pages/Dashboard';
 import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, AgentExperience, SystemHealth, NotFound } from '@/pages';
+import GroupSessionsDetail from '@/pages/GroupSessionsDetail';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -78,6 +79,14 @@ function App() {
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <SessionDetail />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/groups/:groupId/sessions" 
+                      element={
+                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
+                          <GroupSessionsDetail />
                         </ProtectedRoute>
                       } 
                     />

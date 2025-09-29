@@ -174,6 +174,7 @@ var host = new HostBuilder()
             return new BlobServiceClient(connectionString);
         });
         services.AddScoped<ISessionStorageService, SessionStorageService>();
+        services.AddScoped<IFileGroupStorageService, FileGroupStorageService>();
         
         // Health Check Service
         services.AddScoped<IKintsugiApiHealthCheck, KintsugiApiHealthCheck>();

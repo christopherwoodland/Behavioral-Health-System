@@ -172,6 +172,14 @@ class FileGroupService {
         throw new Error(response.message || 'Failed to create file group');
       }
     } catch (error) {
+      // Handle HTTP 409 Conflict (duplicate name) specifically
+      if (error instanceof Error && 'code' in error && error.code === 'HTTP_409') {
+        return {
+          success: false,
+          message: error.message || `A group with the name '${request.groupName}' already exists. Please choose a different name.`
+        };
+      }
+      
       console.error('Error creating file group via API, falling back to localStorage:', error);
       // Fallback to localStorage
       return this.createFileGroupInLocalStorage(request, userId);
@@ -361,6 +369,24 @@ class FileGroupService {
 
   private createFileGroupInLocalStorage(request: CreateFileGroupRequest, userId: string): FileGroupResponse {
     try {
+      // First check for duplicate names
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
+      
+      // Check if any active group has the same name (case-insensitive)
+      const duplicateExists = groups.some(g => 
+        g.status === 'active' && 
+        g.createdBy === userId &&
+        g.groupName.toLowerCase() === request.groupName.trim().toLowerCase()
+      );
+      
+      if (duplicateExists) {
+        return {
+          success: false,
+          message: `A group with the name '${request.groupName}' already exists. Please choose a different name.`
+        };
+      }
+      
       const newGroup: FileGroup = {
         groupId: `group-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         groupName: request.groupName.trim(),
@@ -401,9 +427,27 @@ class FileGroupService {
         };
       }
       
+      // Check for duplicate names if groupName is being updated
       if (updates.groupName) {
+        const newName = updates.groupName.trim().toLowerCase();
+        const currentGroup = groups[groupIndex];
+        const duplicateExists = groups.some((g, index) => 
+          index !== groupIndex && 
+          g.status === 'active' && 
+          g.createdBy === currentGroup.createdBy &&
+          g.groupName.toLowerCase() === newName
+        );
+        
+        if (duplicateExists) {
+          return {
+            success: false,
+            message: `A group with the name '${updates.groupName}' already exists. Please choose a different name.`
+          };
+        }
+        
         groups[groupIndex].groupName = updates.groupName.trim();
       }
+      
       if (updates.description !== undefined) {
         groups[groupIndex].description = updates.description?.trim();
       }

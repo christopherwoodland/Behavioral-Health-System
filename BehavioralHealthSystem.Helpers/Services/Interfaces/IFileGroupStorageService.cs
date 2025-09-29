@@ -69,4 +69,13 @@ public interface IFileGroupStorageService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Number of sessions associated with the group</returns>
     Task<int> GetGroupSessionCountAsync(string groupId, CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Check if a group name already exists for a specific user
+    /// </summary>
+    /// <param name="userId">The user ID to check within</param>
+    /// <param name="groupName">The group name to check for duplicates</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>True if the group name exists, false otherwise</returns>
+    Task<bool> DoesGroupNameExistAsync(string userId, string groupName, CancellationToken cancellationToken = default);
 }

@@ -9,6 +9,8 @@ import { transcriptionService, TranscriptionResult } from '../services/transcrip
 import { useAccessibility } from '../hooks/useAccessibility';
 import { getStoredProcessingMode, setStoredProcessingMode, getStoredProcessingModeBoolean, getUserId } from '../utils';
 import { useAuth } from '../contexts/AuthContext';
+import GroupSelector from '../components/GroupSelector';
+import { fileGroupService } from '../services/fileGroupService';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
 interface UploadProgress {
@@ -220,6 +222,9 @@ const UploadAnalyze: React.FC = () => {
   // Processing options state
   const [runKintsugiAssessment, setRunKintsugiAssessment] = useState(true); // Default checked
   const [transcribeAudio, setTranscribeAudio] = useState(false); // Default unchecked
+  
+  // Group selection state
+  const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
   
   // Check if transcription is enabled via feature flag
   const isTranscriptionEnabled = transcriptionService.isTranscriptionEnabled();
@@ -1527,6 +1532,7 @@ const UploadAnalyze: React.FC = () => {
         sessionId: sessionResponse.sessionId,
         userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
         metadata_user_id: fileMetadata.userId.trim(), // Store metadata user ID separately
+        groupId: selectedGroupId, // Assign to selected group if specified
         ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -2230,6 +2236,7 @@ const UploadAnalyze: React.FC = () => {
         sessionId: sessionResponse.sessionId,
         userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
         metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
+        groupId: selectedGroupId, // Assign to selected group if specified
         ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
         audioFileName: audioFile.file.name,
         createdAt: new Date().toISOString(),
@@ -2818,6 +2825,39 @@ const UploadAnalyze: React.FC = () => {
         )}
           </div>
         )}
+      </div>
+
+      {/* Group Selection */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
+        <div className="p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Group Assignment (Optional)
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Organize your processed files by assigning them to a group. Groups help you track and analyze related sessions together.
+          </p>
+          
+          <GroupSelector
+            selectedGroupId={selectedGroupId}
+            onGroupChange={setSelectedGroupId}
+            onCreateGroup={async (groupName, description) => {
+              const userId = user?.id || getUserId();
+              const response = await fileGroupService.createFileGroup({
+                groupName,
+                description
+              }, userId);
+              
+              if (response.success && response.group) {
+                addToast('success', 'Group Created', `Group "${groupName}" has been created successfully.`);
+                return response.group.groupId;
+              } else {
+                addToast('error', 'Group Creation Failed', response.message || 'Failed to create group');
+                throw new Error(response.message || 'Failed to create group');
+              }
+            }}
+            className="mt-4"
+          />
+        </div>
       </div>
 
       {/* User Metadata Form */}

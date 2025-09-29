@@ -15,13 +15,16 @@ import {
   ChevronDown,
   ChevronUp,
   Download,
-  Eye
+  Eye,
+  Users,
+  Minus
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
+import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime } from '../utils';
-import type { SessionData, AppError } from '../types';
+import type { SessionData, AppError, FileGroup } from '../types';
 
 // Chart data interfaces
 interface ChartDataPoint {
@@ -45,22 +48,40 @@ interface TrendAnalysis {
   period: string;
 }
 
+// Group analytics interface
+interface GroupAnalytics {
+  groupId: string;
+  groupName: string;
+  groupDescription?: string;
+  sessionsCount: number;
+  avgDepression: number | null;
+  avgAnxiety: number | null;
+  depressionTrend: TrendAnalysis | null;
+  anxietyTrend: TrendAnalysis | null;
+  latestSession: string;
+}
+
 // Filter interface
 interface PredictionFilters {
   dateRange: 'all' | 'week' | 'month' | 'quarter' | 'year';
   scoreType: 'all' | 'depression' | 'anxiety' | 'overall';
   showTrends: boolean;
+  groupFilter: 'all' | 'grouped' | 'ungrouped' | string; // 'all', 'grouped', 'ungrouped', or specific groupId
 }
 
 const Predictions: React.FC = () => {
   const { user } = useAuth();
   const [sessions, setSessions] = useState<SessionData[]>([]);
+  const [groups, setGroups] = useState<FileGroup[]>([]);
+  const [groupAnalytics, setGroupAnalytics] = useState<GroupAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingGroups, setLoadingGroups] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
   const [filters, setFilters] = useState<PredictionFilters>({
     dateRange: 'all',
     scoreType: 'all',
-    showTrends: true
+    showTrends: true,
+    groupFilter: 'all'
   });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -78,6 +99,82 @@ const Predictions: React.FC = () => {
     navigate(`/sessions/${sessionId}`);
     announceToScreenReader(`Navigating to session ${sessionId} details`);
   }, [navigate, announceToScreenReader]);
+
+  // Load groups and calculate analytics
+  const loadGroupAnalytics = useCallback(async () => {
+    try {
+      setLoadingGroups(true);
+      
+      // Get all groups
+            const groupsResponse = await fileGroupService.getFileGroups();
+      const allGroups = groupsResponse.fileGroups || [];
+      setGroups(allGroups);
+      
+      // Calculate analytics for each group that has sessions
+      const analytics: GroupAnalytics[] = [];
+      
+      for (const group of allGroups) {
+        const groupSessions = sessions.filter(s => s.groupId === group.groupId);
+        if (groupSessions.length === 0) continue;
+        
+        // Get sessions with predictions
+        const sessionsWithPredictions = groupSessions.filter(s => s.prediction || s.analysisResults);
+        
+        // Calculate depression scores
+        const depressionScores = sessionsWithPredictions.map(session => {
+          const prediction = session.prediction as any;
+          const analysisResults = session.analysisResults;
+          const score = prediction?.predicted_score_depression || 
+                       prediction?.predictedScoreDepression ||
+                       analysisResults?.depressionScore;
+          return typeof score === 'string' ? parseFloat(score) : score;
+        }).filter(score => !isNaN(score));
+        
+        // Calculate anxiety scores
+        const anxietyScores = sessionsWithPredictions.map(session => {
+          const prediction = session.prediction as any;
+          const analysisResults = session.analysisResults;
+          const score = prediction?.predicted_score_anxiety || 
+                       prediction?.predictedScoreAnxiety ||
+                       analysisResults?.anxietyScore;
+          return typeof score === 'string' ? parseFloat(score) : score;
+        }).filter(score => !isNaN(score));
+        
+        // Calculate trends
+        const depressionTrend = depressionScores.length >= 2 ? {
+          direction: depressionScores[depressionScores.length - 1] > depressionScores[0] ? 'worsening' as const : 'improving' as const,
+          change: Math.abs(depressionScores[depressionScores.length - 1] - depressionScores[0]),
+          period: `${depressionScores.length} sessions`
+        } : null;
+        
+        const anxietyTrend = anxietyScores.length >= 2 ? {
+          direction: anxietyScores[anxietyScores.length - 1] > anxietyScores[0] ? 'worsening' as const : 'improving' as const,
+          change: Math.abs(anxietyScores[anxietyScores.length - 1] - anxietyScores[0]),
+          period: `${anxietyScores.length} sessions`
+        } : null;
+        
+        analytics.push({
+          groupId: group.groupId,
+          groupName: group.groupName,
+          groupDescription: group.description,
+          sessionsCount: groupSessions.length,
+          avgDepression: depressionScores.length > 0 ? 
+            depressionScores.reduce((a, b) => a + b, 0) / depressionScores.length : null,
+          avgAnxiety: anxietyScores.length > 0 ? 
+            anxietyScores.reduce((a, b) => a + b, 0) / anxietyScores.length : null,
+          depressionTrend,
+          anxietyTrend,
+          latestSession: groupSessions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.createdAt || ''
+        });
+      }
+      
+      setGroupAnalytics(analytics);
+    } catch (err) {
+      console.error('Failed to load group analytics:', err);
+    } finally {
+      setLoadingGroups(false);
+    }
+  }, [sessions]);
 
   // Load user sessions with prediction data
   const loadPredictions = useCallback(async () => {
@@ -108,32 +205,56 @@ const Predictions: React.FC = () => {
     loadPredictions();
   }, [loadPredictions]);
 
-  // Filter sessions based on date range
-  const filteredSessions = useMemo(() => {
-    if (filters.dateRange === 'all') return sessions;
-
-    const now = new Date();
-    const startDate = new Date();
-    
-    switch (filters.dateRange) {
-      case 'week':
-        startDate.setDate(now.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1);
-        break;
-      case 'quarter':
-        startDate.setMonth(now.getMonth() - 3);
-        break;
-      case 'year':
-        startDate.setFullYear(now.getFullYear() - 1);
-        break;
+  // Load group analytics when sessions change
+  useEffect(() => {
+    if (sessions.length > 0) {
+      loadGroupAnalytics();
     }
-    
-    return sessions.filter(session => 
-      new Date(session.createdAt) >= startDate
-    );
-  }, [sessions, filters.dateRange]);
+  }, [sessions, loadGroupAnalytics]);
+
+  // Filter sessions based on date range and group filter
+  const filteredSessions = useMemo(() => {
+    let filtered = sessions;
+
+    // Apply date range filter
+    if (filters.dateRange !== 'all') {
+      const now = new Date();
+      const startDate = new Date();
+      
+      switch (filters.dateRange) {
+        case 'week':
+          startDate.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDate.setMonth(now.getMonth() - 1);
+          break;
+        case 'quarter':
+          startDate.setMonth(now.getMonth() - 3);
+          break;
+        case 'year':
+          startDate.setFullYear(now.getFullYear() - 1);
+          break;
+      }
+      
+      filtered = filtered.filter(session => 
+        new Date(session.createdAt) >= startDate
+      );
+    }
+
+    // Apply group filter
+    if (filters.groupFilter !== 'all') {
+      if (filters.groupFilter === 'grouped') {
+        filtered = filtered.filter(session => session.groupId);
+      } else if (filters.groupFilter === 'ungrouped') {
+        filtered = filtered.filter(session => !session.groupId);
+      } else {
+        // Specific group ID
+        filtered = filtered.filter(session => session.groupId === filters.groupFilter);
+      }
+    }
+
+    return filtered;
+  }, [sessions, filters.dateRange, filters.groupFilter]);
 
   // Prepare chart data
   const chartData = useMemo((): ChartDataPoint[] => {
@@ -647,7 +768,7 @@ const Predictions: React.FC = () => {
       {/* Filters */}
       {showFilters && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label htmlFor="date-range" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Date Range
@@ -680,6 +801,28 @@ const Predictions: React.FC = () => {
                 <option value="depression">Depression</option>
                 <option value="anxiety">Anxiety</option>
                 <option value="overall">Overall</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="group-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Group Filter
+              </label>
+              <select
+                id="group-filter"
+                value={filters.groupFilter}
+                onChange={(e) => updateFilter('groupFilter', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={loadingGroups}
+              >
+                <option value="all">All Sessions</option>
+                <option value="grouped">Grouped Sessions Only</option>
+                <option value="ungrouped">Ungrouped Sessions Only</option>
+                {groups.map(group => (
+                  <option key={group.groupId} value={group.groupId}>
+                    {group.groupName}
+                  </option>
+                ))}
               </select>
             </div>
             
@@ -716,6 +859,95 @@ const Predictions: React.FC = () => {
         </div>
       ) : (
         <>
+          {/* Group Analytics Dashboard */}
+          {filters.groupFilter !== 'all' && filters.groupFilter !== 'ungrouped' && Object.keys(groupAnalytics).length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Group Analytics
+                </h2>
+                <Users className="w-6 h-6 text-blue-600" aria-hidden="true" />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Object.entries(groupAnalytics).map(([groupId, analytics]) => {
+                  const group = groups.find(g => g.groupId === groupId);
+                  if (!group) return null;
+                  
+                  return (
+                    <div key={groupId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                      <h3 className="font-medium text-gray-900 dark:text-white mb-3">
+                        {group.groupName}
+                      </h3>
+                      
+                      {analytics.avgDepression !== null && analytics.depressionTrend && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Depression Avg</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {analytics.avgDepression.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-xs">
+                            {analytics.depressionTrend.direction === 'improving' && (
+                              <TrendingDown className="w-3 h-3 text-green-500 mr-1" />
+                            )}
+                            {analytics.depressionTrend.direction === 'worsening' && (
+                              <TrendingUp className="w-3 h-3 text-red-500 mr-1" />
+                            )}
+                            {analytics.depressionTrend.direction === 'stable' && (
+                              <Minus className="w-3 h-3 text-gray-500 mr-1" />
+                            )}
+                            <span className={`
+                              ${analytics.depressionTrend.direction === 'improving' ? 'text-green-600' : ''}
+                              ${analytics.depressionTrend.direction === 'worsening' ? 'text-red-600' : ''}
+                              ${analytics.depressionTrend.direction === 'stable' ? 'text-gray-600' : ''}
+                            `}>
+                              {analytics.depressionTrend.direction}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {analytics.avgAnxiety !== null && analytics.anxietyTrend && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between text-sm mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Anxiety Avg</span>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              {analytics.avgAnxiety.toFixed(1)}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-xs">
+                            {analytics.anxietyTrend.direction === 'improving' && (
+                              <TrendingDown className="w-3 h-3 text-green-500 mr-1" />
+                            )}
+                            {analytics.anxietyTrend.direction === 'worsening' && (
+                              <TrendingUp className="w-3 h-3 text-red-500 mr-1" />
+                            )}
+                            {analytics.anxietyTrend.direction === 'stable' && (
+                              <Minus className="w-3 h-3 text-gray-500 mr-1" />
+                            )}
+                            <span className={`
+                              ${analytics.anxietyTrend.direction === 'improving' ? 'text-green-600' : ''}
+                              ${analytics.anxietyTrend.direction === 'worsening' ? 'text-red-600' : ''}
+                              ${analytics.anxietyTrend.direction === 'stable' ? 'text-gray-600' : ''}
+                            `}>
+                              {analytics.anxietyTrend.direction}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        {analytics.sessionsCount} session{analytics.sessionsCount !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Statistics Overview */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">

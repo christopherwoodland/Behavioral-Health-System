@@ -11,6 +11,9 @@ public class SessionData
     [JsonPropertyName("metadata_user_id")]
     public string? MetadataUserId { get; set; }
     
+    [JsonPropertyName("groupId")]
+    public string? GroupId { get; set; }
+    
     [JsonPropertyName("prediction")]
     public PredictionResult? Prediction { get; set; }
     

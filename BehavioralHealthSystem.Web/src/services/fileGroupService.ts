@@ -116,8 +116,8 @@ class FileGroupService {
       
       return {
         success: response.success,
-        groups: response.fileGroups || [],
-        total: response.count || 0
+        fileGroups: response.fileGroups || [],
+        count: response.count || 0
       };
     } catch (error) {
       console.error('Error getting file groups from API, falling back to localStorage:', error);
@@ -139,7 +139,7 @@ class FileGroupService {
       console.error('Error getting file group from API, falling back to localStorage:', error);
       // Fallback to localStorage
       const localResponse = await this.getFileGroupsFromLocalStorage();
-      return localResponse.groups.find(g => g.groupId === groupId) || null;
+      return localResponse.fileGroups.find(g => g.groupId === groupId) || null;
     }
   }
   
@@ -166,7 +166,7 @@ class FileGroupService {
         return {
           success: true,
           message: response.message,
-          group: response.fileGroup
+          fileGroup: response.fileGroup
         };
       } else {
         throw new Error(response.message || 'Failed to create file group');
@@ -210,7 +210,7 @@ class FileGroupService {
       return {
         success: true,
         message: 'File group updated successfully',
-        group: updatedGroup
+        fileGroup: updatedGroup
       };
     } catch (error) {
       console.error('Error updating file group via API, falling back to localStorage:', error);
@@ -247,6 +247,33 @@ class FileGroupService {
   }
   
   /**
+   * Delete a file group and all associated sessions (hard delete)
+   */
+  async deleteFileGroup(groupId: string): Promise<FileGroupResponse> {
+    try {
+      const response = await apiClient.delete<{ success: boolean; message: string }>(
+        `filegroups/${groupId}/delete`
+      );
+      
+      if (response.success) {
+        // Delete from localStorage as well
+        this.deleteFromLocalStorage(groupId);
+        
+        return {
+          success: true,
+          message: response.message
+        };
+      } else {
+        throw new Error(response.message || 'Failed to delete file group');
+      }
+    } catch (error) {
+      console.error('Error deleting file group via API, falling back to localStorage:', error);
+      // Fallback to localStorage
+      return this.deleteFileGroupInLocalStorage(groupId);
+    }
+  }
+  
+  /**
    * Update session count for a group (called when sessions are added/removed)
    */
   async updateGroupSessionCount(groupId: string, count: number): Promise<void> {
@@ -269,7 +296,7 @@ class FileGroupService {
       if (!userId) {
         // Fallback to local search
         const localResponse = await this.getFileGroupsFromLocalStorage();
-        return this.filterGroupsByQuery(localResponse.groups, query);
+        return this.filterGroupsByQuery(localResponse.fileGroups, query);
       }
 
       const response = await apiClient.get<{ success: boolean; count: number; fileGroups: FileGroup[] }>(
@@ -281,7 +308,7 @@ class FileGroupService {
       console.error('Error searching file groups via API, falling back to localStorage:', error);
       // Fallback to local search
       const localResponse = await this.getFileGroupsFromLocalStorage();
-      return this.filterGroupsByQuery(localResponse.groups, query);
+      return this.filterGroupsByQuery(localResponse.fileGroups, query);
     }
   }
   
@@ -290,7 +317,7 @@ class FileGroupService {
    */
   async getGroupsWithStats(userId?: string): Promise<FileGroup[]> {
     const response = await this.getFileGroups(userId);
-    return response.groups;
+    return response.fileGroups;
   }
 
   // Helper method to filter groups by search query
@@ -319,15 +346,15 @@ class FileGroupService {
 
       return {
         success: true,
-        groups: activeGroups,
-        total: activeGroups.length
+        fileGroups: activeGroups,
+        count: activeGroups.length
       };
     } catch (error) {
       console.error('Failed to load file groups from localStorage:', error);
       return {
         success: false,
-        groups: [],
-        total: 0
+        fileGroups: [],
+        count: 0
       };
     }
   }
@@ -350,7 +377,7 @@ class FileGroupService {
       return {
         success: true,
         message: 'File group created successfully',
-        group: newGroup
+        fileGroup: newGroup
       };
     } catch (error) {
       console.error('Failed to create file group in localStorage:', error);
@@ -387,7 +414,7 @@ class FileGroupService {
       return {
         success: true,
         message: 'File group updated successfully',
-        group: groups[groupIndex]
+        fileGroup: groups[groupIndex]
       };
     } catch (error) {
       console.error('Failed to update file group in localStorage:', error);
@@ -419,7 +446,7 @@ class FileGroupService {
       return {
         success: true,
         message: 'File group archived successfully',
-        group: groups[groupIndex]
+        fileGroup: groups[groupIndex]
       };
     } catch (error) {
       console.error('Failed to archive file group in localStorage:', error);
@@ -493,6 +520,51 @@ class FileGroupService {
       }
     } catch (error) {
       console.error('Failed to update group session count in localStorage:', error);
+    }
+  }
+
+  private deleteFileGroupInLocalStorage(groupId: string): FileGroupResponse {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
+      
+      const groupIndex = groups.findIndex(g => g.groupId === groupId);
+      if (groupIndex === -1) {
+        return {
+          success: false,
+          message: 'File group not found'
+        };
+      }
+      
+      // Remove the group completely (hard delete)
+      groups.splice(groupIndex, 1);
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+      
+      return {
+        success: true,
+        message: 'File group and associated sessions deleted successfully'
+      };
+    } catch (error) {
+      console.error('Failed to delete file group in localStorage:', error);
+      return {
+        success: false,
+        message: 'Failed to delete file group'
+      };
+    }
+  }
+
+  private deleteFromLocalStorage(groupId: string): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
+      
+      const groupIndex = groups.findIndex(g => g.groupId === groupId);
+      if (groupIndex >= 0) {
+        groups.splice(groupIndex, 1);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
+      }
+    } catch (error) {
+      console.error('Error deleting file group from localStorage:', error);
     }
   }
 }

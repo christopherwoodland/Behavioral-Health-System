@@ -2845,12 +2845,13 @@ const UploadAnalyze: React.FC = () => {
               const userId = user?.id || getUserId();
               const response = await fileGroupService.createFileGroup({
                 groupName,
-                description
+                description,
+                createdBy: userId
               }, userId);
               
-              if (response.success && response.group) {
+              if (response.success && response.fileGroup) {
                 addToast('success', 'Group Created', `Group "${groupName}" has been created successfully.`);
-                return response.group.groupId;
+                return response.fileGroup.groupId;
               } else {
                 addToast('error', 'Group Creation Failed', response.message || 'Failed to create group');
                 throw new Error(response.message || 'Failed to create group');

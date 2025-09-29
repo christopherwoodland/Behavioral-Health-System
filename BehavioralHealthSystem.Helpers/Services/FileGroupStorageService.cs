@@ -240,6 +240,70 @@ public class FileGroupStorageService : IFileGroupStorageService
         }
     }
 
+    public async Task<bool> DeleteFileGroupAsync(string groupId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            _logger.LogInformation("Deleting file group and associated sessions: {GroupId}", groupId);
+
+            // First, get all sessions associated with this group
+            var allSessions = await _sessionStorageService.GetAllSessionsAsync(cancellationToken);
+            var groupSessions = allSessions.Where(s => s.GroupId == groupId).ToList();
+
+            _logger.LogInformation("Found {Count} sessions associated with group {GroupId}", groupSessions.Count, groupId);
+
+            // Delete all associated sessions first
+            foreach (var session in groupSessions)
+            {
+                var sessionDeleted = await _sessionStorageService.DeleteSessionDataAsync(session.SessionId, cancellationToken);
+                if (!sessionDeleted)
+                {
+                    _logger.LogWarning("Failed to delete session {SessionId} for group {GroupId}", session.SessionId, groupId);
+                }
+                else
+                {
+                    _logger.LogInformation("Successfully deleted session {SessionId} for group {GroupId}", session.SessionId, groupId);
+                }
+            }
+
+            // Now delete the file group itself
+            var containerClient = await GetContainerClientAsync(cancellationToken);
+            
+            // Find and delete the group blob
+            await foreach (var blobItem in containerClient.GetBlobsAsync(
+                traits: BlobTraits.Metadata,
+                prefix: null,
+                cancellationToken: cancellationToken))
+            {
+                if (blobItem.Metadata?.TryGetValue("groupId", out var metaGroupId) == true && 
+                    metaGroupId == groupId)
+                {
+                    var blobClient = containerClient.GetBlobClient(blobItem.Name);
+                    var response = await blobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken);
+                    
+                    if (response.Value)
+                    {
+                        _logger.LogInformation("Successfully deleted file group: {GroupId}", groupId);
+                        return true;
+                    }
+                    else
+                    {
+                        _logger.LogWarning("File group blob not found or already deleted: {GroupId}", groupId);
+                        return false;
+                    }
+                }
+            }
+
+            _logger.LogWarning("File group not found for deletion: {GroupId}", groupId);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting file group: {GroupId}", groupId);
+            return false;
+        }
+    }
+
     public async Task<List<FileGroup>> SearchFileGroupsAsync(string userId, string query, CancellationToken cancellationToken = default)
     {
         try

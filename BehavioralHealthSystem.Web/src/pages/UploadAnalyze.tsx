@@ -1476,7 +1476,8 @@ const UploadAnalyze: React.FC = () => {
       return;
     }
 
-    if (isMultiMode) {
+    // Use current processingMode instead of legacy isMultiMode
+    if (processingMode === 'batch-files' || processingMode === 'batch-csv') {
       if (audioFiles.length === 0 || !userMetadata.userId.trim()) {
         setError('Please select audio files. User ID is automatically generated.');
         addToast('error', 'Missing Information', 'Please select audio files. User ID is automatically generated.');
@@ -1491,7 +1492,7 @@ const UploadAnalyze: React.FC = () => {
       }
       await processSingleFile();
     }
-  }, [audioFile, audioFiles, userMetadata.userId, isMultiMode, runKintsugiAssessment, transcribeAudio]);
+  }, [audioFile, audioFiles, userMetadata.userId, processingMode, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, selectedGroupId, addToast]);
 
   const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile, options: { runKintsugiAssessment: boolean; transcribeAudio: boolean }) => {
     try {
@@ -1926,7 +1927,7 @@ const UploadAnalyze: React.FC = () => {
       }));
       throw err; // Re-throw to be handled by the calling function
     }
-  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast, safeParseFloat]);
+  }, [userMetadata.userId, buildMetadata, apiService, uploadToAzureBlob, convertAudioToWav, addToast, safeParseFloat, selectedGroupId]);
 
   const processMultipleFiles = useCallback(async () => {
     setIsProcessing(true);
@@ -2101,7 +2102,7 @@ const UploadAnalyze: React.FC = () => {
         });
       }, 2000);
     }
-  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled]);
+  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled, selectedGroupId]);
 
   const startSingleFile = useCallback(async (fileId: string) => {
     const audioFile = audioFiles.find(f => f.id === fileId);
@@ -2569,7 +2570,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat, runKintsugiAssessment, transcribeAudio]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat, runKintsugiAssessment, transcribeAudio, selectedGroupId]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {

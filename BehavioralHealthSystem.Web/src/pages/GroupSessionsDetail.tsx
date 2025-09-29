@@ -14,13 +14,14 @@ import {
   Brain,
   Heart,
   FileAudio,
-  BarChart3
+  BarChart3,
+  Trash2
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory } from '../utils';
+import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory, createAppError } from '../utils';
 import type { SessionData, AppError, FileGroup } from '../types';
 
 // Sort configuration interface
@@ -108,6 +109,8 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
   const [loadingGroup, setLoadingGroup] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     sortBy: 'date',
     sortOrder: 'desc'
@@ -168,6 +171,36 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
     await Promise.all([loadGroup(), loadGroupSessions()]);
     setRefreshing(false);
   }, [loadGroup, loadGroupSessions]);
+
+  // Delete group and all associated sessions
+  const handleDeleteGroup = useCallback(async () => {
+    if (!groupId || !group) return;
+
+    setDeleting(true);
+    try {
+      const response = await fileGroupService.deleteFileGroup(groupId);
+      
+      if (response.success) {
+        // Navigate back to sessions list after successful deletion
+        navigate('/sessions');
+      } else {
+        setError(createAppError(
+          'DELETE_ERROR',
+          response.message || 'Failed to delete group',
+          { groupId }
+        ));
+      }
+    } catch (error: any) {
+      setError(createAppError(
+        'DELETE_ERROR',
+        error.message || 'An error occurred while deleting the group',
+        { groupId, error }
+      ));
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }, [groupId, group, navigate]);
 
   // Load data on mount and when groupId changes
   useEffect(() => {
@@ -388,6 +421,17 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={deleting || refreshing}
+            className="btn btn--danger"
+            aria-label="Delete group and all sessions"
+          >
+            <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
+            Delete Group
           </button>
         </div>
       </div>
@@ -652,6 +696,64 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
           <Link to="/upload" className="btn btn--primary">
             Upload Audio for This Group
           </Link>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center mb-4">
+                <div className="flex-shrink-0">
+                  <AlertCircle className="w-8 h-8 text-red-600" aria-hidden="true" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                    Delete Group
+                  </h3>
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  Are you sure you want to delete the group "{group?.groupName}"?
+                </p>
+                <p className="text-sm text-red-600 dark:text-red-400 mt-2 font-medium">
+                  ⚠️ This will permanently delete the group and all {sessions.length} associated session{sessions.length !== 1 ? 's' : ''}. This action cannot be undone.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={deleting}
+                  className="btn btn--secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteGroup}
+                  disabled={deleting}
+                  className="btn btn--danger"
+                >
+                  {deleting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                      Delete Forever
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

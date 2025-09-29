@@ -285,3 +285,11 @@ export const debounce = <T extends (...args: unknown[]) => void>(
     timeoutId = setTimeout(() => fn(...args), delay);
   };
 };
+
+// Utility function to format score categories consistently across all components
+export const formatScoreCategory = (category?: string): string => {
+  if (!category) return '—';
+  return category
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (l: string) => l.toUpperCase());
+};

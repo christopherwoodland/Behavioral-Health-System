@@ -2857,6 +2857,17 @@ const UploadAnalyze: React.FC = () => {
                 throw new Error(response.message || 'Failed to create group');
               }
             }}
+            onDeleteGroup={async (groupId, groupName) => {
+              const response = await fileGroupService.deleteFileGroup(groupId);
+              
+              if (response.success) {
+                addToast('success', 'Group Deleted', `Group "${groupName}" and all associated sessions have been deleted successfully.`);
+              } else {
+                addToast('error', 'Delete Failed', response.message || 'Failed to delete group');
+                throw new Error(response.message || 'Failed to delete group');
+              }
+            }}
+            showDeleteButton={true}
             className="mt-4"
           />
         </div>

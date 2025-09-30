@@ -635,8 +635,8 @@ const DistributionChart: React.FC<{
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
               <div
-                className={`h-2 rounded-full transition-all duration-500 ${item.color}`}
-                style={{ width: `${percentage}%` }}
+                className={`h-2 rounded-full transition-all duration-500 progress-dynamic ${item.color}`}
+                style={{ '--progress-width': `${percentage}%` } as React.CSSProperties}
                 role="progressbar"
                 aria-label={`${item.label}: ${item.value} (${percentage}%)`}
               />
@@ -798,8 +798,8 @@ const MetadataCorrelationChart: React.FC<{
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                   <div
-                    className="h-2 bg-red-500 rounded-full transition-all duration-500"
-                    style={{ width: `${depressionRate}%` }}
+                    className="h-2 bg-red-500 rounded-full transition-all duration-500 progress-dynamic"
+                    style={{ '--progress-width': `${depressionRate}%` } as React.CSSProperties}
                     role="progressbar"
                     aria-label={`Depression rate: ${depressionRate.toFixed(1)}%`}
                   />
@@ -816,8 +816,8 @@ const MetadataCorrelationChart: React.FC<{
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                   <div
-                    className="h-2 bg-orange-500 rounded-full transition-all duration-500"
-                    style={{ width: `${anxietyRate}%` }}
+                    className="h-2 bg-orange-500 rounded-full transition-all duration-500 progress-dynamic"
+                    style={{ '--progress-width': `${anxietyRate}%` } as React.CSSProperties}
                     role="progressbar"
                     aria-label={`Anxiety rate: ${anxietyRate.toFixed(1)}%`}
                   />
@@ -994,8 +994,8 @@ const FunnelChart: React.FC<{
               
               <div className="relative h-8 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
                 <div
-                  className={`h-full ${stage.color} transition-all duration-700 ease-out flex items-center justify-center relative`}
-                  style={{ width: `${width}%` }}
+                  className={`h-full ${stage.color} transition-all duration-700 ease-out flex items-center justify-center relative progress-dynamic`}
+                  style={{ '--progress-width': `${width}%` } as React.CSSProperties}
                 >
                   {width > 20 && (
                     <span className="text-xs font-medium text-white">

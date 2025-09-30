@@ -1,31 +1,65 @@
-# BehavioralHealthSystem.Agents
+# Behavioral Health System - AI Agents
 
-This project contains AI agents built with Microsoft Semantic Kernel for behavioral health assessments and workflows, featuring advanced real-time communication and handoff capabilities.
+A sophisticated AI agent system providing specialized behavioral health assessments through multi-agent coordination, intelligent handoffs, and real-time communication capabilities.
 
-## Overview
+## 🚀 Overview
 
-The agents use the Group Chat multi-agent architecture to collaborate and provide comprehensive behavioral health services. The system includes sophisticated agent handoff mechanisms, real-time communication via SignalR, and crisis detection capabilities for emergency interventions.
+This project implements a comprehensive multi-agent system designed specifically for behavioral health assessments, featuring specialized agents for different assessment types, intelligent coordination, and seamless handoff capabilities.
 
-## Core Architecture
+### Key Features
 
-### Real-Time Communication System
+- ✅ **Multi-Agent Architecture** - Specialized agents for different behavioral health assessments
+- ✅ **Intelligent Handoffs** - Seamless transitions between agents based on context
+- ✅ **Real-Time Communication** - Integration with SignalR for live interactions
+- ✅ **Crisis Detection** - Automatic routing to appropriate crisis intervention agents
+- ✅ **Session Management** - Persistent conversation context and state management
+- ✅ **Extensible Design** - Easy addition of new specialized agents
 
-The agent system features comprehensive real-time communication capabilities:
+## 📁 Project Structure
 
-- **SignalR Integration** - Bidirectional real-time messaging between agents and clients
-- **Agent Handoff Notifications** - Seamless transitions between specialized agents
-- **Typing Indicators** - Real-time feedback when agents are processing responses
-- **Session Management** - Persistent session tracking with unique identifiers
-- **Crisis Detection** - Automatic routing to appropriate crisis intervention agents
+```text
+BehavioralHealthSystem.Agents/
+├── 📁 Agents/                       # Individual agent implementations
+│   ├── ComedianAgent.cs            # Humor-based interaction agent
+│   ├── CoordinatorAgent.cs         # Main coordination and routing agent
+│   ├── Phq2Agent.cs               # PHQ-2 rapid depression screening
+│   └── Phq9Agent.cs               # PHQ-9 comprehensive depression assessment
+├── 📁 Chat/                        # Group chat orchestration
+│   └── BehavioralHealthGroupChat.cs # Multi-agent chat coordination
+├── 📁 Handoff/                     # Agent handoff system
+│   ├── AgentHandoffCoordinator.cs  # Handoff orchestration logic
+│   └── HandoffSession.cs          # Session handoff management
+├── 📁 Interfaces/                  # Agent and handoff interfaces
+│   ├── IChatAgent.cs              # Base chat agent interface
+│   ├── IHandoffAgent.cs           # Handoff-capable agent interface
+│   └── IHandoffAuditLogger.cs     # Handoff audit logging interface
+├── 📁 Models/                      # Agent-specific data models
+│   ├── AgentResponse.cs           # Agent response structure
+│   ├── HandoffRequest.cs          # Handoff request data
+│   └── SessionContext.cs         # Session context information
+├── 📁 Services/                    # Agent support services
+│   ├── AgentCommunicationService.cs # Agent-to-agent communication
+│   └── SessionContextService.cs   # Session context management
+├── 📄 GlobalSuppressions.cs       # Code analysis suppressions
+├── 📄 GlobalUsings.cs             # Global using directives
+└── 📄 README.md                   # This documentation
+```
 
-### Multi-Agent Coordination
+## 🛠️ Technology Stack
 
-The system implements advanced multi-agent coordination patterns:
+### Core Technologies
 
-- **Group Chat Architecture** - Collaborative agent interactions using Semantic Kernel
-- **Specialized Agent Roles** - Each agent handles specific aspects of behavioral health
-- **Intelligent Routing** - Coordinator agent manages workflow and agent selection
-- **Context Preservation** - Seamless context transfer during agent handoffs
+- **🔢 .NET 8** - Latest .NET version with performance improvements
+- **🤖 Microsoft Semantic Kernel** - AI orchestration and agent framework
+- **📡 Azure OpenAI** - Advanced language model integration
+- **💉 Microsoft.Extensions.DependencyInjection** - Dependency injection framework
+
+### AI & ML Integration
+
+- **🧠 Semantic Kernel Agents** - Agent framework and orchestration
+- **📝 Natural Language Processing** - Advanced text understanding and generation
+- **🎯 Context Management** - Persistent conversation context across agents
+- **🔄 Workflow Orchestration** - Complex multi-step assessment workflows
 
 ## Agents
 

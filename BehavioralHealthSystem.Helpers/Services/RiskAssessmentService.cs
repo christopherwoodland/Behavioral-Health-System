@@ -200,9 +200,13 @@ public class RiskAssessmentService : IRiskAssessmentService
             var apiKey = _openAIOptions.ApiKey;
             var deploymentName = _openAIOptions.DeploymentName;
 
+            // Configure OpenAI client options for Azure OpenAI
+            var clientOptions = new OpenAIClientOptions();
+
             OpenAIClient client = new OpenAIClient(
                 endpoint,
-                new AzureKeyCredential(apiKey));
+                new AzureKeyCredential(apiKey),
+                clientOptions);
 
             // Check if this is a GPT-5 model based on deployment name
             bool isGpt5Model = deploymentName.ToLowerInvariant().Contains("gpt-5");
@@ -670,15 +674,30 @@ public class RiskAssessmentService : IRiskAssessmentService
             var apiKey = effectiveConfig.ApiKey;
             var deploymentName = effectiveConfig.DeploymentName;
 
+            // Configure OpenAI client options for Azure OpenAI
+            var clientOptions = new OpenAIClientOptions();
+
             OpenAIClient client = new OpenAIClient(
                 endpoint,
-                new AzureKeyCredential(apiKey));
+                new AzureKeyCredential(apiKey),
+                clientOptions);
 
+            // GPT-5/O3 models have limited parameter support
+            bool isAdvancedModel = deploymentName.ToLowerInvariant().Contains("gpt-5") || 
+                                   deploymentName.ToLowerInvariant().Contains("o3");
+
+            // Create request options - GPT-5/O3 doesn't support max_tokens parameter
             var requestOptions = new ChatCompletionsOptions()
             {
-                MaxTokens = effectiveConfig.MaxTokens,
                 DeploymentName = deploymentName
             };
+
+            // Only set MaxTokens for non-GPT-5/O3 models
+            // GPT-5/O3 uses max_completion_tokens which is not supported by this SDK version
+            if (!isAdvancedModel)
+            {
+                requestOptions.MaxTokens = effectiveConfig.MaxTokens;
+            }
 
             requestOptions.Messages.Add(new ChatRequestSystemMessage(
                 "You are a highly experienced licensed psychiatrist and clinical psychologist with expertise in DSM-5 diagnostic criteria, " +
@@ -686,10 +705,7 @@ public class RiskAssessmentService : IRiskAssessmentService
                 "acknowledging the limitations of assessment based on available data."));
             requestOptions.Messages.Add(new ChatRequestUserMessage(prompt));
 
-            // GPT-5/O3 models have limited parameter support
-            bool isAdvancedModel = deploymentName.ToLowerInvariant().Contains("gpt-5") || 
-                                   deploymentName.ToLowerInvariant().Contains("o3");
-
+            // Set other parameters only for non-advanced models
             if (!isAdvancedModel)
             {
                 requestOptions.Temperature = (float)effectiveConfig.Temperature;
@@ -701,10 +717,11 @@ public class RiskAssessmentService : IRiskAssessmentService
             // Use configured timeout
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(effectiveConfig.TimeoutSeconds));
 
-            _logger.LogInformation("[{MethodName}] Calling Azure OpenAI for extended assessment. Model: {Model}, Deployment: {Deployment}, Timeout: {Timeout}s", 
+            _logger.LogInformation("[{MethodName}] Calling Azure OpenAI for extended assessment. Model: {Model}, Deployment: {Deployment}, MaxTokens: {MaxTokens}, Timeout: {Timeout}s", 
                 nameof(CallAzureOpenAIForExtendedAssessmentAsync), 
                 isAdvancedModel ? "GPT-5/O3" : "Standard", 
                 deploymentName,
+                isAdvancedModel ? "omitted (GPT-5/O3 limitation)" : effectiveConfig.MaxTokens.ToString(),
                 effectiveConfig.TimeoutSeconds);
 
             var response = await client.GetChatCompletionsAsync(requestOptions, cancellationTokenSource.Token);
@@ -782,7 +799,19 @@ public class RiskAssessmentService : IRiskAssessmentService
             if (extendedAssessment != null)
             {
                 extendedAssessment.GeneratedAt = DateTime.UtcNow.ToString("O");
-                extendedAssessment.ModelVersion = $"{_openAIOptions.DeploymentName}-{_openAIOptions.ApiVersion}";
+                
+                // Use extended config if enabled, otherwise use fallback standard config
+                if (_extendedOpenAIOptions.Enabled && 
+                    !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint) && 
+                    !string.IsNullOrEmpty(_extendedOpenAIOptions.ApiKey))
+                {
+                    extendedAssessment.ModelVersion = $"{_extendedOpenAIOptions.DeploymentName}-{_extendedOpenAIOptions.ApiVersion}";
+                }
+                else
+                {
+                    extendedAssessment.ModelVersion = $"{_openAIOptions.DeploymentName}-{_openAIOptions.ApiVersion}";
+                }
+                
                 extendedAssessment.IsExtended = true;
                 
                 // Validate and constrain values

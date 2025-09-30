@@ -560,13 +560,25 @@
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
+/* Dark mode support - Using .dark class (TailwindCSS class-based dark mode) */
+/* Important: Use :global to access the .dark class from the parent HTML element */
+:global(.dark) {
   .extended-assessment {
-    background-color: #1f2937;
+    background-color: #1f2937 !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.18) !important;
     
-    &__title {
-      color: #f9fafb;
+    &__header {
+      border-bottom-color: #374151 !important;
+    }
+    
+    &__title,
+    &__section-title,
+    &__symptom-title,
+    &__impairment-title,
+    &__criterion-title,
+    &__confidence-label,
+    &__fact-value {
+      color: #f9fafb !important;
     }
 
     &__subtitle,
@@ -576,27 +588,81 @@
     &__impairment-text,
     &__duration-text,
     &__differential-item,
-    &__detail-item {
-      color: #d1d5db;
+    &__detail-item,
+    &__fact-detail {
+      color: #d1d5db !important;
+    }
+    
+    &__label {
+      color: #9ca3af !important;
+    }
+    
+    &__fact-label {
+      color: #6b7280 !important;
+    }
+
+    &__model-badge,
+    &__time-badge,
+    &__date-badge {
+      background-color: #374151 !important;
+      color: #d1d5db !important;
+    }
+
+    &__tabs {
+      border-bottom-color: #374151 !important;
+    }
+
+    &__tab {
+      color: #9ca3af !important;
+      
+      &:hover {
+        color: #f9fafb !important;
+        background-color: #374151 !important;
+      }
+      
+      &--active {
+        color: #60a5fa !important;
+        border-bottom-color: #60a5fa !important;
+        background-color: #1e3a8a !important;
+      }
     }
 
     &__symptom-card,
     &__impairment-card,
     &__impairment-level {
-      background-color: #111827;
-      border-color: #374151;
+      background-color: #111827 !important;
+      border-color: #374151 !important;
     }
 
     &__criterion-section,
     &__detail-section,
     &__confidence-card,
     &__fact-card {
-      background-color: #111827;
-      border-color: #374151;
+      background-color: #111827 !important;
+      border-color: #374151 !important;
     }
 
     &__severity-bar {
-      background-color: #374151;
+      background-color: #374151 !important;
+    }
+    
+    &__symptom-notes {
+      background-color: #78350f !important;
+      border-left-color: #f59e0b !important;
+    }
+    
+    &__notes-text {
+      color: #fde68a !important;
+    }
+    
+    &__disclaimer {
+      background-color: #78350f !important;
+      color: #fde68a !important;
+      border-left-color: #f59e0b !important;
+      
+      strong {
+        color: #fef3c7 !important;
+      }
     }
   }
 }

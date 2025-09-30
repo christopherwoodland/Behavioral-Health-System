@@ -1,17 +1,150 @@
-# Behavioral Health System - Web Application
+# Behavioral Health System - Frontend
 
-A productio### Environment Variables
+A modern React-based frontend application for the Behavioral Health System, providing an intuitive interface for mental health assessments, session management, and AI-powered agent interactions.
 
-Create a `.env.local` file with:
+## 🚀 Overview
+
+This React application serves as the user interface for the comprehensive behavioral health platform, featuring real-time communication, advanced audio processing, and seamless integration with Azure Functions backend services.
+
+### Key Features
+
+- ✅ **Modern React 18** - Latest React with concurrent features and TypeScript
+- ✅ **Real-Time Communication** - SignalR integration for live updates
+- ✅ **Advanced Audio Processing** - Web Speech API with FFmpeg integration
+- ✅ **AI Agent Experience** - Interactive chat with specialized behavioral health agents
+- ✅ **Session Management** - Comprehensive session tracking and analytics
+- ✅ **Responsive Design** - Mobile-first approach with dark/light mode support
+- ✅ **Accessibility** - WCAG 2.2 Level AA compliant interface
+
+## 📁 Project Structure
+
+```text
+BehavioralHealthSystem.Web/
+├── 📁 src/
+│   ├── 📁 components/           # Reusable React components
+│   │   ├── 📁 auth/            # Authentication components
+│   │   ├── 📁 layout/          # Layout components (Header, Footer, Navigation)
+│   │   ├── 📁 ui/              # UI component library
+│   │   ├── AudioRecorder.tsx    # Audio recording functionality
+│   │   ├── GroupSelector.tsx    # File group management
+│   │   └── SessionCard.tsx      # Session display components
+│   ├── 📁 pages/               # Application pages
+│   │   ├── AgentExperience.tsx  # AI agent interaction interface
+│   │   ├── ControlPanel.tsx     # Administrative control panel
+│   │   ├── Dashboard.tsx        # Main dashboard
+│   │   ├── Predictions.tsx      # Prediction results and analytics
+│   │   ├── Sessions.tsx         # Session management
+│   │   ├── SessionDetail.tsx    # Detailed session view
+│   │   └── UploadAnalyze.tsx    # Audio upload and analysis
+│   ├── 📁 services/            # API and service integrations
+│   │   ├── apiService.ts        # Backend API client
+│   │   ├── speechService.ts     # Speech recognition service
+│   │   ├── transcriptionService.ts # Audio transcription
+│   │   ├── fileGroupService.ts  # File group management
+│   │   └── sessionService.ts    # Session management
+│   ├── 📁 hooks/               # Custom React hooks
+│   │   ├── useAudio.ts         # Audio playback and control
+│   │   ├── useFileUpload.ts    # File upload handling
+│   │   └── useLocalStorage.ts   # Local storage utilities
+│   ├── 📁 contexts/            # React context providers
+│   │   ├── AuthContext.tsx     # Authentication state
+│   │   └── ThemeContext.tsx    # Theme management
+│   ├── 📁 types/               # TypeScript type definitions
+│   │   ├── api.ts              # API response types
+│   │   ├── audio.ts            # Audio-related types
+│   │   └── session.ts          # Session data types
+│   ├── 📁 utils/               # Utility functions
+│   │   ├── formatters.ts       # Data formatting utilities
+│   │   ├── validators.ts       # Input validation
+│   │   └── constants.ts        # Application constants
+│   ├── 📁 styles/              # CSS and styling
+│   │   ├── components.css      # Component-specific styles (BEM)
+│   │   ├── dynamic-progress.css # Progress bar and animation styles
+│   │   ├── layouts.css         # Layout and page styles
+│   │   └── README.md           # Styling documentation
+│   └── 📁 test/                # Test files and utilities
+│       ├── accessibility.test.tsx # Accessibility tests
+│       └── setup.ts            # Test configuration
+├── 📄 package.json             # Node.js dependencies
+├── 📄 vite.config.ts          # Vite build configuration
+├── 📄 tailwind.config.js      # Tailwind CSS configuration
+├── 📄 tsconfig.json           # TypeScript configuration
+├── 📄 playwright.config.ts    # End-to-end test configuration
+└── 📄 postcss.config.js       # PostCSS configuration
+```
+
+## 🛠️ Technology Stack
+
+### Core Technologies
+- **⚛️ React 18** - Component-based UI framework with concurrent features
+- **📘 TypeScript** - Type-safe JavaScript for better development experience
+- **⚡ Vite** - Fast build tool with hot module replacement
+- **🎨 Tailwind CSS** - Utility-first CSS framework for rapid styling
+
+### UI & Design
+- **🧩 shadcn/ui** - High-quality, accessible component library
+- **🎭 Lucide React** - Beautiful SVG icon library
+- **📐 clsx** - Utility for constructing className strings conditionally
+- **🎨 Tailwind Merge** - Utility for merging Tailwind CSS classes
+
+### Audio & Media
+- **🎙️ Web Speech API** - Browser-native speech recognition
+- **🔊 FFmpeg.wasm** - Client-side audio processing and conversion
+- **📱 React Player** - Media player component for audio/video
+
+### Communication & State
+- **📡 SignalR** - Real-time bidirectional communication
+- **🌐 Axios** - HTTP client for API communication
+- **🔄 SWR/React Query** - Data fetching and caching (if implemented)
+
+### Development & Testing
+- **🧪 Vitest** - Fast unit testing framework
+- **🎭 Playwright** - End-to-end testing framework
+- **♿ @testing-library** - Testing utilities focused on user behavior
+- **🔍 ESLint** - Code linting and quality enforcement
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js 18+** - [Download here](https://nodejs.org/)
+- **npm or yarn** - Package manager (npm comes with Node.js)
+
+### Installation
+
+1. **Navigate to the Web project directory:**
+   ```bash
+   cd BehavioralHealthSystem.Web
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Set up environment variables:**
+   ```bash
+   # Copy environment template
+   cp .env.example .env.local
+   
+   # Edit .env.local with your configuration
+   ```
+
+### Environment Configuration
+
+Create a `.env.local` file in the Web project root:
 
 ```env
+# API Configuration
+VITE_API_BASE_URL=http://localhost:7071/api
+VITE_SIGNALR_HUB_URL=http://localhost:7071/chatHub
+
 # Authentication Configuration
 # Set to 'true' to enable Azure AD/Entra ID authentication
 # Set to 'false' or leave unset to run without authentication (uses mock auth)
 VITE_ENABLE_ENTRA_AUTH=true
-
-# API Configuration
-VITE_API_BASE=http://localhost:7071/api
 
 # Azure AD Configuration (required when VITE_ENABLE_ENTRA_AUTH=true)
 VITE_AZURE_CLIENT_ID=63e9b3fd-de9d-4083-879c-9c13f3aac54d
@@ -28,510 +161,369 @@ VITE_AZURE_CONTROL_PANEL_GROUP_ID=control-panel-group-object-id
 VITE_AZURE_BLOB_SAS_URL=https://yourstorage.blob.core.windows.net/audio-uploads?sp=racw&st=...
 VITE_STORAGE_CONTAINER_NAME=audio-uploads
 
+# Azure Speech Service (for transcription)
+VITE_AZURE_SPEECH_ENDPOINT=https://your-region.api.cognitive.microsoft.com/
+VITE_AZURE_SPEECH_API_KEY=your-speech-api-key
+
 # Polling Configuration
 VITE_POLL_INTERVAL_MS=3000
 
 # Feature Flags
 VITE_ENABLE_FFMPEG_WORKER=true
 VITE_ENABLE_DEBUG_LOGGING=false
-``` React application for behavioral health analysis using audio files.
+VITE_ENABLE_AGENT_EXPERIENCE=true
+VITE_ENABLE_TRANSCRIPTION=true
+VITE_ENABLE_REAL_TIME_UPDATES=true
 
-## 🚀 Features
+# Application Configuration
+VITE_APP_TITLE=Behavioral Health System
+VITE_APP_VERSION=1.0.0
+```
 
-- **WCAG 2.2 Level AA Compliant** - Full accessibility support with screen readers, keyboard navigation, and high contrast
-- **Section 508 Compliant** - Meets government accessibility standards
-- **Azure AD Authentication** - Microsoft identity platform integration with role-based access control
-- **Real-time Communication** - SignalR-powered agent messaging with handoff capabilities
-- **Responsive Design** - Works seamlessly on desktop, tablet, and mobile devices
-- **Dark/Light Mode** - Automatic theme detection with manual toggle
-- **Interactive Animations** - Brain icon hover animations for enhanced user engagement
-- **Audio Processing** - Client-side audio conversion using FFmpeg.wasm
-- **Azure Integration** - Direct upload to Azure Blob Storage with SAS tokens
-- **Real-time Updates** - Polling for prediction results with progress tracking
-- **Offline Support** - Progressive Web App capabilities
-- **Session Re-run Functionality** - Smart re-analysis with optimized audio processing
-- **Enhanced Modal System** - Improved information display replacing problematic tooltips
-- **Streamlined Navigation** - Intuitive user flow with consistent design patterns
+### Development
 
-## 🛠️ Tech Stack
-
-- **React 18** with TypeScript
-- **Vite** for fast development and building
-- **Tailwind CSS** with custom accessibility-focused theme
-- **React Router** for navigation
-- **TanStack Query** for data fetching and caching
-- **FFmpeg.wasm** for audio processing
-- **Azure Storage Blob SDK** for file uploads
-- **Jest + React Testing Library** for unit tests
-- **Playwright** for E2E testing with accessibility validation
-
-## 📋 Prerequisites
-
-- Node.js 18+ and npm
-- Azure Functions backend running (see main README)
-- Azure Blob Storage with SAS URL configured
-
-## 🚀 Quick Start
-
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-2. **Configure environment:**
-   ```bash
-   cp .env .env.local
-   # Edit .env.local with your Azure configuration
-   ```
-
-3. **Start development server:**
+1. **Start the development server:**
    ```bash
    npm run dev
+   # or
+   yarn dev
    ```
 
-4. **Open browser:**
+2. **Open your browser:**
+   - Navigate to `http://localhost:3001`
+   - The development server supports hot module replacement
+
+3. **Start the backend (in another terminal):**
+   ```bash
+   cd ../BehavioralHealthSystem.Functions
+   func start
    ```
-   http://localhost:3000
+
+### Building for Production
+
+1. **Build the application:**
+   ```bash
+   npm run build
+   # or
+   yarn build
    ```
 
-## ⚙️ Configuration
-
-### Environment Variables
-
-Create a `.env.local` file with:
-
-```env
-# API Configuration
-VITE_API_BASE=http://localhost:7071/api
-
-# Azure Blob Storage
-VITE_AZURE_BLOB_SAS_URL=https://yourstorage.blob.core.windows.net/audio-uploads?sp=racw&st=...
-VITE_STORAGE_CONTAINER_NAME=audio-uploads
-
-# Polling Configuration
-VITE_POLL_INTERVAL_MS=3000
-
-# Feature Flags
-VITE_ENABLE_FFMPEG_WORKER=true
-VITE_ENABLE_DEBUG_LOGGING=false
-```
-
-### Azure Blob Storage Setup
-
-1. Create a storage account and container
-2. Generate a SAS URL with read, add, create, write permissions
-3. Set the SAS URL in your environment variables
-
-### Azure AD Authentication Setup
-
-#### Conditional Authentication
-
-The application supports conditional authentication, allowing you to run with or without Azure AD integration:
-
-**With Authentication (Production/Secure Environment):**
-```env
-VITE_ENABLE_ENTRA_AUTH=true
-```
-- Full Azure AD authentication with role-based access control
-- Requires Azure AD app registration and configuration
-- Users must sign in to access the application
-
-**Without Authentication (Development/Testing):**
-```env
-VITE_ENABLE_ENTRA_AUTH=false
-# or leave the variable unset
-```
-- Uses mock authentication with a default admin user
-- No Azure AD configuration required
-- Useful for development, testing, or demo environments
-- All authorization checks pass automatically
-
-#### Full Azure AD Setup (when VITE_ENABLE_ENTRA_AUTH=true)
-
-1. **Register application in Azure AD:**
-   - Go to Azure Portal > Azure Active Directory > App registrations
-   - Create new registration with redirect URI: `http://localhost:5173`
-   - Note the Application (client) ID and Directory (tenant) ID
-
-2. **Configure authentication:**
-   - Add platform configuration for Single-page application
-   - Set redirect URIs for development and production
-   - Enable ID tokens and access tokens
-
-3. **Set up roles or groups:**
-   - **App Roles:** Define custom roles in the app manifest
-   - **Groups:** Create security groups and assign users
-   - Configure group IDs in environment variables
-
-4. **Update environment variables:**
-   - Use the client ID, tenant ID, and authority URL
-   - Set appropriate redirect URIs for your environment
+2. **Preview the build:**
+   ```bash
+   npm run preview
+   # or
+   yarn preview
+   ```
 
 ## 🧪 Testing
 
 ### Unit Tests
+
 ```bash
-# Run all tests
-npm test
+# Run all unit tests
+npm run test
 
 # Run tests in watch mode
 npm run test:watch
 
-# Run accessibility tests
-npm run test:a11y
-
-# Generate coverage report
+# Run tests with coverage
 npm run test:coverage
 ```
 
-### E2E Tests
+### End-to-End Tests
+
 ```bash
+# Install Playwright browsers
+npx playwright install
+
 # Run E2E tests
-npm run e2e
+npm run test:e2e
+
+# Run E2E tests in headed mode
+npm run test:e2e:headed
 
 # Run E2E tests with UI
-npm run e2e:ui
+npm run test:e2e:ui
 ```
 
-## 🎨 Styling & Accessibility
+### Accessibility Tests
 
-### Theme Configuration
+```bash
+# Run accessibility-focused tests
+npm run test:a11y
+```
 
-The application uses a custom Tailwind theme with:
-- Pastel colors that meet WCAG contrast requirements
-- Dark mode support with `class` strategy
-- Custom utility classes for accessibility
-- Consistent spacing and typography scale
+## 📊 Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint for code quality |
+| `npm run lint:fix` | Fix ESLint issues automatically |
+| `npm run type-check` | Run TypeScript type checking |
+| `npm run test` | Run unit tests |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage report |
+| `npm run test:e2e` | Run end-to-end tests |
+| `npm run test:a11y` | Run accessibility tests |
+
+## 🎨 Styling Guidelines
+
+### CSS Architecture
+
+The project uses a hybrid approach combining Tailwind CSS utilities with custom CSS components:
+
+1. **Tailwind CSS** - For utility classes and rapid prototyping
+2. **Custom CSS** - For component-specific styles using BEM methodology
+3. **CSS Custom Properties** - For dynamic theming and responsive design
+
+### BEM Methodology
+
+All custom CSS follows BEM (Block Element Modifier) naming conventions:
+
+```css
+/* Block */
+.toast { /* Base component styles */ }
+
+/* Element */
+.toast__icon { /* Icon within toast */ }
+.toast__content { /* Content area within toast */ }
+
+/* Modifier */
+.toast--success { /* Success variant of toast */ }
+.toast--error { /* Error variant of toast */ }
+```
+
+### File Organization
+
+- `index.css` - Global styles and Tailwind imports
+- `components.css` - Component-specific styles using BEM
+- `dynamic-progress.css` - Progress bars and animations
+- `layouts.css` - Page layout and structural styles
+
+## 🔌 API Integration
+
+### Service Layer
+
+All API communication is handled through dedicated service modules:
+
+#### Core Services
+
+- **`apiService.ts`** - Base HTTP client with error handling
+- **`sessionService.ts`** - Session management operations
+- **`fileGroupService.ts`** - File group CRUD operations
+- **`transcriptionService.ts`** - Audio transcription services
+
+#### Example Usage
+
+```typescript
+import { sessionService } from '@/services/sessionService';
+
+// Get all sessions for current user
+const sessions = await sessionService.getAllSessions();
+
+// Get specific session details
+const session = await sessionService.getSession(sessionId);
+
+// Delete a session
+await sessionService.deleteSession(sessionId);
+```
+
+### Error Handling
+
+The application implements comprehensive error handling:
+
+1. **Network Errors** - Connection issues and timeouts
+2. **API Errors** - HTTP status codes and error responses
+3. **Validation Errors** - Input validation and form errors
+4. **Permission Errors** - Authentication and authorization issues
+
+## 🎭 Component Library
+
+### UI Components
+
+The application uses shadcn/ui components with custom styling:
+
+- **Button** - Various button styles and states
+- **Card** - Content containers with consistent styling
+- **Dialog** - Modal dialogs for confirmations and forms
+- **Toast** - Notification system for user feedback
+- **Progress** - Progress bars for loading states
+- **Badge** - Status indicators and labels
+
+### Custom Components
+
+- **AudioRecorder** - Audio recording with visualization
+- **SessionCard** - Session display with status and actions
+- **GroupSelector** - File group management with CRUD operations
+- **StatusBadge** - Dynamic status indicators
+
+## ♿ Accessibility
+
+### WCAG Compliance
+
+The application follows WCAG 2.2 Level AA guidelines:
+
+- **Keyboard Navigation** - Full keyboard accessibility
+- **Screen Reader Support** - Proper ARIA labels and roles
+- **Color Contrast** - Sufficient contrast ratios for all text
+- **Focus Management** - Visible focus indicators and logical tab order
 
 ### Accessibility Features
 
-- **Keyboard Navigation:** Full keyboard support with visible focus indicators
-- **Screen Reader Support:** Proper ARIA labels, live regions, and semantic HTML
-- **High Contrast:** Colors meet WCAG 2.2 AA contrast ratios (4.5:1 minimum)
-- **Zoom Support:** Layout remains functional up to 200% zoom
-- **Motion Preferences:** Respects `prefers-reduced-motion`
+- **Semantic HTML** - Proper use of HTML5 semantic elements
+- **Alternative Text** - Images and icons have descriptive alt text
+- **Form Labels** - All form inputs have associated labels
+- **Live Regions** - Dynamic content updates are announced
 
-## 🎨 UI/UX Enhancements
+## 🔧 Configuration Files
 
-### Brain Icon Animation
-
-The application features an interactive brain throb animation that activates on hover:
-
-- **Location:** Header navigation and Microsoft sign-in page
-- **Animation:** Custom CSS keyframe animation with realistic scaling pattern
-- **Duration:** 1.5 seconds with smooth transitions
-- **Pattern:** Scale progression (1.0 → 1.05 → 1.1 → 1.05 → 1.0) creates a "living brain" effect
-- **Implementation:** Uses Tailwind CSS classes with custom `@keyframes brain-throb` animation
-
-```css
-@keyframes brain-throb {
-  0% { transform: scale(1.0); }
-  25% { transform: scale(1.05); }
-  50% { transform: scale(1.1); }
-  75% { transform: scale(1.05); }
-  100% { transform: scale(1.0); }
-}
-```
-
-This subtle animation enhances user engagement while maintaining accessibility standards.
-
-## 🔄 Real-Time Communication System
-
-The application features a comprehensive real-time communication system using SignalR for behavioral health agent interactions.
-
-### Features
-
-- **Real-time messaging** between users and behavioral health agents
-- **Agent handoff** with seamless transitions between specialized agents  
-- **Typing indicators** to show when agents are processing responses
-- **Session management** with unique session IDs for each user interaction
-- **Speech integration** with voice input/output capabilities
-- **Crisis detection** and appropriate agent routing
-
-### Architecture
-
-#### Backend Components
-
-**AgentCommunicationHub.cs** - SignalR hub handling real-time communication:
-- `GET /api/negotiate` - SignalR connection negotiation
-- `POST /api/sendagentmessage` - Send message from agent to client
-- `POST /api/notifyagenthandoff` - Notify client of agent handoff
-- `POST /api/notifyagenttyping` - Send typing indicators
-- `POST /api/joinsession` - Join a communication session
-- `POST /api/sendusermessage` - Process user messages
-
-**RealtimeAgentOrchestrator.cs** - Processes user input and coordinates agent responses:
-- Crisis detection and routing
-- Confidence scoring for agent responses
-- Mock agent simulation for development
-- Session status tracking
-
-#### Frontend Components
-
-**signalRService.ts** - TypeScript service for SignalR client communication:
-- Connection management with automatic reconnection
-- Event handling for messages, handoffs, typing indicators
-- Session management and status tracking
-- Error handling and connection state monitoring
-
-**useSignalR.ts** - React hook for managing SignalR state:
-- Connection status tracking
-- Real-time message collection
-- Agent handoff notifications
-- Typing indicators by agent
-- Session status and participants
-
-### Message Types
+### Vite Configuration (`vite.config.ts`)
 
 ```typescript
-interface UserMessage {
-  content: string;
-  timestamp: string;
-  audioData?: string;
-  metadata?: {
-    speechConfidence?: number;
-    voiceActivityLevel?: number;
-    processingTime?: number;
-  };
-}
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-interface AgentMessage {
-  agentName: string;
-  content: string;
-  timestamp: string;
-  confidence?: number;
-  suggestedActions?: string[];
-}
-
-interface AgentHandoffNotification {
-  fromAgent: string;
-  toAgent: string;
-  reason: string;
-  timestamp: string;
-  userContext?: any;
-}
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    port: 3001,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:7071',
+        changeOrigin: true,
+      },
+    },
+  },
+});
 ```
 
-### Configuration
+### TypeScript Configuration (`tsconfig.json`)
 
-#### Local Development
-- SignalR connection uses default local endpoint: `http://localhost:7071/api`
-- No Azure SignalR service required for local development
-- CORS enabled for cross-origin requests
+- Strict type checking enabled
+- Path mapping for clean imports
+- ES2022 target for modern features
+- JSX preserve for React
 
-#### Production
-- Set `AzureSignalRConnectionString` environment variable
-- Configure Azure SignalR Service resource
-- Update frontend `signalRService.ts` baseUrl if needed
+### Tailwind Configuration (`tailwind.config.js`)
 
-### Session Flow
-
-1. **Connection:** Frontend establishes SignalR connection on load
-2. **Session Join:** Generates unique session ID and joins session
-3. **Messaging:** User sends messages through SignalR to backend
-4. **Processing:** RealtimeAgentOrchestrator processes message through agent system
-5. **Response:** Agents send responses back through SignalR hub
-6. **Handoff:** System automatically handles agent transitions with notifications
-
-## 📁 Project Structure
-
-```
-src/
-├── components/          # Reusable UI components
-│   ├── layout/         # Layout components (Header, Footer)
-│   ├── ui/             # Basic UI components (Button, Input)
-│   └── features/       # Feature-specific components
-├── pages/              # Page components
-├── hooks/              # Custom React hooks
-├── services/           # API and external service integrations
-├── contexts/           # React contexts (Theme, etc.)
-├── utils/              # Utility functions
-├── types/              # TypeScript type definitions
-├── config/             # Configuration and constants
-└── test/               # Test utilities and setup
-```
-
-## 🔧 Development
-
-### Code Quality
-
-```bash
-# Lint code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Format code
-npm run format
-
-# Check formatting
-npm run format:check
-```
-
-### Building for Production
-
-```bash
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
+- Custom color palette for brand consistency
+- Extended spacing and typography scales
+- Dark mode support with class strategy
+- Custom component definitions
 
 ## 🚀 Deployment
 
-### Build Process
+### Build Optimization
 
-The application builds to static files that can be deployed to any web server:
+The production build includes:
 
-1. **Azure Static Web Apps** (recommended)
-2. **Netlify** with environment variable support
-3. **Vercel** with API route proxying
-4. **AWS S3 + CloudFront**
-5. **GitHub Pages** (with API backend elsewhere)c
+- **Code Splitting** - Automatic chunking for optimal loading
+- **Tree Shaking** - Removal of unused code
+- **Asset Optimization** - Image and CSS optimization
+- **Bundle Analysis** - Size analysis for optimization opportunities
 
-### Environment Configuration
+### Deployment Targets
 
-For production deployment, ensure these environment variables are set:
-- `VITE_API_BASE` - Your production API endpoint
-- `VITE_AZURE_BLOB_SAS_URL` - Production blob storage SAS URL
-- Other configuration variables as needed
+The application can be deployed to various platforms:
 
-## 🎯 Usage
+1. **Azure Static Web Apps** - Recommended for Azure integration
+2. **Azure App Service** - Full-featured web app hosting
+3. **Netlify/Vercel** - Modern JAMstack platforms
+4. **Azure Storage** - Static website hosting
 
-### Navigation & Dashboard Features
+### Environment-Specific Builds
 
-The application includes several UI improvements for better user experience:
+```bash
+# Development build
+npm run build:dev
 
-- **Streamlined Navigation:** Clean header navigation with Dashboard, Upload, Sessions, and Predictions
-- **Quick Actions Dashboard:** Four-column responsive grid layout for admin functions
-- **Role-Based Access:** System Health and Agent Experience features require appropriate permissions
-- **Coming Soon Features:** Agent Experience functionality is disabled with visual overlay indication
-- **Consistent Button Styling:** System Health button matches View Summary styling (black text on white background)
-- **Real-time Agent Communication:** SignalR-powered messaging system with typing indicators and agent handoffs
+# Staging build
+npm run build:staging
 
-### Audio Upload Workflow
+# Production build
+npm run build
+```
 
-1. **Select Audio File** - Choose WAV, MP3, M4A, AAC, or FLAC files
-2. **Automatic Conversion** - Files are converted to mono 44.1kHz WAV using FFmpeg
-3. **Cloud Upload** - Converted files are uploaded to Azure Blob Storage
-4. **Analysis Request** - API call initiates behavioral health analysis
-5. **Real-time Updates** - Progress tracking with accessibility announcements
-6. **Results Display** - View prediction results with detailed metrics
+## 🔍 Debugging
 
-### User Metadata Validation
+### Development Tools
 
-The application includes comprehensive client-side and server-side validation for user metadata:
+- **React DevTools** - Component inspection and profiling
+- **Redux DevTools** - State management debugging (if using Redux)
+- **Vite DevTools** - Build analysis and hot reload debugging
+- **Browser DevTools** - Network, console, and performance analysis
 
-#### **Validation Rules (Updated)**
+### Debug Configuration
 
-**👤 Gender Options:**
-- `male`, `female`, `non-binary`, `transgender female`, `transgender male`, `other`, `prefer not to specify`
+Enable debug mode in development:
 
-**🏃 Race Options:**
-- `white`, `black or african-american`, `asian`, `american indian or alaskan native`, `native hawaiian or pacific islander`, `two or more races`, `other`, `prefer not to specify`
-
-**🌎 Ethnicity Options:**
-- `Hispanic, Latino, or Spanish Origin`, `Not Hispanic, Latino, or Spanish Origin`
-- **Note:** No "prefer not to specify" option for ethnicity
-
-**Other Fields:**
-- **Age:** 1-149 years (optional)
-- **Weight:** 10-1000 pounds (optional)  
-- **Zipcode:** Alphanumeric, 1-10 characters (optional)
-- **Language:** Boolean indicating English as primary language
-
-#### **CSV Upload Validation**
-
-When uploading CSV files, the same validation rules apply with additional formatting requirements:
-- Headers must match expected field names
-- Empty fields are treated as optional
-- Invalid values trigger detailed error messages with row numbers
-- All validation is case-insensitive for user convenience
-
-### Accessibility Features in Use
-
-- **Screen Reader Announcements** for all major state changes
-- **Progress Updates** announced during file processing
-- **Error Messages** with clear remediation steps
-- **Keyboard Shortcuts** for common actions
-- **Focus Management** between page transitions
-
-## � Latest Features & Enhancements
-
-### Session Re-run Functionality
-
-The application now includes sophisticated session re-run capabilities:
-
-- **🔁 Smart Re-run System** - Re-analyze previous sessions with navigation-based workflow
-- **⚡ Audio Processing Optimization** - Skip redundant audio conversion for existing files
-- **📱 Dual Access Points** - Re-run from both Sessions list and Session Detail pages
-- **🎯 Pre-filled Data** - Session information automatically populated on re-run
-- **🔄 Optimized Performance** - Intelligent file handling reduces processing time
-
-### Enhanced UI/UX Improvements
-
-Recent interface enhancements for better user experience:
-
-- **📱 Improved Modal System** - Replaced problematic tooltips with accessible modal dialogs
-- **🧠 Interactive Brain Animation** - Custom CSS keyframe animation with realistic throb effect
-- **📊 Enhanced Session Views** - Detailed session information with consistent styling
-- **🎨 Unified Design Language** - Consistent button styling and component patterns
-- **⚡ Responsive Interactions** - Smooth transitions and hover effects
-
-### Technical Optimizations
-
-- **📁 File Upload Intelligence** - Conditional audio processing based on file state
-- **🔄 Navigation-Based Workflow** - Uses React Router state for efficient data transfer
-- **🎯 Error Prevention** - Robust handling of edge cases during re-run operations
-- **♿ Accessibility Focus** - All new features maintain WCAG 2.2 Level AA compliance
-
-## �🔍 Troubleshooting
+```env
+VITE_DEBUG_MODE=true
+VITE_LOG_LEVEL=debug
+```
 
 ### Common Issues
 
-1. **FFmpeg Loading Errors:**
-   - Check internet connection (CDN dependency)
-   - Verify SharedArrayBuffer support
-   - Try disabling FFmpeg worker in .env
-
-2. **Azure Upload Failures:**
-   - Verify SAS URL permissions and expiration
-   - Check CORS settings on storage account
-   - Confirm container exists and is accessible
-
-3. **API Connection Issues:**
-   - Ensure backend is running on correct port
-   - Verify CORS configuration
-   - Check network connectivity
-
-### Performance Optimization
-
-- **Code Splitting:** Automatic chunking for faster loading
-- **Image Optimization:** Use appropriate formats and sizes  
-- **Caching:** TanStack Query handles intelligent caching
-- **Bundle Analysis:** Use `npm run build -- --analyze`
+1. **Hot Reload Issues** - Clear browser cache and restart dev server
+2. **Module Resolution** - Check path aliases in `vite.config.ts`
+3. **API Connection** - Verify backend is running on correct port
+4. **Environment Variables** - Ensure all required variables are set
 
 ## 📚 Additional Resources
 
-- [React Accessibility Guide](https://reactjs.org/docs/accessibility.html)
-- [WCAG 2.2 Guidelines](https://www.w3.org/WAI/WCAG22/quickref/)
-- [Section 508 Standards](https://www.section508.gov/)
+### Documentation
+
+- [React Documentation](https://react.dev/)
+- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- [Vite Guide](https://vitejs.dev/guide/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/docs)
-- [TanStack Query Guide](https://tanstack.com/query/latest)
+
+### Testing Resources
+
+- [Vitest Documentation](https://vitest.dev/)
+- [Playwright Documentation](https://playwright.dev/)
+- [Testing Library Documentation](https://testing-library.com/)
+
+### Accessibility Resources
+
+- [WCAG 2.2 Guidelines](https://www.w3.org/WAI/WCAG22/quickref/)
+- [ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
+- [WebAIM Accessibility Resources](https://webaim.org/)
 
 ## 🤝 Contributing
 
-1. Follow the established code style and patterns
-2. Add unit tests for new components
-3. Ensure accessibility compliance
-4. Update documentation as needed
-5. Test with screen readers and keyboard navigation
+### Development Workflow
 
-## 📄 License
+1. Create a feature branch from `main`
+2. Make changes following the established patterns
+3. Add/update tests for new functionality
+4. Ensure all tests pass and accessibility standards are met
+5. Submit a pull request with detailed description
 
-This project is part of the Behavioral Health System licensed under the MIT License.
+### Code Standards
+
+- Follow TypeScript strict mode requirements
+- Use BEM methodology for custom CSS
+- Maintain accessibility standards (WCAG 2.2 AA)
+- Write comprehensive tests for new components
+- Document complex logic and API integrations
+
+### Pull Request Guidelines
+
+- Include screenshots for UI changes
+- Add accessibility testing results
+- Update documentation as needed
+- Ensure build passes all checks
+- Test across different browsers and devices
 
 ---
 

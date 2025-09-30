@@ -1,0 +1,289 @@
+/* Dynamic Progress Bar Styles - BEM Notation with SCSS */
+
+// Variables for progress components
+$progress-height-sm: 0.25rem;
+$progress-height-md: 0.5rem;
+$progress-height-lg: 2rem;
+$progress-color-primary: rgb(37 99 235);
+$progress-color-success: rgb(34 197 94);
+$progress-color-warning: rgb(245 158 11);
+$progress-color-error: rgb(239 68 68);
+$progress-bg-light: rgb(229 231 235);
+$progress-bg-dark: rgb(55 65 81);
+$transition-fast: all 0.2s ease-out;
+$transition-medium: all 0.3s ease-in-out;
+$transition-slow: all 0.5s ease-in-out;
+
+// Mixins for progress bars
+@mixin progress-base($height: $progress-height-sm) {
+  height: $height;
+  background-color: $progress-bg-light;
+  border-radius: 9999px;
+  width: 100%;
+
+  .dark & {
+    background-color: $progress-bg-dark;
+  }
+}
+
+@mixin progress-fill($color: $progress-color-primary, $transition: $transition-medium) {
+  height: 100%;
+  background-color: $color;
+  transition: $transition;
+  width: 0%;
+}
+
+/* Audio Progress Component */
+.audio-progress {
+  @include progress-base($progress-height-sm);
+  overflow: hidden;
+
+  &__fill {
+    @include progress-fill($progress-color-primary, $transition-fast);
+
+    &--animated {
+      transition: width 0.2s ease-out;
+    }
+  }
+}
+
+/* Processing Progress Component */
+.processing-progress {
+  @include progress-base($progress-height-sm);
+
+  &__fill {
+    height: $progress-height-sm;
+    background-color: $progress-color-primary;
+    border-radius: 9999px;
+    transition: $transition-medium;
+    width: 0%;
+
+    &--animated {
+      transition: width 0.3s ease-in-out;
+    }
+
+    &--success {
+      background-color: $progress-color-success;
+    }
+
+    &--warning {
+      background-color: $progress-color-warning;
+    }
+
+    &--error {
+      background-color: $progress-color-error;
+    }
+  }
+}
+
+/* Risk Chart Component */
+.risk-chart {
+  position: relative;
+  height: 8rem;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  background-color: rgb(249 250 251);
+  border-radius: 0.5rem;
+  padding: 1rem;
+
+  .dark & {
+    background-color: rgb(31 41 55);
+  }
+
+  &__bar {
+    width: 2rem;
+    background: linear-gradient(to top, $progress-color-primary, rgb(96 165 250));
+    border-top-left-radius: 0.25rem;
+    border-top-right-radius: 0.25rem;
+    transition: $transition-slow;
+    min-height: 8%;
+    height: var(--chart-height, 8%);
+
+    &--animated {
+      transition: height 0.5s ease-in-out;
+    }
+
+    &--low {
+      background: linear-gradient(to top, $progress-color-success, rgb(134 239 172));
+    }
+
+    &--medium {
+      background: linear-gradient(to top, $progress-color-warning, rgb(253 186 116));
+    }
+
+    &--high {
+      background: linear-gradient(to top, $progress-color-error, rgb(252 165 165));
+    }
+  }
+}
+
+/* Dynamic CSS Custom Properties */
+:root {
+  --progress-width: 0%;
+  --chart-height: 0%;
+}
+
+/* Utility Classes for Dynamic Styling */
+.progress {
+  &--dynamic {
+    width: var(--progress-width, 0%);
+  }
+}
+
+.chart-bar {
+  &--dynamic {
+    height: var(--chart-height, 8%);
+  }
+}
+
+/* Dynamic Progress Classes for Inline Style Replacement */
+.progress-dynamic {
+  width: var(--progress-width, 0%);
+}
+
+.chart-bar-dynamic {
+  height: var(--chart-height, 8%);
+}
+
+.progress-animated {
+  transition: width $transition-slow;
+}
+
+/* Session Timeline Component */
+.session-timeline {
+  position: relative;
+  padding-left: 2rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0.75rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: $progress-bg-light;
+
+    .dark & {
+      background-color: $progress-bg-dark;
+    }
+  }
+
+  &__item {
+    position: relative;
+    margin-bottom: 2rem;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -2.25rem;
+      top: 0.25rem;
+      width: 0.75rem;
+      height: 0.75rem;
+      border-radius: 50%;
+      background-color: $progress-color-primary;
+    }
+
+    &--completed::before {
+      background-color: $progress-color-success;
+    }
+
+    &--failed::before {
+      background-color: $progress-color-error;
+    }
+  }
+
+  &__content {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    .dark & {
+      background-color: rgb(31 41 55);
+    }
+  }
+
+  &__title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  &__description {
+    font-size: 0.875rem;
+    color: rgb(107 114 128);
+
+    .dark & {
+      color: rgb(156 163 175);
+    }
+  }
+
+  &__timestamp {
+    font-size: 0.75rem;
+    color: rgb(156 163 175);
+    margin-top: 0.5rem;
+  }
+}
+
+/* Upload Progress Component */
+.upload-progress {
+  position: relative;
+  background-color: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid rgb(59 130 246);
+
+  .dark & {
+    background-color: rgb(31 41 55);
+    border-left-color: rgb(96 165 250);
+  }
+
+  &--animated {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    font-weight: 600;
+    font-size: 1.125rem;
+  }
+
+  &__status {
+    font-size: 0.875rem;
+    color: rgb(107 114 128);
+
+    .dark & {
+      color: rgb(156 163 175);
+    }
+  }
+
+  &__body {
+    margin-bottom: 1rem;
+  }
+
+  &__details {
+    font-size: 0.875rem;
+    color: rgb(107 114 128);
+    margin-bottom: 0.5rem;
+
+    .dark & {
+      color: rgb(156 163 175);
+    }
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: rgb(156 163 175);
+  }
+}

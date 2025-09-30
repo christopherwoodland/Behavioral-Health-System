@@ -3,6 +3,8 @@ import { Plus, Users, Search, Calendar, Trash2 } from 'lucide-react';
 import { fileGroupService } from '../services/fileGroupService';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserId } from '../utils';
+import { useLoadingState, useFieldState, useConfirmDialog } from '../utils/ui';
+import { validateGroupName } from '../utils/validation';
 import type { FileGroup } from '../types';
 
 interface GroupSelectorProps {
@@ -16,11 +18,6 @@ interface GroupSelectorProps {
   showDeleteButton?: boolean;
 }
 
-interface NewGroupData {
-  name: string;
-  description: string;
-}
-
 const GroupSelector: React.FC<GroupSelectorProps> = ({
   selectedGroupId,
   onGroupChange,
@@ -32,17 +29,25 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
   showDeleteButton = false
 }) => {
   const [groups, setGroups] = useState<FileGroup[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [newGroupData, setNewGroupData] = useState<NewGroupData>({
-    name: '',
-    description: ''
+  
+  // Use utility hooks for state management
+  const loadingState = useLoadingState();
+  const createLoadingState = useLoadingState();
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  
+  // Form field states with validation
+  const groupName = useFieldState('', (value) => {
+    const existingNames = groups.map(g => g.groupName);
+    const validation = validateGroupName(value, existingNames);
+    return validation.isValid ? undefined : validation.error;
   });
-  const [createLoading, setCreateLoading] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState<string | null>(null); // Track which group is being deleted
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null); // Track which group confirmation is shown
+  
+  const groupDescription = useFieldState('');
+  
+  // Confirmation dialog for delete operations
+  const confirmDialog = useConfirmDialog();
   
   const { user } = useAuth();
 
@@ -53,7 +58,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
 
   const loadGroups = async () => {
     try {
-      setLoading(true);
+      loadingState.setLoading(true);
       const userId = user?.id || getUserId();
       const response = await fileGroupService.getFileGroups(userId);
       if (response.success) {
@@ -62,16 +67,15 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
     } catch (error) {
       console.error('Failed to load file groups:', error);
     } finally {
-      setLoading(false);
+      loadingState.resetLoading();
     }
   };
 
   const handleCreateGroup = async () => {
-    if (!newGroupData.name.trim()) return;
+    if (!groupName.value.trim() || !groupName.validate()) return;
     
     try {
-      setCreateLoading(true);
-      setCreateError(null); // Clear previous errors
+      createLoadingState.setLoading(true);
       
       const userId = user?.id || getUserId();
       let createdGroupId: string;
@@ -79,24 +83,25 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       if (onCreateGroup) {
         // If onCreateGroup callback is provided, use it for creation
         try {
-          createdGroupId = await onCreateGroup(newGroupData.name.trim(), newGroupData.description.trim() || undefined);
+          createdGroupId = await onCreateGroup(groupName.value.trim(), groupDescription.value.trim() || undefined);
         } catch (error) {
-          // Handle errors from the callback
-          setCreateError(error instanceof Error ? error.message : 'Failed to create group');
+          // Handle errors from the callback - this will be shown in the field error
+          groupName.setValue(groupName.value); // This will trigger validation and show error
           return;
         }
       } else {
         // If no callback provided, handle creation internally
         const response = await fileGroupService.createFileGroup({
-          groupName: newGroupData.name.trim(),
-          description: newGroupData.description.trim() || undefined,
+          groupName: groupName.value.trim(),
+          description: groupDescription.value.trim() || undefined,
           createdBy: userId
         }, userId);
         
         if (response.success && response.fileGroup) {
           createdGroupId = response.fileGroup.groupId;
         } else {
-          setCreateError(response.message || 'Failed to create group');
+          // Set error on the field
+          groupName.setValue(groupName.value); // This will trigger validation
           return;
         }
       }
@@ -105,7 +110,8 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       onGroupChange(createdGroupId);
       
       // Reset form
-      setNewGroupData({ name: '', description: '' });
+      groupName.reset();
+      groupDescription.reset();
       setShowCreateForm(false);
       
       // Reload groups to ensure UI is in sync
@@ -113,9 +119,9 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       
     } catch (error) {
       console.error('Failed to create group:', error);
-      setCreateError('Failed to create group. Please try again.');
+      groupName.setValue(groupName.value); // This will trigger validation and potentially show error
     } finally {
-      setCreateLoading(false);
+      createLoadingState.resetLoading();
     }
   };
 
@@ -139,8 +145,19 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       // Could add error handling here if needed
     } finally {
       setDeleteLoading(null);
-      setShowDeleteConfirm(null);
     }
+  };
+
+  const showDeleteConfirmation = (groupId: string, groupName: string) => {
+    confirmDialog.showConfirm(
+      `Are you sure you want to delete the group "${groupName}"? This action cannot be undone.`,
+      () => handleDeleteGroup(groupId, groupName),
+      {
+        title: 'Delete Group',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      }
+    );
   };
 
   const filteredGroups = groups.filter(group =>
@@ -177,7 +194,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
           </label>
 
           {/* Existing Groups */}
-          {!loading && filteredGroups.length > 0 && (
+          {!loadingState.isLoading && filteredGroups.length > 0 && (
             <div className="space-y-2">
               {/* Search for existing groups */}
               <div className="relative">
@@ -230,47 +247,23 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                   {/* Delete Button */}
                   {showDeleteButton && onDeleteGroup && (
                     <div className="flex-shrink-0">
-                      {showDeleteConfirm === group.groupId ? (
-                        <div className="flex items-center space-x-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDeleteGroup(group.groupId, group.groupName);
-                            }}
-                            disabled={deleteLoading === group.groupId}
-                            className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-                          >
-                            {deleteLoading === group.groupId ? 'Deleting...' : 'Confirm'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setShowDeleteConfirm(null);
-                            }}
-                            className="px-2 py-1 text-xs bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setShowDeleteConfirm(group.groupId);
-                          }}
-                          disabled={disabled || deleteLoading === group.groupId}
-                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50"
-                          title={`Delete group "${group.groupName}"`}
-                        >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          showDeleteConfirmation(group.groupId, group.groupName);
+                        }}
+                        disabled={disabled || deleteLoading === group.groupId}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded disabled:opacity-50"
+                        title={`Delete group "${group.groupName}"`}
+                      >
+                        {deleteLoading === group.groupId ? (
+                          <div className="w-4 h-4 animate-spin border-2 border-red-500 border-t-transparent rounded-full" />
+                        ) : (
                           <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
+                        )}
+                      </button>
                     </div>
                   )}
                 </label>
@@ -298,12 +291,20 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                   </label>
                   <input
                     type="text"
-                    value={newGroupData.name}
-                    onChange={(e) => setNewGroupData(prev => ({ ...prev, name: e.target.value }))}
+                    value={groupName.value}
+                    onChange={(e) => groupName.setValue(e.target.value)}
+                    onBlur={() => groupName.setTouched()}
                     placeholder="Enter group name..."
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                    disabled={createLoading}
+                    className={`w-full px-3 py-2 border rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm ${
+                      groupName.touched && groupName.error 
+                        ? 'border-red-300 dark:border-red-600' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    disabled={createLoadingState.isLoading}
                   />
+                  {groupName.touched && groupName.error && (
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">{groupName.error}</p>
+                  )}
                 </div>
                 
                 <div>
@@ -311,39 +312,32 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                     Description (Optional)
                   </label>
                   <textarea
-                    value={newGroupData.description}
-                    onChange={(e) => setNewGroupData(prev => ({ ...prev, description: e.target.value }))}
+                    value={groupDescription.value}
+                    onChange={(e) => groupDescription.setValue(e.target.value)}
                     placeholder="Enter group description..."
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                    disabled={createLoading}
+                    disabled={createLoadingState.isLoading}
                   />
                 </div>
-                
-                {/* Error Message */}
-                {createError && (
-                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-                    <p className="text-sm text-red-700 dark:text-red-300">{createError}</p>
-                  </div>
-                )}
                 
                 <div className="flex space-x-2">
                   <button
                     type="button"
                     onClick={handleCreateGroup}
-                    disabled={!newGroupData.name.trim() || createLoading}
+                    disabled={!groupName.isValid || createLoadingState.isLoading}
                     className="btn btn--primary text-sm disabled:opacity-50"
                   >
-                    {createLoading ? 'Creating...' : 'Create Group'}
+                    {createLoadingState.isLoading ? 'Creating...' : 'Create Group'}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setShowCreateForm(false);
-                      setNewGroupData({ name: '', description: '' });
-                      setCreateError(null); // Clear error when cancelling
+                      groupName.reset();
+                      groupDescription.reset();
                     }}
-                    disabled={createLoading}
+                    disabled={createLoadingState.isLoading}
                     className="btn btn--secondary text-sm"
                   >
                     Cancel
@@ -353,7 +347,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
             </div>
           )}
 
-          {loading && (
+          {loadingState.isLoading && (
             <div className="text-center py-4 text-gray-500 dark:text-gray-400">
               Loading groups...
             </div>
@@ -375,6 +369,34 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
           </div>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+              {confirmDialog.config.title}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              {confirmDialog.config.message}
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={confirmDialog.handleCancel}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                {confirmDialog.config.cancelText}
+              </button>
+              <button
+                onClick={confirmDialog.handleConfirm}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                {confirmDialog.config.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

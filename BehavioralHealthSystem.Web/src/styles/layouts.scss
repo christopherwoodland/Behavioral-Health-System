@@ -1,0 +1,389 @@
+/* Page-specific layout and component styles using BEM notation with SCSS */
+
+// Variables
+$grid-gap: 1.5rem;
+$grid-gap-mobile: 1rem;
+$card-padding: 1.5rem;
+$card-padding-mobile: 1rem;
+$border-radius-lg: 0.75rem;
+$border-radius-md: 0.5rem;
+$shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$chart-height: 16rem;
+$chart-height-mobile: 12rem;
+$audio-waveform-height: 4rem;
+
+// Color variables
+$color-blue-primary: rgb(59 130 246);
+$color-blue-light: rgb(96 165 250);
+$color-green: rgb(34 197 94);
+$color-red: rgb(239 68 68);
+$color-yellow: rgb(245 158 11);
+$color-white: white;
+$color-gray-50: rgb(249 250 251);
+$color-gray-100: rgb(243 244 246);
+$color-gray-200: rgb(229 231 235);
+$color-gray-400: rgb(156 163 175);
+$color-gray-500: rgb(107 114 128);
+$color-gray-600: rgb(75 85 99);
+$color-gray-700: rgb(55 65 81);
+$color-gray-800: rgb(31 41 55);
+$color-gray-900: rgb(17 24 39);
+
+// Gradient backgrounds
+$gradient-light: linear-gradient(135deg, rgb(239 246 255) 0%, rgb(219 234 254) 100%);
+$gradient-dark: linear-gradient(135deg, $color-gray-900 0%, rgb(30 41 59) 100%);
+
+// Breakpoints
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+
+// Mixins
+@mixin card-base {
+  background-color: $color-white;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-sm;
+  padding: $card-padding;
+
+  .dark & {
+    background-color: $color-gray-800;
+  }
+}
+
+@mixin grid-responsive($min-width: 300px) {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax($min-width, 1fr));
+  gap: $grid-gap;
+  padding: $grid-gap;
+
+  @media (min-width: $breakpoint-md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: $breakpoint-lg) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@mixin timeline-base {
+  position: relative;
+  padding-left: 2rem;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: $color-gray-200;
+
+    .dark & {
+      background-color: $color-gray-600;
+    }
+  }
+}
+
+/* Dashboard Component */
+.dashboard {
+  @include grid-responsive;
+
+  &__card {
+    @include card-base;
+  }
+}
+
+/* Predictions Chart Component */
+.predictions-chart {
+  position: relative;
+  height: $chart-height;
+  background: $gradient-light;
+  border-radius: $border-radius-lg;
+  padding: $card-padding;
+  overflow: hidden;
+
+  .dark & {
+    background: $gradient-dark;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f3f4f6' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.5;
+  }
+
+  &__title {
+    position: relative;
+    z-index: 1;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  &__content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+  }
+}
+
+/* Audio Waveform Component */
+.audio-waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: $audio-waveform-height;
+  background-color: $color-gray-50;
+  border-radius: $border-radius-md;
+  padding: 0.5rem;
+  margin: 1rem 0;
+
+  .dark & {
+    background-color: $color-gray-900;
+  }
+
+  &__bar {
+    width: 2px;
+    background-color: $color-blue-primary;
+    margin: 0 1px;
+    border-radius: 1px;
+    transition: height 0.1s ease-in-out;
+
+    &--active {
+      background-color: $color-red;
+    }
+  }
+
+  &__controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+}
+
+/* Session Timeline Component */
+.session-timeline {
+  @include timeline-base;
+
+  &__item {
+    position: relative;
+    margin-bottom: 1.5rem;
+    padding-left: 1.5rem;
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -0.5rem;
+      top: 0.5rem;
+      width: 0.75rem;
+      height: 0.75rem;
+      background-color: $color-blue-primary;
+      border-radius: 50%;
+      border: 2px solid $color-white;
+
+      .dark & {
+        border-color: $color-gray-900;
+      }
+    }
+
+    &--completed::before {
+      background-color: $color-green;
+    }
+
+    &--failed::before {
+      background-color: $color-red;
+    }
+  }
+
+  &__content {
+    @include card-base;
+    box-shadow: $shadow-sm;
+  }
+
+  &__title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  &__description {
+    font-size: 0.875rem;
+    color: $color-gray-500;
+
+    .dark & {
+      color: $color-gray-400;
+    }
+  }
+
+  &__timestamp {
+    font-size: 0.75rem;
+    color: $color-gray-400;
+    margin-top: 0.5rem;
+  }
+}
+
+/* Upload Progress Component */
+.upload-progress {
+  position: relative;
+  background-color: $color-white;
+  border-radius: $border-radius-lg;
+  box-shadow: $shadow-md;
+  padding: $card-padding;
+  margin-bottom: 1rem;
+  border-left: 4px solid $color-blue-primary;
+
+  .dark & {
+    background-color: $color-gray-800;
+    border-left-color: $color-blue-light;
+  }
+
+  &--animated {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  &__title {
+    font-weight: 600;
+    font-size: 1.125rem;
+  }
+
+  &__status {
+    font-size: 0.875rem;
+    font-weight: 500;
+
+    &--processing {
+      color: $color-yellow;
+    }
+
+    &--completed {
+      color: $color-green;
+    }
+
+    &--failed {
+      color: $color-red;
+    }
+  }
+
+  &__details {
+    font-size: 0.875rem;
+    color: $color-gray-500;
+
+    .dark & {
+      color: $color-gray-400;
+    }
+  }
+}
+
+/* Risk Assessment Heatmap Component */
+.risk-heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding: 1rem;
+  background-color: $color-gray-50;
+  border-radius: $border-radius-md;
+
+  .dark & {
+    background-color: $color-gray-900;
+  }
+
+  &__cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    &--low {
+      background-color: rgb(220 252 231);
+    }
+
+    &--medium {
+      background-color: rgb(254 249 195);
+    }
+
+    &--high {
+      background-color: rgb(254 226 226);
+    }
+
+    &--empty {
+      background-color: $color-gray-100;
+
+      .dark & {
+        background-color: $color-gray-700;
+      }
+    }
+  }
+
+  &__legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  &__legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  &__legend-color {
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 2px;
+  }
+}
+
+/* Animation keyframes */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Mobile-specific styles */
+@media (max-width: $breakpoint-md) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding: $grid-gap-mobile;
+    gap: $grid-gap-mobile;
+  }
+  
+  .predictions-chart {
+    height: $chart-height-mobile;
+    padding: $card-padding-mobile;
+  }
+  
+  .upload-progress {
+    padding: $card-padding-mobile;
+  }
+  
+  .session-timeline {
+    padding-left: 1.5rem;
+
+    &__item {
+      padding-left: $card-padding-mobile;
+    }
+  }
+}

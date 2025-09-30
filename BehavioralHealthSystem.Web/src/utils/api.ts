@@ -319,4 +319,18 @@ export class ApiEndpoints {
     check: () => buildUrl(this.baseUrl, '/api/health'),
     detailed: () => buildUrl(this.baseUrl, '/api/health/detailed'),
   };
+
+  // Risk assessment endpoints
+  riskAssessment = {
+    generate: (sessionId: string) => buildUrl(this.baseUrl, `/api/sessions/${sessionId}/risk-assessment`),
+    get: (sessionId: string) => buildUrl(this.baseUrl, `/api/sessions/${sessionId}/risk-assessment`),
+  };
+
+  // Extended risk assessment endpoints (GPT-5 with schizophrenia evaluation)
+  extendedRiskAssessment = {
+    generate: (sessionId: string) => buildUrl(this.baseUrl, `/api/sessions/${sessionId}/extended-risk-assessment`),
+    get: (sessionId: string) => buildUrl(this.baseUrl, `/api/sessions/${sessionId}/extended-risk-assessment`),
+    delete: (sessionId: string) => buildUrl(this.baseUrl, `/api/sessions/${sessionId}/extended-risk-assessment`),
+    status: (sessionId: string) => buildUrl(this.baseUrl, `/api/sessions/${sessionId}/extended-risk-assessment/status`),
+  };
 }

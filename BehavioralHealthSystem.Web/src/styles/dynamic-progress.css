@@ -116,3 +116,16 @@
 .chart-bar--dynamic {
   height: var(--chart-height, 8%);
 }
+
+/* Dynamic Progress Classes for Inline Style Replacement */
+.progress-dynamic {
+  width: var(--progress-width, 0%);
+}
+
+.chart-bar-dynamic {
+  height: var(--chart-height, 8%);
+}
+
+.progress-animated {
+  transition: width 0.5s ease-in-out;
+}

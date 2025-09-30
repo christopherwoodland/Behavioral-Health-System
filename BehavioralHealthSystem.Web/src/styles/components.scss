@@ -1,0 +1,264 @@
+/* Component-specific styles using BEM notation with SCSS */
+
+// Variables
+$border-radius-sm: 0.5rem;
+$border-radius-full: 9999px;
+$spacing-xs: 0.25rem;
+$spacing-sm: 0.5rem;
+$spacing-md: 0.75rem;
+$spacing-lg: 1rem;
+$spacing-xl: 1.5rem;
+$spacing-2xl: 3rem;
+$font-size-sm: 0.875rem;
+$font-size-base: 1rem;
+$font-size-lg: 1.125rem;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$transition-all: all 0.3s ease-in-out;
+$transition-fast: all 0.2s ease-in-out;
+$z-index-toast: 9999;
+
+// Color variables
+$color-white: white;
+$color-blue-600: rgb(37 99 235);
+$color-blue-500: rgb(59 130 246);
+$color-green-600: rgb(34 197 94);
+$color-red-600: rgb(239 68 68);
+$color-yellow-500: rgb(245 158 11);
+$color-gray-100: rgb(243 244 246);
+$color-gray-200: rgb(229 231 235);
+$color-gray-300: rgb(209 213 219);
+$color-gray-400: rgb(156 163 175);
+$color-gray-500: rgb(107 114 128);
+$color-gray-600: rgb(75 85 99);
+$color-gray-700: rgb(55 65 81);
+$color-gray-800: rgb(31 41 55);
+$color-gray-900: rgb(17 24 39);
+
+// Mixins
+@mixin focus-ring($color: $color-blue-500) {
+  outline: 2px solid $color;
+  outline-offset: 2px;
+}
+
+@mixin shadow-md {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Toast Component */
+.toast {
+  position: fixed;
+  top: $spacing-lg;
+  right: $spacing-lg;
+  z-index: $z-index-toast;
+  max-width: 24rem;
+  width: 100%;
+  background-color: $color-white;
+  @include shadow-md;
+  border-radius: $border-radius-sm;
+  border-left-width: 4px;
+  padding: $spacing-lg;
+  transition: $transition-all;
+  transform: translateX(0);
+
+  .dark & {
+    background-color: $color-gray-800;
+  }
+
+  &--success {
+    border-left-color: $color-green-600;
+  }
+
+  &--error {
+    border-left-color: $color-red-600;
+  }
+
+  &--warning {
+    border-left-color: $color-yellow-500;
+  }
+
+  &--info {
+    border-left-color: $color-blue-500;
+  }
+
+  &__icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-right: $spacing-md;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+  }
+
+  &__title {
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__message {
+    font-size: $font-size-sm;
+    color: $color-gray-500;
+
+    .dark & {
+      color: $color-gray-400;
+    }
+  }
+}
+
+/* Toggle Switch Component */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  height: 2rem;
+  width: 4rem;
+  align-items: center;
+  border-radius: $border-radius-full;
+  transition: colors 0.2s ease-in-out;
+  cursor: pointer;
+
+  &:focus {
+    @include focus-ring;
+  }
+
+  .dark &:focus {
+    outline-offset: $color-gray-800;
+  }
+
+  &--enabled {
+    background-color: $color-blue-500;
+  }
+
+  &--disabled {
+    background-color: $color-gray-400;
+  }
+
+  &__thumb {
+    display: inline-flex;
+    height: $spacing-xl;
+    width: $spacing-xl;
+    transform: translateX(0);
+    border-radius: $border-radius-full;
+    background-color: $color-white;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease-in-out;
+
+    &--enabled {
+      transform: translateX(2rem);
+    }
+  }
+
+  &__label {
+    margin-left: $spacing-md;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-medium;
+  }
+}
+
+/* Upload Dropzone Component */
+.upload-dropzone {
+  border: 2px dashed $color-gray-300;
+  border-radius: $border-radius-sm;
+  transition: $transition-fast;
+  background-color: rgb(249 250 251);
+  padding: $spacing-2xl $spacing-xl;
+  text-align: center;
+
+  .dark & {
+    border-color: $color-gray-600;
+    background-color: $color-gray-900;
+  }
+
+  &--active {
+    border-color: $color-blue-500;
+    background-color: rgb(239 246 255);
+
+    .dark & {
+      background-color: rgb(30 58 138);
+    }
+  }
+
+  &__icon {
+    width: $spacing-2xl;
+    height: $spacing-2xl;
+    margin: 0 auto $spacing-lg;
+    color: $color-gray-400;
+  }
+
+  &__text {
+    font-size: $font-size-lg;
+    font-weight: $font-weight-semibold;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__hint {
+    font-size: $font-size-sm;
+    color: $color-gray-500;
+
+    .dark & {
+      color: $color-gray-400;
+    }
+  }
+}
+
+/* Status Badge Component */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem $spacing-md;
+  border-radius: $border-radius-full;
+  font-size: 0.75rem;
+  font-weight: $font-weight-medium;
+
+  &--processing {
+    background-color: rgb(254 249 195);
+    color: rgb(161 98 7);
+
+    .dark & {
+      background-color: rgb(120 53 15);
+      color: rgb(253 230 138);
+    }
+  }
+
+  &--completed {
+    background-color: rgb(220 252 231);
+    color: rgb(21 128 61);
+
+    .dark & {
+      background-color: rgb(20 83 45);
+      color: rgb(187 247 208);
+    }
+  }
+
+  &--failed {
+    background-color: rgb(254 226 226);
+    color: rgb(185 28 28);
+
+    .dark & {
+      background-color: rgb(127 29 29);
+      color: rgb(252 165 165);
+    }
+  }
+
+  &--queued {
+    background-color: $color-gray-100;
+    color: $color-gray-700;
+
+    .dark & {
+      background-color: $color-gray-700;
+      color: $color-gray-200;
+    }
+  }
+
+  &__icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-right: $spacing-xs;
+  }
+
+  &__text {
+    text-transform: capitalize;
+  }
+}

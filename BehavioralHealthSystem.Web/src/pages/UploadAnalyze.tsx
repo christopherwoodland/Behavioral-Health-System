@@ -3322,10 +3322,8 @@ const UploadAnalyze: React.FC = () => {
                     </div>
                     <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2">
                       <div 
-                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-                        style={{ 
-                          width: `${csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0}%` 
-                        }}
+                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300 progress--dynamic"
+                        style={{ '--progress-width': `${csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0}%` } as React.CSSProperties}
                         role="progressbar"
                         aria-valuenow={csvProcessingProgress.currentFile}
                         aria-valuemin={0}
@@ -3472,13 +3470,13 @@ const UploadAnalyze: React.FC = () => {
                   {audioFile.duration && (
                     <div className="audio-progress">
                       <div
-                        className="audio-progress__fill progress-animated"
-                        style={{ width: `${(currentTime / audioFile.duration) * 100}%` }}
+                        className="audio-progress__fill progress-animated progress--dynamic"
+                        style={{ '--progress-width': `${(currentTime / audioFile.duration) * 100}%` } as React.CSSProperties}
                         role="progressbar"
                         aria-label="Audio playback progress"
-                        aria-valuenow={currentTime}
+                        aria-valuenow={Math.round(currentTime)}
                         aria-valuemin={0}
-                        aria-valuemax={audioFile.duration}
+                        aria-valuemax={Math.round(audioFile.duration)}
                       />
                     </div>
                   )}
@@ -3597,8 +3595,8 @@ const UploadAnalyze: React.FC = () => {
                             </div>
                             <div className="processing-progress mt-1">
                               <div
-                                className={`processing-progress__fill ${getProgressColor(progress.stage)}`}
-                                style={{ width: `${progress.progress}%` }}
+                                className={`processing-progress__fill progress--dynamic ${getProgressColor(progress.stage)}`}
+                                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
                               />
                             </div>
                           </div>
@@ -3651,11 +3649,11 @@ const UploadAnalyze: React.FC = () => {
             </div>
             <div className="processing-progress">
               <div
-                className={`processing-progress__fill progress-animated ${getProgressColor(progress.stage)}`}
-                style={{ width: `${progress.progress}%` }}
+                className={`processing-progress__fill progress-animated progress--dynamic ${getProgressColor(progress.stage)}`}
+                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
                 role="progressbar"
                 aria-label="Processing progress"
-                aria-valuenow={progress.progress}
+                aria-valuenow={Math.round(progress.progress)}
                 aria-valuemin={0}
                 aria-valuemax={100}
               />
@@ -3893,10 +3891,8 @@ const UploadAnalyze: React.FC = () => {
                   </div>
                   <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mb-2">
                     <div 
-                      className="bg-green-600 dark:bg-green-400 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${batchProcessingProgress.totalFiles > 0 ? (batchProcessingProgress.currentFile / batchProcessingProgress.totalFiles) * 100 : 0}%` 
-                      }}
+                      className="bg-green-600 dark:bg-green-400 h-2 rounded-full transition-all duration-300 progress--dynamic"
+                      style={{ '--progress-width': `${batchProcessingProgress.totalFiles > 0 ? (batchProcessingProgress.currentFile / batchProcessingProgress.totalFiles) * 100 : 0}%` } as React.CSSProperties}
                       role="progressbar"
                       aria-valuenow={batchProcessingProgress.currentFile}
                       aria-valuemin={0}

@@ -43,6 +43,9 @@ public class SessionData
     
     [JsonPropertyName("riskAssessment")]
     public RiskAssessment? RiskAssessment { get; set; }
+    
+    [JsonPropertyName("extendedRiskAssessment")]
+    public ExtendedRiskAssessment? ExtendedRiskAssessment { get; set; }
 }
 
 public class AnalysisResults

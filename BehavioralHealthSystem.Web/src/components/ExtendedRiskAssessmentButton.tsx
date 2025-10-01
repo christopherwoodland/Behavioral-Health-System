@@ -169,14 +169,14 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           : response.data;
         
         console.log('[ExtendedRiskAssessment] Wrapper success: true, checking inner response...');
-        console.log('[ExtendedRiskAssessment] response.data.success:', parsedData.success);
-        console.log('[ExtendedRiskAssessment] response.data.extendedRiskAssessment exists:', !!parsedData.extendedRiskAssessment);
+        console.log('[ExtendedRiskAssessment] parsedData.success:', parsedData.success);
+        console.log('[ExtendedRiskAssessment] parsedData.extendedRiskAssessment exists:', !!parsedData.extendedRiskAssessment);
         
-        if (response.data.success && response.data.extendedRiskAssessment) {
+        if (parsedData.success && parsedData.extendedRiskAssessment) {
           console.log('[ExtendedRiskAssessment] ✅ Assessment fetched successfully');
-          setAssessment(response.data.extendedRiskAssessment);
+          setAssessment(parsedData.extendedRiskAssessment);
           setIsLoading(false); // Make sure to stop loading when we get the result
-          onComplete?.(response.data.extendedRiskAssessment);
+          onComplete?.(parsedData.extendedRiskAssessment);
         } else {
           console.warn('[ExtendedRiskAssessment] ⚠️ Inner response missing success or extendedRiskAssessment');
         }

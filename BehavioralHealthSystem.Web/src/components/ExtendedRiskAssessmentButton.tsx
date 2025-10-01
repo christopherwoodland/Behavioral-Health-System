@@ -1,10 +1,11 @@
 /**
  * Extended Risk Assessment Button Component
  * Provides UI for triggering and displaying extended risk assessments with schizophrenia evaluation
+ * Uses async job pattern to handle long-running GPT-5/O3 calls without timeout issues
  */
 
-import React, { useState, useEffect } from 'react';
-import { Brain, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Brain, Loader2, AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { ExtendedRiskAssessmentDisplay } from './ExtendedRiskAssessmentDisplay';
 import { 
   ExtendedRiskAssessment, 
@@ -12,6 +13,45 @@ import {
   ExtendedRiskAssessmentStatusResponse 
 } from '../types/extendedRiskAssessment';
 import { apiPost, apiGet } from '../utils/api';
+
+// Job-related types
+interface ExtendedAssessmentJob {
+  jobId: string;
+  sessionId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled' | 'timedout';
+  progressPercentage: number;
+  currentStep?: string;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  processingTimeMs?: number;
+  elapsedTimeMs: number;
+  isCompleted: boolean;
+  isProcessing: boolean;
+  errorMessage?: string;
+  modelUsed?: string;
+  retryCount: number;
+  canRetry: boolean;
+}
+
+interface JobStatusResponse {
+  success: boolean;
+  job: ExtendedAssessmentJob;
+  message?: string;
+  error?: string;
+}
+
+interface StartJobResponse {
+  success: boolean;
+  message: string;
+  jobId: string;
+  instanceId: string;
+  sessionId: string;
+  statusUrl: string;
+  resultUrl: string;
+  estimatedProcessingTime: string;
+  error?: string;
+}
 
 interface ExtendedRiskAssessmentButtonProps {
   sessionId: string;
@@ -33,6 +73,29 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   const [assessment, setAssessment] = useState<ExtendedRiskAssessment | null>(existingAssessment || null);
   const [status, setStatus] = useState<ExtendedRiskAssessmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Job-related state
+  const [currentJob, setCurrentJob] = useState<ExtendedAssessmentJob | null>(null);
+  const [jobProgress, setJobProgress] = useState(0);
+  const [jobStep, setJobStep] = useState<string>('');
+  const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+  
+  // Refs for cleanup
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      if (elapsedTimeIntervalRef.current) {
+        clearInterval(elapsedTimeIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Load existing assessment on mount or when it changes
   useEffect(() => {
@@ -112,6 +175,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         if (response.data.success && response.data.extendedRiskAssessment) {
           console.log('[ExtendedRiskAssessment] ✅ Assessment fetched successfully');
           setAssessment(response.data.extendedRiskAssessment);
+          setIsLoading(false); // Make sure to stop loading when we get the result
           onComplete?.(response.data.extendedRiskAssessment);
         } else {
           console.warn('[ExtendedRiskAssessment] ⚠️ Inner response missing success or extendedRiskAssessment');
@@ -124,11 +188,16 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     }
   };
 
-  // Generate new assessment
+  // Start async job for assessment generation
   const generateAssessment = async () => {
-    console.log('[ExtendedRiskAssessment] 🚀 Starting assessment generation for session:', sessionId);
+    console.log('[ExtendedRiskAssessment] 🚀 Starting async job for session:', sessionId);
     setIsLoading(true);
     setError(null);
+    setCurrentJob(null);
+    setJobProgress(0);
+    setJobStep('');
+    setElapsedTime(0);
+    
     // Clear existing assessment when regenerating to show loading state
     if (assessment) {
       console.log('[ExtendedRiskAssessment] Clearing existing assessment for regeneration');
@@ -136,80 +205,118 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     }
 
     try {
-      console.log('[ExtendedRiskAssessment] Making POST request to generate assessment...');
-      const response = await apiPost<ExtendedRiskAssessmentResponse>(
+      console.log('[ExtendedRiskAssessment] Making POST request to start async job...');
+      const response = await apiPost<StartJobResponse>(
         `${apiBaseUrl}/api/sessions/${sessionId}/extended-risk-assessment`,
-        {},
-        { timeout: 180000 } // 3 minute timeout for GPT-5
+        {}
       );
 
-      console.log('[ExtendedRiskAssessment] 📥 Raw response received:', JSON.stringify(response, null, 2));
-      console.log('[ExtendedRiskAssessment] Response structure check:');
-      console.log('  - response.success:', response.success);
-      console.log('  - response.data exists:', !!response.data);
-      console.log('  - response.data type:', typeof response.data);
-      console.log('  - response.error:', response.error);
+      console.log('[ExtendedRiskAssessment] 📥 Job start response:', JSON.stringify(response, null, 2));
       
-      // Parse data if it's a string (sometimes API returns stringified JSON)
-      let parsedData = response.data;
-      if (response.data && typeof response.data === 'string') {
-        console.log('[ExtendedRiskAssessment] ⚠️ response.data is a string, parsing JSON...');
-        try {
-          parsedData = JSON.parse(response.data);
-          console.log('[ExtendedRiskAssessment] ✅ JSON parsed successfully');
-        } catch (parseError) {
-          console.error('[ExtendedRiskAssessment] ❌ Failed to parse JSON:', parseError);
-          setError('Failed to parse API response');
-          onError?.('Failed to parse API response');
-          return;
-        }
-      }
-      
-      if (parsedData) {
-        console.log('[ExtendedRiskAssessment] response.data structure:');
-        console.log('  - response.data.success:', parsedData.success);
-        console.log('  - response.data.message:', parsedData.message);
-        console.log('  - response.data.extendedRiskAssessment exists:', !!parsedData.extendedRiskAssessment);
-        console.log('  - response.data.error:', parsedData.error);
-      }
-
-      // Check both wrapper success and inner API response success
-      if (response.success && parsedData) {
-        console.log('[ExtendedRiskAssessment] ✅ Wrapper response successful, checking inner response...');
+      if (response.success && response.data) {
+        // Parse the JSON string response
+        const jobData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        console.log('[ExtendedRiskAssessment] ✅ Job started successfully! Job ID:', jobData.jobId);
         
-        if (parsedData.success && parsedData.extendedRiskAssessment) {
-          console.log('[ExtendedRiskAssessment] ✅✅ Inner response successful! Assessment generated.');
-          console.log('[ExtendedRiskAssessment] Assessment keys:', Object.keys(parsedData.extendedRiskAssessment));
-          setAssessment(parsedData.extendedRiskAssessment);
-          onComplete?.(parsedData.extendedRiskAssessment);
-        } else {
-          console.error('[ExtendedRiskAssessment] ❌ Inner response failed or missing extendedRiskAssessment');
-          console.error('[ExtendedRiskAssessment] response.data.success:', parsedData.success);
-          console.error('[ExtendedRiskAssessment] response.data.extendedRiskAssessment:', parsedData.extendedRiskAssessment);
-          const errorMsg = parsedData.error || parsedData.message || 'Failed to generate assessment';
-          console.error('[ExtendedRiskAssessment] Setting error:', errorMsg);
-          setError(errorMsg);
-          onError?.(errorMsg);
-        }
+        setJobStep('Job created, starting processing...');
+        setProcessingStartTime(new Date());
+        
+        // Start polling for job status
+        startJobPolling(jobData.jobId);
       } else {
-        console.error('[ExtendedRiskAssessment] ❌ Wrapper response failed');
-        console.error('[ExtendedRiskAssessment] response.success:', response.success);
-        console.error('[ExtendedRiskAssessment] response.data:', parsedData);
-        const errorMsg = response.error || 'Failed to generate assessment';
-        console.error('[ExtendedRiskAssessment] Setting error:', errorMsg);
+        console.error('[ExtendedRiskAssessment] ❌ Failed to start job');
+        const errorMsg = response.error || 'Failed to start assessment job';
         setError(errorMsg);
         onError?.(errorMsg);
+        setIsLoading(false);
       }
     } catch (err) {
-      console.error('[ExtendedRiskAssessment] ❌ Exception caught during generation:', err);
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error generating assessment';
-      console.error('[ExtendedRiskAssessment] Exception error message:', errorMsg);
+      console.error('[ExtendedRiskAssessment] ❌ Exception starting job:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error starting assessment job';
       setError(errorMsg);
       onError?.(errorMsg);
-    } finally {
-      console.log('[ExtendedRiskAssessment] Generation attempt completed, setting isLoading to false');
       setIsLoading(false);
     }
+  };
+
+  // Start polling for job completion
+  const startJobPolling = (jobId: string) => {
+    console.log('[ExtendedRiskAssessment] 🔄 Starting job polling for:', jobId);
+    
+    // Start elapsed time counter
+    elapsedTimeIntervalRef.current = setInterval(() => {
+      if (processingStartTime) {
+        const elapsed = Math.floor((Date.now() - processingStartTime.getTime()) / 1000);
+        setElapsedTime(elapsed);
+      }
+    }, 1000);
+    
+    // Poll job status every 2 seconds
+    const pollJob = async () => {
+      try {
+        const response = await apiGet<JobStatusResponse>(
+          `${apiBaseUrl}/api/jobs/${jobId}`
+        );
+        
+        // Parse response.data if it's a string
+        const jobData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+        
+        if (response.success && jobData?.job) {
+          const job = jobData.job;
+          setCurrentJob(job);
+          setJobProgress(job.progressPercentage);
+          setJobStep(job.currentStep || '');
+          
+          console.log('[ExtendedRiskAssessment] Job status:', job.status, job.progressPercentage + '%', job.currentStep);
+          
+          if (job.isCompleted) {
+            console.log('[ExtendedRiskAssessment] 🎉 Job completed!');
+            stopJobPolling();
+            
+            if (job.status === 'completed') {
+              // Job completed successfully, fetch the result
+              await fetchAssessment();
+            } else {
+              // Job failed
+              const errorMsg = job.errorMessage || 'Assessment job failed';
+              setError(errorMsg);
+              onError?.(errorMsg);
+              setIsLoading(false);
+            }
+          }
+        } else {
+          console.error('[ExtendedRiskAssessment] Failed to get job status');
+        }
+      } catch (err) {
+        console.error('[ExtendedRiskAssessment] Error polling job:', err);
+      }
+    };
+    
+    // Poll immediately and then every 2 seconds
+    pollJob();
+    pollingIntervalRef.current = setInterval(pollJob, 2000);
+  };
+
+  // Stop job polling
+  const stopJobPolling = () => {
+    console.log('[ExtendedRiskAssessment] 🛑 Stopping job polling');
+    
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    
+    if (elapsedTimeIntervalRef.current) {
+      clearInterval(elapsedTimeIntervalRef.current);
+      elapsedTimeIntervalRef.current = null;
+    }
+  };
+
+  // Format elapsed time
+  const formatElapsedTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   // If no assessment exists and not generating/checking, show generate buttons (matching RiskAssessment component)
@@ -291,7 +398,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     );
   }
 
-  // Loading state (matching RiskAssessment component)
+  // Loading state with job progress
   if (isLoading || isChecking) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -303,10 +410,46 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         <div className="text-center py-8">
           <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" aria-hidden="true" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {isLoading ? 'Generating Extended Assessment...' : 'Checking Status...'}
+            {isLoading ? 'Processing Extended Assessment...' : 'Checking Status...'}
           </h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            {isLoading ? 'This may take 30-120 seconds. Using GPT-5/O3 for comprehensive evaluation.' : 'Please wait...'}
+          
+          {/* Job Progress */}
+          {isLoading && currentJob && (
+            <div className="max-w-md mx-auto">
+              {/* Progress Bar */}
+              <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                  style={{'--progress-width': `${jobProgress}%`, width: 'var(--progress-width)'} as React.CSSProperties}
+                ></div>
+              </div>
+              
+              {/* Progress Info */}
+              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span>Progress:</span>
+                  <span className="font-medium">{jobProgress}%</span>
+                </div>
+                {jobStep && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {jobStep}
+                  </div>
+                )}
+                {elapsedTime > 0 && (
+                  <div className="flex justify-between items-center text-xs">
+                    <span>Elapsed Time:</span>
+                    <span className="font-medium flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {formatElapsedTime(elapsedTime)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <p className="text-gray-600 dark:text-gray-300 mt-4">
+            {isLoading ? 'Using GPT-5/O3 for comprehensive evaluation. This typically takes 30-120 seconds.' : 'Please wait...'}
           </p>
         </div>
       </div>
@@ -324,7 +467,8 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           </h2>
           <button type="button"
             onClick={() => {
-              console.log('[ExtendedRiskAssessment] Regenerate button clicked - calling generateAssessment()');
+              console.log('[ExtendedRiskAssessment] Regenerate button clicked - stopping polling and calling generateAssessment()');
+              stopJobPolling();
               generateAssessment();
             }}
             disabled={isLoading}

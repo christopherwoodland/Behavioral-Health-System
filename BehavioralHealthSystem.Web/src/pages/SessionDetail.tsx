@@ -854,7 +854,7 @@ const SessionDetail: React.FC = () => {
         >
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
             <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
-            AI Risk Assessment
+            AI Risk Assessment (Quick)
           </h2>
           {isRiskAssessmentExpanded ? (
             <ChevronUp className="w-5 h-5 text-gray-500" aria-hidden="true" />

@@ -1,24 +1,30 @@
+using Microsoft.DurableTask.Client;
+
 namespace BehavioralHealthSystem.Functions;
 
 /// <summary>
 /// Azure Functions for Extended Risk Assessment with Schizophrenia Evaluation (GPT-5/O3)
 /// Provides HTTP endpoints for generating and retrieving comprehensive psychiatric assessments
+/// Uses async job pattern to handle long-running GPT-5/O3 calls without timeout issues
 /// </summary>
 public class ExtendedRiskAssessmentFunctions
 {
     private readonly ILogger<ExtendedRiskAssessmentFunctions> _logger;
     private readonly IRiskAssessmentService _riskAssessmentService;
     private readonly ISessionStorageService _sessionStorageService;
+    private readonly IExtendedAssessmentJobService _jobService;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public ExtendedRiskAssessmentFunctions(
         ILogger<ExtendedRiskAssessmentFunctions> logger,
         IRiskAssessmentService riskAssessmentService,
-        ISessionStorageService sessionStorageService)
+        ISessionStorageService sessionStorageService,
+        IExtendedAssessmentJobService jobService)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _riskAssessmentService = riskAssessmentService ?? throw new ArgumentNullException(nameof(riskAssessmentService));
         _sessionStorageService = sessionStorageService ?? throw new ArgumentNullException(nameof(sessionStorageService));
+        _jobService = jobService ?? throw new ArgumentNullException(nameof(jobService));
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -27,34 +33,32 @@ public class ExtendedRiskAssessmentFunctions
     }
 
     /// <summary>
-    /// Generates an extended risk assessment with schizophrenia evaluation using GPT-5/O3
+    /// Starts an asynchronous extended risk assessment job using GPT-5/O3
     /// POST /api/sessions/{sessionId}/extended-risk-assessment
     /// </summary>
     /// <remarks>
-    /// This endpoint triggers an asynchronous extended assessment that includes:
-    /// - Comprehensive risk evaluation
-    /// - DSM-5 compliant schizophrenia assessment (Criteria A, B, C)
-    /// - Functional impairment analysis
-    /// - Differential diagnosis considerations
+    /// This endpoint immediately returns a job ID for tracking the assessment progress.
+    /// The actual processing happens asynchronously in the background to avoid timeout issues.
     /// 
-    /// Note: This operation can take 30-120 seconds due to GPT-5/O3 processing time
+    /// Use the returned job ID to poll for status using GET /api/jobs/{jobId}
     /// </remarks>
-    [Function("GenerateExtendedRiskAssessment")]
-    public async Task<HttpResponseData> GenerateExtendedRiskAssessment(
+    [Function("StartExtendedRiskAssessmentJob")]
+    public async Task<HttpResponseData> StartExtendedRiskAssessmentJob(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/{sessionId}/extended-risk-assessment")] HttpRequestData req,
+        [DurableClient] DurableTaskClient durableClient,
         string sessionId)
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Starting extended risk assessment generation for session: {SessionId}", 
-                nameof(GenerateExtendedRiskAssessment), sessionId);
+            _logger.LogInformation("[{FunctionName}] Starting extended risk assessment job for session: {SessionId}", 
+                nameof(StartExtendedRiskAssessmentJob), sessionId);
 
             // Validate session exists
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
             {
                 _logger.LogWarning("[{FunctionName}] Session not found: {SessionId}", 
-                    nameof(GenerateExtendedRiskAssessment), sessionId);
+                    nameof(StartExtendedRiskAssessmentJob), sessionId);
                 
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
@@ -65,90 +69,45 @@ public class ExtendedRiskAssessmentFunctions
                 return notFoundResponse;
             }
 
-            // Check if extended assessment already exists
-            if (sessionData.ExtendedRiskAssessment != null)
-            {
-                _logger.LogInformation("[{FunctionName}] Extended risk assessment already exists for session: {SessionId}", 
-                    nameof(GenerateExtendedRiskAssessment), sessionId);
-                
-                var existingResponse = req.CreateResponse(HttpStatusCode.OK);
-                await existingResponse.WriteStringAsync(JsonSerializer.Serialize(new
-                {
-                    success = true,
-                    message = "Extended risk assessment already exists",
-                    extendedRiskAssessment = sessionData.ExtendedRiskAssessment,
-                    cached = true
-                }, _jsonOptions));
-                return existingResponse;
-            }
-
-            // Generate extended risk assessment (this can take 30-120 seconds)
-            var startTime = DateTime.UtcNow;
-            var extendedRiskAssessment = await _riskAssessmentService.GenerateExtendedRiskAssessmentAsync(sessionData);
-            var elapsedSeconds = (DateTime.UtcNow - startTime).TotalSeconds;
+            // Create a new job
+            var jobId = await _jobService.CreateJobAsync(sessionId);
             
-            if (extendedRiskAssessment != null)
-            {
-                // Update session with the extended risk assessment
-                sessionData.ExtendedRiskAssessment = extendedRiskAssessment;
-                sessionData.UpdatedAt = DateTime.UtcNow.ToString("O");
-                
-                var updateSuccess = await _sessionStorageService.UpdateSessionDataAsync(sessionData);
-                
-                if (updateSuccess)
+            // Start the durable function orchestration
+            var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
+                "ExtendedAssessmentOrchestrator",
+                new ExtendedAssessmentOrchestrationInput
                 {
-                    _logger.LogInformation("[{FunctionName}] Extended risk assessment generated and saved successfully for session: {SessionId} in {ElapsedSeconds}s", 
-                        nameof(GenerateExtendedRiskAssessment), sessionId, elapsedSeconds);
+                    JobId = jobId,
+                    SessionId = sessionId
+                });
 
-                    var response = req.CreateResponse(HttpStatusCode.OK);
-                    await response.WriteStringAsync(JsonSerializer.Serialize(new
-                    {
-                        success = true,
-                        message = "Extended risk assessment generated successfully",
-                        extendedRiskAssessment = extendedRiskAssessment,
-                        processingTimeSeconds = elapsedSeconds,
-                        cached = false
-                    }, _jsonOptions));
-                    return response;
-                }
-                else
-                {
-                    _logger.LogError("[{FunctionName}] Failed to update session {SessionId} with extended risk assessment", 
-                        nameof(GenerateExtendedRiskAssessment), sessionId);
-                    
-                    var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                    await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
-                    {
-                        success = false,
-                        message = "Extended risk assessment generated but failed to save to session"
-                    }, _jsonOptions));
-                    return errorResponse;
-                }
-            }
-            else
+            _logger.LogInformation("[{FunctionName}] Started orchestration {InstanceId} for job {JobId}, session {SessionId}", 
+                nameof(StartExtendedRiskAssessmentJob), instanceId, jobId, sessionId);
+
+            var response = req.CreateResponse(HttpStatusCode.Accepted);
+            await response.WriteStringAsync(JsonSerializer.Serialize(new
             {
-                _logger.LogError("[{FunctionName}] Failed to generate extended risk assessment for session: {SessionId}", 
-                    nameof(GenerateExtendedRiskAssessment), sessionId);
-                
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    message = "Failed to generate extended risk assessment. This may be due to Azure OpenAI configuration, timeout, or model availability."
-                }, _jsonOptions));
-                return errorResponse;
-            }
+                success = true,
+                message = "Extended risk assessment job started",
+                jobId = jobId,
+                instanceId = instanceId,
+                sessionId = sessionId,
+                statusUrl = $"/api/jobs/{jobId}",
+                resultUrl = $"/api/sessions/{sessionId}/extended-risk-assessment",
+                estimatedProcessingTime = "30-120 seconds"
+            }, _jsonOptions));
+            return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error generating extended risk assessment for session: {SessionId}", 
-                nameof(GenerateExtendedRiskAssessment), sessionId);
+            _logger.LogError(ex, "[{FunctionName}] Error starting extended risk assessment job for session: {SessionId}", 
+                nameof(StartExtendedRiskAssessmentJob), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
             {
                 success = false,
-                message = "Error generating extended risk assessment",
+                message = "Error starting extended risk assessment job",
                 error = ex.Message
             }, _jsonOptions));
             return errorResponse;
@@ -298,6 +257,80 @@ public class ExtendedRiskAssessmentFunctions
     }
 
     /// <summary>
+    /// Gets the status of an extended assessment job
+    /// GET /api/jobs/{jobId}
+    /// </summary>
+    /// <remarks>
+    /// Use this endpoint to poll for job completion status and progress
+    /// </remarks>
+    [Function("GetExtendedAssessmentJobStatus")]
+    public async Task<HttpResponseData> GetExtendedAssessmentJobStatus(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "jobs/{jobId}")] HttpRequestData req,
+        string jobId)
+    {
+        try
+        {
+            _logger.LogInformation("[{FunctionName}] Getting job status for: {JobId}", 
+                nameof(GetExtendedAssessmentJobStatus), jobId);
+
+            var job = await _jobService.GetJobAsync(jobId);
+            if (job == null)
+            {
+                _logger.LogWarning("[{FunctionName}] Job not found: {JobId}", 
+                    nameof(GetExtendedAssessmentJobStatus), jobId);
+                
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = $"Job not found: {jobId}"
+                }, _jsonOptions));
+                return notFoundResponse;
+            }
+
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(JsonSerializer.Serialize(new
+            {
+                success = true,
+                job = new
+                {
+                    jobId = job.JobId,
+                    sessionId = job.SessionId,
+                    status = job.Status.ToString().ToLowerInvariant(),
+                    progressPercentage = job.ProgressPercentage,
+                    currentStep = job.CurrentStep,
+                    createdAt = job.CreatedAt,
+                    startedAt = job.StartedAt,
+                    completedAt = job.CompletedAt,
+                    processingTimeMs = job.ProcessingTimeMs,
+                    elapsedTimeMs = job.ElapsedTime.TotalMilliseconds,
+                    isCompleted = job.IsCompleted,
+                    isProcessing = job.IsProcessing,
+                    errorMessage = job.ErrorMessage,
+                    modelUsed = job.ModelUsed,
+                    retryCount = job.RetryCount,
+                    canRetry = job.CanRetry
+                }
+            }, _jsonOptions));
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{FunctionName}] Error getting job status for: {JobId}", 
+                nameof(GetExtendedAssessmentJobStatus), jobId);
+
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "Error getting job status",
+                error = ex.Message
+            }, _jsonOptions));
+            return errorResponse;
+        }
+    }
+
+    /// <summary>
     /// Gets the status/availability of extended risk assessment for a session
     /// GET /api/sessions/{sessionId}/extended-risk-assessment/status
     /// </summary>
@@ -357,6 +390,75 @@ public class ExtendedRiskAssessmentFunctions
             {
                 success = false,
                 message = "Error checking extended risk assessment status",
+                error = ex.Message
+            }, _jsonOptions));
+            return errorResponse;
+        }
+    }
+
+    /// <summary>
+    /// Gets the status of an async job by jobId
+    /// GET /api/jobs/{jobId}
+    /// </summary>
+    [Function("GetJobStatus")]
+    public async Task<HttpResponseData> GetJobStatus(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "jobs/{jobId}")] HttpRequestData req,
+        string jobId)
+    {
+        try
+        {
+            _logger.LogInformation("[{FunctionName}] Getting job status for: {JobId}", 
+                nameof(GetJobStatus), jobId);
+
+            // Get job from service
+            var job = await _jobService.GetJobAsync(jobId);
+            
+            if (job == null)
+            {
+                _logger.LogWarning("[{FunctionName}] Job not found: {JobId}", nameof(GetJobStatus), jobId);
+                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    success = false,
+                    message = $"Job not found: {jobId}"
+                }, _jsonOptions));
+                return notFoundResponse;
+            }
+
+            // Return job status
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            await response.WriteStringAsync(JsonSerializer.Serialize(new
+            {
+                success = true,
+                job = new
+                {
+                    jobId = job.JobId,
+                    sessionId = job.SessionId,
+                    status = job.Status.ToString().ToLowerInvariant(),
+                    progress = job.ProgressPercentage,
+                    currentStep = job.CurrentStep,
+                    elapsedSeconds = (int)job.ElapsedTime.TotalSeconds,
+                    createdAt = job.CreatedAt,
+                    startedAt = job.StartedAt,
+                    completedAt = job.CompletedAt,
+                    errorMessage = job.ErrorMessage,
+                    retryCount = job.RetryCount,
+                    canRetry = job.CanRetry,
+                    isCompleted = job.IsCompleted
+                }
+            }, _jsonOptions));
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{FunctionName}] Error getting job status for: {JobId}", 
+                nameof(GetJobStatus), jobId);
+
+            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
+            {
+                success = false,
+                message = "Error getting job status",
                 error = ex.Message
             }, _jsonOptions));
             return errorResponse;

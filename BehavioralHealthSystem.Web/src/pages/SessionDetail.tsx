@@ -20,7 +20,9 @@ import {
   TrendingUp,
   Brain,
   Heart,
-  Info
+  Info,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
@@ -28,6 +30,7 @@ import { fileGroupService } from '../services/fileGroupService';
 import { formatDateTime, formatRelativeTime, formatScoreCategory } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
+import { ExtendedRiskAssessmentButton } from '../components/ExtendedRiskAssessmentButton';
 import type { SessionData, AppError, FileGroup } from '../types';
 
 // Status configuration for consistent styling
@@ -57,6 +60,12 @@ const SessionDetail: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  
+  // Collapsible section states
+  const [isTranscriptionExpanded, setIsTranscriptionExpanded] = useState(true);
+  const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
+  const [isRiskAssessmentExpanded, setIsRiskAssessmentExpanded] = useState(true);
+  const [isExtendedRiskExpanded, setIsExtendedRiskExpanded] = useState(true);
 
   // Load group data when session has a groupId
   const loadGroupData = useCallback(async (groupId: string) => {
@@ -580,12 +589,34 @@ const SessionDetail: React.FC = () => {
       </div>
 
       {/* Audio Transcription */}
-      <TranscriptionComponent
-        audioUrl={session.audioUrl}
-        sessionId={session.sessionId}
-        audioFileName={session.audioFileName}
-        existingTranscription={session.transcription}
-      />
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <button
+          onClick={() => setIsTranscriptionExpanded(!isTranscriptionExpanded)}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          aria-expanded={isTranscriptionExpanded}
+          aria-controls="transcription-content"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+            <FileAudio className="w-5 h-5 mr-2" aria-hidden="true" />
+            Audio Transcription
+          </h2>
+          {isTranscriptionExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          )}
+        </button>
+        {isTranscriptionExpanded && (
+          <div id="transcription-content" className="border-t border-gray-200 dark:border-gray-700">
+            <TranscriptionComponent
+              audioUrl={session.audioUrl}
+              sessionId={session.sessionId}
+              audioFileName={session.audioFileName}
+              existingTranscription={session.transcription}
+            />
+          </div>
+        )}
+      </div>
 
       {/* User Metadata */}
       {session.userMetadata && (
@@ -689,11 +720,25 @@ const SessionDetail: React.FC = () => {
 
       {/* Analysis Results */}
       {(session.analysisResults || session.prediction) && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-            <Activity className="w-5 h-5 mr-2" aria-hidden="true" />
-            Analysis Results
-          </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <button
+            onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            aria-expanded={isAnalysisExpanded}
+            aria-controls="analysis-content"
+          >
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+              <Activity className="w-5 h-5 mr-2" aria-hidden="true" />
+              Analysis Results
+            </h2>
+            {isAnalysisExpanded ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" aria-hidden="true" />
+            )}
+          </button>
+          {isAnalysisExpanded && (
+            <div id="analysis-content" className="p-6 border-t border-gray-200 dark:border-gray-700">
           
           <div className="space-y-6">
             {/* Mental Health Scores */}
@@ -794,17 +839,76 @@ const SessionDetail: React.FC = () => {
               </div>
             )}
           </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* AI Risk Assessment */}
-      <RiskAssessmentComponent 
-        sessionId={session.sessionId}
-        existingAssessment={session.riskAssessment || null}
-        onAssessmentUpdated={(assessment) => {
-          setSession(prev => prev ? { ...prev, riskAssessment: assessment } : null);
-        }}
-      />
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <button
+          onClick={() => setIsRiskAssessmentExpanded(!isRiskAssessmentExpanded)}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          aria-expanded={isRiskAssessmentExpanded}
+          aria-controls="risk-assessment-content"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+            <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
+            AI Risk Assessment (Quick)
+          </h2>
+          {isRiskAssessmentExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          )}
+        </button>
+        {isRiskAssessmentExpanded && (
+          <div id="risk-assessment-content" className="border-t border-gray-200 dark:border-gray-700">
+                  <RiskAssessmentComponent 
+              sessionId={session.sessionId}
+              existingAssessment={session.riskAssessment || null}
+              onAssessmentUpdated={(assessment) => {
+                setSession(prev => prev ? { ...prev, riskAssessment: assessment } : null);
+              }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Extended AI Risk Assessment */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <button
+          onClick={() => setIsExtendedRiskExpanded(!isExtendedRiskExpanded)}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+          aria-expanded={isExtendedRiskExpanded}
+          aria-controls="extended-risk-content"
+        >
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+            <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
+            AI Risk Assessment (Extended)
+          </h2>
+          {isExtendedRiskExpanded ? (
+            <ChevronUp className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-500" aria-hidden="true" />
+          )}
+        </button>
+        {isExtendedRiskExpanded && (
+          <div id="extended-risk-content" className="border-t border-gray-200 dark:border-gray-700">
+                  <ExtendedRiskAssessmentButton
+              sessionId={session.sessionId}
+              apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
+              existingAssessment={session.extendedRiskAssessment}
+              onComplete={(assessment) => {
+                setSession(prev => prev ? { ...prev, extendedRiskAssessment: assessment } : null);
+              }}
+              onError={(errorMessage) => {
+                announceToScreenReader(`Extended assessment error: ${errorMessage}`);
+              }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -113,7 +113,7 @@ public class ExtendedAssessmentOrchestrator
                 CurrentStep = "Saving assessment results to session..."
             });
 
-            var saveResult = await context.CallActivityAsync<bool>("SaveAssessmentToSession", new
+            var saveResult = await context.CallActivityAsync<bool>("SaveAssessmentToSession", new SaveAssessmentInput
             {
                 JobId = input.JobId,
                 SessionId = input.SessionId,
@@ -247,4 +247,14 @@ public class AssessmentGenerationInput
 {
     public string JobId { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Input for save assessment activity
+/// </summary>
+public class SaveAssessmentInput
+{
+    public string JobId { get; set; } = string.Empty;
+    public string SessionId { get; set; } = string.Empty;
+    public ExtendedRiskAssessment Assessment { get; set; } = null!;
 }

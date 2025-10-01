@@ -145,7 +145,7 @@ public class ExtendedAssessmentActivities
     /// Saves the generated assessment to the session
     /// </summary>
     [Function("SaveAssessmentToSession")]
-    public async Task<bool> SaveAssessmentToSession([ActivityTrigger] dynamic input)
+    public async Task<bool> SaveAssessmentToSession([ActivityTrigger] SaveAssessmentInput input)
     {
         string jobId = input.JobId;
         string sessionId = input.SessionId;

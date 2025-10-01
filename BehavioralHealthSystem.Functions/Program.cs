@@ -168,6 +168,10 @@ var host = new HostBuilder()
         // Risk Assessment Service (no longer needs HttpClient)
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         
+        // Extended Assessment Job Service
+        services.AddMemoryCache();
+        services.AddScoped<IExtendedAssessmentJobService, ExtendedAssessmentJobService>();
+        
         // Grammar Correction Service
         services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();
         

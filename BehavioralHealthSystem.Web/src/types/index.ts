@@ -1,8 +1,14 @@
+// Import ExtendedRiskAssessment from separate file
+import type { ExtendedRiskAssessment } from './extendedRiskAssessment';
+
 // API Types
 export interface User {
   id: string;
   createdAt: string;
 }
+
+// Re-export ExtendedRiskAssessment for convenience
+export type { ExtendedRiskAssessment };
 
 export interface SessionMetadata {
   age?: number;
@@ -128,6 +134,7 @@ export interface SessionData {
     completedAt: string;
   };
   riskAssessment?: RiskAssessment;
+  extendedRiskAssessment?: ExtendedRiskAssessment;
 }
 
 export interface RiskAssessment {

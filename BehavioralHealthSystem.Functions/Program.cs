@@ -98,6 +98,21 @@ var host = new HostBuilder()
             options.Enabled = config.GetValue<bool>("AZURE_OPENAI_ENABLED", false);
         });
 
+        // Extended Assessment (GPT-5/O3) Configuration
+        services.Configure<ExtendedAssessmentOpenAIOptions>(options =>
+        {
+            var config = context.Configuration;
+            options.Endpoint = config["EXTENDED_ASSESSMENT_OPENAI_ENDPOINT"] ?? string.Empty;
+            options.ApiKey = config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"] ?? string.Empty;
+            options.DeploymentName = config["EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT"] ?? string.Empty;
+            options.ApiVersion = config["EXTENDED_ASSESSMENT_OPENAI_API_VERSION"] ?? "2024-08-01-preview";
+            options.MaxTokens = config.GetValue<int>("EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS", 4000);
+            options.Temperature = config.GetValue<double>("EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE", 0.2);
+            options.TimeoutSeconds = config.GetValue<int>("EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS", 120);
+            options.Enabled = config.GetValue<bool>("EXTENDED_ASSESSMENT_OPENAI_ENABLED", false);
+            options.UseFallbackToStandardConfig = config.GetValue<bool>("EXTENDED_ASSESSMENT_USE_FALLBACK", true);
+        });
+
         // HTTP Client with policies - Force immediate configuration
         services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
             .ConfigureHttpClient((serviceProvider, client) =>
@@ -152,6 +167,10 @@ var host = new HostBuilder()
         
         // Risk Assessment Service (no longer needs HttpClient)
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
+        
+        // Extended Assessment Job Service
+        services.AddMemoryCache();
+        services.AddScoped<IExtendedAssessmentJobService, ExtendedAssessmentJobService>();
         
         // Grammar Correction Service
         services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();

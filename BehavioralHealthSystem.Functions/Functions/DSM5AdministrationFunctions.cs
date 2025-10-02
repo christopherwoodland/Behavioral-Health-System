@@ -51,23 +51,25 @@ public class DSM5AdministrationFunctions
             var requestBody = await req.ReadAsStringAsync();
             var request = JsonSerializer.Deserialize<DSM5ExtractionRequest>(requestBody!, _jsonOptions);
 
-            if (request == null || string.IsNullOrEmpty(request.PdfUrl))
+            if (request == null || (string.IsNullOrEmpty(request.PdfUrl) && string.IsNullOrEmpty(request.PdfBase64)))
             {
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new
                 {
                     success = false,
-                    message = "Invalid request. 'pdfUrl' is required."
+                    message = "Invalid request. Either 'pdfUrl' or 'pdfBase64' is required."
                 }, _jsonOptions));
                 return badRequestResponse;
             }
 
-            _logger.LogInformation("[{FunctionName}] Extracting from PDF: {PdfUrl}, Pages: {PageRanges}", 
-                nameof(ValidateAndExtractDSM5Data), request.PdfUrl, request.PageRanges ?? "all");
+            var sourceType = !string.IsNullOrEmpty(request.PdfUrl) ? "URL" : "Base64";
+            _logger.LogInformation("[{FunctionName}] Extracting from PDF ({SourceType}), Pages: {PageRanges}", 
+                nameof(ValidateAndExtractDSM5Data), sourceType, request.PageRanges ?? "all");
 
             // Extract data using Document Intelligence
             var extractionResult = await _dsm5DataService.ExtractDiagnosticCriteriaAsync(
                 request.PdfUrl, 
+                request.PdfBase64,
                 request.PageRanges, 
                 request.AutoUpload);
 
@@ -393,7 +395,8 @@ public class DSM5AdministrationFunctions
 // Request/Response DTOs
 public class DSM5ExtractionRequest
 {
-    public string PdfUrl { get; set; } = string.Empty;
+    public string? PdfUrl { get; set; }  // HTTP/HTTPS URL to PDF
+    public string? PdfBase64 { get; set; }  // Base64-encoded PDF data (alternative to PdfUrl)
     public string? PageRanges { get; set; } // "123-124,200-205" or null for all pages
     public bool AutoUpload { get; set; } = false;
 }

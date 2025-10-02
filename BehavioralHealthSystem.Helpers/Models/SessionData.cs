@@ -46,6 +46,9 @@ public class SessionData
     
     [JsonPropertyName("extendedRiskAssessment")]
     public ExtendedRiskAssessment? ExtendedRiskAssessment { get; set; }
+    
+    [JsonPropertyName("multiConditionAssessment")]
+    public MultiConditionExtendedRiskAssessment? MultiConditionAssessment { get; set; }
 }
 
 public class AnalysisResults

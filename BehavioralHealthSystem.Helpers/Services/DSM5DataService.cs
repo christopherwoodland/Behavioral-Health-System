@@ -78,19 +78,39 @@ public class DSM5DataService : IDSM5DataService
         _ = EnsureContainerExistsAsync();
     }
 
-    public async Task<DSM5ExtractionResult> ExtractDiagnosticCriteriaAsync(string pdfUrl, string? pageRanges = null, bool autoUpload = false)
+    public async Task<DSM5ExtractionResult> ExtractDiagnosticCriteriaAsync(string? pdfUrl = null, string? pdfBase64 = null, string? pageRanges = null, bool autoUpload = false)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         
         try
         {
-            _logger.LogInformation("[{MethodName}] Starting DSM-5 extraction from PDF: {PdfUrl}, Pages: {PageRanges}",
-                nameof(ExtractDiagnosticCriteriaAsync), pdfUrl, pageRanges ?? "all");
+            var sourceType = !string.IsNullOrEmpty(pdfUrl) ? "URL" : "Base64";
+            _logger.LogInformation("[{MethodName}] Starting DSM-5 extraction from PDF ({SourceType}), Pages: {PageRanges}",
+                nameof(ExtractDiagnosticCriteriaAsync), sourceType, pageRanges ?? "all");
+
+            // Get PDF bytes from either URL or base64
+            byte[] pdfBytes;
+            if (!string.IsNullOrEmpty(pdfUrl))
+            {
+                _logger.LogInformation("[{MethodName}] Downloading PDF from URL", nameof(ExtractDiagnosticCriteriaAsync));
+                pdfBytes = await DownloadPdfAsBytesAsync(pdfUrl);
+            }
+            else if (!string.IsNullOrEmpty(pdfBase64))
+            {
+                _logger.LogInformation("[{MethodName}] Decoding PDF from base64", nameof(ExtractDiagnosticCriteriaAsync));
+                pdfBytes = Convert.FromBase64String(pdfBase64);
+            }
+            else
+            {
+                throw new ArgumentException("Either pdfUrl or pdfBase64 must be provided");
+            }
+
+            _logger.LogInformation("[{MethodName}] PDF size: {Size} bytes", nameof(ExtractDiagnosticCriteriaAsync), pdfBytes.Length);
 
             // Step 1: Analyze the PDF with Document Intelligence
             var analyzeRequest = new AnalyzeDocumentContent
             {
-                Base64Source = BinaryData.FromBytes(await DownloadPdfAsBytesAsync(pdfUrl))
+                Base64Source = BinaryData.FromBytes(pdfBytes)
             };
 
             var operation = await _documentClient.AnalyzeDocumentAsync(

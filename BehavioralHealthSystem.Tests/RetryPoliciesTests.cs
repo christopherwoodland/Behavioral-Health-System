@@ -3,7 +3,6 @@ using BehavioralHealthSystem.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Polly;
-using Polly.Timeout;
 
 namespace BehavioralHealthSystem.Tests;
 

@@ -31,6 +31,7 @@ import { formatDateTime, formatRelativeTime, formatScoreCategory } from '../util
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
 import { ExtendedRiskAssessmentButton } from '../components/ExtendedRiskAssessmentButton';
+import { DSM5ConditionSelector } from '../components/DSM5ConditionSelector';
 import type { SessionData, AppError, FileGroup } from '../types';
 
 // Status configuration for consistent styling
@@ -66,6 +67,9 @@ const SessionDetail: React.FC = () => {
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
   const [isRiskAssessmentExpanded, setIsRiskAssessmentExpanded] = useState(true);
   const [isExtendedRiskExpanded, setIsExtendedRiskExpanded] = useState(true);
+  
+  // DSM-5 condition selection state
+  const [selectedDSM5Conditions, setSelectedDSM5Conditions] = useState<string[]>([]);
 
   // Load group data when session has a groupId
   const loadGroupData = useCallback(async (groupId: string) => {
@@ -895,17 +899,47 @@ const SessionDetail: React.FC = () => {
         </button>
         {isExtendedRiskExpanded && (
           <div id="extended-risk-content" className="border-t border-gray-200 dark:border-gray-700">
-                  <ExtendedRiskAssessmentButton
-              sessionId={session.sessionId}
-              apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
-              existingAssessment={session.extendedRiskAssessment}
-              onComplete={(assessment) => {
-                setSession(prev => prev ? { ...prev, extendedRiskAssessment: assessment } : null);
-              }}
-              onError={(errorMessage) => {
-                announceToScreenReader(`Extended assessment error: ${errorMessage}`);
-              }}
-            />
+            <div className="p-6 space-y-6">
+              {/* DSM-5 Condition Selection */}
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      DSM-5 Multi-Condition Assessment
+                    </h4>
+                    <p className="mt-1 text-sm text-blue-800 dark:text-blue-200">
+                      Select up to 5 mental health conditions from the DSM-5 to include in the AI-powered extended risk assessment. 
+                      The assessment will analyze the session transcript against the diagnostic criteria for each selected condition.
+                    </p>
+                  </div>
+                </div>
+
+                <DSM5ConditionSelector
+                  selectedConditions={selectedDSM5Conditions}
+                  onSelectionChange={setSelectedDSM5Conditions}
+                  maxSelections={5}
+                  disabled={!session.transcription || loading || isRefreshing}
+                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                />
+              </div>
+
+              {/* Extended Assessment Button */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <ExtendedRiskAssessmentButton
+                  sessionId={session.sessionId}
+                  apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
+                  existingAssessment={session.extendedRiskAssessment}
+                  selectedDSM5Conditions={selectedDSM5Conditions}
+                  onComplete={(assessment) => {
+                    setSession(prev => prev ? { ...prev, extendedRiskAssessment: assessment } : null);
+                  }}
+                  onError={(errorMessage) => {
+                    announceToScreenReader(`Extended assessment error: ${errorMessage}`);
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>

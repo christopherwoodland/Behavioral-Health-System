@@ -1,6 +1,5 @@
 using Azure;
 using Azure.AI.OpenAI;
-using BehavioralHealthSystem.Models;
 
 namespace BehavioralHealthSystem.Services;
 

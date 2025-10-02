@@ -57,6 +57,7 @@ interface ExtendedRiskAssessmentButtonProps {
   sessionId: string;
   apiBaseUrl: string;
   existingAssessment?: ExtendedRiskAssessment | null;
+  selectedDSM5Conditions?: string[];
   onComplete?: (assessment: ExtendedRiskAssessment) => void;
   onError?: (error: string) => void;
 }
@@ -65,6 +66,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   sessionId,
   apiBaseUrl,
   existingAssessment,
+  selectedDSM5Conditions = [],
   onComplete,
   onError
 }) => {
@@ -206,9 +208,12 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
     try {
       console.log('[ExtendedRiskAssessment] Making POST request to start async job...');
+      console.log('[ExtendedRiskAssessment] Selected DSM-5 conditions:', selectedDSM5Conditions);
       const response = await apiPost<StartJobResponse>(
         `${apiBaseUrl}/api/sessions/${sessionId}/extended-risk-assessment`,
-        {}
+        {
+          dsm5ConditionIds: selectedDSM5Conditions.length > 0 ? selectedDSM5Conditions : undefined
+        }
       );
 
       console.log('[ExtendedRiskAssessment] 📥 Job start response:', JSON.stringify(response, null, 2));

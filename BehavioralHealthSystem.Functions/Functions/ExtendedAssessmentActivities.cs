@@ -1,5 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
-
 namespace BehavioralHealthSystem.Functions;
 
 /// <summary>

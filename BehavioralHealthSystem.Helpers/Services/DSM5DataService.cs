@@ -3,7 +3,6 @@ using Azure.AI.DocumentIntelligence;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.Extensions.Configuration;
 using System.Text.RegularExpressions;
 
 namespace BehavioralHealthSystem.Services;
@@ -32,18 +31,40 @@ public class DSM5DataService : IDSM5DataService
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
-        // Initialize Azure Document Intelligence client with Managed Identity
+        // Initialize Azure Document Intelligence client
         var documentEndpoint = _configuration["DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT"] 
             ?? throw new InvalidOperationException("DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT configuration missing");
         
-        _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new DefaultAzureCredential());
+        // Check for API key first (local development), then fall back to Managed Identity (production)
+        var documentApiKey = _configuration["DSM5_DOCUMENT_INTELLIGENCE_KEY"];
+        if (!string.IsNullOrWhiteSpace(documentApiKey))
+        {
+            _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new AzureKeyCredential(documentApiKey));
+            _logger.LogInformation("[{MethodName}] Initialized Document Intelligence client with API key", nameof(DSM5DataService));
+        }
+        else
+        {
+            _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new DefaultAzureCredential());
+            _logger.LogInformation("[{MethodName}] Initialized Document Intelligence client with Managed Identity", nameof(DSM5DataService));
+        }
 
-        // Initialize Blob Storage client with Managed Identity
+        // Initialize Blob Storage client
         var storageAccountName = _configuration["DSM5_STORAGE_ACCOUNT_NAME"]
             ?? throw new InvalidOperationException("DSM5_STORAGE_ACCOUNT_NAME configuration missing");
         
-        var blobServiceUri = $"https://{storageAccountName}.blob.core.windows.net";
-        _blobServiceClient = new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential());
+        // Check for connection string first (local development), then fall back to Managed Identity (production)
+        var storageConnectionString = _configuration.GetConnectionString("AzureWebJobsStorage") ?? _configuration["AzureWebJobsStorage"];
+        if (!string.IsNullOrWhiteSpace(storageConnectionString))
+        {
+            _blobServiceClient = new BlobServiceClient(storageConnectionString);
+            _logger.LogInformation("[{MethodName}] Initialized Blob Storage client with connection string", nameof(DSM5DataService));
+        }
+        else
+        {
+            var blobServiceUri = $"https://{storageAccountName}.blob.core.windows.net";
+            _blobServiceClient = new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential());
+            _logger.LogInformation("[{MethodName}] Initialized Blob Storage client with Managed Identity", nameof(DSM5DataService));
+        }
 
         _containerName = _configuration["DSM5_CONTAINER_NAME"] ?? DSM5_CONTAINER_NAME;
 

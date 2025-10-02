@@ -1,5 +1,6 @@
 using Azure;
 using Azure.AI.OpenAI;
+using BehavioralHealthSystem.Models;
 
 namespace BehavioralHealthSystem.Services;
 
@@ -843,6 +844,330 @@ public class RiskAssessmentService : IRiskAssessmentService
             _logger.LogError(ex, "[{MethodName}] Error parsing extended risk assessment response. Response length: {Length}", 
                 nameof(ParseExtendedRiskAssessmentResponse), response?.Length ?? 0);
             return null;
+        }
+    }
+    
+    #endregion
+    
+    #region Multi-Condition Assessment Methods
+    
+    public async Task<MultiConditionExtendedRiskAssessment?> GenerateMultiConditionAssessmentAsync(SessionData sessionData, List<string> selectedConditions, AssessmentOptions? options = null)
+    {
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        
+        try
+        {
+            _logger.LogInformation("[{MethodName}] Starting multi-condition assessment for session {SessionId} with {ConditionCount} conditions", 
+                nameof(GenerateMultiConditionAssessmentAsync), sessionData.SessionId, selectedConditions.Count);
+
+            if (!selectedConditions.Any())
+            {
+                _logger.LogWarning("[{MethodName}] No conditions selected for assessment", nameof(GenerateMultiConditionAssessmentAsync));
+                return null;
+            }
+
+            // Check if extended assessment is available
+            bool isConfigured = (_extendedOpenAIOptions.Enabled && 
+                                !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint) && 
+                                !string.IsNullOrEmpty(_extendedOpenAIOptions.ApiKey)) ||
+                               (_extendedOpenAIOptions.UseFallbackToStandardConfig && _openAIOptions.Enabled);
+            
+            if (!isConfigured)
+            {
+                _logger.LogWarning("[{MethodName}] Extended assessment is not available. Cannot perform multi-condition assessment.", 
+                    nameof(GenerateMultiConditionAssessmentAsync));
+                return null;
+            }
+
+            // Get DSM-5 condition data (this would normally use the DSM5DataService)
+            var conditionData = await GetConditionDataAsync(selectedConditions);
+            
+            // Build the multi-condition assessment prompt
+            var prompt = BuildMultiConditionAssessmentPrompt(sessionData, conditionData, options);
+            
+            // Call extended Azure OpenAI
+            var openAIResponse = await CallAzureOpenAIForExtendedAssessmentAsync(prompt);
+            
+            if (openAIResponse != null)
+            {
+                var multiConditionAssessment = ParseMultiConditionAssessmentResponse(openAIResponse, selectedConditions);
+                
+                if (multiConditionAssessment != null)
+                {
+                    stopwatch.Stop();
+                    multiConditionAssessment.ProcessingTimeMs = stopwatch.ElapsedMilliseconds;
+                    multiConditionAssessment.EvaluatedConditions = selectedConditions;
+                    multiConditionAssessment.IsMultiCondition = true;
+                    
+                    _logger.LogInformation("[{MethodName}] Multi-condition assessment generated successfully for session {SessionId} in {ElapsedMs}ms", 
+                        nameof(GenerateMultiConditionAssessmentAsync), sessionData.SessionId, stopwatch.ElapsedMilliseconds);
+                    
+                    return multiConditionAssessment;
+                }
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _logger.LogError(ex, "[{MethodName}] Error generating multi-condition assessment for session {SessionId} in {ElapsedMs}ms", 
+                nameof(GenerateMultiConditionAssessmentAsync), sessionData.SessionId, stopwatch.ElapsedMilliseconds);
+            return null;
+        }
+    }
+
+    public async Task<bool> UpdateSessionWithMultiConditionAssessmentAsync(string sessionId, List<string> selectedConditions, AssessmentOptions? options = null)
+    {
+        try
+        {
+            var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
+            if (sessionData == null)
+            {
+                _logger.LogWarning("[{MethodName}] Session {SessionId} not found for multi-condition assessment update", 
+                    nameof(UpdateSessionWithMultiConditionAssessmentAsync), sessionId);
+                return false;
+            }
+
+            // Generate multi-condition assessment if not already present
+            if (sessionData.MultiConditionAssessment == null)
+            {
+                sessionData.MultiConditionAssessment = await GenerateMultiConditionAssessmentAsync(sessionData, selectedConditions, options);
+                
+                if (sessionData.MultiConditionAssessment != null)
+                {
+                    sessionData.UpdatedAt = DateTime.UtcNow.ToString("O");
+                    var success = await _sessionStorageService.UpdateSessionDataAsync(sessionData);
+                    
+                    if (success)
+                    {
+                        _logger.LogInformation("[{MethodName}] Session {SessionId} updated with multi-condition assessment", 
+                            nameof(UpdateSessionWithMultiConditionAssessmentAsync), sessionId);
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogInformation("[{MethodName}] Session {SessionId} already has multi-condition assessment", 
+                    nameof(UpdateSessionWithMultiConditionAssessmentAsync), sessionId);
+                return true;
+            }
+            
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{MethodName}] Error updating session {SessionId} with multi-condition assessment", 
+                nameof(UpdateSessionWithMultiConditionAssessmentAsync), sessionId);
+            return false;
+        }
+    }
+
+    private async Task<Dictionary<string, DSM5ConditionData>> GetConditionDataAsync(List<string> conditionIds)
+    {
+        // This would normally call the DSM5DataService
+        // For now, return a placeholder - this will be implemented when DSM5DataService is integrated
+        var conditionData = new Dictionary<string, DSM5ConditionData>();
+        
+        foreach (var conditionId in conditionIds)
+        {
+            // Create placeholder condition data
+            conditionData[conditionId] = new DSM5ConditionData
+            {
+                Id = conditionId,
+                Name = $"Condition {conditionId}",
+                Code = "000.00 (F00.0)",
+                Category = "Mental Health Condition",
+                Description = "Placeholder description for condition",
+                DiagnosticCriteria = new List<DSM5DiagnosticCriterion>
+                {
+                    new DSM5DiagnosticCriterion
+                    {
+                        CriterionId = "A",
+                        Title = "Primary Criterion",
+                        Description = "Primary diagnostic criterion for this condition",
+                        IsRequired = true
+                    }
+                }
+            };
+        }
+        
+        return conditionData;
+    }
+
+    private string BuildMultiConditionAssessmentPrompt(SessionData sessionData, Dictionary<string, DSM5ConditionData> conditionData, AssessmentOptions? options)
+    {
+        var promptBuilder = new StringBuilder();
+        
+        promptBuilder.AppendLine("# Multi-Condition Mental Health Assessment");
+        promptBuilder.AppendLine();
+        promptBuilder.AppendLine("You are a clinical AI assistant specializing in comprehensive mental health assessments. Evaluate the patient's data against multiple DSM-5 conditions simultaneously.");
+        promptBuilder.AppendLine();
+        
+        // Add session data context
+        promptBuilder.AppendLine("## Patient Data:");
+        promptBuilder.AppendLine();
+        
+        if (sessionData.Prediction != null)
+        {
+            promptBuilder.AppendLine($"**Depression Score:** {sessionData.Prediction.PredictedScoreDepression}");
+            promptBuilder.AppendLine($"**Anxiety Score:** {sessionData.Prediction.PredictedScoreAnxiety}");
+            promptBuilder.AppendLine($"**Risk Level:** {sessionData.Prediction.PredictedScore}");
+            promptBuilder.AppendLine();
+        }
+
+        if (!string.IsNullOrEmpty(sessionData.Transcription))
+        {
+            promptBuilder.AppendLine("**Audio Transcription:**");
+            promptBuilder.AppendLine(sessionData.Transcription);
+            promptBuilder.AppendLine();
+        }
+        
+        if (sessionData.UserMetadata != null)
+        {
+            promptBuilder.AppendLine("**Demographics:**");
+            promptBuilder.AppendLine($"Age: {sessionData.UserMetadata.Age}");
+            promptBuilder.AppendLine($"Gender: {sessionData.UserMetadata.Gender}");
+            promptBuilder.AppendLine($"Ethnicity: {sessionData.UserMetadata.Ethnicity}");
+            promptBuilder.AppendLine();
+        }
+
+        // Add conditions to evaluate
+        promptBuilder.AppendLine("## DSM-5 Conditions to Evaluate:");
+        promptBuilder.AppendLine();
+        
+        foreach (var condition in conditionData.Values)
+        {
+            promptBuilder.AppendLine($"### {condition.Name} ({condition.Code})");
+            promptBuilder.AppendLine($"**Category:** {condition.Category}");
+            promptBuilder.AppendLine($"**Description:** {condition.Description}");
+            promptBuilder.AppendLine();
+            
+            promptBuilder.AppendLine("**Diagnostic Criteria:**");
+            foreach (var criterion in condition.DiagnosticCriteria)
+            {
+                promptBuilder.AppendLine($"**Criterion {criterion.CriterionId}** ({(criterion.IsRequired ? "Required" : "Optional")}): {criterion.Title}");
+                promptBuilder.AppendLine($"  {criterion.Description}");
+                
+                if (criterion.SubCriteria.Any())
+                {
+                    foreach (var subCriterion in criterion.SubCriteria)
+                    {
+                        promptBuilder.AppendLine($"  {subCriterion.Id}. {subCriterion.Name}: {subCriterion.Description}");
+                    }
+                }
+                promptBuilder.AppendLine();
+            }
+        }
+
+        // Add assessment instructions
+        promptBuilder.AppendLine("## Assessment Instructions:");
+        promptBuilder.AppendLine();
+        promptBuilder.AppendLine("For each condition, provide a comprehensive evaluation including:");
+        promptBuilder.AppendLine("1. Overall likelihood assessment (None, Minimal, Low, Moderate, High, Very High)");
+        promptBuilder.AppendLine("2. Confidence score (0.0-1.0)");
+        promptBuilder.AppendLine("3. Risk score for the condition (1-10)");
+        promptBuilder.AppendLine("4. Detailed assessment summary");
+        promptBuilder.AppendLine("5. Evaluation of each diagnostic criterion");
+        promptBuilder.AppendLine("6. Evidence supporting or contradicting the diagnosis");
+        promptBuilder.AppendLine("7. Recommended clinical actions");
+        promptBuilder.AppendLine("8. Differential diagnosis considerations");
+        promptBuilder.AppendLine();
+        
+        promptBuilder.AppendLine("Provide your response in valid JSON format matching the MultiConditionExtendedRiskAssessment structure.");
+        
+        return promptBuilder.ToString();
+    }
+
+    private MultiConditionExtendedRiskAssessment? ParseMultiConditionAssessmentResponse(string response, List<string> selectedConditions)
+    {
+        try
+        {
+            _logger.LogDebug("[{MethodName}] Parsing multi-condition assessment response. Length: {Length}", 
+                nameof(ParseMultiConditionAssessmentResponse), response.Length);
+
+            // Extract JSON from response if it contains markdown formatting
+            var jsonContent = response.Trim();
+            if (jsonContent.StartsWith("```json"))
+            {
+                jsonContent = jsonContent.Substring(7);
+            }
+            if (jsonContent.EndsWith("```"))
+            {
+                jsonContent = jsonContent.Substring(0, jsonContent.Length - 3);
+            }
+            jsonContent = jsonContent.Trim();
+            
+            if (string.IsNullOrEmpty(jsonContent))
+            {
+                _logger.LogWarning("[{MethodName}] No valid JSON found in response", nameof(ParseMultiConditionAssessmentResponse));
+                return null;
+            }
+
+            var assessment = JsonSerializer.Deserialize<MultiConditionExtendedRiskAssessment>(jsonContent, _jsonOptions);
+            
+            if (assessment != null)
+            {
+                // Ensure basic properties are set
+                assessment.IsExtended = true;
+                assessment.IsMultiCondition = true;
+                assessment.GeneratedAt = DateTime.UtcNow.ToString("O");
+                
+                // Validate and populate missing data
+                ValidateMultiConditionAssessment(assessment, selectedConditions);
+                
+                _logger.LogInformation("[{MethodName}] Successfully parsed multi-condition assessment with {ConditionCount} evaluations", 
+                    nameof(ParseMultiConditionAssessmentResponse), assessment.ConditionAssessments.Count);
+                
+                return assessment;
+            }
+            
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{MethodName}] Error parsing multi-condition assessment response. Response length: {Length}", 
+                nameof(ParseMultiConditionAssessmentResponse), response?.Length ?? 0);
+            return null;
+        }
+    }
+
+    private void ValidateMultiConditionAssessment(MultiConditionExtendedRiskAssessment assessment, List<string> selectedConditions)
+    {
+        // Ensure we have assessments for all selected conditions
+        var missingConditions = selectedConditions.Except(assessment.ConditionAssessments.Select(c => c.ConditionId)).ToList();
+        
+        foreach (var missingCondition in missingConditions)
+        {
+            _logger.LogWarning("[{MethodName}] Missing assessment for condition: {ConditionId}", 
+                nameof(ValidateMultiConditionAssessment), missingCondition);
+            
+            // Add placeholder assessment
+            assessment.ConditionAssessments.Add(new ConditionAssessmentResult
+            {
+                ConditionId = missingCondition,
+                ConditionName = $"Condition {missingCondition}",
+                OverallLikelihood = "None",
+                ConfidenceScore = 0.0,
+                AssessmentSummary = "Assessment could not be completed for this condition"
+            });
+        }
+        
+        // Calculate overall risk based on highest individual risk
+        if (assessment.ConditionAssessments.Any())
+        {
+            var highestRisk = assessment.ConditionAssessments.Max(c => c.ConditionRiskScore);
+            assessment.RiskScore = Math.Max(assessment.RiskScore, highestRisk);
+            
+            var highestRiskCondition = assessment.ConditionAssessments
+                .OrderByDescending(c => c.ConditionRiskScore)
+                .FirstOrDefault();
+            
+            if (highestRiskCondition != null)
+            {
+                assessment.HighestRiskCondition = highestRiskCondition.ConditionName;
+            }
         }
     }
     

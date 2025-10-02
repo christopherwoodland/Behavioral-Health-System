@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using BehavioralHealthSystem.Validators;
 using BehavioralHealthSystem.Configuration;
+using BehavioralHealthSystem.Services;
 using System.Net.Http.Headers;
 using Azure.Storage.Blobs;
 
@@ -9,10 +10,6 @@ var host = new HostBuilder()
     .ConfigureAppConfiguration((context, config) =>
     {
         config.AddEnvironmentVariables();
-        if (context.HostingEnvironment.IsDevelopment())
-        {
-            config.AddJsonFile("local.settings.json", optional: true, reloadOnChange: true);
-        }
     })
     .ConfigureServices((context, services) =>
     {
@@ -167,6 +164,9 @@ var host = new HostBuilder()
         
         // Risk Assessment Service (no longer needs HttpClient)
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
+        
+        // DSM-5 Data Service for PDF extraction and condition management
+        services.AddScoped<IDSM5DataService, DSM5DataService>();
         
         // Extended Assessment Job Service
         services.AddMemoryCache();

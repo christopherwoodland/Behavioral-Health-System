@@ -27,9 +27,7 @@ global using Polly.Timeout;
 // Project namespaces
 global using BehavioralHealthSystem.Models;
 global using BehavioralHealthSystem.Configuration;
-global using BehavioralHealthSystem.Services;
 global using BehavioralHealthSystem.Services.Interfaces;
 
 // Add support for new services
 global using BehavioralHealthSystem.Helpers.Models;
-global using BehavioralHealthSystem.Helpers.Services;

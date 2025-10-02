@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DSM5ConditionData } from '../types/dsm5Types';
+import { dsm5Service } from '../services/dsm5Service';
+import { createAppError } from '../utils';
 
 interface DSM5ConditionSelectorProps {
   selectedConditions: string[];
@@ -42,23 +44,16 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/dsm5-admin/conditions?includeDetails=false');
+      const conditions = await dsm5Service.getAvailableConditions({ 
+        includeDetails: false 
+      });
       
-      if (!response.ok) {
-        throw new Error(`Failed to load DSM-5 conditions: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success && data.conditions) {
-        setAvailableConditions(data.conditions);
-      } else {
-        throw new Error(data.message || 'Failed to load conditions');
-      }
+      setAvailableConditions(conditions);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error loading conditions';
-      setError(errorMessage);
-      console.error('Error loading DSM-5 conditions:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load DSM-5 conditions';
+      const error = createAppError('DSM5_LOAD_ERROR', errorMessage);
+      setError(error.message);
+      console.error('Error loading DSM-5 conditions:', error);
     } finally {
       setLoading(false);
     }

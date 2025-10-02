@@ -1,4 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 
 namespace BehavioralHealthSystem.Functions;

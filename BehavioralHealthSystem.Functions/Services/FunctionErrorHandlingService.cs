@@ -1,6 +1,3 @@
-using System.Net;
-using Microsoft.Azure.Functions.Worker.Http;
-
 namespace BehavioralHealthSystem.Functions.Services;
 
 /// <summary>

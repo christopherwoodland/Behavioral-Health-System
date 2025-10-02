@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Caching.Memory;
-
 namespace BehavioralHealthSystem.Helpers.Services;
 
 /// <summary>

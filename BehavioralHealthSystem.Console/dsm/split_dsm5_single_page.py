@@ -61,7 +61,9 @@ class DSMSinglePageSplitter:
         return text_pages
     
     def find_diagnostic_sections(self, text_pages):
-        """Find diagnostic sections using the actual DSM-5 structure."""
+        """Find diagnostic sections using the actual DSM-5 structure.
+        Pattern: Disorder Title (line) -> "Diagnostic Criteria" (next line) -> Code (same or next line)
+        """
         diagnostic_items = []
         current_item = None
         current_text = []
@@ -79,79 +81,93 @@ class DSMSinglePageSplitter:
                     i += 1
                     continue
                 
-                # Look for disorder title followed by "Diagnostic Criteria" and code
-                disorder_keywords = ['disorder', 'syndrome', 'episode', 'condition', 'phobia', 'anxiety', 'depression', 'bipolar']
+                # Look for "Diagnostic Criteria" which should follow a disorder title
+                # Pattern 1: "Diagnostic Criteria" on its own line
+                # Pattern 2: "Diagnostic Criteria 292.0 (F12.288)" - criteria + code on same line
+                criteria_match = re.match(r'^\s*Diagnostic\s+Criteria\s*(.*)$', line, re.IGNORECASE)
                 
-                # Check if this is a standalone disorder title
-                if (any(keyword in line.lower() for keyword in disorder_keywords) and
-                    len(line.split()) <= 8 and not line.endswith('.') and
-                    not re.match(r'^\d+\.', line) and
-                    not line.lower().startswith('specify') and
-                    not line.lower().startswith('note:') and
-                    not line.lower().startswith('with')):
+                if criteria_match:
+                    # Before starting a new disorder, save the previous one if it exists
+                    if current_item and not current_item.get('item_saved', False):
+                        current_item['end_page'] = page_num
+                        current_item['full_text'] = '\n'.join(current_text)
+                        current_item['item_saved'] = True
+                        diagnostic_items.append(current_item)
+                        logger.info(f"Saved item: {current_item['title']} (found next disorder)")
+                        # Reset for next item
+                        current_item = None
+                        current_text = []
                     
-                    # Look ahead for "Diagnostic Criteria" with code
-                    found_criteria = False
-                    criteria_line = ""
-                    diagnostic_code = ""
+                    # Look backwards for the disorder title (previous non-empty line)
+                    disorder_title = ""
+                    for j in range(i - 1, max(i - 5, -1), -1):
+                        prev_line = lines[j].strip()
+                        if prev_line and not re.match(r'^\d+$', prev_line):  # Skip page numbers
+                            disorder_title = prev_line
+                            break
                     
-                    for j in range(i + 1, min(i + 5, len(lines))):
-                        next_line = lines[j].strip()
+                    if disorder_title:
+                        # Check if code is on the same line as "Diagnostic Criteria"
+                        remaining_text = criteria_match.group(1).strip()
+                        code_match = re.search(r'\b(\d{3}\.\d+)\s*\(([A-Z]\d+[\.\d]*)\)', remaining_text)
                         
-                        # Look for "Diagnostic Criteria" followed by code pattern
-                        if re.search(r'diagnostic\s+criteria', next_line, re.IGNORECASE):
-                            criteria_line = next_line
-                            
-                            # Extract diagnostic code (e.g., "299.00 (F84.0)")
-                            code_match = re.search(r'\b(\d{3}\.\d+)\s*\(([A-Z]\d+[\.\d]*)\)', next_line)
-                            if code_match:
-                                diagnostic_code = f"{code_match.group(1)} ({code_match.group(2)})"
-                                found_criteria = True
-                                break
-                    
-                    if found_criteria:
-                        # Save previous item if exists
-                        if current_item and current_item.get('has_comorbidity', False):
-                            current_item['full_text'] = '\n'.join(current_text)
-                            diagnostic_items.append(current_item)
-                            current_text = []
+                        if code_match:
+                            # Code is on the same line
+                            diagnostic_code = f"{code_match.group(1)} ({code_match.group(2)})"
+                        else:
+                            # Look ahead for diagnostic code on next lines
+                            diagnostic_code = ""
+                            for j in range(i + 1, min(i + 5, len(lines))):
+                                next_line = lines[j].strip()
+                                
+                                # Extract diagnostic code (e.g., "292.0 (F12.288)" or "299.00 (F84.0)")
+                                code_match = re.search(r'\b(\d{3}\.\d+)\s*\(([A-Z]\d+[\.\d]*)\)', next_line)
+                                if code_match:
+                                    diagnostic_code = f"{code_match.group(1)} ({code_match.group(2)})"
+                                    break
                         
-                        # Start new diagnostic item
-                        current_item = {
-                            'title': line,
-                            'diagnostic_code': diagnostic_code,
-                            'start_page': page_num,
-                            'has_criteria': True,
-                            'has_comorbidity': False,
-                            'end_page': page_num,
-                            'comorbidity_page': None
-                        }
-                        current_text = [f"{line}\n{diagnostic_code}\n\n"]
-                        logger.info(f"Found diagnostic item: {line} [{diagnostic_code}]")
-                
-                # Add current line to text if we're collecting
-                if current_item:
-                    current_text.append(line)
+                        if diagnostic_code:
+                            # Start new diagnostic item
+                            current_item = {
+                                'title': disorder_title,
+                                'diagnostic_code': diagnostic_code,
+                                'start_page': page_num,
+                                'has_criteria': True,
+                                'has_comorbidity': False,
+                                'item_saved': False,
+                                'end_page': page_num,
+                                'comorbidity_page': None
+                            }
+                            current_text = [f"{disorder_title}\nDiagnostic Criteria\n{diagnostic_code}\n\n"]
+                            logger.info(f"Found diagnostic item: {disorder_title} [{diagnostic_code}]")
                 
                 # Look for "Comorbidity" section (marks end of current disorder)
                 if (current_item and 
+                    not current_item.get('has_comorbidity', False) and
                     re.match(r'^Comorbidity\s*$', line, re.IGNORECASE)):
                     
+                    # Mark that we found comorbidity heading
                     current_item['has_comorbidity'] = True
                     current_item['comorbidity_page'] = page_num
-                    current_item['end_page'] = page_num
-                    logger.info(f"Found comorbidity section for: {current_item['title']}")
+                    current_item['comorbidity_start_line'] = i
+                    current_text.append(line)
+                    logger.info(f"Found comorbidity section for: {current_item['title']} - collecting content")
                 
-                # Update current item end page
-                if current_item:
-                    current_item['end_page'] = page_num
+                # If we're collecting text for an item (not yet saved), add this line
+                elif current_item and not current_item.get('item_saved', False):
+                    # Add line to current collection
+                    if line.strip():
+                        current_text.append(line)
+                        current_item['end_page'] = page_num
                 
                 i += 1
         
-        # Add the last item if it has comorbidity
-        if current_item and current_item.get('has_comorbidity', False):
+        # Save the last item if it wasn't saved yet
+        if current_item and not current_item.get('item_saved', False):
+            current_item['end_page'] = page_num
             current_item['full_text'] = '\n'.join(current_text)
             diagnostic_items.append(current_item)
+            logger.info(f"Saved final item: {current_item['title']}")
         
         # Filter items to only include complete diagnostic sections
         complete_items = []
@@ -209,7 +225,7 @@ class DSMSinglePageSplitter:
         return processed_lines
     
     def create_single_page_pdf(self, item, output_path):
-        """Create a single-page PDF with scaled text to fit all content."""
+        """Create a single-page PDF with multi-column layout to fit all content."""
         try:
             buffer = BytesIO()
             
@@ -219,8 +235,8 @@ class DSMSinglePageSplitter:
             
             # Set up margins (smaller for more space)
             margin = 0.25 * inch
-            usable_width = width - (2 * margin)
-            usable_height = height - (2 * margin)
+            header_height = 0.4 * inch  # Space for title and code
+            footer_height = 0.15 * inch  # Space for footer
             
             # Title and header
             c.setFont("Helvetica-Bold", 9)
@@ -232,51 +248,86 @@ class DSMSinglePageSplitter:
             c.drawString(margin, height - margin - 0.15*inch, code_text)
             
             # Draw a line separator
-            c.line(margin, height - margin - 0.2*inch, width - margin, height - margin - 0.2*inch)
+            c.line(margin, height - margin - 0.25*inch, width - margin, height - margin - 0.25*inch)
+            
+            # Multi-column setup
+            num_columns = 2  # Default to 2 columns
+            column_gap = 0.15 * inch
+            text_length = len(item.get('full_text', ''))
+            
+            # Use 3 columns for very long content
+            if text_length > 100000:
+                num_columns = 3
+            
+            # Calculate column dimensions
+            total_column_width = width - (2 * margin)
+            total_gap_width = column_gap * (num_columns - 1)
+            column_width = (total_column_width - total_gap_width) / num_columns
+            
+            # Available height for content
+            content_start_y = height - margin - header_height
+            content_end_y = margin + footer_height
+            column_height = content_start_y - content_end_y
             
             # Prepare text content with section headers
             text = item.get('full_text', '')
             processed_content = self.detect_section_headers(text)
             
             # Calculate font size based on content length
-            text_length = len(text)
             if text_length < 2000:
-                font_size = 6
-                line_spacing = 7
-                header_size = 7
-            elif text_length < 4000:
-                font_size = 5
-                line_spacing = 6
-                header_size = 6
-            elif text_length < 6000:
+                font_size = 5.5
+                line_spacing = 6.5
+                header_size = 6.5
+            elif text_length < 5000:
+                font_size = 4.5
+                line_spacing = 5.5
+                header_size = 5.5
+            elif text_length < 10000:
                 font_size = 4
                 line_spacing = 5
                 header_size = 5
-            else:
+            elif text_length < 30000:
                 font_size = 3.5
                 line_spacing = 4.5
                 header_size = 4.5
-            
-            # Start position for text (below header)
-            y_position = height - margin - 0.35*inch
+            elif text_length < 60000:
+                font_size = 3
+                line_spacing = 4
+                header_size = 4
+            elif text_length < 100000:
+                font_size = 2.8
+                line_spacing = 3.5
+                header_size = 3.5
+            else:
+                font_size = 2.5
+                line_spacing = 3.2
+                header_size = 3.2
             
             # Process content into formatted lines with type markers
             formatted_lines = []
+            is_first_line = True
+            disorder_name = item['title']
             
             for content_type, content_text in processed_content:
-                if content_type == 'HEADER':
+                # Check if this is the disorder name line (first text line)
+                if is_first_line and content_type == 'TEXT' and content_text.strip() == disorder_name.strip():
+                    # Mark disorder name as a special type to render in bold
+                    formatted_lines.append(('DISORDER_NAME', content_text))
+                    is_first_line = False
+                elif content_type == 'HEADER':
                     # Add header as a single formatted line
                     formatted_lines.append(('HEADER', content_text))
+                    is_first_line = False
                 else:
-                    # Split regular text into word-wrapped lines
+                    # Split regular text into word-wrapped lines for column width
                     words = content_text.split()
                     current_line = ""
                     
                     for word in words:
                         test_line = current_line + " " + word if current_line else word
-                        # Use regular font size for width calculation
+                        # Use column width for width calculation
                         test_width = c.stringWidth(test_line, "Helvetica", font_size)
-                        if test_width < usable_width:
+                        if test_width < column_width - (0.05 * inch):  # Small padding
                             current_line = test_line
                         else:
                             if current_line:
@@ -285,40 +336,54 @@ class DSMSinglePageSplitter:
                     
                     if current_line:
                         formatted_lines.append(('TEXT', current_line))
+                    is_first_line = False
             
-            # Calculate maximum lines that fit on page
-            # Headers take slightly more space
-            header_spacing = line_spacing * 1.5
-            total_height_needed = sum(header_spacing if lt == 'HEADER' else line_spacing 
-                                     for lt, _ in formatted_lines)
+            # Draw content in columns
+            header_spacing = line_spacing * 1.3
+            current_column = 0
+            x_position = margin
+            y_position = content_start_y
             
-            # If content doesn't fit, scale down
-            if total_height_needed > usable_height:
-                scale_factor = usable_height / total_height_needed
-                font_size = max(2.5, font_size * scale_factor)
-                header_size = max(3, header_size * scale_factor)
-                line_spacing = max(3, line_spacing * scale_factor)
-                header_spacing = line_spacing * 1.5
-            
-            # Draw all lines with proper formatting
-            lines_drawn = 0
             for line_type, line_text in formatted_lines:
-                # Stop if we've run out of space
-                if y_position < margin:
-                    break
-                
-                if line_type == 'HEADER':
-                    # Draw header in bold with slightly larger font
-                    c.setFont("Helvetica-Bold", header_size)
-                    c.drawString(margin, y_position, line_text[:200])
-                    y_position -= header_spacing
+                # Determine line height and spacing based on type
+                if line_type in ['HEADER', 'DISORDER_NAME']:
+                    line_height = header_spacing
                 else:
-                    # Draw regular text
-                    c.setFont("Helvetica", font_size)
-                    c.drawString(margin, y_position, line_text[:250])
-                    y_position -= line_spacing
+                    line_height = line_spacing
                 
-                lines_drawn += 1
+                # Check if we need to move to next column
+                if y_position - line_height < content_end_y:
+                    current_column += 1
+                    if current_column >= num_columns:
+                        # No more space, stop drawing
+                        logger.warning(f"Content too large for {num_columns} columns, some content may be truncated")
+                        break
+                    # Move to next column
+                    x_position = margin + (current_column * (column_width + column_gap))
+                    y_position = content_start_y
+                
+                # Draw the line with appropriate font
+                if line_type == 'DISORDER_NAME':
+                    # Disorder name in bold with slightly larger font
+                    c.setFont("Helvetica-Bold", header_size)
+                    c.drawString(x_position, y_position, line_text[:int(column_width/2)])
+                elif line_type == 'HEADER':
+                    # Section headers in bold
+                    c.setFont("Helvetica-Bold", header_size)
+                    c.drawString(x_position, y_position, line_text[:int(column_width/2)])
+                else:
+                    # Regular text
+                    c.setFont("Helvetica", font_size)
+                    c.drawString(x_position, y_position, line_text[:int(column_width/2)])
+                
+                y_position -= line_height
+            
+            # Draw column separators (optional visual guide)
+            c.setStrokeColorRGB(0.8, 0.8, 0.8)
+            c.setLineWidth(0.5)
+            for col in range(1, num_columns):
+                x_sep = margin + (col * (column_width + column_gap)) - (column_gap / 2)
+                c.line(x_sep, content_start_y, x_sep, content_end_y)
             
             # Add footer with page info
             c.setFont("Helvetica", 5)

@@ -86,6 +86,7 @@ var host = new HostBuilder()
         services.AddScoped<IKintsugiApiService, KintsugiApiService>();
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         services.AddScoped<IDSM5DataService, DSM5DataService>();
+        services.AddScoped<IAzureContentUnderstandingService, AzureContentUnderstandingService>();
         services.AddMemoryCache();
         services.AddScoped<IExtendedAssessmentJobService, ExtendedAssessmentJobService>();
         services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();

@@ -653,6 +653,172 @@ ENTRYPOINT ["dotnet", "BehavioralHealthSystem.Console.dll"]
 - **Microsoft.Extensions.Http** - HTTP client factory
 - **System.CommandLine** - Command-line argument parsing
 
+## 🩺 DSM-5 Import Command (`import-dsm5`)
+
+### Overview
+
+The `import-dsm5` command extracts DSM-5 diagnostic conditions from a PDF and uploads them to Azure Blob Storage.
+
+### Installation
+
+```powershell
+# Build from source
+cd BehavioralHealthSystem.Console
+dotnet build -c Release
+
+# Executable location
+bin\Release\net8.0\bhs.exe
+```
+
+### Prerequisites
+
+1. **DSM-5 PDF File** - Official DSM-5 manual PDF
+
+2. **Azure Configuration** - Configure in `appsettings.json`:
+   ```json
+   {
+     "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "https://your-content-understanding.services.ai.azure.com/",
+     "AZURE_CONTENT_UNDERSTANDING_KEY": "your-api-key-here",
+     "DSM5_STORAGE_ACCOUNT_NAME": "your-storage-account-name",
+     "DSM5_CONTAINER_NAME": "dsm5-data",
+     "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING"
+   }
+   ```
+   
+   **Note:** `DSM5_EXTRACTION_METHOD` must be set to `"CONTENT_UNDERSTANDING"` to use the Azure Content Understanding service instead of Document Intelligence.
+
+3. **Authentication** - Either:
+   - API Key in configuration (development)
+   - Azure Managed Identity (production)
+   - Azure CLI logged in (`az login`)
+
+### Usage
+
+**Command:**
+```powershell
+bhs import-dsm5 [options]
+```
+
+**Important:** This command **bypasses the Azure Functions** and calls Azure Content Understanding directly, avoiding the 5-minute Function timeout limit. Full PDF processing takes 15-20 minutes.
+
+**Options:**
+
+| Option | Alias | Description | Default |
+|--------|-------|-------------|---------|
+| `--pdf-path <path>` | `-p` | Path to DSM-5 PDF file | `C:\DSM5\dsm5.pdf` |
+| `--start-page <number>` | `-s` | Starting page for extraction | `1` |
+| `--end-page <number>` | `-e` | Ending page for extraction | `991` |
+| `--verbose` | `-v` | Enable verbose logging | `false` |
+
+**Examples:**
+
+```powershell
+# Basic usage
+bhs import-dsm5
+
+# Specify custom PDF path
+bhs import-dsm5 --pdf-path "C:\Users\yourname\Documents\DSM5.pdf"
+
+# Import with verbose logging
+bhs import-dsm5 -p "C:\DSM5\dsm5.pdf" -v
+
+# Import specific page range (for testing)
+bhs import-dsm5 --start-page 50 --end-page 100 -v
+
+```
+
+### Process Flow
+
+**Direct Azure Service Integration** - No Functions timeout limits!
+
+1. **Validate Prerequisites**
+   - Checks PDF file exists and is readable
+   - Displays file size information
+
+2. **Check Storage Status**
+   - Verifies Azure Blob Storage connectivity
+   - Shows current DSM-5 data status
+
+3. **Extract and Upload PDF Data** (15-20 minutes for full PDF)
+   - Reads PDF file and encodes to base64
+   - **Directly calls** Azure Content Understanding service (no 5-minute timeout!)
+   - Extracts diagnostic conditions using AI
+   - **Automatically uploads** to Azure Blob Storage
+   - Reports conditions found and processing time
+
+4. **Verify Availability**
+   - Confirms conditions are accessible in storage
+   - Displays sample conditions
+
+### Expected Output
+
+```
+==================================================
+  DSM-5 Data Import Tool
+==================================================
+
+PDF File: C:\DSM5\dsm5.pdf
+Page Range: 1 to 991
+Mode: Direct Azure Content Understanding (no Function timeout)
+
+Step 1/4: Validating prerequisites
+✓ PDF file found (42.18 MB)
+
+Step 2/4: Checking DSM-5 storage status
+✓ Storage service is accessible
+  Current conditions: 0
+  Available conditions: 0
+
+Step 3/4: Extracting and uploading DSM-5 data
+⚠ This may take 15-20 minutes for full PDF (no timeout limits)...
+Processing pages: 1-991
+Sending PDF to Azure Content Understanding service...
+✓ Extraction and upload successful!
+  Conditions found: 297
+  Processing time: 1,234.5s
+  Total elapsed: 1,245.2s
+  Uploaded to storage: True
+
+Step 4/4: Verifying DSM-5 conditions are available
+✓ Verification successful!
+  Total conditions: 297
+
+Sample conditions:
+  • Autism Spectrum Disorder (F84.0)
+  • Major Depressive Disorder (F32.9)
+  • Generalized Anxiety Disorder (F41.1)
+  • Schizophrenia (F20.9)
+  • Bipolar I Disorder (F31.9)
+
+✓ DSM-5 data import completed successfully!
+
+Next Steps:
+  1. Refresh your React app (Ctrl+F5)
+  2. Navigate to a session's Extended Risk Assessment
+  3. Select DSM-5 conditions from the dropdown
+  4. Run the extended assessment
+```
+
+### Troubleshooting
+
+#### "PDF file not found"
+**Solution:** Verify file path is correct and use absolute path
+
+#### "Extraction failed"
+**Solution:** Verify `DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT` and `DSM5_DOCUMENT_INTELLIGENCE_KEY` in `appsettings.json`
+
+#### "Upload failed"
+**Solution:** Verify `DSM5_STORAGE_ACCOUNT_NAME` and Azure authentication (API key or `az login`)
+
+### Development
+
+Run in debug mode with verbose output:
+
+```powershell
+cd BehavioralHealthSystem.Console
+dotnet run -- import-dsm5 --verbose
+```
+
 ---
 
 This console application provides comprehensive administrative and testing capabilities for the behavioral health system, enabling efficient development and operations management.

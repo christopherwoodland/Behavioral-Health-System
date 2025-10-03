@@ -4,6 +4,7 @@ using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Text.RegularExpressions;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Services;
 
@@ -15,8 +16,9 @@ public class DSM5DataService : IDSM5DataService
 {
     private readonly ILogger<DSM5DataService> _logger;
     private readonly IConfiguration _configuration;
-    private readonly DocumentIntelligenceClient _documentClient;
+    private readonly DocumentIntelligenceClient? _documentClient;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IAzureContentUnderstandingService? _contentUnderstandingService;
     private readonly string _containerName;
     private readonly JsonSerializerOptions _jsonOptions;
 
@@ -26,26 +28,35 @@ public class DSM5DataService : IDSM5DataService
 
     public DSM5DataService(
         ILogger<DSM5DataService> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IAzureContentUnderstandingService? contentUnderstandingService = null)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _contentUnderstandingService = contentUnderstandingService;
 
-        // Initialize Azure Document Intelligence client
-        var documentEndpoint = _configuration["DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT"] 
-            ?? throw new InvalidOperationException("DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT configuration missing");
+        // Initialize Azure Document Intelligence client (only if endpoint is provided)
+        // This is optional when using Content Understanding exclusively
+        var documentEndpoint = _configuration["DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT"];
         
-        // Check for API key first (local development), then fall back to Managed Identity (production)
-        var documentApiKey = _configuration["DSM5_DOCUMENT_INTELLIGENCE_KEY"];
-        if (!string.IsNullOrWhiteSpace(documentApiKey))
+        if (!string.IsNullOrWhiteSpace(documentEndpoint))
         {
-            _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new AzureKeyCredential(documentApiKey));
-            _logger.LogInformation("[{MethodName}] Initialized Document Intelligence client with API key", nameof(DSM5DataService));
+            // Check for API key first (local development), then fall back to Managed Identity (production)
+            var documentApiKey = _configuration["DSM5_DOCUMENT_INTELLIGENCE_KEY"];
+            if (!string.IsNullOrWhiteSpace(documentApiKey))
+            {
+                _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new AzureKeyCredential(documentApiKey));
+                _logger.LogInformation("[{MethodName}] Initialized Document Intelligence client with API key", nameof(DSM5DataService));
+            }
+            else
+            {
+                _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new DefaultAzureCredential());
+                _logger.LogInformation("[{MethodName}] Initialized Document Intelligence client with Managed Identity", nameof(DSM5DataService));
+            }
         }
         else
         {
-            _documentClient = new DocumentIntelligenceClient(new Uri(documentEndpoint), new DefaultAzureCredential());
-            _logger.LogInformation("[{MethodName}] Initialized Document Intelligence client with Managed Identity", nameof(DSM5DataService));
+            _logger.LogInformation("[{MethodName}] Document Intelligence endpoint not configured - will use Content Understanding if available", nameof(DSM5DataService));
         }
 
         // Initialize Blob Storage client
@@ -107,28 +118,75 @@ public class DSM5DataService : IDSM5DataService
 
             _logger.LogInformation("[{MethodName}] PDF size: {Size} bytes", nameof(ExtractDiagnosticCriteriaAsync), pdfBytes.Length);
 
-            // Step 1: Analyze the PDF with Document Intelligence
-            var analyzeRequest = new AnalyzeDocumentContent
-            {
-                Base64Source = BinaryData.FromBytes(pdfBytes)
-            };
+            // Check if Content Understanding should be used
+            var extractionMethod = _configuration["DSM5_EXTRACTION_METHOD"];
+            var useContentUnderstanding = extractionMethod?.Equals("CONTENT_UNDERSTANDING", StringComparison.OrdinalIgnoreCase) == true;
 
-            var operation = await _documentClient.AnalyzeDocumentAsync(
-                WaitUntil.Completed,
-                "prebuilt-layout", // Use layout model for structured text extraction
-                analyzeRequest);
+            List<DSM5ConditionData> extractedConditions;
 
-            if (!operation.HasCompleted || operation.Value == null)
+            if (useContentUnderstanding && _contentUnderstandingService != null)
             {
-                throw new InvalidOperationException("Document analysis did not complete successfully");
+                _logger.LogInformation("[{MethodName}] Using Azure Content Understanding for extraction", nameof(ExtractDiagnosticCriteriaAsync));
+
+                // Parse page ranges
+                int startPage = 1;
+                int? endPage = null;
+                if (!string.IsNullOrEmpty(pageRanges))
+                {
+                    var parts = pageRanges.Split('-');
+                    if (parts.Length == 2)
+                    {
+                        int.TryParse(parts[0], out startPage);
+                        if (int.TryParse(parts[1], out var end))
+                        {
+                            endPage = end;
+                        }
+                    }
+                }
+
+                // Use Content Understanding for extraction
+                extractedConditions = await _contentUnderstandingService.ExtractDSM5ConditionsAsync(
+                    pdfBytes,
+                    startPage,
+                    endPage);
+
+                _logger.LogInformation("[{MethodName}] Content Understanding extracted {ConditionCount} conditions",
+                    nameof(ExtractDiagnosticCriteriaAsync), extractedConditions.Count);
             }
+            else
+            {
+                if (_documentClient == null)
+                {
+                    throw new InvalidOperationException(
+                        "Document Intelligence client is not configured. " +
+                        "Either set DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT or use DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING");
+                }
 
-            var result = operation.Value;
-            _logger.LogInformation("[{MethodName}] Document analysis completed. Pages: {PageCount}",
-                nameof(ExtractDiagnosticCriteriaAsync), result.Pages?.Count ?? 0);
+                _logger.LogInformation("[{MethodName}] Using Document Intelligence for extraction", nameof(ExtractDiagnosticCriteriaAsync));
 
-            // Step 2: Parse the document structure to extract DSM-5 conditions
-            var extractedConditions = await ParseDSM5ConditionsFromDocumentAsync(result, pageRanges);
+                // Step 1: Analyze the PDF with Document Intelligence
+                var analyzeRequest = new AnalyzeDocumentContent
+                {
+                    Base64Source = BinaryData.FromBytes(pdfBytes)
+                };
+
+                var operation = await _documentClient.AnalyzeDocumentAsync(
+                    WaitUntil.Completed,
+                    "prebuilt-layout", // Use layout model for structured text extraction
+                    analyzeRequest);
+
+                if (!operation.HasCompleted || operation.Value == null)
+                {
+                    throw new InvalidOperationException("Document analysis did not complete successfully");
+                }
+
+                var result = operation.Value;
+                _logger.LogInformation("[{MethodName}] Document analysis completed. Pages: {PageCount}",
+                    nameof(ExtractDiagnosticCriteriaAsync), result.Pages?.Count ?? 0);
+
+                // Step 2: Parse the document structure to extract DSM-5 conditions
+                extractedConditions = await ParseDSM5ConditionsFromDocumentAsync(result, pageRanges);
+            }
 
             _logger.LogInformation("[{MethodName}] Extracted {ConditionCount} conditions from DSM-5",
                 nameof(ExtractDiagnosticCriteriaAsync), extractedConditions.Count);
@@ -146,11 +204,14 @@ public class DSM5DataService : IDSM5DataService
 
             stopwatch.Stop();
 
+            // Calculate total pages processed (estimate from conditions if Content Understanding was used)
+            int pagesProcessed = extractedConditions.Sum(c => c.PageNumbers?.Count ?? 1);
+
             return new DSM5ExtractionResult
             {
                 Success = true,
                 ExtractedConditions = extractedConditions,
-                PagesProcessed = result.Pages?.Count ?? 0,
+                PagesProcessed = pagesProcessed,
                 ProcessingTimeMs = stopwatch.ElapsedMilliseconds,
                 UploadedToStorage = autoUpload && !string.IsNullOrEmpty(blobPath),
                 BlobPath = blobPath

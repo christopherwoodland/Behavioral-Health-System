@@ -4,6 +4,11 @@ using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using BehavioralHealthSystem.Services;
+using BehavioralHealthSystem.Helpers.Services;
+using BehavioralHealthSystem.Configuration;
+using Azure.Storage.Blobs;
+using Azure.Identity;
 
 namespace BehavioralHealthSystem.Console;
 
@@ -25,21 +30,17 @@ public class Program
             getDefaultValue: () => @"C:\DSM5\dsm5.pdf");
         pdfPathOption.AddAlias("-p");
         
-        var apiUrlOption = new Option<string>(
-            name: "--api-url",
-            description: "Base URL of the Functions API",
-            getDefaultValue: () => "http://localhost:7071/api");
-        apiUrlOption.AddAlias("-u");
-        
         var startPageOption = new Option<int>(
             name: "--start-page",
             description: "Starting page number for extraction",
             getDefaultValue: () => 1);
+        startPageOption.AddAlias("-s");
         
         var endPageOption = new Option<int>(
             name: "--end-page",
             description: "Ending page number for extraction",
             getDefaultValue: () => 991);
+        endPageOption.AddAlias("-e");
         
         var verboseOption = new Option<bool>(
             name: "--verbose",
@@ -48,16 +49,36 @@ public class Program
         verboseOption.AddAlias("-v");
 
         dsm5Command.AddOption(pdfPathOption);
-        dsm5Command.AddOption(apiUrlOption);
         dsm5Command.AddOption(startPageOption);
         dsm5Command.AddOption(endPageOption);
         dsm5Command.AddOption(verboseOption);
 
-        dsm5Command.SetHandler(async (pdfPath, apiUrl, startPage, endPage, verbose) =>
+        dsm5Command.SetHandler(async (pdfPath, startPage, endPage, verbose) =>
         {
-            var importer = new DSM5Importer(apiUrl, verbose);
+            // Build configuration
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            // Build service provider with DSM5DataService
+            var services = new ServiceCollection();
+            services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(verbose ? LogLevel.Debug : LogLevel.Information));
+            services.AddSingleton<IConfiguration>(configuration);
+            
+            // Register Azure Content Understanding Service (used when DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING)
+            services.AddSingleton<IAzureContentUnderstandingService, AzureContentUnderstandingService>();
+            
+            // Register DSM5DataService
+            services.AddSingleton<IDSM5DataService, DSM5DataService>();
+
+            var serviceProvider = services.BuildServiceProvider();
+            var dsm5Service = serviceProvider.GetRequiredService<IDSM5DataService>();
+
+            var importer = new DSM5Importer(dsm5Service, verbose);
             await importer.ImportAsync(pdfPath, startPage, endPage);
-        }, pdfPathOption, apiUrlOption, startPageOption, endPageOption, verboseOption);
+        }, pdfPathOption, startPageOption, endPageOption, verboseOption);
 
         rootCommand.AddCommand(dsm5Command);
 
@@ -66,22 +87,17 @@ public class Program
 }
 
 /// <summary>
-/// Handles DSM-5 data import operations
+/// Handles DSM-5 data import operations using DSM5DataService directly
 /// </summary>
 public class DSM5Importer
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _apiBaseUrl;
+    private readonly IDSM5DataService _dsm5Service;
     private readonly bool _verbose;
 
-    public DSM5Importer(string apiBaseUrl, bool verbose)
+    public DSM5Importer(IDSM5DataService dsm5Service, bool verbose)
     {
-        _apiBaseUrl = apiBaseUrl.TrimEnd('/');
+        _dsm5Service = dsm5Service ?? throw new ArgumentNullException(nameof(dsm5Service));
         _verbose = verbose;
-        _httpClient = new HttpClient
-        {
-            Timeout = TimeSpan.FromMinutes(10) // Long timeout for large PDF processing
-        };
     }
 
     public async Task ImportAsync(string pdfPath, int startPage, int endPage)
@@ -90,23 +106,20 @@ public class DSM5Importer
         {
             WriteHeader("DSM-5 Data Import Tool");
             WriteInfo($"PDF File: {pdfPath}");
-            WriteInfo($"API URL: {_apiBaseUrl}");
             WriteInfo($"Page Range: {startPage} to {endPage}");
+            WriteInfo($"Mode: Direct Azure Content Understanding (no Function timeout)");
             System.Console.WriteLine();
 
             // Step 1: Validate prerequisites
-            await ValidatePrerequisitesAsync(pdfPath);
+            ValidatePrerequisites(pdfPath);
 
             // Step 2: Check system status
             await CheckSystemStatusAsync();
 
-            // Step 3: Extract PDF data
-            var extractedData = await ExtractPdfDataAsync(pdfPath, startPage, endPage);
+            // Step 3: Extract PDF data directly using DSM5DataService
+            await ExtractAndUploadPdfDataAsync(pdfPath, startPage, endPage);
 
-            // Step 4: Upload to storage
-            await UploadDataAsync(extractedData);
-
-            // Step 5: Verify availability
+            // Step 4: Verify availability
             await VerifyDataAsync();
 
             WriteSuccess("DSM-5 data import completed successfully!");
@@ -129,9 +142,9 @@ public class DSM5Importer
         }
     }
 
-    private async Task ValidatePrerequisitesAsync(string pdfPath)
+    private void ValidatePrerequisites(string pdfPath)
     {
-        WriteStep("Step 1/5: Validating prerequisites");
+        WriteStep("Step 1/4: Validating prerequisites");
 
         // Check PDF file exists
         if (!File.Exists(pdfPath))
@@ -164,49 +177,37 @@ public class DSM5Importer
 
     private async Task CheckSystemStatusAsync()
     {
-        WriteStep("Step 2/5: Checking DSM-5 system status");
+        WriteStep("Step 2/4: Checking DSM-5 storage status");
 
         try
         {
-            var url = $"{_apiBaseUrl}/dsm5-admin/data-status";
-            WriteVerbose($"GET {url}");
+            var status = await _dsm5Service.GetDataStatusAsync();
 
-            var response = await _httpClient.GetAsync(url);
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new HttpRequestException($"API returned {response.StatusCode}");
-            }
-
-            var content = await response.Content.ReadAsStringAsync();
-            var status = JsonSerializer.Deserialize<JsonElement>(content);
-
-            WriteSuccess("API is accessible");
+            WriteSuccess("Storage service is accessible");
+            WriteInfo($"  Current conditions: {status.TotalConditions}");
+            WriteInfo($"  Available conditions: {status.AvailableConditions}");
             
             if (_verbose)
             {
-                WriteVerbose("System Status:");
-                WriteVerbose(JsonSerializer.Serialize(status, new JsonSerializerOptions 
-                { 
-                    WriteIndented = true 
-                }));
+                WriteVerbose($"Container exists: {status.ContainerExists}");
+                WriteVerbose($"Data version: {status.DataVersion}");
+                WriteVerbose($"Last updated: {status.LastUpdated}");
             }
 
             System.Console.WriteLine();
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex)
         {
-            throw new InvalidOperationException(
-                "Cannot connect to API. Is the Functions host running?\n" +
-                $"  Run: cd BehavioralHealthSystem.Functions && func start --port 7071\n" +
-                $"  Error: {ex.Message}");
+            WriteWarning($"Could not check system status: {ex.Message}");
+            WriteInfo("Continuing with import...");
+            System.Console.WriteLine();
         }
     }
 
-    private async Task<JsonElement> ExtractPdfDataAsync(string pdfPath, int startPage, int endPage)
+    private async Task ExtractAndUploadPdfDataAsync(string pdfPath, int startPage, int endPage)
     {
-        WriteStep("Step 3/5: Extracting DSM-5 data from PDF");
-        WriteWarning("This may take several minutes depending on PDF size...");
+        WriteStep("Step 3/4: Extracting and uploading DSM-5 data");
+        WriteWarning("This may take 15-20 minutes for full PDF (no timeout limits)...");
 
         // Read and encode PDF
         WriteVerbose("Reading PDF file...");
@@ -216,205 +217,73 @@ public class DSM5Importer
         WriteVerbose($"PDF size: {FormatFileSize(pdfBytes.Length)}");
         WriteVerbose($"Base64 size: {FormatFileSize(pdfBase64.Length)}");
 
-        // Prepare extraction request with base64 data
+        // Prepare page ranges
         var pageRanges = $"{startPage}-{endPage}";
-        var request = new
-        {
-            pdfBase64 = pdfBase64,
-            pageRanges = pageRanges,
-            autoUpload = true  // Automatically upload to storage after extraction
-        };
-
-        var jsonContent = JsonSerializer.Serialize(request);
-        WriteVerbose($"Request size: {FormatFileSize(Encoding.UTF8.GetByteCount(jsonContent))}");
-
-        // Send extraction request
-        var url = $"{_apiBaseUrl}/dsm5-admin/validate-extraction";
-        WriteInfo("Sending PDF to Document Intelligence service...");
-        WriteVerbose($"POST {url}");
+        WriteInfo($"Processing pages: {pageRanges}");
+        WriteInfo("Sending PDF to Azure Content Understanding service...");
 
         var startTime = DateTime.UtcNow;
-        var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync(url, httpContent);
 
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"Extraction failed: {response.StatusCode}\n{errorContent}");
-        }
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
+        // Call DSM5DataService directly (no Function timeout!)
+        var result = await _dsm5Service.ExtractDiagnosticCriteriaAsync(
+            pdfUrl: null,
+            pdfBase64: pdfBase64,
+            pageRanges: pageRanges,
+            autoUpload: true);
 
         var elapsed = DateTime.UtcNow - startTime;
 
-        if (result.TryGetProperty("success", out var success) && success.GetBoolean())
+        if (result.Success)
         {
-            // Get extraction result
-            var extractionResult = result.GetProperty("extractionResult");
-            var conditionsFound = extractionResult.GetProperty("conditionsFound").GetInt32();
-            var processingTime = extractionResult.GetProperty("processingTimeSeconds").GetDouble();
-            var uploadedToStorage = extractionResult.TryGetProperty("uploadedToStorage", out var uploaded) && uploaded.GetBoolean();
-
-            WriteSuccess($"Extraction successful!");
-            WriteInfo($"  Conditions found: {conditionsFound}");
-            WriteInfo($"  Processing time: {processingTime:F1}s");
+            WriteSuccess($"Extraction and upload successful!");
+            WriteInfo($"  Conditions found: {result.ExtractedConditions?.Count ?? 0}");
+            WriteInfo($"  Processing time: {result.ProcessingTimeMs / 1000.0:F1}s");
             WriteInfo($"  Total elapsed: {elapsed.TotalSeconds:F1}s");
+            WriteInfo($"  Uploaded to storage: {result.UploadedToStorage}");
             
-            if (uploadedToStorage)
+            if (!string.IsNullOrEmpty(result.BlobPath))
             {
-                WriteInfo($"  Auto-uploaded to storage: Yes");
+                WriteVerbose($"  Blob path: {result.BlobPath}");
             }
             
-            System.Console.WriteLine();
-
-            return extractionResult;
-        }
-        else
-        {
-            var message = result.TryGetProperty("message", out var msg) 
-                ? msg.GetString() 
-                : "Unknown error";
-            throw new InvalidOperationException($"Extraction failed: {message}");
-        }
-    }
-
-    private async Task UploadDataAsync(JsonElement extractionResult)
-    {
-        WriteStep("Step 4/5: Uploading extracted data to Azure Storage");
-
-        // Check if data was already auto-uploaded during extraction
-        if (extractionResult.TryGetProperty("uploadedToStorage", out var uploaded) && uploaded.GetBoolean())
-        {
-            WriteInfo("Data was auto-uploaded during extraction");
-            
-            var conditionsFound = extractionResult.GetProperty("conditionsFound").GetInt32();
-            WriteSuccess($"Upload confirmed!");
-            WriteInfo($"  Conditions uploaded: {conditionsFound}");
-            
-            if (extractionResult.TryGetProperty("blobPath", out var blobPath))
-            {
-                WriteVerbose($"  Blob path: {blobPath.GetString()}");
-            }
-            
-            System.Console.WriteLine();
-            return;
-        }
-
-        // Manual upload if auto-upload didn't happen
-        WriteWarning("Auto-upload was not completed, uploading manually...");
-
-        var request = new
-        {
-            extractedData = extractionResult,
-            overwriteExisting = true
-        };
-
-        var jsonContent = JsonSerializer.Serialize(request, new JsonSerializerOptions 
-        { 
-            WriteIndented = false 
-        });
-        
-        WriteVerbose($"Upload payload size: {FormatFileSize(Encoding.UTF8.GetByteCount(jsonContent))}");
-
-        var url = $"{_apiBaseUrl}/dsm5-admin/upload-data";
-        WriteInfo("Uploading to blob storage...");
-        WriteVerbose($"POST {url}");
-
-        var httpContent = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-        var response = await _httpClient.PostAsync(url, httpContent);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync();
-            throw new HttpRequestException($"Upload failed: {response.StatusCode}\n{errorContent}");
-        }
-
-        var responseContent = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(responseContent);
-
-        if (result.TryGetProperty("success", out var success) && success.GetBoolean())
-        {
-            var conditionsUploaded = result.GetProperty("conditionsUploaded").GetInt32();
-            var blobUrl = result.TryGetProperty("blobUrl", out var url_prop) 
-                ? url_prop.GetString() 
-                : "N/A";
-
-            WriteSuccess($"Upload successful!");
-            WriteInfo($"  Conditions uploaded: {conditionsUploaded}");
-            WriteVerbose($"  Blob URL: {blobUrl}");
             System.Console.WriteLine();
         }
         else
         {
-            var message = result.TryGetProperty("message", out var msg) 
-                ? msg.GetString() 
-                : "Unknown error";
-            throw new InvalidOperationException($"Upload failed: {message}");
+            throw new InvalidOperationException($"Extraction failed: {result.ErrorMessage}");
         }
     }
 
     private async Task VerifyDataAsync()
     {
-        WriteStep("Step 5/5: Verifying DSM-5 conditions are available");
+        WriteStep("Step 4/4: Verifying DSM-5 conditions are available");
 
-        var url = $"{_apiBaseUrl}/dsm5-admin/conditions";
-        WriteVerbose($"GET {url}");
-
-        var response = await _httpClient.GetAsync(url);
-
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            WriteWarning("Could not verify conditions");
-            return;
-        }
-
-        var content = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<JsonElement>(content);
-
-        if (result.TryGetProperty("success", out var success) && success.GetBoolean())
-        {
-            // Try to get total conditions from different possible locations in response
-            var totalConditions = result.TryGetProperty("totalConditions", out var total) 
-                ? total.GetInt32() 
-                : (result.TryGetProperty("conditions", out var conditionsArray) ? conditionsArray.GetArrayLength() : 0);
+            var conditions = await _dsm5Service.GetAvailableConditionsAsync(
+                category: null,
+                searchTerm: null,
+                includeDetails: false);
 
             WriteSuccess($"Verification successful!");
-            WriteInfo($"  Total conditions: {totalConditions}");
-            
-            // Categories might not be in the response if using default query
-            if (result.TryGetProperty("categories", out var categories))
-            {
-                var categoryCount = categories.GetArrayLength();
-                WriteInfo($"  Categories: {categoryCount}");
-            }
+            WriteInfo($"  Total conditions: {conditions.Count}");
             
             System.Console.WriteLine();
 
             // Show sample conditions
-            if (result.TryGetProperty("conditions", out var conditions))
+            if (conditions.Any())
             {
                 WriteInfo("Sample conditions:");
-                var count = 0;
-                foreach (var condition in conditions.EnumerateArray())
+                foreach (var condition in conditions.Take(5))
                 {
-                    if (count >= 5) break;
-                    
-                    if (condition.TryGetProperty("name", out var nameProp) && 
-                        condition.TryGetProperty("code", out var codeProp))
-                    {
-                        var name = nameProp.GetString();
-                        var code = codeProp.GetString();
-                        WriteInfo($"  • {name} ({code})");
-                        count++;
-                    }
+                    WriteInfo($"  • {condition.Name} ({condition.Code})");
                 }
                 System.Console.WriteLine();
             }
         }
-        else
+        catch (Exception ex)
         {
-            WriteWarning("Could not verify conditions");
+            WriteWarning($"Could not verify conditions: {ex.Message}");
         }
     }
 

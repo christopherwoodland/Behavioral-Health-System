@@ -657,7 +657,7 @@ ENTRYPOINT ["dotnet", "BehavioralHealthSystem.Console.dll"]
 
 ### Overview
 
-The `import-dsm5` command extracts DSM-5 diagnostic conditions from a PDF and uploads them to Azure Blob Storage.
+The `import-dsm5` command processes **split DSM-5 diagnostic PDF files** (one diagnostic per file) and uploads them to Azure Blob Storage. Each PDF file in the input directory contains a single diagnostic element and is processed individually using Azure Content Understanding.
 
 ### Installation
 
@@ -672,7 +672,10 @@ bin\Release\net8.0\bhs.exe
 
 ### Prerequisites
 
-1. **DSM-5 PDF File** - Official DSM-5 manual PDF
+1. **Split DSM-5 PDF Files** - Individual PDF files for each diagnostic condition
+   - Files should be named: `dsm5_{DIAGNOSTIC_CODE}_{DISORDER_TITLE}.pdf`
+   - Each PDF contains a single diagnostic element
+   - Default location: `dsm\single-pages\` (relative to console app directory)
 
 2. **Azure Configuration** - Configure in `appsettings.json`:
    ```json
@@ -699,96 +702,135 @@ bin\Release\net8.0\bhs.exe
 bhs import-dsm5 [options]
 ```
 
-**Important:** This command **bypasses the Azure Functions** and calls Azure Content Understanding directly, avoiding the 5-minute Function timeout limit. Full PDF processing takes 15-20 minutes.
+**Important:** This command **bypasses the Azure Functions** and calls Azure Content Understanding directly, avoiding the 5-minute Function timeout limit. Each diagnostic PDF is processed individually, and the total time depends on the number of files.
 
 **Options:**
 
 | Option | Alias | Description | Default |
 |--------|-------|-------------|---------|
-| `--pdf-path <path>` | `-p` | Path to DSM-5 PDF file | `C:\DSM5\dsm5.pdf` |
-| `--start-page <number>` | `-s` | Starting page for extraction | `1` |
-| `--end-page <number>` | `-e` | Ending page for extraction | `991` |
+| `--directory <path>` | `-d` | Path to directory containing split DSM-5 PDFs | `dsm\single-pages` |
+| `--pattern <pattern>` | `-p` | File pattern to match (glob pattern) | `dsm5_*.pdf` |
+| `--max-files <count>` | `-m` | Maximum number of files to process (for testing) | None (all files) |
 | `--verbose` | `-v` | Enable verbose logging | `false` |
 
 **Examples:**
 
 ```powershell
-# Basic usage
+# Basic usage - processes all PDFs in default directory
 bhs import-dsm5
 
-# Specify custom PDF path
-bhs import-dsm5 --pdf-path "C:\Users\yourname\Documents\DSM5.pdf"
+# Process PDFs from custom directory
+bhs import-dsm5 --directory "C:\DSM5\split-files"
 
-# Import with verbose logging
-bhs import-dsm5 -p "C:\DSM5\dsm5.pdf" -v
+# Process with verbose logging
+bhs import-dsm5 -v
 
-# Import specific page range (for testing)
-bhs import-dsm5 --start-page 50 --end-page 100 -v
+# Process only first 10 files (for testing)
+bhs import-dsm5 --max-files 10 -v
 
+# Process specific pattern
+bhs import-dsm5 --pattern "dsm5_300_*.pdf"
+
+# Custom directory with file limit
+bhs import-dsm5 -d "C:\DSM5\diagnostics" -m 5 -v
 ```
 
 ### Process Flow
 
 **Direct Azure Service Integration** - No Functions timeout limits!
 
-1. **Validate Prerequisites**
-   - Checks PDF file exists and is readable
-   - Displays file size information
+1. **Validate Directory and Discover Files**
+   - Checks directory exists and is accessible
+   - Discovers all PDF files matching the pattern
+   - Displays total files found and total size
+   - Shows sample file names for verification
 
 2. **Check Storage Status**
    - Verifies Azure Blob Storage connectivity
    - Shows current DSM-5 data status
 
-3. **Extract and Upload PDF Data** (15-20 minutes for full PDF)
-   - Reads PDF file and encodes to base64
-   - **Directly calls** Azure Content Understanding service (no 5-minute timeout!)
-   - Extracts diagnostic conditions using AI
-   - **Automatically uploads** to Azure Blob Storage
-   - Reports conditions found and processing time
+3. **Process Split PDF Files** (Batch Processing)
+   - Loops through each PDF file individually
+   - For each file:
+     - Reads PDF file and encodes to base64
+     - **Directly calls** Azure Content Understanding service (no 5-minute timeout!)
+     - Extracts diagnostic condition using AI (each file contains one diagnostic)
+     - **Automatically uploads** to Azure Blob Storage
+     - Reports success/failure and processing time
+   - Shows progress indicator: `[3/59] Processing: dsm5_300_01_F41_0_Panic_Disorder.pdf`
+   - Displays batch processing summary with success/failure counts
 
 4. **Verify Availability**
-   - Confirms conditions are accessible in storage
-   - Displays sample conditions
+   - Confirms all conditions are accessible in storage
+   - Displays sample conditions extracted
 
 ### Expected Output
 
 ```
 ==================================================
-  DSM-5 Data Import Tool
+  DSM-5 Data Import Tool - Batch Processing
 ==================================================
 
-PDF File: C:\DSM5\dsm5.pdf
-Page Range: 1 to 991
+Directory: C:\Users\cwoodland\dev\BehavioralHealthSystem\BehavioralHealthSystem.Console\dsm\single-pages
+File Pattern: dsm5_*.pdf
 Mode: Direct Azure Content Understanding (no Function timeout)
 
-Step 1/4: Validating prerequisites
-✓ PDF file found (42.18 MB)
+Step 1/4: Validating directory and discovering PDF files
+✓ Directory found: C:\...\dsm\single-pages
+✓ Found 59 PDF files
+  Processing all 59 files
+  Total size: 8.42 MB
+  [VERBOSE] Sample files:
+  [VERBOSE]   • dsm5_292_89_F16_983_Hallucinogen_Persisting_Perception_Disorder.pdf
+  [VERBOSE]   • dsm5_293_89_F06_1_Another_Medical_Condition.pdf
+  [VERBOSE]   • dsm5_295_40_F20_81_Schizophreniform_Disorder.pdf
+  [VERBOSE]   • dsm5_296_89_F31_81_Bipolar_II_Disorder.pdf
+  [VERBOSE]   • dsm5_296_99_F34_8_Disruptive_Mood_Dysregulation_Disorder.pdf
+  [VERBOSE]   ... and 54 more
 
 Step 2/4: Checking DSM-5 storage status
 ✓ Storage service is accessible
   Current conditions: 0
   Available conditions: 0
 
-Step 3/4: Extracting and uploading DSM-5 data
-⚠ This may take 15-20 minutes for full PDF (no timeout limits)...
-Processing pages: 1-991
-Sending PDF to Azure Content Understanding service...
-✓ Extraction and upload successful!
-  Conditions found: 297
-  Processing time: 1,234.5s
-  Total elapsed: 1,245.2s
-  Uploaded to storage: True
+Step 3/4: Processing split DSM-5 PDF files
+Processing 59 diagnostic PDF files...
+⚠ Each file contains a single diagnostic and will be processed individually.
+
+[1/59] Processing: dsm5_292_89_F16_983_Hallucinogen_Persisting_Perception_Disorder.pdf
+  [VERBOSE] Size: 142.37 KB
+✓ Extracted in 8.2s - Found 1 condition(s)
+
+[2/59] Processing: dsm5_293_89_F06_1_Another_Medical_Condition.pdf
+  [VERBOSE] Size: 156.91 KB
+✓ Extracted in 7.8s - Found 1 condition(s)
+
+[3/59] Processing: dsm5_295_40_F20_81_Schizophreniform_Disorder.pdf
+  [VERBOSE] Size: 134.22 KB
+✓ Extracted in 8.5s - Found 1 condition(s)
+
+... [progress continues for all 59 files] ...
+
+Batch Processing Summary
+✓ Successfully processed: 57/59
+✗ Failed: 2/59
+Total processing time: 9.2 minutes
+Average per file: 9.4s
+
+Failed files:
+  • dsm5_300_12_F44_0_somatic_symptom_disorder_eating_disorders_substanc.pdf: Timeout
+  • dsm5_312_32_F63_2_478_Disruptive_Impulse-Control_and_Conduct_Disorde.pdf: Parse error
 
 Step 4/4: Verifying DSM-5 conditions are available
 ✓ Verification successful!
-  Total conditions: 297
+  Total conditions: 57
 
 Sample conditions:
-  • Autism Spectrum Disorder (F84.0)
-  • Major Depressive Disorder (F32.9)
-  • Generalized Anxiety Disorder (F41.1)
-  • Schizophrenia (F20.9)
-  • Bipolar I Disorder (F31.9)
+  • Panic Disorder (300.01 / F41.0)
+  • Generalized Anxiety Disorder (300.02 / F41.1)
+  • Agoraphobia (300.22 / F40.00)
+  • Social Anxiety Disorder (300.23 / F40.10)
+  • Obsessive-Compulsive Disorder (300.3 / F42)
 
 ✓ DSM-5 data import completed successfully!
 
@@ -801,14 +843,29 @@ Next Steps:
 
 ### Troubleshooting
 
-#### "PDF file not found"
-**Solution:** Verify file path is correct and use absolute path
+#### "Directory not found"
+**Solution:** Verify directory path is correct. Use `--directory` option to specify custom path, or ensure `dsm\single-pages` exists relative to console app.
 
-#### "Extraction failed"
-**Solution:** Verify `DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT` and `DSM5_DOCUMENT_INTELLIGENCE_KEY` in `appsettings.json`
+#### "No PDF files found matching pattern"
+**Solution:** 
+- Check files are named with pattern `dsm5_*.pdf`
+- Verify files are in the correct directory
+- Use `--pattern` option to specify custom pattern
+
+#### "Extraction failed" for specific files
+**Solution:** 
+- Check if PDF file is corrupted or empty
+- Verify Azure Content Understanding service configuration in `appsettings.json`
+- Some files may have complex formatting that causes parsing issues
 
 #### "Upload failed"
-**Solution:** Verify `DSM5_STORAGE_ACCOUNT_NAME` and Azure authentication (API key or `az login`)
+**Solution:** Verify `AzureWebJobsStorage` connection string and Azure authentication in `appsettings.json`
+
+#### Partial Success (Some files failed)
+**Solution:** 
+- Review the "Failed files" section in the output
+- Re-run import with `--pattern` targeting only failed files
+- Check individual file integrity
 
 ### Development
 

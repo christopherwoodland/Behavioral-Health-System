@@ -536,6 +536,15 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                 return conditions;
             }
 
+            // DEBUG: Save markdown to file for inspection
+            try
+            {
+                var debugPath = Path.Combine(Path.GetTempPath(), $"dsm5-markdown-{DateTime.Now:yyyyMMddHHmmss}.md");
+                File.WriteAllText(debugPath, markdownText);
+                _logger.LogInformation("[{MethodName}] Saved markdown to: {Path}", nameof(ParseExtractionResult), debugPath);
+            }
+            catch { /* Ignore debug errors */ }
+
             // Parse DSM-5 conditions from the markdown text
             // Look for condition headers and their associated sections
             conditions = ParseDSM5ConditionsFromMarkdown(markdownText);
@@ -567,8 +576,9 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             // Split markdown into sections by looking for condition headers
             // A condition header typically contains both name and a diagnostic code
             
-            // Regex to find condition headers with codes (e.g., "296.23 (F32.1)")
-            var conditionHeaderPattern = @"(?m)^#{1,3}\s+(.+?)\s+(\d{3}\.\d{1,2})\s+\(([A-Z]\d{2}\.\d+)\)";
+            // Regex to find condition headers with codes
+            // Format: "# Condition Name Code: 292.89 (F16.983)"
+            var conditionHeaderPattern = @"(?m)^#{1,3}\s+(.+?)\s+Code:\s*(\d{3}\.\d{1,2})\s+\(([A-Z]\d{2}\.\d+)\)";
             var matches = Regex.Matches(markdownText, conditionHeaderPattern);
 
             _logger.LogInformation("[{MethodName}] Found {Count} potential condition headers", 
@@ -634,30 +644,31 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                 condition.Category = categoryMatch.Groups[1].Value.Trim();
             }
 
-            // Section extraction patterns
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Diagnostic Criteria\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            // Section extraction patterns - Updated for Content Understanding OCR output
+            // The OCR produces plain text without markdown headers, so we look for section names as plain text
+            ExtractSection(conditionText, @"(?i)\bDiagnostic Criteria\b([\s\S]{20,3000}?)(?=\b(?:Diagnostic Features|Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity|Specifiers)|\z)", 
                 "Diagnostic Criteria", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Diagnostic Features?\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bDiagnostic Features?\b([\s\S]{20,3000}?)(?=\b(?:Associated Features|Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Diagnostic Features", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Associated Features?.*\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bAssociated Features?[^\n]{0,50}\b([\s\S]{20,3000}?)(?=\b(?:Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Associated Features", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Prevalence\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bPrevalence\b([\s\S]{20,3000}?)(?=\b(?:Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Prevalence", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Development and Course\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\b(?:Development and Course|Dirvelopment and Course)\b([\s\S]{20,3000}?)(?=\b(?:Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Development and Course", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Risk.*Factors?\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\b(?:Risk and Prognostic Factors|Risk and Prognossite Factors)\b([\s\S]{20,3000}?)(?=\b(?:Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Risk and Prognostic Factors", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Culture.*Issues?\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bCulture[- ]?Related[^\n]{0,30}Issues?\b([\s\S]{20,3000}?)(?=\b(?:Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Culture-Related Diagnostic Issues", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*(?:Gender|Sex).*Issues?\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\b(?:Gender|Sex)[- ]?Related[^\n]{0,30}Issues?\b([\s\S]{20,3000}?)(?=\b(?:Suicide|Functional|Differential|Comorbidity)|\z)", 
                 "Gender-Related Diagnostic Issues", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Suicide Risk\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bSuicide Risk\b([\s\S]{20,3000}?)(?=\b(?:Functional|Differential|Comorbidity)|\z)", 
                 "Suicide Risk", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Functional Consequences?\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bFunctional Consequences?[^\n]{0,50}\b([\s\S]{20,3000}?)(?=\b(?:Differential|Comorbidity)|\z)", 
                 "Functional Consequences", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Differential Diagnosis\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bDifferential Diagnosis\b([\s\S]{20,3000}?)(?=\b(?:Comorbidity)|\z)", 
                 "Differential Diagnosis", condition);
-            ExtractSection(conditionText, @"(?i)(?:^|\n)#{1,4}\s*Comorbidity\s*\n([\s\S]+?)(?=\n#{1,4}\s|\z)", 
+            ExtractSection(conditionText, @"(?i)\bComorbidity\b([\s\S]{20,3000})(?=\z)", 
                 "Comorbidity", condition);
 
             _logger.LogInformation("[{MethodName}] Condition {Name}: Found {Present} sections, missing {Missing}",

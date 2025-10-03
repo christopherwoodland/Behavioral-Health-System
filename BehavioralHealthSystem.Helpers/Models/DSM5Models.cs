@@ -2,6 +2,7 @@ namespace BehavioralHealthSystem.Models;
 
 /// <summary>
 /// Represents a mental health condition from the DSM-5 with its diagnostic criteria
+/// Following the complete DSM-5 structured format (13 sections)
 /// </summary>
 public class DSM5ConditionData
 {
@@ -35,41 +36,105 @@ public class DSM5ConditionData
     [JsonPropertyName("description")]
     public string Description { get; set; } = string.Empty;
 
+    // ==================== DSM-5 STANDARD SECTIONS ====================
+
     /// <summary>
-    /// List of diagnostic criteria (A, B, C, etc.)
+    /// Section 1: Diagnostic Criteria - Official lettered list of symptoms and requirements
     /// </summary>
     [JsonPropertyName("diagnosticCriteria")]
     public List<DSM5DiagnosticCriterion> DiagnosticCriteria { get; set; } = new();
 
     /// <summary>
-    /// Differential diagnosis considerations
+    /// Section 2: Diagnostic Features - Narrative explanation of core symptoms and presentation
+    /// </summary>
+    [JsonPropertyName("diagnosticFeatures")]
+    public string? DiagnosticFeatures { get; set; }
+
+    /// <summary>
+    /// Section 3: Associated Features Supporting Diagnosis - Additional symptoms/behaviors
+    /// </summary>
+    [JsonPropertyName("associatedFeatures")]
+    public string? AssociatedFeatures { get; set; }
+
+    /// <summary>
+    /// Section 4: Prevalence - Data on how common the disorder is
+    /// </summary>
+    [JsonPropertyName("prevalence")]
+    public string? Prevalence { get; set; }
+
+    /// <summary>
+    /// Section 5: Development and Course - Age at onset, progression, natural history
+    /// </summary>
+    [JsonPropertyName("developmentAndCourse")]
+    public string? DevelopmentAndCourse { get; set; }
+
+    /// <summary>
+    /// Section 6: Risk and Prognostic Factors
+    /// </summary>
+    [JsonPropertyName("riskAndPrognosticFactors")]
+    public DSM5RiskFactors? RiskAndPrognosticFactors { get; set; }
+
+    /// <summary>
+    /// Section 7: Culture-Related Diagnostic Issues
+    /// </summary>
+    [JsonPropertyName("cultureRelatedIssues")]
+    public string? CultureRelatedIssues { get; set; }
+
+    /// <summary>
+    /// Section 8: Gender-Related Diagnostic Issues
+    /// </summary>
+    [JsonPropertyName("genderRelatedIssues")]
+    public string? GenderRelatedIssues { get; set; }
+
+    /// <summary>
+    /// Section 9: Suicide Risk (for applicable disorders)
+    /// </summary>
+    [JsonPropertyName("suicideRisk")]
+    public string? SuicideRisk { get; set; }
+
+    /// <summary>
+    /// Section 10: Functional Consequences - Impact on daily functioning, work, relationships
+    /// </summary>
+    [JsonPropertyName("functionalConsequences")]
+    public string? FunctionalConsequences { get; set; }
+
+    /// <summary>
+    /// Section 11: Differential Diagnosis - Other disorders to consider and rule out
     /// </summary>
     [JsonPropertyName("differentialDiagnosis")]
     public List<string> DifferentialDiagnosis { get; set; } = new();
 
     /// <summary>
-    /// Prevalence information
+    /// Section 12: Comorbidity - Disorders commonly co-occurring
     /// </summary>
-    [JsonPropertyName("prevalence")]
-    public string Prevalence { get; set; } = string.Empty;
+    [JsonPropertyName("comorbidity")]
+    public string? Comorbidity { get; set; }
 
     /// <summary>
-    /// Development and course information
+    /// Section 13: Specifiers and Subtypes (where applicable)
     /// </summary>
-    [JsonPropertyName("development")]
-    public string Development { get; set; } = string.Empty;
+    [JsonPropertyName("specifiers")]
+    public List<DSM5Specifier> Specifiers { get; set; } = new();
 
-    /// <summary>
-    /// Risk and prognostic factors
-    /// </summary>
-    [JsonPropertyName("riskFactors")]
-    public List<string> RiskFactors { get; set; } = new();
+    // ==================== METADATA ====================
 
     /// <summary>
     /// Page numbers in the DSM-5 where this condition appears
     /// </summary>
     [JsonPropertyName("pageNumbers")]
     public List<int> PageNumbers { get; set; } = new();
+
+    /// <summary>
+    /// Which sections were present in the source document
+    /// </summary>
+    [JsonPropertyName("presentSections")]
+    public List<string> PresentSections { get; set; } = new();
+
+    /// <summary>
+    /// Which sections were missing or empty in the source
+    /// </summary>
+    [JsonPropertyName("missingSections")]
+    public List<string> MissingSections { get; set; } = new();
 
     /// <summary>
     /// Whether this condition is available for use in assessments
@@ -172,6 +237,72 @@ public class DSM5SubCriterion
     /// </summary>
     [JsonPropertyName("isRequired")]
     public bool IsRequired { get; set; } = false;
+}
+
+/// <summary>
+/// Risk and prognostic factors for a DSM-5 condition (Section 6)
+/// </summary>
+public class DSM5RiskFactors
+{
+    /// <summary>
+    /// Temperamental risk factors (personality traits, coping styles)
+    /// </summary>
+    [JsonPropertyName("temperamental")]
+    public string? Temperamental { get; set; }
+
+    /// <summary>
+    /// Environmental risk factors (life events, stress, trauma)
+    /// </summary>
+    [JsonPropertyName("environmental")]
+    public string? Environmental { get; set; }
+
+    /// <summary>
+    /// Genetic and physiological factors
+    /// </summary>
+    [JsonPropertyName("geneticAndPhysiological")]
+    public string? GeneticAndPhysiological { get; set; }
+
+    /// <summary>
+    /// Course modifiers (factors that affect prognosis)
+    /// </summary>
+    [JsonPropertyName("courseModifiers")]
+    public string? CourseModifiers { get; set; }
+}
+
+/// <summary>
+/// Specifiers and subtypes for a DSM-5 condition (Section 13)
+/// </summary>
+public class DSM5Specifier
+{
+    /// <summary>
+    /// Type of specifier (e.g., "Severity", "Course", "With Features")
+    /// </summary>
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Name of the specifier
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Description of the specifier
+    /// </summary>
+    [JsonPropertyName("description")]
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Code modifier if applicable
+    /// </summary>
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+
+    /// <summary>
+    /// Criteria for applying this specifier
+    /// </summary>
+    [JsonPropertyName("criteria")]
+    public List<string> Criteria { get; set; } = new();
 }
 
 /// <summary>

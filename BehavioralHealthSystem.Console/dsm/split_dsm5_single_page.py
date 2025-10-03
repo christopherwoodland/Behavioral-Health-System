@@ -177,8 +177,83 @@ class DSMSinglePageSplitter:
                 item.get('diagnostic_code') and
                 item.get('full_text')):
                 complete_items.append(item)
+        
+        # Add standardized headers to each item for uniform structure
+        for item in complete_items:
+            item['full_text'] = self.add_standardized_headers(item['full_text'], item['title'])
                 
         return complete_items
+    
+    def add_standardized_headers(self, text, disorder_title):
+        """Add all standardized DSM-5 headers to ensure uniform structure"""
+        # Define the standard order of sections
+        standard_sections = [
+            'Diagnostic Criteria',
+            'Specifiers',
+            'Diagnostic Features',
+            'Associated Features Supporting Diagnosis',
+            'Prevalence',
+            'Development and Course',
+            'Risk and Prognostic Factors',
+            'Culture-Related Diagnostic Issues',
+            'Gender-Related Diagnostic Issues',
+            'Suicide Risk',
+            f'Functional Consequences of {disorder_title}',
+            'Differential Diagnosis',
+            'Comorbidity'
+        ]
+        
+        # Parse existing content into sections
+        lines = text.split('\n')
+        sections = {}
+        current_section = None
+        current_content = []
+        
+        for line in lines:
+            line_stripped = line.strip()
+            
+            # Skip empty lines and disorder title (will be added by PDF generator)
+            if not line_stripped or line_stripped == disorder_title:
+                continue
+            
+            # Check if this line is a section header
+            is_header = False
+            for std_section in standard_sections:
+                # Match section headers (case-insensitive, flexible spacing)
+                # Handle "Functional Consequences of [Disorder]" variations
+                if 'Functional Consequences' in std_section:
+                    pattern = r'^Functional\s+Consequences'
+                else:
+                    pattern = re.escape(std_section).replace(r'\ ', r'\s+')
+                
+                if re.match(f'^{pattern}', line_stripped, re.IGNORECASE):
+                    # Save previous section
+                    if current_section:
+                        sections[current_section] = '\n'.join(current_content).strip()
+                    current_section = std_section
+                    current_content = []
+                    is_header = True
+                    break
+            
+            if not is_header and current_section:
+                current_content.append(line)
+        
+        # Save last section
+        if current_section:
+            sections[current_section] = '\n'.join(current_content).strip()
+        
+        # Build standardized output
+        result = []
+        for section in standard_sections:
+            result.append(section)  # Add section header
+            if section in sections and sections[section]:
+                result.append(sections[section])  # Add content if exists
+                result.append('')  # Add blank line after content
+            else:
+                result.append('[No data available for this section]')
+                result.append('')  # Add blank line
+        
+        return '\n'.join(result)
     
     def detect_section_headers(self, text):
         """Detect and mark section headers in the text."""

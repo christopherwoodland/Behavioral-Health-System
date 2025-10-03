@@ -22,25 +22,25 @@ public class Program
         var rootCommand = new RootCommand("Behavioral Health System - Administrative CLI Tool");
 
         // DSM-5 import command
-        var dsm5Command = new Command("import-dsm5", "Import DSM-5 diagnostic conditions from PDF");
+        var dsm5Command = new Command("import-dsm5", "Import DSM-5 diagnostic conditions from split PDF files");
         
-        var pdfPathOption = new Option<string>(
-            name: "--pdf-path",
-            description: "Path to the DSM-5 PDF file",
-            getDefaultValue: () => @"C:\DSM5\dsm5.pdf");
-        pdfPathOption.AddAlias("-p");
+        var directoryPathOption = new Option<string>(
+            name: "--directory",
+            description: "Path to the directory containing split DSM-5 PDF files",
+            getDefaultValue: () => Path.Combine(Directory.GetCurrentDirectory(), "dsm", "single-pages"));
+        directoryPathOption.AddAlias("-d");
         
-        var startPageOption = new Option<int>(
-            name: "--start-page",
-            description: "Starting page number for extraction",
-            getDefaultValue: () => 1);
-        startPageOption.AddAlias("-s");
+        var filePatternOption = new Option<string>(
+            name: "--pattern",
+            description: "File pattern to match (e.g., 'dsm5_*.pdf')",
+            getDefaultValue: () => "dsm5_*.pdf");
+        filePatternOption.AddAlias("-p");
         
-        var endPageOption = new Option<int>(
-            name: "--end-page",
-            description: "Ending page number for extraction",
-            getDefaultValue: () => 991);
-        endPageOption.AddAlias("-e");
+        var maxFilesOption = new Option<int?>(
+            name: "--max-files",
+            description: "Maximum number of files to process (for testing)",
+            getDefaultValue: () => null);
+        maxFilesOption.AddAlias("-m");
         
         var verboseOption = new Option<bool>(
             name: "--verbose",
@@ -48,12 +48,12 @@ public class Program
             getDefaultValue: () => false);
         verboseOption.AddAlias("-v");
 
-        dsm5Command.AddOption(pdfPathOption);
-        dsm5Command.AddOption(startPageOption);
-        dsm5Command.AddOption(endPageOption);
+        dsm5Command.AddOption(directoryPathOption);
+        dsm5Command.AddOption(filePatternOption);
+        dsm5Command.AddOption(maxFilesOption);
         dsm5Command.AddOption(verboseOption);
 
-        dsm5Command.SetHandler(async (pdfPath, startPage, endPage, verbose) =>
+        dsm5Command.SetHandler(async (directoryPath, filePattern, maxFiles, verbose) =>
         {
             // Build configuration
             var configuration = new ConfigurationBuilder()
@@ -77,8 +77,8 @@ public class Program
             var dsm5Service = serviceProvider.GetRequiredService<IDSM5DataService>();
 
             var importer = new DSM5Importer(dsm5Service, verbose);
-            await importer.ImportAsync(pdfPath, startPage, endPage);
-        }, pdfPathOption, startPageOption, endPageOption, verboseOption);
+            await importer.ImportBatchAsync(directoryPath, filePattern, maxFiles);
+        }, directoryPathOption, filePatternOption, maxFilesOption, verboseOption);
 
         rootCommand.AddCommand(dsm5Command);
 
@@ -100,24 +100,28 @@ public class DSM5Importer
         _verbose = verbose;
     }
 
-    public async Task ImportAsync(string pdfPath, int startPage, int endPage)
+    public async Task ImportBatchAsync(string directoryPath, string filePattern, int? maxFiles)
     {
         try
         {
-            WriteHeader("DSM-5 Data Import Tool");
-            WriteInfo($"PDF File: {pdfPath}");
-            WriteInfo($"Page Range: {startPage} to {endPage}");
+            WriteHeader("DSM-5 Data Import Tool - Batch Processing");
+            WriteInfo($"Directory: {directoryPath}");
+            WriteInfo($"File Pattern: {filePattern}");
+            if (maxFiles.HasValue)
+            {
+                WriteInfo($"Max Files: {maxFiles.Value}");
+            }
             WriteInfo($"Mode: Direct Azure Content Understanding (no Function timeout)");
             System.Console.WriteLine();
 
-            // Step 1: Validate prerequisites
-            ValidatePrerequisites(pdfPath);
+            // Step 1: Validate prerequisites and get PDF files
+            var pdfFiles = ValidateDirectoryAndGetFiles(directoryPath, filePattern, maxFiles);
 
             // Step 2: Check system status
             await CheckSystemStatusAsync();
 
-            // Step 3: Extract PDF data directly using DSM5DataService
-            await ExtractAndUploadPdfDataAsync(pdfPath, startPage, endPage);
+            // Step 3: Process each PDF file
+            await ProcessPdfBatchAsync(pdfFiles);
 
             // Step 4: Verify availability
             await VerifyDataAsync();
@@ -142,37 +146,59 @@ public class DSM5Importer
         }
     }
 
-    private void ValidatePrerequisites(string pdfPath)
+    private List<string> ValidateDirectoryAndGetFiles(string directoryPath, string filePattern, int? maxFiles)
     {
-        WriteStep("Step 1/4: Validating prerequisites");
+        WriteStep("Step 1/4: Validating directory and discovering PDF files");
 
-        // Check PDF file exists
-        if (!File.Exists(pdfPath))
+        // Check directory exists
+        if (!Directory.Exists(directoryPath))
         {
-            throw new FileNotFoundException($"PDF file not found at: {pdfPath}");
+            throw new DirectoryNotFoundException($"Directory not found at: {directoryPath}");
         }
 
-        var fileInfo = new FileInfo(pdfPath);
-        WriteSuccess($"PDF file found ({FormatFileSize(fileInfo.Length)})");
+        WriteSuccess($"Directory found: {directoryPath}");
 
-        // Check file is not empty
-        if (fileInfo.Length == 0)
+        // Get all PDF files matching the pattern
+        var allFiles = Directory.GetFiles(directoryPath, filePattern, SearchOption.TopDirectoryOnly)
+            .OrderBy(f => f)
+            .ToList();
+
+        if (allFiles.Count == 0)
         {
-            throw new InvalidOperationException("PDF file is empty");
+            throw new InvalidOperationException($"No PDF files found matching pattern '{filePattern}' in {directoryPath}");
         }
 
-        // Check file is readable
-        try
+        // Limit files if maxFiles is specified
+        var filesToProcess = maxFiles.HasValue 
+            ? allFiles.Take(maxFiles.Value).ToList() 
+            : allFiles;
+
+        WriteSuccess($"Found {allFiles.Count} PDF files");
+        if (maxFiles.HasValue && filesToProcess.Count < allFiles.Count)
         {
-            using var fs = File.OpenRead(pdfPath);
-            WriteVerbose("PDF file is readable");
+            WriteInfo($"  Processing first {filesToProcess.Count} files (limited by --max-files)");
         }
-        catch (Exception ex)
+        else
         {
-            throw new InvalidOperationException($"Cannot read PDF file: {ex.Message}");
+            WriteInfo($"  Processing all {filesToProcess.Count} files");
+        }
+
+        // Calculate total size
+        long totalSize = filesToProcess.Sum(f => new FileInfo(f).Length);
+        WriteInfo($"  Total size: {FormatFileSize(totalSize)}");
+
+        WriteVerbose("Sample files:");
+        foreach (var file in filesToProcess.Take(5))
+        {
+            WriteVerbose($"  • {Path.GetFileName(file)}");
+        }
+        if (filesToProcess.Count > 5)
+        {
+            WriteVerbose($"  ... and {filesToProcess.Count - 5} more");
         }
 
         System.Console.WriteLine();
+        return filesToProcess;
     }
 
     private async Task CheckSystemStatusAsync()
@@ -204,53 +230,105 @@ public class DSM5Importer
         }
     }
 
-    private async Task ExtractAndUploadPdfDataAsync(string pdfPath, int startPage, int endPage)
+    private async Task ProcessPdfBatchAsync(List<string> pdfFiles)
     {
-        WriteStep("Step 3/4: Extracting and uploading DSM-5 data");
-        WriteWarning("This may take 15-20 minutes for full PDF (no timeout limits)...");
+        WriteStep("Step 3/4: Processing split DSM-5 PDF files");
+        WriteInfo($"Processing {pdfFiles.Count} diagnostic PDF files...");
+        WriteWarning("Each file contains a single diagnostic and will be processed individually.");
+        System.Console.WriteLine();
 
-        // Read and encode PDF
-        WriteVerbose("Reading PDF file...");
-        byte[] pdfBytes = await File.ReadAllBytesAsync(pdfPath);
-        string pdfBase64 = Convert.ToBase64String(pdfBytes);
-        
-        WriteVerbose($"PDF size: {FormatFileSize(pdfBytes.Length)}");
-        WriteVerbose($"Base64 size: {FormatFileSize(pdfBase64.Length)}");
+        int successCount = 0;
+        int failureCount = 0;
+        var totalStartTime = DateTime.UtcNow;
+        var failedFiles = new List<(string FileName, string Error)>();
 
-        // Prepare page ranges
-        var pageRanges = $"{startPage}-{endPage}";
-        WriteInfo($"Processing pages: {pageRanges}");
-        WriteInfo("Sending PDF to Azure Content Understanding service...");
-
-        var startTime = DateTime.UtcNow;
-
-        // Call DSM5DataService directly (no Function timeout!)
-        var result = await _dsm5Service.ExtractDiagnosticCriteriaAsync(
-            pdfUrl: null,
-            pdfBase64: pdfBase64,
-            pageRanges: pageRanges,
-            autoUpload: true);
-
-        var elapsed = DateTime.UtcNow - startTime;
-
-        if (result.Success)
+        for (int i = 0; i < pdfFiles.Count; i++)
         {
-            WriteSuccess($"Extraction and upload successful!");
-            WriteInfo($"  Conditions found: {result.ExtractedConditions?.Count ?? 0}");
-            WriteInfo($"  Processing time: {result.ProcessingTimeMs / 1000.0:F1}s");
-            WriteInfo($"  Total elapsed: {elapsed.TotalSeconds:F1}s");
-            WriteInfo($"  Uploaded to storage: {result.UploadedToStorage}");
+            var pdfPath = pdfFiles[i];
+            var fileName = Path.GetFileName(pdfPath);
             
-            if (!string.IsNullOrEmpty(result.BlobPath))
+            try
             {
-                WriteVerbose($"  Blob path: {result.BlobPath}");
+                WriteInfo($"[{i + 1}/{pdfFiles.Count}] Processing: {fileName}");
+
+                // Read and encode PDF
+                byte[] pdfBytes = await File.ReadAllBytesAsync(pdfPath);
+                string pdfBase64 = Convert.ToBase64String(pdfBytes);
+                
+                WriteVerbose($"  Size: {FormatFileSize(pdfBytes.Length)}");
+
+                var fileStartTime = DateTime.UtcNow;
+
+                // Call DSM5DataService - no page ranges needed since each file is a single diagnostic
+                var result = await _dsm5Service.ExtractDiagnosticCriteriaAsync(
+                    pdfUrl: null,
+                    pdfBase64: pdfBase64,
+                    pageRanges: null, // Single-page PDF, no ranges needed
+                    autoUpload: true);
+
+                var elapsed = DateTime.UtcNow - fileStartTime;
+
+                if (result.Success)
+                {
+                    WriteSuccess($"  ✓ Extracted in {elapsed.TotalSeconds:F1}s - Found {result.ExtractedConditions?.Count ?? 0} condition(s)");
+                    successCount++;
+                }
+                else
+                {
+                    WriteError($"  ✗ Extraction failed: {result.ErrorMessage}");
+                    failedFiles.Add((fileName, result.ErrorMessage ?? "Unknown error"));
+                    failureCount++;
+                }
             }
-            
+            catch (Exception ex)
+            {
+                WriteError($"  ✗ Error processing file: {ex.Message}");
+                failedFiles.Add((fileName, ex.Message));
+                failureCount++;
+            }
+
             System.Console.WriteLine();
+
+            // Add a small delay between files to avoid overwhelming the API
+            if (i < pdfFiles.Count - 1)
+            {
+                await Task.Delay(500);
+            }
         }
-        else
+
+        var totalElapsed = DateTime.UtcNow - totalStartTime;
+
+        // Summary
+        WriteStep("Batch Processing Summary");
+        WriteSuccess($"Successfully processed: {successCount}/{pdfFiles.Count}");
+        if (failureCount > 0)
         {
-            throw new InvalidOperationException($"Extraction failed: {result.ErrorMessage}");
+            WriteError($"Failed: {failureCount}/{pdfFiles.Count}");
+        }
+        WriteInfo($"Total processing time: {totalElapsed.TotalMinutes:F1} minutes");
+        WriteInfo($"Average per file: {totalElapsed.TotalSeconds / pdfFiles.Count:F1}s");
+
+        // Show failed files if any
+        if (failedFiles.Any())
+        {
+            System.Console.WriteLine();
+            WriteWarning("Failed files:");
+            foreach (var (fileName, error) in failedFiles)
+            {
+                WriteError($"  • {fileName}: {error}");
+            }
+        }
+
+        System.Console.WriteLine();
+
+        if (failureCount > 0 && successCount == 0)
+        {
+            throw new InvalidOperationException($"All {failureCount} files failed to process");
+        }
+
+        if (failureCount > 0)
+        {
+            WriteWarning($"Completed with {failureCount} failures. {successCount} files were processed successfully.");
         }
     }
 

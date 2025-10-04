@@ -168,3 +168,125 @@ export const formatProcessingTime = (ms: number): string => {
   const remainingSeconds = seconds % 60;
   return `${minutes}m ${remainingSeconds}s`;
 };
+
+// ==================== MULTI-CONDITION ASSESSMENT TYPES ====================
+
+export type DisorderLikelihood = 'None' | 'Minimal' | 'Low' | 'Moderate' | 'High' | 'Very High';
+
+export interface SubCriterionEvaluationResult {
+  subCriterionId: string;
+  subCriterionName: string;
+  description: string;
+  severity: number; // 0-4 scale
+  isPresent: boolean;
+  confidence: number; // 0.0-1.0
+  evidence: string;
+  notes: string;
+  observedExamples: string[];
+}
+
+export interface CriterionEvaluationResult {
+  criterionId: string;
+  criterionTitle: string;
+  criterionDescription: string;
+  isMet: boolean;
+  confidence: number; // 0.0-1.0
+  evidence: string[];
+  subCriteriaEvaluations: SubCriterionEvaluationResult[];
+  notes: string;
+  durationRequirementMet?: boolean;
+  subCriteriaRequired: number;
+  subCriteriaMet: number;
+}
+
+export interface ConditionAssessmentResult {
+  conditionId: string;
+  conditionName: string;
+  conditionCode: string;
+  category: string;
+  overallLikelihood: DisorderLikelihood;
+  confidenceScore: number; // 0.0-1.0
+  conditionRiskScore: number; // 1-10
+  assessmentSummary: string;
+  criteriaEvaluations: CriterionEvaluationResult[];
+  riskFactorsIdentified: string[];
+  recommendedActions: string[];
+  clinicalNotes: string[];
+  differentialDiagnosis: string[];
+  durationAssessment: string;
+  functionalImpairment: FunctionalImpairmentAssessment;
+}
+
+export interface MultiConditionExtendedRiskAssessment {
+  // Base risk assessment fields
+  overallRiskLevel: RiskLevel;
+  riskScore: number; // 1-10
+  summary: string;
+  keyFactors: string[];
+  recommendations: string[];
+  immediateActions: string[];
+  followUpRecommendations: string[];
+  confidenceLevel: number; // 0.0-1.0
+  
+  // Extended assessment specific fields
+  isExtended: boolean;
+  generatedAt: string; // ISO 8601 datetime
+  modelVersion: string;
+  processingTimeMs: number;
+  
+  // Multi-condition specific fields
+  isMultiCondition: boolean;
+  evaluatedConditions: string[];
+  overallAssessmentSummary: string;
+  highestRiskCondition: string | null;
+  combinedRecommendedActions: string[];
+  crossConditionDifferentialDiagnosis: string[];
+  conditionAssessments: ConditionAssessmentResult[];
+  
+  // Legacy field for backwards compatibility
+  schizophreniaAssessment?: SchizophreniaAssessment;
+}
+
+export interface MultiConditionAssessmentRequest {
+  selectedConditions: string[];
+}
+
+export interface MultiConditionAssessmentResponse {
+  success: boolean;
+  message?: string;
+  multiConditionAssessment?: MultiConditionExtendedRiskAssessment;
+  processingTimeSeconds?: number;
+  cached?: boolean;
+  error?: string;
+  jobId?: string;
+}
+
+// Helper functions for multi-condition UI
+export const getConditionLikelihoodColor = (likelihood: DisorderLikelihood): string => {
+  switch (likelihood) {
+    case 'None':
+    case 'Minimal':
+      return 'text-green-600 bg-green-50 border-green-200';
+    case 'Low':
+      return 'text-blue-600 bg-blue-50 border-blue-200';
+    case 'Moderate':
+      return 'text-yellow-600 bg-yellow-50 border-yellow-200';
+    case 'High':
+      return 'text-orange-600 bg-orange-50 border-orange-200';
+    case 'Very High':
+      return 'text-red-600 bg-red-50 border-red-200';
+    default:
+      return 'text-gray-600 bg-gray-50 border-gray-200';
+  }
+};
+
+export const getCriterionMetBadge = (isMet: boolean): string => {
+  return isMet 
+    ? 'bg-green-100 text-green-800 border-green-200'
+    : 'bg-gray-100 text-gray-800 border-gray-200';
+};
+
+export const formatConditionCode = (code: string): string => {
+  // Format DSM-5 codes nicely (e.g., "295.90 (F20.9)")
+  return code.replace(/(\d+\.\d+)\s*\(([^)]+)\)/, '$1 ($2)');
+};

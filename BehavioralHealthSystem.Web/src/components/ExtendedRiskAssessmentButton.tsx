@@ -212,7 +212,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       const response = await apiPost<StartJobResponse>(
         `${apiBaseUrl}/api/sessions/${sessionId}/extended-risk-assessment`,
         {
-          dsm5ConditionIds: selectedDSM5Conditions.length > 0 ? selectedDSM5Conditions : undefined
+          selectedConditions: selectedDSM5Conditions.length > 0 ? selectedDSM5Conditions : []
         }
       );
 
@@ -339,7 +339,15 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
             No Extended Risk Assessment Available
           </h3>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            Generate an AI-powered extended risk assessment with comprehensive DSM-5 schizophrenia evaluation using GPT-5/O3. Processing time: 30-120 seconds.
+            {selectedDSM5Conditions.length > 0 ? (
+              selectedDSM5Conditions.length === 1 ? (
+                `Generate an AI-powered extended risk assessment with comprehensive DSM-5 evaluation for the selected condition using GPT-5/O3. Processing time: 30-120 seconds.`
+              ) : (
+                `Generate an AI-powered extended risk assessment with comprehensive DSM-5 evaluation for ${selectedDSM5Conditions.length} selected conditions using GPT-5/O3. Processing time: 30-120 seconds.`
+              )
+            ) : (
+              'Generate an AI-powered extended risk assessment with comprehensive DSM-5 schizophrenia evaluation using GPT-5/O3. Processing time: 30-120 seconds.'
+            )}
           </p>
           
           <div className="space-y-3">
@@ -454,7 +462,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           )}
           
           <p className="text-gray-600 dark:text-gray-300 mt-4">
-            {isLoading ? 'Using GPT-5/O3 for comprehensive evaluation. This typically takes 30-120 seconds.' : 'Please wait...'}
+            {isLoading ? 'Generating comprehensive evaluation. This typically takes 30-120 seconds.' : 'Please wait...'}
           </p>
         </div>
       </div>

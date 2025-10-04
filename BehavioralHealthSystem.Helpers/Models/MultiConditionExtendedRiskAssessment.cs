@@ -282,7 +282,7 @@ public class SubCriterionEvaluationResult
     /// Evidence supporting this evaluation
     /// </summary>
     [JsonPropertyName("evidence")]
-    public string Evidence { get; set; } = string.Empty;
+    public List<string> Evidence { get; set; } = new();
 
     /// <summary>
     /// Additional notes about this sub-criterion

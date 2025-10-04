@@ -181,6 +181,7 @@ public class ExtendedAssessmentOrchestrationInput
 {
     public string JobId { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
+    public List<string> SelectedConditions { get; set; } = new();
 }
 
 /// <summary>

@@ -9,18 +9,21 @@ public class RiskAssessmentService : IRiskAssessmentService
     private readonly AzureOpenAIOptions _openAIOptions;
     private readonly ExtendedAssessmentOpenAIOptions _extendedOpenAIOptions;
     private readonly ISessionStorageService _sessionStorageService;
+    private readonly IDSM5DataService _dsm5DataService;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public RiskAssessmentService(
         ILogger<RiskAssessmentService> logger,
         IOptions<AzureOpenAIOptions> openAIOptions,
         IOptions<ExtendedAssessmentOpenAIOptions> extendedOpenAIOptions,
-        ISessionStorageService sessionStorageService)
+        ISessionStorageService sessionStorageService,
+        IDSM5DataService dsm5DataService)
     {
         _logger = logger;
         _openAIOptions = openAIOptions.Value;
         _extendedOpenAIOptions = extendedOpenAIOptions.Value;
         _sessionStorageService = sessionStorageService;
+        _dsm5DataService = dsm5DataService;
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -355,7 +358,21 @@ public class RiskAssessmentService : IRiskAssessmentService
                 return null;
             }
 
-            var prompt = BuildExtendedRiskAssessmentPrompt(sessionData);
+            // For backwards compatibility, use schizophrenia as default if DSM5 conditions not specified
+            var selectedConditions = new List<string>();
+            if (sessionData.DSM5Conditions != null && sessionData.DSM5Conditions.Count > 0)
+            {
+                selectedConditions = sessionData.DSM5Conditions;
+            }
+            else
+            {
+                // Default to schizophrenia for backwards compatibility
+                selectedConditions.Add("schizophrenia_295_90_f20_9");
+                _logger.LogInformation("[{MethodName}] No DSM5 conditions specified, defaulting to schizophrenia for backwards compatibility",
+                    nameof(GenerateExtendedRiskAssessmentAsync));
+            }
+
+            var prompt = await BuildExtendedRiskAssessmentPromptAsync(sessionData, selectedConditions);
             
             _logger.LogInformation("[{MethodName}] Starting extended risk assessment for session {SessionId}", 
                 nameof(GenerateExtendedRiskAssessmentAsync), sessionData.SessionId);
@@ -443,12 +460,17 @@ public class RiskAssessmentService : IRiskAssessmentService
         }
     }
     
-    private string BuildExtendedRiskAssessmentPrompt(SessionData sessionData)
+    private async Task<string> BuildExtendedRiskAssessmentPromptAsync(
+        SessionData sessionData, 
+        List<string> selectedConditionIds)
     {
         var promptBuilder = new StringBuilder();
         
+        var isMultiCondition = selectedConditionIds.Count > 1;
+        var conditionsText = selectedConditionIds.Count == 1 ? "evaluation" : $"evaluations for {selectedConditionIds.Count} selected conditions";
+        
         promptBuilder.AppendLine("You are a licensed mental health professional AI assistant specializing in comprehensive psychiatric assessment.");
-        promptBuilder.AppendLine("Based on the following clinical data, provide a comprehensive extended risk assessment including schizophrenia evaluation.");
+        promptBuilder.AppendLine($"Based on the following clinical data, provide a comprehensive extended risk assessment including DSM-5 {conditionsText}.");
         promptBuilder.AppendLine("Your response must be in valid JSON format matching the exact structure specified.");
         promptBuilder.AppendLine();
         
@@ -524,58 +546,110 @@ public class RiskAssessmentService : IRiskAssessmentService
         promptBuilder.AppendLine("8. Confidence level (0.0-1.0)");
         promptBuilder.AppendLine();
         
-        promptBuilder.AppendLine("### Part 2: Schizophrenia Assessment (DSM-5 Criteria 295.90 F20.9)");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine("Evaluate the degree to which the patient's information and transcription relates to schizophrenia based on DSM-5 diagnostic criteria:");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine("**Criterion A - Characteristic Symptoms** (Assess each symptom 0-4 scale where 0=not present, 4=severe):");
-        promptBuilder.AppendLine("1. **Delusions** - False beliefs not amenable to change despite conflicting evidence");
-        promptBuilder.AppendLine("2. **Hallucinations** - Perception-like experiences without external stimulus (auditory most common)");
-        promptBuilder.AppendLine("3. **Disorganized Speech** - Frequent derailment, incoherence, tangentiality");
-        promptBuilder.AppendLine("4. **Grossly Disorganized or Catatonic Behavior** - Childlike silliness to unpredictable agitation");
-        promptBuilder.AppendLine("5. **Negative Symptoms** - Diminished emotional expression, avolition, alogia, anhedonia, asociality");
-        promptBuilder.AppendLine();
-        promptBuilder.AppendLine("**Note:** At least TWO symptoms must be present for significant time during 1-month period.");
-        promptBuilder.AppendLine("**Note:** At least ONE must be delusions (A1), hallucinations (A2), or disorganized speech (A3).");
-        promptBuilder.AppendLine();
+        // Fetch DSM-5 condition data for selected conditions
+        var conditionDataDict = await GetConditionDataAsync(selectedConditionIds);
         
-        promptBuilder.AppendLine("**Criterion B - Functional Impairment:**");
-        promptBuilder.AppendLine("Assess level of functioning in major areas:");
-        promptBuilder.AppendLine("- Work/occupational functioning");
-        promptBuilder.AppendLine("- Interpersonal relations");
-        promptBuilder.AppendLine("- Self-care");
-        promptBuilder.AppendLine();
-        
-        promptBuilder.AppendLine("**Criterion C - Duration:**");
-        promptBuilder.AppendLine("Note if information suggests continuous signs for at least 6 months (if determinable from data)");
-        promptBuilder.AppendLine();
-        
-        promptBuilder.AppendLine("**Differential Diagnosis Considerations:**");
-        promptBuilder.AppendLine("- Rule out schizoaffective disorder");
-        promptBuilder.AppendLine("- Rule out depressive or bipolar disorder with psychotic features");
-        promptBuilder.AppendLine("- Rule out substance/medication-induced psychotic disorder");
-        promptBuilder.AppendLine("- Rule out psychotic disorder due to another medical condition");
-        promptBuilder.AppendLine("- Consider autism spectrum disorder or communication disorders");
-        promptBuilder.AppendLine();
-        
-        promptBuilder.AppendLine("**Overall Schizophrenia Likelihood Assessment:**");
-        promptBuilder.AppendLine("- None: No evidence of schizophrenia-related symptoms");
-        promptBuilder.AppendLine("- Minimal: Very slight indications, likely not clinically significant");
-        promptBuilder.AppendLine("- Low: Some symptoms present but not meeting diagnostic criteria");
-        promptBuilder.AppendLine("- Moderate: Multiple symptoms present, warrants further evaluation");
-        promptBuilder.AppendLine("- High: Strong evidence of multiple criteria being met");
-        promptBuilder.AppendLine("- Very High: Clear evidence of meeting DSM-5 diagnostic criteria");
-        promptBuilder.AppendLine();
+        // Build dynamic sections for each selected DSM-5 condition
+        int partNumber = 2;
+        foreach (var conditionId in selectedConditionIds)
+        {
+            if (!conditionDataDict.TryGetValue(conditionId, out var conditionData))
+            {
+                _logger.LogWarning("[{MethodName}] Skipping condition {ConditionId} - not found in DSM-5 data",
+                    nameof(BuildExtendedRiskAssessmentPromptAsync), conditionId);
+                continue;
+            }
+            
+            promptBuilder.AppendLine($"### Part {partNumber}: {conditionData.Name} Assessment (DSM-5 {conditionData.Code})");
+            promptBuilder.AppendLine();
+            promptBuilder.AppendLine($"Evaluate the degree to which the patient's information and transcription relates to {conditionData.Name} based on DSM-5 diagnostic criteria:");
+            promptBuilder.AppendLine();
+            
+            // Add diagnostic criteria dynamically
+            if (conditionData.DiagnosticCriteria?.Any() == true)
+            {
+                foreach (var criterion in conditionData.DiagnosticCriteria)
+                {
+                    promptBuilder.AppendLine($"**Criterion {criterion.CriterionId} - {criterion.Title}**");
+                    promptBuilder.AppendLine(criterion.Description);
+                    promptBuilder.AppendLine();
+                    
+                    if (criterion.SubCriteria?.Any() == true)
+                    {
+                        foreach (var subCriterion in criterion.SubCriteria)
+                        {
+                            promptBuilder.AppendLine($"{subCriterion.Id}. **{subCriterion.Name}** - {subCriterion.Description}");
+                        }
+                        promptBuilder.AppendLine();
+                        
+                        if (criterion.MinimumRequired.HasValue)
+                        {
+                            promptBuilder.AppendLine($"**Note:** At least {criterion.MinimumRequired.Value} of the above sub-criteria must be present.");
+                            promptBuilder.AppendLine();
+                        }
+                    }
+                    
+                    if (!string.IsNullOrEmpty(criterion.DurationRequirement))
+                    {
+                        promptBuilder.AppendLine($"**Duration Requirement:** {criterion.DurationRequirement}");
+                        promptBuilder.AppendLine();
+                    }
+                }
+            }
+            
+            // Add functional impairment assessment
+            if (!string.IsNullOrEmpty(conditionData.FunctionalConsequences))
+            {
+                promptBuilder.AppendLine("**Functional Impairment Assessment:**");
+                promptBuilder.AppendLine(conditionData.FunctionalConsequences);
+                promptBuilder.AppendLine();
+            }
+            
+            // Add differential diagnosis
+            if (conditionData.DifferentialDiagnosis?.Any() == true)
+            {
+                promptBuilder.AppendLine("**Differential Diagnosis Considerations:**");
+                foreach (var differential in conditionData.DifferentialDiagnosis)
+                {
+                    promptBuilder.AppendLine($"- {differential}");
+                }
+                promptBuilder.AppendLine();
+            }
+            
+            // Add risk factors
+            if (conditionData.RiskAndPrognosticFactors != null)
+            {
+                promptBuilder.AppendLine("**Risk and Prognostic Factors:**");
+                if (!string.IsNullOrEmpty(conditionData.RiskAndPrognosticFactors.Temperamental))
+                    promptBuilder.AppendLine($"- Temperamental: {conditionData.RiskAndPrognosticFactors.Temperamental}");
+                if (!string.IsNullOrEmpty(conditionData.RiskAndPrognosticFactors.Environmental))
+                    promptBuilder.AppendLine($"- Environmental: {conditionData.RiskAndPrognosticFactors.Environmental}");
+                if (!string.IsNullOrEmpty(conditionData.RiskAndPrognosticFactors.GeneticAndPhysiological))
+                    promptBuilder.AppendLine($"- Genetic/Physiological: {conditionData.RiskAndPrognosticFactors.GeneticAndPhysiological}");
+                promptBuilder.AppendLine();
+            }
+            
+            promptBuilder.AppendLine($"**Overall {conditionData.Name} Likelihood Assessment:**");
+            promptBuilder.AppendLine("- None: No evidence of disorder-related symptoms");
+            promptBuilder.AppendLine("- Minimal: Very slight indications, likely not clinically significant");
+            promptBuilder.AppendLine("- Low: Some symptoms present but not meeting diagnostic criteria");
+            promptBuilder.AppendLine("- Moderate: Multiple symptoms present, warrants further evaluation");
+            promptBuilder.AppendLine("- High: Strong evidence of multiple criteria being met");
+            promptBuilder.AppendLine("- Very High: Clear evidence of meeting DSM-5 diagnostic criteria");
+            promptBuilder.AppendLine();
+            
+            partNumber++;
+        }
         
         promptBuilder.AppendLine("**IMPORTANT CLINICAL CAVEATS:**");
         promptBuilder.AppendLine("1. This is a preliminary assessment based on limited data");
         promptBuilder.AppendLine("2. Formal diagnosis requires comprehensive clinical interview and observation over time");
         promptBuilder.AppendLine("3. Cultural context must be carefully considered");
-        promptBuilder.AppendLine("4. Duration criteria (6 months) cannot be fully assessed from single session data");
+        promptBuilder.AppendLine("4. Duration criteria cannot be fully assessed from single session data");
         promptBuilder.AppendLine("5. Differential diagnosis requires ruling out other conditions through medical evaluation");
         promptBuilder.AppendLine();
         
-        // Add the complete JSON schema
+        // Build dynamic JSON schema based on selected conditions
         promptBuilder.AppendLine("## Required JSON Response Format:");
         promptBuilder.AppendLine("```json");
         promptBuilder.AppendLine("{");
@@ -588,37 +662,92 @@ public class RiskAssessmentService : IRiskAssessmentService
         promptBuilder.AppendLine("  \"followUpRecommendations\": [\"followup1\"],");
         promptBuilder.AppendLine("  \"confidenceLevel\": 0.0-1.0,");
         promptBuilder.AppendLine("  \"isExtended\": true,");
-        promptBuilder.AppendLine("  \"schizophreniaAssessment\": {");
-        promptBuilder.AppendLine("    \"overallLikelihood\": \"None|Minimal|Low|Moderate|High|Very High\",");
-        promptBuilder.AppendLine("    \"confidenceScore\": 0.0-1.0,");
-        promptBuilder.AppendLine("    \"assessmentSummary\": \"Detailed assessment narrative\",");
-        promptBuilder.AppendLine("    \"criterionAEvaluation\": {");
-        promptBuilder.AppendLine("      \"delusions\": {");
-        promptBuilder.AppendLine("        \"presenceLevel\": \"Not Present|Possible|Likely|Present|Clearly Present\",");
-        promptBuilder.AppendLine("        \"severity\": 0-4,");
-        promptBuilder.AppendLine("        \"evidence\": [\"evidence1\"],");
-        promptBuilder.AppendLine("        \"notes\": \"Additional notes\"");
-        promptBuilder.AppendLine("      },");
-        promptBuilder.AppendLine("      \"hallucinations\": { /* same structure */ },");
-        promptBuilder.AppendLine("      \"disorganizedSpeech\": { /* same structure */ },");
-        promptBuilder.AppendLine("      \"disorganizedBehavior\": { /* same structure */ },");
-        promptBuilder.AppendLine("      \"negativeSymptoms\": { /* same structure */ },");
-        promptBuilder.AppendLine("      \"totalSymptomsPresent\": 0-5,");
-        promptBuilder.AppendLine("      \"criterionAMet\": true|false");
-        promptBuilder.AppendLine("    },");
-        promptBuilder.AppendLine("    \"functionalImpairment\": {");
-        promptBuilder.AppendLine("      \"impairmentLevel\": \"None|Mild|Moderate|Marked|Severe\",");
-        promptBuilder.AppendLine("      \"workFunctioning\": \"Assessment text\",");
-        promptBuilder.AppendLine("      \"interpersonalRelations\": \"Assessment text\",");
-        promptBuilder.AppendLine("      \"selfCare\": \"Assessment text\",");
-        promptBuilder.AppendLine("      \"criterionBMet\": true|false");
-        promptBuilder.AppendLine("    },");
-        promptBuilder.AppendLine("    \"durationAssessment\": \"Assessment of duration criteria\",");
-        promptBuilder.AppendLine("    \"differentialDiagnosis\": [\"consideration1\"],");
-        promptBuilder.AppendLine("    \"riskFactorsIdentified\": [\"risk factor1\"],");
-        promptBuilder.AppendLine("    \"recommendedActions\": [\"action1\"],");
-        promptBuilder.AppendLine("    \"clinicalNotes\": [\"note1\"]");
-        promptBuilder.AppendLine("  }");
+        promptBuilder.AppendLine($"  \"isMultiCondition\": {(isMultiCondition ? "true" : "false")},");
+        promptBuilder.AppendLine($"  \"evaluatedConditions\": [{string.Join(", ", selectedConditionIds.Select(id => $"\"{id}\""))}],");
+        promptBuilder.AppendLine("  \"overallAssessmentSummary\": \"Summary across all evaluated conditions\",");
+        promptBuilder.AppendLine("  \"highestRiskCondition\": \"condition name with highest risk\",");
+        promptBuilder.AppendLine("  \"combinedRecommendedActions\": [\"action1\", \"action2\"],");
+        promptBuilder.AppendLine("  \"crossConditionDifferentialDiagnosis\": [\"cross-condition consideration1\"],");
+        promptBuilder.AppendLine("  \"conditionAssessments\": [");
+        
+        // Add schema for each condition
+        foreach (var conditionId in selectedConditionIds)
+        {
+            if (!conditionDataDict.TryGetValue(conditionId, out var conditionData))
+                continue;
+                
+            var isLastCondition = conditionId == selectedConditionIds.Last();
+            promptBuilder.AppendLine("    {");
+            promptBuilder.AppendLine($"      \"conditionId\": \"{conditionId}\",");
+            promptBuilder.AppendLine($"      \"conditionName\": \"{conditionData.Name}\",");
+            promptBuilder.AppendLine($"      \"conditionCode\": \"{conditionData.Code}\",");
+            promptBuilder.AppendLine($"      \"category\": \"{conditionData.Category}\",");
+            promptBuilder.AppendLine("      \"overallLikelihood\": \"None|Minimal|Low|Moderate|High|Very High\",");
+            promptBuilder.AppendLine("      \"confidenceScore\": 0.0-1.0,");
+            promptBuilder.AppendLine("      \"conditionRiskScore\": 1-10,");
+            promptBuilder.AppendLine("      \"assessmentSummary\": \"Detailed assessment narrative for this condition\",");
+            promptBuilder.AppendLine("      \"criteriaEvaluations\": [");
+            
+            // Add criteria schema
+            if (conditionData.DiagnosticCriteria?.Any() == true)
+            {
+                foreach (var criterion in conditionData.DiagnosticCriteria)
+                {
+                    var isLastCriterion = criterion == conditionData.DiagnosticCriteria.Last();
+                    promptBuilder.AppendLine("        {");
+                    promptBuilder.AppendLine($"          \"criterionId\": \"{criterion.CriterionId}\",");
+                    promptBuilder.AppendLine($"          \"criterionTitle\": \"{criterion.Title}\",");
+                    promptBuilder.AppendLine($"          \"criterionDescription\": \"{criterion.Description.Replace("\"", "\\\"")}\",");
+                    promptBuilder.AppendLine("          \"isMet\": true|false,");
+                    promptBuilder.AppendLine("          \"confidence\": 0.0-1.0,");
+                    promptBuilder.AppendLine("          \"evidence\": [\"evidence1\", \"evidence2\"],");
+                    promptBuilder.AppendLine("          \"notes\": \"Additional notes\",");
+                    promptBuilder.AppendLine($"          \"subCriteriaRequired\": {criterion.MinimumRequired ?? criterion.SubCriteria?.Count ?? 0},");
+                    promptBuilder.AppendLine("          \"subCriteriaMet\": 0,");
+                    promptBuilder.AppendLine("          \"subCriteriaEvaluations\": [");
+                    
+                    // Add sub-criteria schema
+                    if (criterion.SubCriteria?.Any() == true)
+                    {
+                        foreach (var subCriterion in criterion.SubCriteria)
+                        {
+                            var isLastSub = subCriterion == criterion.SubCriteria.Last();
+                            promptBuilder.AppendLine("            {");
+                            promptBuilder.AppendLine($"              \"subCriterionId\": \"{subCriterion.Id}\",");
+                            promptBuilder.AppendLine($"              \"subCriterionName\": \"{subCriterion.Name}\",");
+                            promptBuilder.AppendLine($"              \"description\": \"{subCriterion.Description.Replace("\"", "\\\"")}\",");
+                            promptBuilder.AppendLine("              \"severity\": 0-4,");
+                            promptBuilder.AppendLine("              \"isPresent\": true|false,");
+                            promptBuilder.AppendLine("              \"confidence\": 0.0-1.0,");
+                            promptBuilder.AppendLine("              \"evidence\": \"Evidence text\",");
+                            promptBuilder.AppendLine("              \"notes\": \"Additional notes\",");
+                            promptBuilder.AppendLine("              \"observedExamples\": [\"example1\"]");
+                            promptBuilder.AppendLine(isLastSub ? "            }" : "            },");
+                        }
+                    }
+                    
+                    promptBuilder.AppendLine("          ]");
+                    promptBuilder.AppendLine(isLastCriterion ? "        }" : "        },");
+                }
+            }
+            
+            promptBuilder.AppendLine("      ],");
+            promptBuilder.AppendLine("      \"riskFactorsIdentified\": [\"risk factor1\"],");
+            promptBuilder.AppendLine("      \"recommendedActions\": [\"action1\"],");
+            promptBuilder.AppendLine("      \"clinicalNotes\": [\"note1\"],");
+            promptBuilder.AppendLine("      \"differentialDiagnosis\": [\"consideration1\"],");
+            promptBuilder.AppendLine("      \"durationAssessment\": \"Assessment of duration criteria\",");
+            promptBuilder.AppendLine("      \"functionalImpairment\": {");
+            promptBuilder.AppendLine("        \"impairmentLevel\": \"None|Mild|Moderate|Marked|Severe\",");
+            promptBuilder.AppendLine("        \"workFunctioning\": \"Assessment text\",");
+            promptBuilder.AppendLine("        \"interpersonalRelations\": \"Assessment text\",");
+            promptBuilder.AppendLine("        \"selfCare\": \"Assessment text\",");
+            promptBuilder.AppendLine("        \"criterionBMet\": true|false");
+            promptBuilder.AppendLine("      }");
+            promptBuilder.AppendLine(isLastCondition ? "    }" : "    },");
+        }
+        
+        promptBuilder.AppendLine("  ]");
         promptBuilder.AppendLine("}");
         promptBuilder.AppendLine("```");
         promptBuilder.AppendLine();
@@ -965,34 +1094,41 @@ public class RiskAssessmentService : IRiskAssessmentService
 
     private async Task<Dictionary<string, DSM5ConditionData>> GetConditionDataAsync(List<string> conditionIds)
     {
-        // This would normally call the DSM5DataService
-        // For now, return a placeholder - this will be implemented when DSM5DataService is integrated
         var conditionData = new Dictionary<string, DSM5ConditionData>();
         
-        foreach (var conditionId in conditionIds)
+        try
         {
-            // Create placeholder condition data
-            conditionData[conditionId] = new DSM5ConditionData
+            foreach (var conditionId in conditionIds)
             {
-                Id = conditionId,
-                Name = $"Condition {conditionId}",
-                Code = "000.00 (F00.0)",
-                Category = "Mental Health Condition",
-                Description = "Placeholder description for condition",
-                DiagnosticCriteria = new List<DSM5DiagnosticCriterion>
+                try
                 {
-                    new DSM5DiagnosticCriterion
+                    var condition = await _dsm5DataService.GetConditionDetailsAsync(conditionId);
+                    if (condition != null)
                     {
-                        CriterionId = "A",
-                        Title = "Primary Criterion",
-                        Description = "Primary diagnostic criterion for this condition",
-                        IsRequired = true
+                        conditionData[conditionId] = condition;
+                        _logger.LogInformation("[{MethodName}] Retrieved DSM-5 condition data for {ConditionId}: {ConditionName}",
+                            nameof(GetConditionDataAsync), conditionId, condition.Name);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("[{MethodName}] No DSM-5 condition data found for {ConditionId}",
+                            nameof(GetConditionDataAsync), conditionId);
                     }
                 }
-            };
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[{MethodName}] Error retrieving DSM-5 condition data for {ConditionId}",
+                        nameof(GetConditionDataAsync), conditionId);
+                }
+            }
+            
+            return conditionData;
         }
-        
-        return conditionData;
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{MethodName}] Error in GetConditionDataAsync", nameof(GetConditionDataAsync));
+            return conditionData;
+        }
     }
 
     private string BuildMultiConditionAssessmentPrompt(SessionData sessionData, Dictionary<string, DSM5ConditionData> conditionData, AssessmentOptions? options)

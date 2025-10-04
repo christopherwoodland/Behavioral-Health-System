@@ -1,16 +1,22 @@
 namespace BehavioralHealthSystem.Models;
 
 /// <summary>
-/// Extended risk assessment that includes schizophrenia evaluation
+/// Extended risk assessment that includes schizophrenia evaluation or multi-condition assessments
 /// Generated using GPT-5 with more comprehensive analysis
 /// </summary>
 public class ExtendedRiskAssessment : RiskAssessment
 {
     /// <summary>
-    /// Schizophrenia-specific assessment
+    /// Schizophrenia-specific assessment (legacy format for backwards compatibility)
     /// </summary>
     [JsonPropertyName("schizophreniaAssessment")]
     public SchizophreniaAssessment? SchizophreniaAssessment { get; set; }
+    
+    /// <summary>
+    /// Multi-condition assessments (new format for dynamic disorder evaluation)
+    /// </summary>
+    [JsonPropertyName("conditionAssessments")]
+    public List<ConditionAssessmentResult>? ConditionAssessments { get; set; }
     
     /// <summary>
     /// Indicates whether this is an extended assessment

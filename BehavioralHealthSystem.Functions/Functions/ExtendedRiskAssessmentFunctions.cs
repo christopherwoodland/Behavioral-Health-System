@@ -53,6 +53,22 @@ public class ExtendedRiskAssessmentFunctions
             _logger.LogInformation("[{FunctionName}] Starting extended risk assessment job for session: {SessionId}", 
                 nameof(StartExtendedRiskAssessmentJob), sessionId);
 
+            // Parse request body for selected DSM-5 conditions
+            ExtendedRiskAssessmentRequest? requestBody = null;
+            try
+            {
+                var requestBodyText = await new StreamReader(req.Body).ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(requestBodyText))
+                {
+                    requestBody = JsonSerializer.Deserialize<ExtendedRiskAssessmentRequest>(requestBodyText, _jsonOptions);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[{FunctionName}] Error parsing request body, will use default schizophrenia assessment", 
+                    nameof(StartExtendedRiskAssessmentJob));
+            }
+
             // Validate session exists
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
@@ -69,6 +85,22 @@ public class ExtendedRiskAssessmentFunctions
                 return notFoundResponse;
             }
 
+            // Update session data with selected DSM-5 conditions
+            if (requestBody?.SelectedConditions != null && requestBody.SelectedConditions.Count > 0)
+            {
+                sessionData.DSM5Conditions = requestBody.SelectedConditions;
+                await _sessionStorageService.UpdateSessionDataAsync(sessionData);
+                _logger.LogInformation("[{FunctionName}] Updated session {SessionId} with {Count} selected DSM-5 conditions: {Conditions}", 
+                    nameof(StartExtendedRiskAssessmentJob), sessionId, 
+                    requestBody.SelectedConditions.Count, 
+                    string.Join(", ", requestBody.SelectedConditions));
+            }
+            else
+            {
+                _logger.LogInformation("[{FunctionName}] No DSM-5 conditions specified, will default to schizophrenia for backwards compatibility", 
+                    nameof(StartExtendedRiskAssessmentJob));
+            }
+
             // Create a new job
             var jobId = await _jobService.CreateJobAsync(sessionId);
             
@@ -78,7 +110,8 @@ public class ExtendedRiskAssessmentFunctions
                 new ExtendedAssessmentOrchestrationInput
                 {
                     JobId = jobId,
-                    SessionId = sessionId
+                    SessionId = sessionId,
+                    SelectedConditions = requestBody?.SelectedConditions ?? new List<string>()
                 });
 
             _logger.LogInformation("[{FunctionName}] Started orchestration {InstanceId} for job {JobId}, session {SessionId}", 
@@ -395,4 +428,13 @@ public class ExtendedRiskAssessmentFunctions
             return errorResponse;
         }
     }
+}
+
+/// <summary>
+/// Request body for extended risk assessment with optional DSM-5 condition selection
+/// </summary>
+public class ExtendedRiskAssessmentRequest
+{
+    [JsonPropertyName("selectedConditions")]
+    public List<string> SelectedConditions { get; set; } = new();
 }

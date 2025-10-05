@@ -31,6 +31,7 @@ import { formatDateTime, formatRelativeTime, formatScoreCategory } from '../util
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
 import { ExtendedRiskAssessmentButton } from '../components/ExtendedRiskAssessmentButton';
+import { DSM5ConditionSelector } from '../components/DSM5ConditionSelector';
 import type { SessionData, AppError, FileGroup } from '../types';
 
 // Status configuration for consistent styling
@@ -60,6 +61,9 @@ const SessionDetail: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  
+  // DSM-5 condition selection state
+  const [selectedDSM5Conditions, setSelectedDSM5Conditions] = useState<string[]>([]);
   
   // Collapsible section states
   const [isTranscriptionExpanded, setIsTranscriptionExpanded] = useState(true);
@@ -169,7 +173,6 @@ const SessionDetail: React.FC = () => {
 
   // Download audio file using audioUrl from session data
   const downloadAudioFile = useCallback(async () => {
-    if (!session?.audioUrl || !session?.audioFileName) return;
     if (!session?.audioUrl) return;
 
     try {
@@ -178,8 +181,6 @@ const SessionDetail: React.FC = () => {
       
       // Open the download URL in a new tab
       window.open(downloadUrl, '_blank');
-      // Use the audioUrl directly from session data
-      window.open(session.audioUrl, '_blank');
       
       announceToScreenReader(`Downloading audio file: ${session.audioFileName || 'audio file'}`);
     } catch (error) {
@@ -589,7 +590,7 @@ const SessionDetail: React.FC = () => {
       </div>
 
       {/* Audio Transcription */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setIsTranscriptionExpanded(!isTranscriptionExpanded)}
           className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -720,7 +721,7 @@ const SessionDetail: React.FC = () => {
 
       {/* Analysis Results */}
       {(session.analysisResults || session.prediction) && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setIsAnalysisExpanded(!isAnalysisExpanded)}
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -845,7 +846,7 @@ const SessionDetail: React.FC = () => {
       )}
 
       {/* AI Risk Assessment */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setIsRiskAssessmentExpanded(!isRiskAssessmentExpanded)}
           className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -876,7 +877,7 @@ const SessionDetail: React.FC = () => {
       </div>
 
       {/* Extended AI Risk Assessment */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setIsExtendedRiskExpanded(!isExtendedRiskExpanded)}
           className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
@@ -895,17 +896,39 @@ const SessionDetail: React.FC = () => {
         </button>
         {isExtendedRiskExpanded && (
           <div id="extended-risk-content" className="border-t border-gray-200 dark:border-gray-700">
-                  <ExtendedRiskAssessmentButton
-              sessionId={session.sessionId}
-              apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
-              existingAssessment={session.extendedRiskAssessment}
-              onComplete={(assessment) => {
-                setSession(prev => prev ? { ...prev, extendedRiskAssessment: assessment } : null);
-              }}
-              onError={(errorMessage) => {
-                announceToScreenReader(`Extended assessment error: ${errorMessage}`);
-              }}
-            />
+            <div className="p-6 space-y-6">
+              {/* DSM-5 Condition Selector */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Select Mental Health Conditions for Assessment
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Choose specific DSM-5 conditions to include in the extended risk assessment. If no conditions are selected, 
+                  the assessment will default to schizophrenia evaluation only.
+                </p>
+                <div className="relative">
+                  <DSM5ConditionSelector
+                    selectedConditions={selectedDSM5Conditions}
+                    onSelectionChange={setSelectedDSM5Conditions}
+                    maxSelections={5}
+                  />
+                </div>
+              </div>
+              
+              {/* Extended Risk Assessment Component */}
+              <ExtendedRiskAssessmentButton
+                sessionId={session.sessionId}
+                apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
+                existingAssessment={session.extendedRiskAssessment}
+                selectedDSM5Conditions={selectedDSM5Conditions}
+                onComplete={(assessment) => {
+                  setSession(prev => prev ? { ...prev, extendedRiskAssessment: assessment } : null);
+                }}
+                onError={(errorMessage) => {
+                  announceToScreenReader(`Extended assessment error: ${errorMessage}`);
+                }}
+              />
+            </div>
           </div>
         )}
       </div>

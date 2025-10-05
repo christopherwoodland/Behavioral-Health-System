@@ -1,8 +1,5 @@
 using Azure;
 using Azure.AI.OpenAI;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using BehavioralHealthSystem.Configuration;
 
 namespace BehavioralHealthSystem.Services;
 

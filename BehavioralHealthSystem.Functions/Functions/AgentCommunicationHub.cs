@@ -1,10 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Azure.Functions.Worker.Extensions.SignalRService;
-using Microsoft.Extensions.Logging;
-using System.Text.Json;
-using System.Net;
-
 namespace BehavioralHealthSystem.Functions.Functions;
 
 public class AgentCommunicationHub

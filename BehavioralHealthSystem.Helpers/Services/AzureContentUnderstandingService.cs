@@ -382,12 +382,13 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             }
             else if (_credential != null)
             {
+                // Get fresh token each time to avoid expiration issues during long operations
                 var token = await _credential.GetTokenAsync(
                     new TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" }),
                     CancellationToken.None);
                 _httpClient.DefaultRequestHeaders.Authorization = 
                     new AuthenticationHeaderValue("Bearer", token.Token);
-                _logger.LogInformation("[{MethodName}] Using Managed Identity authentication", nameof(AnalyzeDocumentAsync));
+                _logger.LogInformation("[{MethodName}] Using Managed Identity authentication (token refreshed)", nameof(AnalyzeDocumentAsync));
             }
 
             // Call Azure Content Understanding API with prebuilt-documentAnalyzer
@@ -400,7 +401,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             _logger.LogInformation("[{MethodName}] Pages: {Pages}", nameof(AnalyzeDocumentAsync), pageRange);
             _logger.LogInformation("[{MethodName}] Analyzer: {Analyzer}", nameof(AnalyzeDocumentAsync), analyzerId);
 
-            var response = await _httpClient.PostAsync(url, httpContent);
+            var response = await CallWithRetryAsync(async () => await _httpClient.PostAsync(url, httpContent));
 
             if (!response.IsSuccessStatusCode)
             {
@@ -449,7 +450,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             _logger.LogInformation("[{MethodName}] Polling operation status (attempt {Attempt}/{Max})", 
                 nameof(PollOperationAsync), attempt, maxAttempts);
 
-            var response = await _httpClient.GetAsync(operationUrl);
+            var response = await CallWithRetryAsync(async () => await _httpClient.GetAsync(operationUrl));
             
             if (!response.IsSuccessStatusCode)
             {
@@ -486,6 +487,49 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         }
 
         throw new TimeoutException("Content Understanding operation timed out after 10 minutes");
+    }
+
+    /// <summary>
+    /// Calls HTTP request with retry logic for network failures
+    /// </summary>
+    private async Task<HttpResponseMessage> CallWithRetryAsync(Func<Task<HttpResponseMessage>> httpCall)
+    {
+        var maxRetries = 3;
+        var baseDelay = TimeSpan.FromSeconds(2);
+
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                _logger.LogInformation("[{MethodName}] HTTP call attempt {Attempt}/{MaxRetries}", 
+                    nameof(CallWithRetryAsync), attempt, maxRetries);
+                
+                return await httpCall();
+            }
+            catch (HttpRequestException ex) when (attempt < maxRetries)
+            {
+                var delay = TimeSpan.FromMilliseconds(baseDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
+                
+                _logger.LogWarning("[{MethodName}] HTTP call failed on attempt {Attempt}/{MaxRetries}: {Error}. Retrying in {Delay}ms", 
+                    nameof(CallWithRetryAsync), attempt, maxRetries, ex.Message, delay.TotalMilliseconds);
+                
+                await Task.Delay(delay);
+            }
+            catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException && attempt < maxRetries)
+            {
+                var delay = TimeSpan.FromMilliseconds(baseDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
+                
+                _logger.LogWarning("[{MethodName}] HTTP call timed out on attempt {Attempt}/{MaxRetries}. Retrying in {Delay}ms", 
+                    nameof(CallWithRetryAsync), attempt, maxRetries, delay.TotalMilliseconds);
+                
+                await Task.Delay(delay);
+            }
+        }
+
+        // Final attempt without catching exceptions
+        _logger.LogInformation("[{MethodName}] Final HTTP call attempt {Attempt}/{MaxRetries}", 
+            nameof(CallWithRetryAsync), maxRetries, maxRetries);
+        return await httpCall();
     }
 
     // ==================== CONTENT UNDERSTANDING MARKDOWN PARSING ====================

@@ -1,15 +1,3 @@
-using System.CommandLine;
-using System.Text;
-using System.Text.Json;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using BehavioralHealthSystem.Services;
-using BehavioralHealthSystem.Helpers.Services;
-using BehavioralHealthSystem.Configuration;
-using Azure.Storage.Blobs;
-using Azure.Identity;
-
 namespace BehavioralHealthSystem.Console;
 
 /// <summary>

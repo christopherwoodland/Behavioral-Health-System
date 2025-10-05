@@ -100,7 +100,7 @@ try {
     # Create production .env file
     $prodEnvContent = @"
 # Production Environment Configuration
-VITE_API_BASE=https://cwbhieastus001.azurewebsites.net/api
+VITE_API_BASE_URL=https://cwbhieastus001.azurewebsites.net/api
 VITE_AZURE_BLOB_SAS_URL=https://aistgvi.blob.core.windows.net/?sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2026-06-26T11:43:55Z&st=2025-09-06T03:28:55Z&spr=https&sig=jlfi75igY6qW805u%2FWErZpEu7AZSll5hJOdvSJU35%2Bo%3D
 VITE_STORAGE_CONTAINER_NAME=audio-uploads
 VITE_POLL_INTERVAL_MS=3000
@@ -178,7 +178,7 @@ VITE_ENABLE_DEBUG_LOGGING=false
                 
                 # Set app settings one by one to avoid shell interpretation issues
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "WEBSITE_NODE_DEFAULT_VERSION=~22" --output none
-                az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_API_BASE=https://cwbhieastus001.azurewebsites.net/api" --output none
+                az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_API_BASE_URL=https://cwbhieastus001.azurewebsites.net/api" --output none
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_AZURE_BLOB_SAS_URL=https://aistgvi.blob.core.windows.net/?sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2026-06-26T11:43:55Z&st=2025-09-06T03:28:55Z&spr=https&sig=jlfi75igY6qW805u%2FWErZpEu7AZSll5hJOdvSJU35%2Bo%3D" --output none
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_STORAGE_CONTAINER_NAME=audio-uploads" --output none
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_POLL_INTERVAL_MS=3000" --output none

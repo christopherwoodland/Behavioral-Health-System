@@ -1,4 +1,3 @@
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.DurableTask;
 
 namespace BehavioralHealthSystem.Functions;
@@ -182,6 +181,7 @@ public class ExtendedAssessmentOrchestrationInput
 {
     public string JobId { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
+    public List<string> SelectedConditions { get; set; } = new();
 }
 
 /// <summary>

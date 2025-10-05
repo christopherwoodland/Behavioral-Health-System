@@ -34,6 +34,17 @@ A **production-ready** full-stack behavioral health assessment platform featurin
 - ✅ **FFmpeg Integration** - Client-side audio conversion with WebAssembly
 - ✅ **Format Optimization** - Automatic conversion to optimal audio formats
 
+### **🧠 AI-Powered Extended Risk Assessment**
+
+- ✅ **Multi-Condition DSM-5 Evaluation** - Dynamic assessment of any DSM-5 psychiatric conditions
+- ✅ **GPT-5/O3 Integration** - Advanced AI analysis with comprehensive diagnostic criteria
+- ✅ **Disorder-Specific Evaluation** - Tailored assessment for each selected condition
+- ✅ **Cross-Condition Analysis** - Differential diagnosis across multiple disorders
+- ✅ **Evidence-Based Criteria** - Official DSM-5 diagnostic criteria evaluation
+- ✅ **Confidence Scoring** - AI confidence metrics for each assessment
+- ✅ **Async Job Processing** - Non-blocking assessment with progress tracking
+- ✅ **Backwards Compatible** - Maintains support for legacy schizophrenia-only assessments
+
 ### **📊 Observability**
 
 - ✅ **Application Insights Integration** - Comprehensive telemetry and monitoring
@@ -136,10 +147,15 @@ BehavioralHealthSystem/
 │   │   ├── PredictionResultTests.cs
 │   │   └── UserMetadataTests.cs
 │   └── test-requests.http                       # HTTP test requests for local development
-├── 📄 deploy-solution.ps1                      # Complete solution deployment script
-├── 📄 deploy-code-only.ps1                     # Code-only deployment script
-├── 📄 deploy-ui.ps1                             # UI deployment script
-├── 📄 local-run.ps1                             # Local development startup script
+├── � scripts/                                  # PowerShell automation scripts
+│   ├── deploy-solution.ps1                      # Complete solution deployment script
+│   ├── deploy-code-only.ps1                     # Code-only deployment script
+│   ├── deploy-ui.ps1                            # UI deployment script
+│   ├── local-run.ps1                            # Local development startup script
+│   ├── extract-dsm5-data.ps1                    # DSM-5 data extraction tool
+│   ├── load-dsm5-data.ps1                       # DSM-5 data loading script
+│   ├── DSM5_TEST_SCRIPT.ps1                     # DSM-5 API testing
+│   └── test-dsm5-extraction.ps1                 # DSM-5 extraction testing
 └── 📄 BehavioralHealthSystem.sln                # Solution file
 ```
 └── 📄 BehavioralHealthSystem.sln              # Solution file
@@ -191,7 +207,7 @@ BehavioralHealthSystem/
 
    ```bash
    # From the solution root directory - starts both backend and frontend
-   .\local-run.ps1
+   .\scripts\local-run.ps1
    # This script builds the Functions project and starts both:
    # - Azure Functions host (localhost:7071)
    # - React development server (localhost:3001)
@@ -221,7 +237,7 @@ BehavioralHealthSystem/
 
 ### **🎯 Development Workflow**
 
-The `local-run.ps1` script provides the optimal development experience:
+The `scripts\local-run.ps1` script provides the optimal development experience:
 
 - ✅ **Automatic building** - Builds the Functions project with error checking
 - ✅ **Parallel startup** - Starts both backend and frontend simultaneously
@@ -518,7 +534,7 @@ Perfect for demos, testing, and rapid prototyping with minimal configuration:
 
 ```powershell
 # From solution root directory - Auto-generates resource group name
-.\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
+.\scripts\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
 ```
 
 This creates:
@@ -534,7 +550,7 @@ For production deployments with custom resource group and region:
 
 ```powershell
 # From solution root directory - Full control over resources
-.\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
+.\scripts\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
 ```
 
 ### **⚡ Code-Only Deploy (Rapid Updates)**
@@ -543,7 +559,7 @@ For updating code on existing Azure infrastructure:
 
 ```powershell
 # Deploy only code changes to existing Function App
-.\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
+.\scripts\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
 ```
 
 ### **🌐 UI-Only Deploy**
@@ -552,29 +568,29 @@ Deploy just the React web application:
 
 ```powershell
 # Deploy to Azure App Service
-.\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "your-web-app" -ResourceGroupName "your-rg"
+.\scripts\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "your-web-app" -ResourceGroupName "your-rg"
 
 # Deploy to Azure Storage static website
-.\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
+.\scripts\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
 
 # Deploy to Azure Static Web Apps
-.\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
+.\scripts\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
 ```
 
 ### **📋 Deployment Script Overview**
 
 | Script | Purpose | Use Case |
 |--------|---------|----------|
-| `deploy-solution.ps1` | **Complete solution deployment** | New projects, full infrastructure setup |
-| `deploy-code-only.ps1` | **Code updates only** | Rapid development iterations |
-| `deploy-ui.ps1` | **UI deployment only** | Frontend updates, multi-target deployment |
+| `scripts\deploy-solution.ps1` | **Complete solution deployment** | New projects, full infrastructure setup |
+| `scripts\deploy-code-only.ps1` | **Code updates only** | Rapid development iterations |
+| `scripts\deploy-ui.ps1` | **UI deployment only** | Frontend updates, multi-target deployment |
 
 ### **🎯 Which Script Should I Use?**
 
-- **🆕 First-time deployment?** → Use `deploy-solution.ps1` with `-QuickDeploy`
-- **🔄 Code changes only?** → Use `deploy-code-only.ps1`
-- **🎨 UI updates only?** → Use `deploy-ui.ps1`
-- **🏭 Production setup?** → Use `deploy-solution.ps1` with custom parameters
+- **🆕 First-time deployment?** → Use `scripts\deploy-solution.ps1` with `-QuickDeploy`
+- **🔄 Code changes only?** → Use `scripts\deploy-code-only.ps1`
+- **🎨 UI updates only?** → Use `scripts\deploy-ui.ps1`
+- **🏭 Production setup?** → Use `scripts\deploy-solution.ps1` with custom parameters
 
 ### **🤖 Automated Deployment with GitHub Actions**
 
@@ -1098,16 +1114,19 @@ The solution includes several PowerShell deployment scripts for different scenar
 
 ### Full System Deployment Script
 
-Use the `deploy-full-system.ps1` script to deploy both the Functions app and UI in sequence:
+Use the `scripts\deploy-solution.ps1` script to deploy both the Functions app and infrastructure:
 
 ```powershell
-# Deploy to specific Azure resources
-.\deploy-full-system.ps1 -KintsugiApiKey "your-api-key-here"
+# Quick Deploy (recommended for first-time setup)
+.\scripts\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
+
+# Or with custom resource group and location
+.\scripts\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
 
 # This script will:
-# 1. Deploy Functions to: cwbhieastus001
-# 2. Deploy UI to: cwuibhieastus001  
-# 3. Target resource group: bhi
+# 1. Create or update Azure resources (Functions, Storage, App Service Plan, etc.)
+# 2. Deploy Functions code
+# 3. Configure environment variables and app settings
 ```
 
 **Script Output Example:**
@@ -1145,14 +1164,14 @@ Deploy just the Functions app:
 
 ```powershell
 # Deploy only the Azure Functions
-.\deploy-code-only.ps1 -FunctionAppName "cwbhieastus001" -ResourceGroupName "bhi"
+.\scripts\deploy-code-only.ps1 -FunctionAppName "cwbhieastus001" -ResourceGroupName "bhi"
 ```
 
 Deploy just the UI:
 
 ```powershell
 # Deploy only the UI application
-.\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "cwuibhieastus001" -ResourceGroupName "bhi"
+.\scripts\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "cwuibhieastus001" -ResourceGroupName "bhi"
 ```
 
 ### Agent Project Example
@@ -1457,6 +1476,501 @@ The transcription uses Azure Speech Services Fast Transcription API v3.1:
 - ✅ **Health Check Enhancements** - Comprehensive health monitoring
 - ✅ **Error Handling** - Improved error responses and logging
 - ✅ **API Endpoints** - New endpoints for agent chat and session management
+
+## 📊 DSM-5 Multi-Condition Extended Risk Assessment System
+
+### **Overview**
+
+The system provides dynamic, AI-powered psychiatric assessments that can evaluate **any combination of DSM-5 conditions** selected by the clinician. Using GPT-5/O3, the system generates comprehensive evaluations with disorder-specific diagnostic criteria, evidence mapping, and confidence scoring.
+
+### **🎯 Dynamic Multi-Condition Assessment**
+
+**Key Capabilities:**
+- **Flexible Condition Selection** - Choose 1-5 DSM-5 conditions for simultaneous evaluation
+- **Disorder-Specific Criteria** - Each condition evaluated against its unique DSM-5 diagnostic criteria
+- **Cross-Condition Analysis** - Differential diagnosis and symptom overlap identification
+- **Evidence-Based Evaluation** - AI maps patient data to specific diagnostic criteria
+- **Confidence Metrics** - Transparent confidence scoring for each criterion and overall assessment
+
+**Supported Assessment Types:**
+1. **Single-Condition Assessment** - In-depth evaluation of one specific disorder
+2. **Multi-Condition Assessment** - Simultaneous evaluation of 2-5 conditions
+3. **Schizophrenia-Focused** - Legacy support for schizophrenia-only assessments
+4. **Cross-Diagnostic Analysis** - Comparative evaluation across condition boundaries
+
+### **🎯 Key Features**
+
+- ✅ **Azure Content Understanding Integration** - Purpose-built API for complex document extraction
+- ✅ **Complete DSM-5 Coverage** - All 13 standard sections per condition
+- ✅ **Multi-Condition Assessment** - Evaluate multiple psychiatric conditions simultaneously
+- ✅ **Schema-Driven Extraction** - Structured extraction with validation
+- ✅ **Quality Scoring** - Automatic assessment quality tracking
+- ✅ **Blob Storage Management** - Organized condition data storage
+
+### **📋 DSM-5 Data Structure**
+
+Each condition includes 13 standard sections:
+
+1. **Diagnostic Criteria** - Official DSM-5 criteria (A, B, C, etc.)
+2. **Diagnostic Features** - Detailed symptom descriptions
+3. **Associated Features** - Related symptoms and presentations
+4. **Prevalence** - Epidemiological data
+5. **Development and Course** - Age of onset, progression
+6. **Risk and Prognostic Factors** - Temperamental, environmental, genetic
+7. **Culture-Related Issues** - Cultural variations in presentation
+8. **Gender-Related Issues** - Gender-specific considerations
+9. **Suicide Risk** - Risk assessment factors
+10. **Functional Consequences** - Impact on daily functioning
+11. **Differential Diagnosis** - Similar conditions to rule out
+12. **Comorbidity** - Common co-occurring conditions
+13. **Specifiers** - Severity levels, subtypes, course specifiers
+
+### **🔧 Configuration**
+
+```json
+{
+  "Values": {
+    "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "https://your-resource.cognitiveservices.azure.com/",
+    "AZURE_CONTENT_UNDERSTANDING_KEY": "your-api-key",
+    "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING",
+    "DSM5_STORAGE_ACCOUNT_NAME": "your-storage-account",
+    "DSM5_CONTAINER_NAME": "dsm5-data"
+  }
+}
+```
+
+### **📡 DSM-5 API Endpoints**
+
+#### Get System Status
+**GET** `/api/dsm5-admin/data-status`
+
+Returns DSM-5 system initialization status and statistics.
+
+```json
+{
+  "success": true,
+  "dataStatus": {
+    "isInitialized": true,
+    "totalConditions": 346,
+    "availableConditions": 346,
+    "categories": ["Neurodevelopmental Disorders", "Schizophrenia Spectrum", ...],
+    "lastUpdated": "2025-10-02T22:53:45Z",
+    "dataVersion": "1.0",
+    "storageInfo": {
+      "containerExists": true,
+      "totalBlobSize": 267357,
+      "blobCount": 346
+    }
+  }
+}
+```
+
+#### Get Available Conditions
+**GET** `/api/dsm5-admin/conditions`
+
+Retrieves list of all DSM-5 conditions for condition selection.
+
+```json
+{
+  "success": true,
+  "totalConditions": 346,
+  "categories": ["Depressive Disorders", "Anxiety Disorders", ...],
+  "conditions": [
+    {
+      "conditionId": "major-depressive-disorder",
+      "name": "Major Depressive Disorder",
+      "code": "296.2x (F32.x)",
+      "category": "Depressive Disorders"
+    }
+  ]
+}
+```
+
+#### Get Condition Details
+**GET** `/api/dsm5-admin/conditions/{conditionId}`
+
+Returns full diagnostic criteria for a specific condition.
+
+#### Validate Extraction
+**POST** `/api/dsm5-admin/validate-extraction`
+
+Test PDF extraction with sample pages before processing full document.
+
+**Request:**
+```json
+{
+  "pdfData": "base64-encoded-pdf",
+  "startPage": 50,
+  "endPage": 60,
+  "autoUpload": false
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "conditionsFound": 114,
+  "processingTimeSeconds": 186.0,
+  "extractedData": {
+    "conditions": [...]
+  }
+}
+```
+
+### **🔍 How It Works**
+
+1. **PDF Upload** - DSM-5 PDF uploaded to temporary blob storage with SAS URL
+2. **Content Understanding API** - API analyzes document with markdown extraction
+3. **Markdown Parsing** - Regex-based extraction of condition headers and sections
+4. **Data Validation** - Quality scoring and completeness checking
+5. **Blob Storage** - Individual condition files stored for quick access
+6. **UI Integration** - Conditions available via dropdown selector
+
+### **⚙️ DSM-5 Administration**
+
+#### Initial Data Loading
+
+```powershell
+# From solution root directory
+cd BehavioralHealthSystem.Console
+dotnet run -c Release -- import-dsm5 -p "DSM5.pdf" -s 1 -e 810 -v
+```
+
+**Processing Time Estimates:**
+- Single disorder (5 pages): 3-5 seconds
+- Chapter (50 pages): 30-45 seconds  
+- Full DSM-5 (810 pages): 3-5 minutes
+
+**Quality Score Guidelines:**
+- **0.90-1.00**: Excellent - All major sections present
+- **0.75-0.89**: Good - Most sections present
+- **0.60-0.74**: Acceptable - Core sections present
+- **<0.60**: Poor - May need manual review
+
+#### Data Storage Structure
+
+```
+dsm5-temp-uploads/           # Temporary PDF uploads with SAS URLs
+dsm5-data/
+├── conditions/
+│   └── {condition-id}.json  # Individual condition files
+```
+
+### **🎯 Extended Risk Assessment with DSM-5**
+
+The system provides comprehensive psychiatric evaluation including:
+
+- **Multi-Condition Analysis** - Evaluate up to 5 DSM-5 conditions simultaneously
+- **Cross-Condition Symptom Tracking** - Identify overlapping symptoms
+- **DSM-5 Criteria Mapping** - Match symptoms to diagnostic criteria
+- **Schizophrenia Spectrum Assessment** - Detailed evaluation with confidence scoring
+- **Treatment Recommendations** - Condition-specific treatment suggestions
+
+#### Assessment Workflow
+
+```csharp
+// 1. Select DSM-5 conditions (up to 5)
+var selectedConditions = new List<string> 
+{ 
+    "major-depressive-disorder", 
+    "generalized-anxiety-disorder",
+    "schizophrenia"
+};
+
+// 2. Generate extended assessment
+var assessment = await riskAssessmentService.GenerateExtendedRiskAssessmentAsync(
+    sessionData, 
+    selectedConditions
+);
+
+// 3. Access results
+var schizophreniaLikelihood = assessment.SchizophreniaAssessment?.OverallLikelihood;
+var functionalImpairment = assessment.SchizophreniaAssessment?.FunctionalImpairment;
+var recommendations = assessment.SchizophreniaAssessment?.RecommendedActions;
+```
+
+#### Schizophrenia Assessment Criteria
+
+**Criterion A Symptoms** (≥2 required, at least 1 from first 3):
+1. Delusions - False fixed beliefs
+2. Hallucinations - Perceptions without stimulus  
+3. Disorganized Speech - Incoherent, derailed
+4. Disorganized Behavior - Inappropriate, unpredictable
+5. Negative Symptoms - Flat affect, avolition
+
+**Criterion B**: Functional impairment in work, relationships, or self-care
+
+**Likelihood Levels**:
+- **None** - No evidence
+- **Minimal** - Slight indications → Monitor
+- **Low** - Some symptoms → Consider follow-up
+- **Moderate** - Multiple symptoms → Further evaluation recommended
+- **High** - Strong evidence → Clinical assessment needed
+- **Very High** - Meets criteria → Urgent psychiatric referral
+
+### **📊 Extraction Quality & Validation**
+
+**Quality Metrics:**
+- Completeness score (0.0-1.0)
+- Present sections count (0-13)
+- Missing sections list
+- Parsing confidence indicators
+
+**Validation Checks:**
+- Required fields present (name, code, category)
+- Diagnostic criteria structure valid
+- Section content non-empty
+- JSON serialization successful
+
+### **⚙️ Multi-Condition Assessment Architecture**
+
+#### Assessment Generation Workflow
+
+```typescript
+// Frontend: User selects DSM-5 conditions
+const selectedConditions = [
+  'major-depressive-disorder',
+  'generalized-anxiety-disorder',
+  'post-traumatic-stress-disorder'
+];
+
+// 1. Initiate async assessment job
+const response = await apiPost('/api/sessions/{sessionId}/extended-risk-assessment', {
+  selectedConditions
+});
+
+// 2. Backend generates dynamic prompt with all selected conditions
+// 3. GPT-5/O3 evaluates patient against each condition's DSM-5 criteria
+// 4. Returns multi-condition assessment with:
+//    - Individual condition evaluations
+//    - Cross-condition differential diagnosis
+//    - Highest risk condition identification
+//    - Combined treatment recommendations
+```
+
+#### Backend Model Structure
+
+```csharp
+public class ExtendedRiskAssessment : RiskAssessment
+{
+    // Legacy single-condition support
+    public SchizophreniaAssessment? SchizophreniaAssessment { get; set; }
+    
+    // New multi-condition support
+    public List<ConditionAssessmentResult>? ConditionAssessments { get; set; }
+}
+
+public class ConditionAssessmentResult
+{
+    public string ConditionId { get; set; }
+    public string ConditionName { get; set; }
+    public string OverallLikelihood { get; set; }
+    public List<CriterionEvaluationResult> CriteriaEvaluations { get; set; }
+    public List<string> RecommendedActions { get; set; }
+    // ... additional properties
+}
+```
+
+#### Frontend Display Logic
+
+```typescript
+// Type detection: single vs multi-condition
+if ('conditionAssessments' in assessment && assessment.conditionAssessments) {
+  // Multi-condition display: Show tabs for each evaluated disorder
+  return <MultiConditionDisplay conditions={assessment.conditionAssessments} />;
+} else if ('schizophreniaAssessment' in assessment) {
+  // Legacy display: Single schizophrenia evaluation
+  return <SchizophreniaDisplay assessment={assessment.schizophreniaAssessment} />;
+}
+```
+
+### **🔧 Troubleshooting DSM-5 System**
+
+#### Common Issues
+
+**"Cannot access a disposed object" error:**
+- Ensure `CORSCredentials: false` in `local.settings.json`
+- This was causing premature IServiceProvider disposal
+
+**No conditions available:**
+- Run DSM-5 import script to initialize data
+- Check blob storage connection string
+- Verify Azure Content Understanding credentials
+
+**Extraction taking too long:**
+- Normal processing: ~3-5 minutes for full DSM-5
+- Monitor Function timeout settings (default: 10 minutes)
+- Check Application Insights for performance data
+
+**Low quality scores:**
+- Verify PDF quality (text vs scanned images)
+- Check page ranges align with disorder boundaries
+- Some disorders naturally lack certain sections
+
+**"The request must contain a 'url' property" error:**
+- System now automatically uploads PDF to blob storage
+- Generates temporary SAS URL for Content Understanding API
+- Ensures AzureWebJobsStorage is configured
+
+#### Debug Mode
+
+Enable detailed logging:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Debug",
+      "BehavioralHealthSystem": "Debug",
+      "Azure.AI.ContentUnderstanding": "Debug"
+    }
+  }
+}
+```
+
+### **💡 Best Practices**
+
+1. **Test with Sample Pages First** - Use `validate-extraction` endpoint with 5-10 pages
+2. **Monitor Quality Scores** - Review extraction quality before full processing
+3. **Use Appropriate Model** - GPT-4 or GPT-5 recommended for extended assessments
+4. **Consider Processing Time** - Budget 3-5 minutes for full DSM-5 extraction
+5. **Validate Storage** - Ensure blob containers exist before extraction
+6. **Check Costs** - Azure Content Understanding charges per page analyzed
+
+## 🐛 Debugging Guide
+
+### **Frontend Debugging**
+
+#### Extended Risk Assessment Issues
+
+**Enable Debug Logging:**
+
+Open browser console (F12) and filter for `ExtendedRiskAssessment`.
+
+**Key Log Points:**
+```typescript
+[ExtendedRiskAssessment] 🚀 Starting assessment generation
+[ExtendedRiskAssessment] 📥 Raw response received: {full JSON}
+[ExtendedRiskAssessment] Response structure check:
+  - response.success: true/false
+  - response.data exists: true/false
+  - response.data.success: true/false
+  - response.data.extendedRiskAssessment exists: true/false
+```
+
+**Common Issues:**
+
+1. **"Failed to generate assessment" with HTTP 200:**
+   - Check response structure in console logs
+   - Verify nested `success` fields are both true
+   - Ensure `extendedRiskAssessment` object exists
+
+2. **Timeout errors:**
+   - Extended assessments take 30s-2min
+   - Standard timeout is 30s, may need increase
+   - Check network tab for actual response time
+
+3. **Type mismatches:**
+   - Verify API response matches TypeScript interfaces
+   - Check for null/undefined in nested objects
+   - Review serialization settings in backend
+
+#### SignalR Connection Issues
+
+**Check Connection Status:**
+```typescript
+// In browser console
+window.signalRConnection?.state
+// Should return: "Connected", "Connecting", "Disconnected", "Reconnecting"
+```
+
+**Connection Troubleshooting:**
+- Verify Functions host is running on correct port
+- Check CORS settings allow SignalR connections
+- Review browser console for connection errors
+- Test with `chrome://inspect/#devices` for detailed logs
+
+### **Backend Debugging**
+
+#### Azure Functions Local Debugging
+
+**Start with Verbose Logging:**
+```powershell
+cd BehavioralHealthSystem.Functions
+func start --port 7071 --verbose
+```
+
+**Common Issues:**
+
+1. **IServiceProvider disposed errors:**
+   - Set `CORSCredentials: false` in `local.settings.json`
+   - Check DI registration order in `Program.cs`
+   - Avoid capturing IServiceProvider in long-lived delegates
+
+2. **Blob storage connection failures:**
+   - Verify `AzureWebJobsStorage` connection string
+   - Use Azure Storage Emulator for local development
+   - Check firewall/network connectivity to Azure
+
+3. **Content Understanding API errors:**
+   - Verify API endpoint and key are correct
+   - Check API version: `2025-05-01-preview`
+   - Ensure PDF is uploaded to blob storage first
+   - Review SAS token expiration (default: 2 hours)
+
+#### Health Check Endpoint
+
+**Test System Health:**
+```powershell
+Invoke-RestMethod -Uri "http://localhost:7071/api/health" -Method GET
+```
+
+**Expected Response:**
+```json
+{
+  "status": "Healthy",
+  "totalDuration": 45.2,
+  "entries": {
+    "kintsugi-api": {
+      "status": "Healthy",
+      "description": "Kintsugi API service is configured"
+    },
+    "storage": {
+      "status": "Healthy",
+      "description": "Azure Storage is accessible"
+    }
+  }
+}
+```
+
+### **Test Scripts**
+
+#### DSM-5 System Test
+```powershell
+# Test DSM-5 data status
+Invoke-RestMethod -Uri "http://localhost:7071/api/dsm5-admin/data-status" -Method GET
+
+# Test extraction with sample pages
+$testRequest = @{
+    pdfData = [Convert]::ToBase64String([System.IO.File]::ReadAllBytes("DSM5.pdf"))
+    startPage = 50
+    endPage = 60
+    autoUpload = $false
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:7071/api/dsm5-admin/validate-extraction" `
+    -Method POST -Body $testRequest -ContentType "application/json"
+```
+
+#### Session Management Test
+```powershell
+# Get all sessions
+Invoke-RestMethod -Uri "http://localhost:7071/api/sessions" -Method GET
+
+# Delete specific session
+Invoke-RestMethod -Uri "http://localhost:7071/api/sessions/{sessionId}" -Method DELETE
+```
 
 ## 🤝 Contributing
 

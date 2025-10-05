@@ -53,6 +53,22 @@ public class ExtendedRiskAssessmentFunctions
             _logger.LogInformation("[{FunctionName}] Starting extended risk assessment job for session: {SessionId}", 
                 nameof(StartExtendedRiskAssessmentJob), sessionId);
 
+            // Parse request body for selected DSM-5 conditions
+            ExtendedRiskAssessmentRequest? requestBody = null;
+            try
+            {
+                var requestBodyText = await new StreamReader(req.Body).ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(requestBodyText))
+                {
+                    requestBody = JsonSerializer.Deserialize<ExtendedRiskAssessmentRequest>(requestBodyText, _jsonOptions);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[{FunctionName}] Error parsing request body, will use default schizophrenia assessment", 
+                    nameof(StartExtendedRiskAssessmentJob));
+            }
+
             // Validate session exists
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
@@ -69,6 +85,22 @@ public class ExtendedRiskAssessmentFunctions
                 return notFoundResponse;
             }
 
+            // Update session data with selected DSM-5 conditions
+            if (requestBody?.SelectedConditions != null && requestBody.SelectedConditions.Count > 0)
+            {
+                sessionData.DSM5Conditions = requestBody.SelectedConditions;
+                await _sessionStorageService.UpdateSessionDataAsync(sessionData);
+                _logger.LogInformation("[{FunctionName}] Updated session {SessionId} with {Count} selected DSM-5 conditions: {Conditions}", 
+                    nameof(StartExtendedRiskAssessmentJob), sessionId, 
+                    requestBody.SelectedConditions.Count, 
+                    string.Join(", ", requestBody.SelectedConditions));
+            }
+            else
+            {
+                _logger.LogInformation("[{FunctionName}] No DSM-5 conditions specified, will default to schizophrenia for backwards compatibility", 
+                    nameof(StartExtendedRiskAssessmentJob));
+            }
+
             // Create a new job
             var jobId = await _jobService.CreateJobAsync(sessionId);
             
@@ -78,7 +110,8 @@ public class ExtendedRiskAssessmentFunctions
                 new ExtendedAssessmentOrchestrationInput
                 {
                     JobId = jobId,
-                    SessionId = sessionId
+                    SessionId = sessionId,
+                    SelectedConditions = requestBody?.SelectedConditions ?? new List<string>()
                 });
 
             _logger.LogInformation("[{FunctionName}] Started orchestration {InstanceId} for job {JobId}, session {SessionId}", 
@@ -395,73 +428,13 @@ public class ExtendedRiskAssessmentFunctions
             return errorResponse;
         }
     }
+}
 
-    /// <summary>
-    /// Gets the status of an async job by jobId
-    /// GET /api/jobs/{jobId}
-    /// </summary>
-    [Function("GetJobStatus")]
-    public async Task<HttpResponseData> GetJobStatus(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "jobs/{jobId}")] HttpRequestData req,
-        string jobId)
-    {
-        try
-        {
-            _logger.LogInformation("[{FunctionName}] Getting job status for: {JobId}", 
-                nameof(GetJobStatus), jobId);
-
-            // Get job from service
-            var job = await _jobService.GetJobAsync(jobId);
-            
-            if (job == null)
-            {
-                _logger.LogWarning("[{FunctionName}] Job not found: {JobId}", nameof(GetJobStatus), jobId);
-                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
-                {
-                    success = false,
-                    message = $"Job not found: {jobId}"
-                }, _jsonOptions));
-                return notFoundResponse;
-            }
-
-            // Return job status
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteStringAsync(JsonSerializer.Serialize(new
-            {
-                success = true,
-                job = new
-                {
-                    jobId = job.JobId,
-                    sessionId = job.SessionId,
-                    status = job.Status.ToString().ToLowerInvariant(),
-                    progress = job.ProgressPercentage,
-                    currentStep = job.CurrentStep,
-                    elapsedSeconds = (int)job.ElapsedTime.TotalSeconds,
-                    createdAt = job.CreatedAt,
-                    startedAt = job.StartedAt,
-                    completedAt = job.CompletedAt,
-                    errorMessage = job.ErrorMessage,
-                    retryCount = job.RetryCount,
-                    canRetry = job.CanRetry,
-                    isCompleted = job.IsCompleted
-                }
-            }, _jsonOptions));
-            return response;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[{FunctionName}] Error getting job status for: {JobId}", 
-                nameof(GetJobStatus), jobId);
-
-            var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
-            {
-                success = false,
-                message = "Error getting job status",
-                error = ex.Message
-            }, _jsonOptions));
-            return errorResponse;
-        }
-    }
+/// <summary>
+/// Request body for extended risk assessment with optional DSM-5 condition selection
+/// </summary>
+public class ExtendedRiskAssessmentRequest
+{
+    [JsonPropertyName("selectedConditions")]
+    public List<string> SelectedConditions { get; set; } = new();
 }

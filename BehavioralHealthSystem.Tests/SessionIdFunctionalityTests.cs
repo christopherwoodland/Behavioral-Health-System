@@ -1,13 +1,6 @@
 // NOTE: These tests validate functionality that is available through the service layer
 // and validate interface contracts and model properties.
 
-using Moq;
-using Microsoft.Extensions.Logging;
-using BehavioralHealthSystem.Services.Interfaces;
-using BehavioralHealthSystem.Functions;
-using BehavioralHealthSystem.Models;
-using FluentValidation;
-
 namespace BehavioralHealthSystem.Tests
 {
     [TestClass]

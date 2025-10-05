@@ -653,6 +653,302 @@ ENTRYPOINT ["dotnet", "BehavioralHealthSystem.Console.dll"]
 - **Microsoft.Extensions.Http** - HTTP client factory
 - **System.CommandLine** - Command-line argument parsing
 
+## 🩺 DSM-5 Import Command (`import-dsm5`)
+
+### Overview
+
+The `import-dsm5` command processes **split DSM-5 diagnostic PDF files** (one diagnostic per file) and uploads them to Azure Blob Storage. Each PDF file in the input directory contains a single diagnostic element and is processed individually using Azure Content Understanding.
+
+### Installation
+
+```powershell
+# Build from source
+cd BehavioralHealthSystem.Console
+dotnet build -c Release
+
+# Executable location
+bin\Release\net8.0\bhs.exe
+```
+
+### Prerequisites
+
+1. **Split DSM-5 PDF Files** - Individual PDF files for each diagnostic condition
+   - Files should be named: `dsm5_{DIAGNOSTIC_CODE}_{DISORDER_TITLE}.pdf`
+   - Each PDF contains a single diagnostic element
+   - Default location: `dsm\single-pages\` (relative to console app directory)
+
+2. **Azure Configuration** - Configure in `appsettings.json`:
+   ```json
+   {
+     "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "https://your-content-understanding.services.ai.azure.com/",
+     "AZURE_CONTENT_UNDERSTANDING_KEY": "your-api-key-here",
+     "DSM5_STORAGE_ACCOUNT_NAME": "your-storage-account-name",
+     "DSM5_CONTAINER_NAME": "dsm5-data",
+     "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING"
+   }
+   ```
+   
+   **Note:** `DSM5_EXTRACTION_METHOD` must be set to `"CONTENT_UNDERSTANDING"` to use the Azure Content Understanding service instead of Document Intelligence.
+
+3. **Authentication** - Either:
+   - API Key in configuration (development)
+   - Azure Managed Identity (production)
+   - Azure CLI logged in (`az login`)
+
+### Usage
+
+**Command:**
+```powershell
+bhs import-dsm5 [options]
+```
+
+**Important:** This command **bypasses the Azure Functions** and calls Azure Content Understanding directly, avoiding the 5-minute Function timeout limit. Each diagnostic PDF is processed individually, and the total time depends on the number of files.
+
+**Options:**
+
+| Option | Alias | Description | Default |
+|--------|-------|-------------|---------|
+| `--directory <path>` | `-d` | Path to directory containing split DSM-5 PDFs | `dsm\single-pages` |
+| `--pattern <pattern>` | `-p` | File pattern to match (glob pattern) | `dsm5_*.pdf` |
+| `--max-files <count>` | `-m` | Maximum number of files to process (for testing) | None (all files) |
+| `--verbose` | `-v` | Enable verbose logging | `false` |
+
+**Examples:**
+
+```powershell
+# Basic usage - processes all PDFs in default directory
+bhs import-dsm5
+
+# Process PDFs from custom directory
+bhs import-dsm5 --directory "C:\DSM5\split-files"
+
+# Process with verbose logging
+bhs import-dsm5 -v
+
+# Process only first 10 files (for testing)
+bhs import-dsm5 --max-files 10 -v
+
+# Process specific pattern
+bhs import-dsm5 --pattern "dsm5_300_*.pdf"
+
+# Custom directory with file limit
+bhs import-dsm5 -d "C:\DSM5\diagnostics" -m 5 -v
+```
+
+### Process Flow
+
+**Direct Azure Service Integration** - No Functions timeout limits!
+
+1. **Validate Directory and Discover Files**
+   - Checks directory exists and is accessible
+   - Discovers all PDF files matching the pattern
+   - Displays total files found and total size
+   - Shows sample file names for verification
+
+2. **Check Storage Status**
+   - Verifies Azure Blob Storage connectivity
+   - Shows current DSM-5 data status
+
+3. **Process Split PDF Files** (Batch Processing)
+   - Loops through each PDF file individually
+   - For each file:
+     - Reads PDF file and encodes to base64
+     - **Directly calls** Azure Content Understanding service (no 5-minute timeout!)
+     - Extracts diagnostic condition using AI (each file contains one diagnostic)
+     - **Automatically uploads** to Azure Blob Storage
+     - Reports success/failure and processing time
+   - Shows progress indicator: `[3/59] Processing: dsm5_300_01_F41_0_Panic_Disorder.pdf`
+   - Displays batch processing summary with success/failure counts
+
+4. **Verify Availability**
+   - Confirms all conditions are accessible in storage
+   - Displays sample conditions extracted
+
+### Expected Output
+
+```
+==================================================
+  DSM-5 Data Import Tool - Batch Processing
+==================================================
+
+Directory: C:\Users\cwoodland\dev\BehavioralHealthSystem\BehavioralHealthSystem.Console\dsm\single-pages
+File Pattern: dsm5_*.pdf
+Mode: Direct Azure Content Understanding (no Function timeout)
+
+Step 1/4: Validating directory and discovering PDF files
+✓ Directory found: C:\...\dsm\single-pages
+✓ Found 59 PDF files
+  Processing all 59 files
+  Total size: 8.42 MB
+  [VERBOSE] Sample files:
+  [VERBOSE]   • dsm5_292_89_F16_983_Hallucinogen_Persisting_Perception_Disorder.pdf
+  [VERBOSE]   • dsm5_293_89_F06_1_Another_Medical_Condition.pdf
+  [VERBOSE]   • dsm5_295_40_F20_81_Schizophreniform_Disorder.pdf
+  [VERBOSE]   • dsm5_296_89_F31_81_Bipolar_II_Disorder.pdf
+  [VERBOSE]   • dsm5_296_99_F34_8_Disruptive_Mood_Dysregulation_Disorder.pdf
+  [VERBOSE]   ... and 54 more
+
+Step 2/4: Checking DSM-5 storage status
+✓ Storage service is accessible
+  Current conditions: 0
+  Available conditions: 0
+
+Step 3/4: Processing split DSM-5 PDF files
+Processing 59 diagnostic PDF files...
+⚠ Each file contains a single diagnostic and will be processed individually.
+
+[1/59] Processing: dsm5_292_89_F16_983_Hallucinogen_Persisting_Perception_Disorder.pdf
+  [VERBOSE] Size: 142.37 KB
+✓ Extracted in 8.2s - Found 1 condition(s)
+
+[2/59] Processing: dsm5_293_89_F06_1_Another_Medical_Condition.pdf
+  [VERBOSE] Size: 156.91 KB
+✓ Extracted in 7.8s - Found 1 condition(s)
+
+[3/59] Processing: dsm5_295_40_F20_81_Schizophreniform_Disorder.pdf
+  [VERBOSE] Size: 134.22 KB
+✓ Extracted in 8.5s - Found 1 condition(s)
+
+... [progress continues for all 59 files] ...
+
+Batch Processing Summary
+✓ Successfully processed: 57/59
+✗ Failed: 2/59
+Total processing time: 9.2 minutes
+Average per file: 9.4s
+
+Failed files:
+  • dsm5_300_12_F44_0_somatic_symptom_disorder_eating_disorders_substanc.pdf: Timeout
+  • dsm5_312_32_F63_2_478_Disruptive_Impulse-Control_and_Conduct_Disorde.pdf: Parse error
+
+Step 4/4: Verifying DSM-5 conditions are available
+✓ Verification successful!
+  Total conditions: 57
+
+Sample conditions:
+  • Panic Disorder (300.01 / F41.0)
+  • Generalized Anxiety Disorder (300.02 / F41.1)
+  • Agoraphobia (300.22 / F40.00)
+  • Social Anxiety Disorder (300.23 / F40.10)
+  • Obsessive-Compulsive Disorder (300.3 / F42)
+
+✓ DSM-5 data import completed successfully!
+
+Next Steps:
+  1. Refresh your React app (Ctrl+F5)
+  2. Navigate to a session's Extended Risk Assessment
+  3. Select DSM-5 conditions from the dropdown
+  4. Run the extended assessment
+```
+
+### Troubleshooting
+
+#### "Directory not found"
+**Solution:** Verify directory path is correct. Use `--directory` option to specify custom path, or ensure `dsm\single-pages` exists relative to console app.
+
+#### "No PDF files found matching pattern"
+**Solution:** 
+- Check files are named with pattern `dsm5_*.pdf`
+- Verify files are in the correct directory
+- Use `--pattern` option to specify custom pattern
+
+#### "Extraction failed" for specific files
+**Solution:** 
+- Check if PDF file is corrupted or empty
+- Verify Azure Content Understanding service configuration in `appsettings.json`
+- Some files may have complex formatting that causes parsing issues
+
+#### "Upload failed"
+**Solution:** Verify `AzureWebJobsStorage` connection string and Azure authentication in `appsettings.json`
+
+#### Partial Success (Some files failed)
+**Solution:** 
+- Review the "Failed files" section in the output
+- Re-run import with `--pattern` targeting only failed files
+- Check individual file integrity
+
+### Development
+
+Run in debug mode with verbose output:
+
+```powershell
+cd BehavioralHealthSystem.Console
+dotnet run -- import-dsm5 --verbose
+```
+
+---
+
+### Progress Tracking & Resume Capability
+
+**NEW:** The `import-dsm5` command now includes automatic progress tracking that allows imports to be resumed if they fail or are interrupted.
+
+#### Features
+
+- ✅ **Automatic Progress Saving** - Each completed file is recorded to `dsm5-import-progress.json`
+- ✅ **Smart Resume** - Automatically skips already-processed files when re-run
+- ✅ **Failure Tracking** - Records failed files with error messages for investigation
+- ✅ **Multi-Session Support** - Progress accumulates across multiple runs
+- ✅ **Auto-Cleanup** - Progress file is automatically deleted when all files complete successfully
+
+#### Additional Commands
+
+**Check Import Status:**
+```powershell
+bhs import-status
+```
+
+Shows:
+- Total files, completed, failed, remaining
+- Completion percentage
+- List of failed files with errors
+- Start time and last update time
+
+**Reset Progress (Start Fresh):**
+```powershell
+bhs import-reset
+```
+
+Deletes the progress file so next import starts from beginning.
+
+#### Usage Examples
+
+**Resume Failed Import:**
+```powershell
+# First run - processes 30/59 files then fails
+bhs import-dsm5
+
+# Check what happened
+bhs import-status
+# Shows: Completed: 30 (50.8%), Failed: 5, Remaining: 24
+
+# Fix issues (network, API keys, etc.) then resume
+bhs import-dsm5
+# Automatically skips 30 completed files
+# Processes remaining 24 + retries 5 failed = 29 files
+```
+
+**Test with Small Batch:**
+```powershell
+# Test first 5 files
+bhs import-dsm5 --max-files 5
+
+# If successful, reset and run full import
+bhs import-reset
+bhs import-dsm5
+```
+
+For detailed documentation on progress tracking, see [IMPORT_PROGRESS_TRACKING.md](./IMPORT_PROGRESS_TRACKING.md).
+
+### Development
+
+Run in debug mode with verbose output:
+
+```powershell
+cd BehavioralHealthSystem.Console
+dotnet run -- import-dsm5 --verbose
+```
+
 ---
 
 This console application provides comprehensive administrative and testing capabilities for the behavioral health system, enabling efficient development and operations management.
+````

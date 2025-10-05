@@ -34,6 +34,17 @@ A **production-ready** full-stack behavioral health assessment platform featurin
 - ✅ **FFmpeg Integration** - Client-side audio conversion with WebAssembly
 - ✅ **Format Optimization** - Automatic conversion to optimal audio formats
 
+### **🧠 AI-Powered Extended Risk Assessment**
+
+- ✅ **Multi-Condition DSM-5 Evaluation** - Dynamic assessment of any DSM-5 psychiatric conditions
+- ✅ **GPT-5/O3 Integration** - Advanced AI analysis with comprehensive diagnostic criteria
+- ✅ **Disorder-Specific Evaluation** - Tailored assessment for each selected condition
+- ✅ **Cross-Condition Analysis** - Differential diagnosis across multiple disorders
+- ✅ **Evidence-Based Criteria** - Official DSM-5 diagnostic criteria evaluation
+- ✅ **Confidence Scoring** - AI confidence metrics for each assessment
+- ✅ **Async Job Processing** - Non-blocking assessment with progress tracking
+- ✅ **Backwards Compatible** - Maintains support for legacy schizophrenia-only assessments
+
 ### **📊 Observability**
 
 - ✅ **Application Insights Integration** - Comprehensive telemetry and monitoring
@@ -1466,11 +1477,26 @@ The transcription uses Azure Speech Services Fast Transcription API v3.1:
 - ✅ **Error Handling** - Improved error responses and logging
 - ✅ **API Endpoints** - New endpoints for agent chat and session management
 
-## 📊 DSM-5 Multi-Condition Assessment System
+## 📊 DSM-5 Multi-Condition Extended Risk Assessment System
 
 ### **Overview**
 
-The system integrates Azure Content Understanding API for extracting structured DSM-5 diagnostic criteria from the official DSM-5 manual. This enables comprehensive multi-condition psychiatric assessments with evidence-based diagnostic criteria.
+The system provides dynamic, AI-powered psychiatric assessments that can evaluate **any combination of DSM-5 conditions** selected by the clinician. Using GPT-5/O3, the system generates comprehensive evaluations with disorder-specific diagnostic criteria, evidence mapping, and confidence scoring.
+
+### **🎯 Dynamic Multi-Condition Assessment**
+
+**Key Capabilities:**
+- **Flexible Condition Selection** - Choose 1-5 DSM-5 conditions for simultaneous evaluation
+- **Disorder-Specific Criteria** - Each condition evaluated against its unique DSM-5 diagnostic criteria
+- **Cross-Condition Analysis** - Differential diagnosis and symptom overlap identification
+- **Evidence-Based Evaluation** - AI maps patient data to specific diagnostic criteria
+- **Confidence Metrics** - Transparent confidence scoring for each criterion and overall assessment
+
+**Supported Assessment Types:**
+1. **Single-Condition Assessment** - In-depth evaluation of one specific disorder
+2. **Multi-Condition Assessment** - Simultaneous evaluation of 2-5 conditions
+3. **Schizophrenia-Focused** - Legacy support for schizophrenia-only assessments
+4. **Cross-Diagnostic Analysis** - Comparative evaluation across condition boundaries
 
 ### **🎯 Key Features**
 
@@ -1696,6 +1722,68 @@ var recommendations = assessment.SchizophreniaAssessment?.RecommendedActions;
 - Diagnostic criteria structure valid
 - Section content non-empty
 - JSON serialization successful
+
+### **⚙️ Multi-Condition Assessment Architecture**
+
+#### Assessment Generation Workflow
+
+```typescript
+// Frontend: User selects DSM-5 conditions
+const selectedConditions = [
+  'major-depressive-disorder',
+  'generalized-anxiety-disorder',
+  'post-traumatic-stress-disorder'
+];
+
+// 1. Initiate async assessment job
+const response = await apiPost('/api/sessions/{sessionId}/extended-risk-assessment', {
+  selectedConditions
+});
+
+// 2. Backend generates dynamic prompt with all selected conditions
+// 3. GPT-5/O3 evaluates patient against each condition's DSM-5 criteria
+// 4. Returns multi-condition assessment with:
+//    - Individual condition evaluations
+//    - Cross-condition differential diagnosis
+//    - Highest risk condition identification
+//    - Combined treatment recommendations
+```
+
+#### Backend Model Structure
+
+```csharp
+public class ExtendedRiskAssessment : RiskAssessment
+{
+    // Legacy single-condition support
+    public SchizophreniaAssessment? SchizophreniaAssessment { get; set; }
+    
+    // New multi-condition support
+    public List<ConditionAssessmentResult>? ConditionAssessments { get; set; }
+}
+
+public class ConditionAssessmentResult
+{
+    public string ConditionId { get; set; }
+    public string ConditionName { get; set; }
+    public string OverallLikelihood { get; set; }
+    public List<CriterionEvaluationResult> CriteriaEvaluations { get; set; }
+    public List<string> RecommendedActions { get; set; }
+    // ... additional properties
+}
+```
+
+#### Frontend Display Logic
+
+```typescript
+// Type detection: single vs multi-condition
+if ('conditionAssessments' in assessment && assessment.conditionAssessments) {
+  // Multi-condition display: Show tabs for each evaluated disorder
+  return <MultiConditionDisplay conditions={assessment.conditionAssessments} />;
+} else if ('schizophreniaAssessment' in assessment) {
+  // Legacy display: Single schizophrenia evaluation
+  return <SchizophreniaDisplay assessment={assessment.schizophreniaAssessment} />;
+}
+```
 
 ### **🔧 Troubleshooting DSM-5 System**
 

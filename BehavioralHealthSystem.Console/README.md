@@ -878,4 +878,77 @@ dotnet run -- import-dsm5 --verbose
 
 ---
 
+### Progress Tracking & Resume Capability
+
+**NEW:** The `import-dsm5` command now includes automatic progress tracking that allows imports to be resumed if they fail or are interrupted.
+
+#### Features
+
+- ✅ **Automatic Progress Saving** - Each completed file is recorded to `dsm5-import-progress.json`
+- ✅ **Smart Resume** - Automatically skips already-processed files when re-run
+- ✅ **Failure Tracking** - Records failed files with error messages for investigation
+- ✅ **Multi-Session Support** - Progress accumulates across multiple runs
+- ✅ **Auto-Cleanup** - Progress file is automatically deleted when all files complete successfully
+
+#### Additional Commands
+
+**Check Import Status:**
+```powershell
+bhs import-status
+```
+
+Shows:
+- Total files, completed, failed, remaining
+- Completion percentage
+- List of failed files with errors
+- Start time and last update time
+
+**Reset Progress (Start Fresh):**
+```powershell
+bhs import-reset
+```
+
+Deletes the progress file so next import starts from beginning.
+
+#### Usage Examples
+
+**Resume Failed Import:**
+```powershell
+# First run - processes 30/59 files then fails
+bhs import-dsm5
+
+# Check what happened
+bhs import-status
+# Shows: Completed: 30 (50.8%), Failed: 5, Remaining: 24
+
+# Fix issues (network, API keys, etc.) then resume
+bhs import-dsm5
+# Automatically skips 30 completed files
+# Processes remaining 24 + retries 5 failed = 29 files
+```
+
+**Test with Small Batch:**
+```powershell
+# Test first 5 files
+bhs import-dsm5 --max-files 5
+
+# If successful, reset and run full import
+bhs import-reset
+bhs import-dsm5
+```
+
+For detailed documentation on progress tracking, see [IMPORT_PROGRESS_TRACKING.md](./IMPORT_PROGRESS_TRACKING.md).
+
+### Development
+
+Run in debug mode with verbose output:
+
+```powershell
+cd BehavioralHealthSystem.Console
+dotnet run -- import-dsm5 --verbose
+```
+
+---
+
 This console application provides comprehensive administrative and testing capabilities for the behavioral health system, enabling efficient development and operations management.
+````

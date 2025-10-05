@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_BASE: string;
+  readonly VITE_API_BASE_URL: string;
   readonly VITE_AZURE_BLOB_SAS_URL: string;
   readonly VITE_STORAGE_CONTAINER_NAME: string;
   readonly VITE_POLL_INTERVAL_MS: string;

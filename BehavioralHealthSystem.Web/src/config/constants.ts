@@ -1,7 +1,7 @@
 // Environment configuration
 export const config = {
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE || 'http://localhost:7071/api',
+    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api',
   },
   azure: {
     blobSasUrl: import.meta.env.VITE_AZURE_BLOB_SAS_URL || '',

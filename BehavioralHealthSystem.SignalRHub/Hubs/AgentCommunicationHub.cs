@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.SignalR;
-
 namespace BehavioralHealthSystem.SignalRHub.Hubs;
 
 public class AgentCommunicationHub : Hub

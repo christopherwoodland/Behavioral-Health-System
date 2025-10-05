@@ -1,4 +1,3 @@
-using System.ClientModel;
 using System.Net.WebSockets;
 
 namespace BehavioralHealthSystem.Agents.Services;

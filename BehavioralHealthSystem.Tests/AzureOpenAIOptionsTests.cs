@@ -1,5 +1,3 @@
-using BehavioralHealthSystem.Configuration;
-
 namespace BehavioralHealthSystem.Tests;
 
 [TestClass]

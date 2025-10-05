@@ -1,9 +1,3 @@
-using System.Net;
-using BehavioralHealthSystem.Configuration;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Polly;
-
 namespace BehavioralHealthSystem.Tests;
 
 [TestClass]

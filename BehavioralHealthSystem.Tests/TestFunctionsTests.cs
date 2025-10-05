@@ -1,10 +1,3 @@
-using BehavioralHealthSystem.Functions;
-using Microsoft.Extensions.Logging;
-using BehavioralHealthSystem.Services.Interfaces;
-using FluentValidation;
-using BehavioralHealthSystem.Models;
-using Moq;
-
 namespace BehavioralHealthSystem.Tests
 {
     [TestClass]

@@ -74,6 +74,69 @@ BehavioralHealthSystem.Helpers/
 
 ### Core Models
 
+#### ExtendedRiskAssessment (Updated for Multi-Condition Support)
+
+The Extended Risk Assessment model now supports both legacy single-condition and new multi-condition evaluations:
+
+```csharp
+public class ExtendedRiskAssessment : RiskAssessment
+{
+    /// <summary>
+    /// Schizophrenia-specific assessment (legacy format for backwards compatibility)
+    /// </summary>
+    [JsonPropertyName("schizophreniaAssessment")]
+    public SchizophreniaAssessment? SchizophreniaAssessment { get; set; }
+    
+    /// <summary>
+    /// Multi-condition assessments (new format for dynamic disorder evaluation)
+    /// </summary>
+    [JsonPropertyName("conditionAssessments")]
+    public List<ConditionAssessmentResult>? ConditionAssessments { get; set; }
+}
+```
+
+**Key Changes:**
+- ✅ Added `ConditionAssessments` property for multi-condition support
+- ✅ Maintained `SchizophreniaAssessment` for backwards compatibility
+- ✅ Supports 1-5 DSM-5 conditions evaluated simultaneously
+- ✅ JSON deserialization handles both legacy and new formats
+
+#### ConditionAssessmentResult
+
+Represents assessment results for a specific DSM-5 condition:
+
+```csharp
+public class ConditionAssessmentResult
+{
+    public string ConditionId { get; set; }
+    public string ConditionName { get; set; }
+    public string ConditionCode { get; set; }
+    public string Category { get; set; }
+    public string OverallLikelihood { get; set; }
+    public double ConfidenceScore { get; set; }
+    public List<CriterionEvaluationResult> CriteriaEvaluations { get; set; }
+    public List<string> RecommendedActions { get; set; }
+    // ... additional properties
+}
+```
+
+#### SubCriterionEvaluationResult (Fixed)
+
+**Important Fix:** The `Evidence` property type was corrected to match GPT-5/O3 output format:
+
+```csharp
+public class SubCriterionEvaluationResult
+{
+    // ✅ Fixed: Changed from string to List<string>
+    [JsonPropertyName("evidence")]
+    public List<string> Evidence { get; set; } = new();
+    
+    // Was: public string Evidence { get; set; } = string.Empty; ❌
+}
+```
+
+This fix resolved JSON deserialization errors: `"Cannot convert JSON array to string"`
+
 #### UserMetadata
 
 Represents user demographic information for behavioral health analysis:

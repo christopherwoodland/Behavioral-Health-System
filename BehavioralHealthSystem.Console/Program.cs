@@ -82,8 +82,252 @@ public class Program
 
         rootCommand.AddCommand(dsm5Command);
 
+        // Progress status command
+        var statusCommand = new Command("import-status", "Show DSM-5 import progress status");
+        statusCommand.SetHandler(() =>
+        {
+            var progressFilePath = Path.Combine(Directory.GetCurrentDirectory(), "dsm5-import-progress.json");
+            
+            if (!File.Exists(progressFilePath))
+            {
+                System.Console.ForegroundColor = ConsoleColor.Yellow;
+                System.Console.WriteLine("No import progress file found.");
+                System.Console.ResetColor();
+                System.Console.WriteLine("Either no import has been started, or the last import completed successfully.");
+                return Task.CompletedTask;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(progressFilePath);
+                var progress = JsonSerializer.Deserialize<ImportProgress>(json);
+                
+                if (progress != null)
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Cyan;
+                    System.Console.WriteLine("==================================================");
+                    System.Console.WriteLine("  DSM-5 Import Progress Status");
+                    System.Console.WriteLine("==================================================");
+                    System.Console.ResetColor();
+                    System.Console.WriteLine();
+                    
+                    System.Console.WriteLine($"Started:        {progress.StartedAt:g}");
+                    System.Console.WriteLine($"Last Updated:   {progress.LastUpdatedAt?.ToString("g") ?? "Never"}");
+                    System.Console.WriteLine($"Total Files:    {progress.TotalFiles}");
+                    
+                    System.Console.ForegroundColor = ConsoleColor.Green;
+                    System.Console.WriteLine($"Completed:      {progress.CompletedFiles} ({(progress.TotalFiles > 0 ? (progress.CompletedFiles * 100.0 / progress.TotalFiles) : 0):F1}%)");
+                    System.Console.ResetColor();
+                    
+                    if (progress.FailedFiles > 0)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Red;
+                        System.Console.WriteLine($"Failed:         {progress.FailedFiles}");
+                        System.Console.ResetColor();
+                    }
+                    
+                    var remaining = progress.TotalFiles - progress.CompletedFiles - progress.FailedFiles;
+                    if (remaining > 0)
+                    {
+                        System.Console.ForegroundColor = ConsoleColor.Yellow;
+                        System.Console.WriteLine($"Remaining:      {remaining}");
+                        System.Console.ResetColor();
+                    }
+                    
+                    System.Console.WriteLine();
+                    System.Console.WriteLine($"Progress file:  {progressFilePath}");
+                    
+                    if (progress.FailedFilesList.Any())
+                    {
+                        System.Console.WriteLine();
+                        System.Console.ForegroundColor = ConsoleColor.Yellow;
+                        System.Console.WriteLine("Failed files:");
+                        System.Console.ResetColor();
+                        foreach (var failed in progress.FailedFilesList.Take(10))
+                        {
+                            System.Console.ForegroundColor = ConsoleColor.Red;
+                            System.Console.WriteLine($"  • {failed.FileName}");
+                            System.Console.ResetColor();
+                            System.Console.ForegroundColor = ConsoleColor.Gray;
+                            System.Console.WriteLine($"    {failed.Error}");
+                            System.Console.ResetColor();
+                        }
+                        if (progress.FailedFilesList.Count > 10)
+                        {
+                            System.Console.WriteLine($"  ... and {progress.FailedFilesList.Count - 10} more");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Console.ForegroundColor = ConsoleColor.Red;
+                System.Console.WriteLine($"Error reading progress file: {ex.Message}");
+                System.Console.ResetColor();
+            }
+            
+            return Task.CompletedTask;
+        });
+        rootCommand.AddCommand(statusCommand);
+
+        // Reset progress command
+        var resetCommand = new Command("import-reset", "Reset DSM-5 import progress (start fresh)");
+        resetCommand.SetHandler(() =>
+        {
+            var progressFilePath = Path.Combine(Directory.GetCurrentDirectory(), "dsm5-import-progress.json");
+            
+            if (!File.Exists(progressFilePath))
+            {
+                System.Console.ForegroundColor = ConsoleColor.Yellow;
+                System.Console.WriteLine("No progress file found - nothing to reset.");
+                System.Console.ResetColor();
+                return Task.CompletedTask;
+            }
+
+            try
+            {
+                File.Delete(progressFilePath);
+                System.Console.ForegroundColor = ConsoleColor.Green;
+                System.Console.WriteLine("✓ Import progress has been reset.");
+                System.Console.ResetColor();
+                System.Console.WriteLine("Next import will start from the beginning.");
+            }
+            catch (Exception ex)
+            {
+                System.Console.ForegroundColor = ConsoleColor.Red;
+                System.Console.WriteLine($"✗ Error resetting progress: {ex.Message}");
+                System.Console.ResetColor();
+            }
+            
+            return Task.CompletedTask;
+        });
+        rootCommand.AddCommand(resetCommand);
+
+        // Retry failed files command
+        var retryCommand = new Command("import-retry", "Retry processing only the failed files from previous import");
+        
+        var retryDirectoryOption = new Option<string>(
+            name: "--directory",
+            description: "Path to the directory containing split DSM-5 PDF files",
+            getDefaultValue: () => Path.Combine(Directory.GetCurrentDirectory(), "dsm", "single-pages"));
+        retryDirectoryOption.AddAlias("-d");
+        
+        var retryVerboseOption = new Option<bool>(
+            name: "--verbose",
+            description: "Enable verbose logging",
+            getDefaultValue: () => false);
+        retryVerboseOption.AddAlias("-v");
+
+        retryCommand.AddOption(retryDirectoryOption);
+        retryCommand.AddOption(retryVerboseOption);
+        
+        retryCommand.SetHandler(async (directoryPath, verbose) =>
+        {
+            var progressFilePath = Path.Combine(Directory.GetCurrentDirectory(), "dsm5-import-progress.json");
+            
+            if (!File.Exists(progressFilePath))
+            {
+                System.Console.ForegroundColor = ConsoleColor.Yellow;
+                System.Console.WriteLine("No import progress file found.");
+                System.Console.ResetColor();
+                System.Console.WriteLine("Run 'import-dsm5' to start a new import.");
+                return;
+            }
+
+            try
+            {
+                var json = File.ReadAllText(progressFilePath);
+                var progress = JsonSerializer.Deserialize<ImportProgress>(json);
+                
+                if (progress?.FailedFilesList.Any() != true)
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Green;
+                    System.Console.WriteLine("✓ No failed files to retry!");
+                    System.Console.ResetColor();
+                    return;
+                }
+
+                System.Console.ForegroundColor = ConsoleColor.Cyan;
+                System.Console.WriteLine($"Found {progress.FailedFilesList.Count} failed files to retry:");
+                System.Console.ResetColor();
+                foreach (var failed in progress.FailedFilesList)
+                {
+                    System.Console.WriteLine($"  • {failed.FileName}: {failed.Error}");
+                }
+                System.Console.WriteLine();
+
+                // Build configuration and services
+                var configuration = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json", optional: true)
+                    .AddEnvironmentVariables()
+                    .Build();
+
+                var services = new ServiceCollection();
+                services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(verbose ? LogLevel.Debug : LogLevel.Information));
+                services.AddSingleton<IConfiguration>(configuration);
+                services.AddSingleton<IAzureContentUnderstandingService, AzureContentUnderstandingService>();
+                services.AddSingleton<IDSM5DataService, DSM5DataService>();
+
+                var serviceProvider = services.BuildServiceProvider();
+                var dsm5Service = serviceProvider.GetRequiredService<IDSM5DataService>();
+
+                // Create list of failed file paths
+                var failedFilePaths = progress.FailedFilesList
+                    .Select(f => Path.Combine(directoryPath, f.FileName))
+                    .Where(File.Exists)
+                    .ToList();
+
+                if (!failedFilePaths.Any())
+                {
+                    System.Console.ForegroundColor = ConsoleColor.Red;
+                    System.Console.WriteLine("✗ None of the failed files found in the specified directory.");
+                    System.Console.ResetColor();
+                    System.Console.WriteLine($"Directory: {directoryPath}");
+                    return;
+                }
+
+                // Clear failed files from progress (they'll be re-added if they fail again)
+                progress.FailedFilesList.Clear();
+                progress.FailedFiles = 0;
+                File.WriteAllText(progressFilePath, JsonSerializer.Serialize(progress, new JsonSerializerOptions { WriteIndented = true }));
+
+                var importer = new DSM5Importer(dsm5Service, verbose);
+                await importer.RetryFailedFilesAsync(failedFilePaths);
+            }
+            catch (Exception ex)
+            {
+                System.Console.ForegroundColor = ConsoleColor.Red;
+                System.Console.WriteLine($"Error during retry: {ex.Message}");
+                System.Console.ResetColor();
+            }
+        }, retryDirectoryOption, retryVerboseOption);
+        
+        rootCommand.AddCommand(retryCommand);
+
         return await rootCommand.InvokeAsync(args);
     }
+}
+
+/// <summary>
+/// Progress tracking for DSM-5 import operations
+/// </summary>
+public class ImportProgress
+{
+    public DateTime StartedAt { get; set; }
+    public DateTime? LastUpdatedAt { get; set; }
+    public int TotalFiles { get; set; }
+    public int CompletedFiles { get; set; }
+    public int FailedFiles { get; set; }
+    public List<string> CompletedFileNames { get; set; } = new();
+    public List<FailedFileInfo> FailedFilesList { get; set; } = new();
+}
+
+public class FailedFileInfo
+{
+    public string FileName { get; set; } = string.Empty;
+    public string Error { get; set; } = string.Empty;
+    public DateTime FailedAt { get; set; }
 }
 
 /// <summary>
@@ -93,11 +337,86 @@ public class DSM5Importer
 {
     private readonly IDSM5DataService _dsm5Service;
     private readonly bool _verbose;
+    private readonly string _progressFilePath;
+    private ImportProgress _progress;
 
     public DSM5Importer(IDSM5DataService dsm5Service, bool verbose)
     {
         _dsm5Service = dsm5Service ?? throw new ArgumentNullException(nameof(dsm5Service));
         _verbose = verbose;
+        _progressFilePath = Path.Combine(Directory.GetCurrentDirectory(), "dsm5-import-progress.json");
+        _progress = LoadOrCreateProgress();
+    }
+
+    private ImportProgress LoadOrCreateProgress()
+    {
+        if (File.Exists(_progressFilePath))
+        {
+            try
+            {
+                var json = File.ReadAllText(_progressFilePath);
+                var progress = JsonSerializer.Deserialize<ImportProgress>(json);
+                if (progress != null)
+                {
+                    WriteInfo($"Resuming from previous import session (started {progress.StartedAt:g})");
+                    WriteInfo($"  Previously completed: {progress.CompletedFiles}/{progress.TotalFiles} files");
+                    if (progress.FailedFiles > 0)
+                    {
+                        WriteWarning($"  Previously failed: {progress.FailedFiles} files");
+                    }
+                    System.Console.WriteLine();
+                    return progress;
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteWarning($"Could not load progress file: {ex.Message}");
+                WriteInfo("Starting fresh import...");
+            }
+        }
+
+        return new ImportProgress
+        {
+            StartedAt = DateTime.UtcNow
+        };
+    }
+
+    private void SaveProgress()
+    {
+        try
+        {
+            _progress.LastUpdatedAt = DateTime.UtcNow;
+            var json = JsonSerializer.Serialize(_progress, new JsonSerializerOptions 
+            { 
+                WriteIndented = true 
+            });
+            File.WriteAllText(_progressFilePath, json);
+            
+            if (_verbose)
+            {
+                WriteVerbose($"Progress saved: {_progress.CompletedFiles}/{_progress.TotalFiles} completed");
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteWarning($"Could not save progress: {ex.Message}");
+        }
+    }
+
+    private void ClearProgress()
+    {
+        try
+        {
+            if (File.Exists(_progressFilePath))
+            {
+                File.Delete(_progressFilePath);
+                WriteSuccess("Import completed - progress file cleared");
+            }
+        }
+        catch (Exception ex)
+        {
+            WriteWarning($"Could not delete progress file: {ex.Message}");
+        }
     }
 
     public async Task ImportBatchAsync(string directoryPath, string filePattern, int? maxFiles)
@@ -143,6 +462,30 @@ public class DSM5Importer
                 WriteError($"Stack trace: {ex.StackTrace}");
             }
             Environment.Exit(1);
+        }
+    }
+
+    public async Task RetryFailedFilesAsync(List<string> failedFilePaths)
+    {
+        try
+        {
+            WriteHeader("DSM-5 Data Import Tool - Retry Failed Files");
+            WriteInfo($"Retrying {failedFilePaths.Count} failed files");
+            WriteInfo($"Mode: Direct Azure Content Understanding (no Function timeout)");
+            System.Console.WriteLine();
+
+            // Process each failed file (skip filtering for retry)
+            await ProcessPdfBatchAsync(failedFilePaths, isRetry: true);
+
+            WriteStep("Final Status Check");
+            await VerifyDataAsync();
+
+            WriteSuccess("Failed files retry completed!");
+        }
+        catch (Exception ex)
+        {
+            WriteError($"Failed files retry failed: {ex.Message}");
+            throw;
         }
     }
 
@@ -230,26 +573,55 @@ public class DSM5Importer
         }
     }
 
-    private async Task ProcessPdfBatchAsync(List<string> pdfFiles)
+    private async Task ProcessPdfBatchAsync(List<string> pdfFiles, bool isRetry = false)
     {
         WriteStep("Step 3/4: Processing split DSM-5 PDF files");
-        WriteInfo($"Processing {pdfFiles.Count} diagnostic PDF files...");
+        
+        // Initialize progress if this is a new run
+        if (_progress.TotalFiles == 0)
+        {
+            _progress.TotalFiles = pdfFiles.Count;
+            SaveProgress();
+        }
+
+        // Filter out already completed files
+        var pendingFiles = pdfFiles
+            .Where(f => !_progress.CompletedFileNames.Contains(Path.GetFileName(f)))
+            .ToList();
+
+        // For regular import (not retry), also filter out files that are already in failed list to avoid double processing
+        if (!isRetry)
+        {
+            var failedFileNames = _progress.FailedFilesList.Select(ff => ff.FileName).ToHashSet();
+            pendingFiles = pendingFiles
+                .Where(f => !failedFileNames.Contains(Path.GetFileName(f)))
+                .ToList();
+        }
+
+        if (pendingFiles.Count < pdfFiles.Count)
+        {
+            var skippedCount = pdfFiles.Count - pendingFiles.Count;
+            WriteSuccess($"Skipping {skippedCount} already processed files (completed or failed)");
+        }
+
+        WriteInfo($"Processing {pendingFiles.Count} diagnostic PDF files...");
         WriteWarning("Each file contains a single diagnostic and will be processed individually.");
         System.Console.WriteLine();
 
-        int successCount = 0;
-        int failureCount = 0;
+        int successCount = _progress.CompletedFiles;
+        int failureCount = _progress.FailedFiles;
         var totalStartTime = DateTime.UtcNow;
-        var failedFiles = new List<(string FileName, string Error)>();
+        var sessionFailedFiles = new List<(string FileName, string Error)>();
 
-        for (int i = 0; i < pdfFiles.Count; i++)
+        for (int i = 0; i < pendingFiles.Count; i++)
         {
-            var pdfPath = pdfFiles[i];
+            var pdfPath = pendingFiles[i];
             var fileName = Path.GetFileName(pdfPath);
+            var overallProgress = successCount + failureCount + 1;
             
             try
             {
-                WriteInfo($"[{i + 1}/{pdfFiles.Count}] Processing: {fileName}");
+                WriteInfo($"[{overallProgress}/{pdfFiles.Count}] Processing: {fileName}");
 
                 // Read and encode PDF
                 byte[] pdfBytes = await File.ReadAllBytesAsync(pdfPath);
@@ -272,27 +644,54 @@ public class DSM5Importer
                 {
                     WriteSuccess($"  ✓ Extracted in {elapsed.TotalSeconds:F1}s - Found {result.ExtractedConditions?.Count ?? 0} condition(s)");
                     successCount++;
+                    
+                    // Track completed file
+                    _progress.CompletedFiles = successCount;
+                    _progress.CompletedFileNames.Add(fileName);
+                    SaveProgress();
                 }
                 else
                 {
                     WriteError($"  ✗ Extraction failed: {result.ErrorMessage}");
-                    failedFiles.Add((fileName, result.ErrorMessage ?? "Unknown error"));
+                    var errorMsg = result.ErrorMessage ?? "Unknown error";
+                    sessionFailedFiles.Add((fileName, errorMsg));
                     failureCount++;
+                    
+                    // Track failed file
+                    _progress.FailedFiles = failureCount;
+                    _progress.FailedFilesList.Add(new FailedFileInfo
+                    {
+                        FileName = fileName,
+                        Error = errorMsg,
+                        FailedAt = DateTime.UtcNow
+                    });
+                    SaveProgress();
                 }
             }
             catch (Exception ex)
             {
                 WriteError($"  ✗ Error processing file: {ex.Message}");
-                failedFiles.Add((fileName, ex.Message));
+                sessionFailedFiles.Add((fileName, ex.Message));
                 failureCount++;
+                
+                // Track failed file
+                _progress.FailedFiles = failureCount;
+                _progress.FailedFilesList.Add(new FailedFileInfo
+                {
+                    FileName = fileName,
+                    Error = ex.Message,
+                    FailedAt = DateTime.UtcNow
+                });
+                SaveProgress();
             }
 
             System.Console.WriteLine();
 
-            // Add a small delay between files to avoid overwhelming the API
-            if (i < pdfFiles.Count - 1)
+            // Add a delay between files to avoid overwhelming the API
+            // Increased from 500ms to 2 seconds for better rate limiting
+            if (i < pendingFiles.Count - 1)
             {
-                await Task.Delay(500);
+                await Task.Delay(2000);
             }
         }
 
@@ -306,16 +705,30 @@ public class DSM5Importer
             WriteError($"Failed: {failureCount}/{pdfFiles.Count}");
         }
         WriteInfo($"Total processing time: {totalElapsed.TotalMinutes:F1} minutes");
-        WriteInfo($"Average per file: {totalElapsed.TotalSeconds / pdfFiles.Count:F1}s");
+        if (pendingFiles.Count > 0)
+        {
+            WriteInfo($"Average per file (this session): {totalElapsed.TotalSeconds / pendingFiles.Count:F1}s");
+        }
 
-        // Show failed files if any
-        if (failedFiles.Any())
+        // Show failed files from this session if any
+        if (sessionFailedFiles.Any())
         {
             System.Console.WriteLine();
-            WriteWarning("Failed files:");
-            foreach (var (fileName, error) in failedFiles)
+            WriteWarning("Failed files (this session):");
+            foreach (var (fileName, error) in sessionFailedFiles)
             {
                 WriteError($"  • {fileName}: {error}");
+            }
+        }
+
+        // Show all failed files if there are any from previous sessions
+        if (_progress.FailedFilesList.Any() && sessionFailedFiles.Count < _progress.FailedFilesList.Count)
+        {
+            System.Console.WriteLine();
+            WriteWarning("All failed files (including previous sessions):");
+            foreach (var failedFile in _progress.FailedFilesList)
+            {
+                WriteError($"  • {failedFile.FileName}: {failedFile.Error}");
             }
         }
 
@@ -329,6 +742,13 @@ public class DSM5Importer
         if (failureCount > 0)
         {
             WriteWarning($"Completed with {failureCount} failures. {successCount} files were processed successfully.");
+            WriteInfo($"Progress saved to: {_progressFilePath}");
+            WriteInfo("To retry failed files or continue, run the command again.");
+        }
+        else if (successCount == pdfFiles.Count)
+        {
+            // All files completed successfully - clear progress file
+            ClearProgress();
         }
     }
 

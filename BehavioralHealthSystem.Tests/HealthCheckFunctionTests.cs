@@ -1,8 +1,3 @@
-using BehavioralHealthSystem.Functions;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Moq;
-
 namespace BehavioralHealthSystem.Tests
 {
     [TestClass]

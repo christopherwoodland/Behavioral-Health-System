@@ -863,3 +863,7 @@ local.settings.*.json
 .env.production
 .env.staging
 .env.test
+
+# DSM-5 PDF files (proprietary/copyrighted content)
+**/dsm/single-pages/*.pdf
+BehavioralHealthSystem.Console/dsm/single-pages/*.pdf

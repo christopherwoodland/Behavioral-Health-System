@@ -1,11 +1,11 @@
 # Solution-Level Deployment Script for Behavioral Health System
 #
-# This script provides comprehensive deployment from the solution root directory.
+# This script provides comprehensive deployment with automatic path resolution.
 # It builds the entire solution and then deploys all components to Azure.
 #
 # FEATURES:
 # =========
-# - Validates solution structure and prerequisites
+# - Validates solution structure and prerequisites  
 # - Builds the complete solution in Release configuration
 # - Deploys Azure infrastructure using ARM templates
 # - Provides comprehensive deployment validation
@@ -13,7 +13,7 @@
 #
 # REQUIREMENTS:
 # =============
-# - Must be run from the solution root directory (where BehavioralHealthSystem.sln exists)
+# - Can be run from either the solution root OR the scripts directory
 # - .NET 8 SDK installed
 # - Azure CLI installed and authenticated
 # - Azure Functions Core Tools v4 (for code deployment)
@@ -32,8 +32,11 @@
 #
 # EXAMPLE USAGE:
 # ==============
-# QUICK DEPLOY (auto-generated resource group):
+# FROM SCRIPTS DIRECTORY:
 # .\deploy-solution.ps1 -FunctionAppName "myapp-func" -KintsugiApiKey "your-key" -QuickDeploy
+#
+# FROM SOLUTION ROOT:
+# .\scripts\deploy-solution.ps1 -FunctionAppName "myapp-func" -KintsugiApiKey "your-key" -QuickDeploy
 #
 # CUSTOM DEPLOY (specify resource group):
 # .\deploy-solution.ps1 -ResourceGroupName "myapp-rg" -FunctionAppName "myapp-func" -KintsugiApiKey "your-key"
@@ -95,22 +98,32 @@ Write-Host "                     Behavioral Health System                       
 Write-Host "================================================================================" -ForegroundColor Blue
 Write-Host ""
 
+# Determine script and solution directories
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$SolutionRoot = Split-Path -Parent $ScriptDir
+
 # Validate solution structure
 Write-Host "SOLUTION VALIDATION:" -ForegroundColor Yellow
-if (-not (Test-Path "BehavioralHealthSystem.sln")) {
+$solutionFile = Join-Path $SolutionRoot "BehavioralHealthSystem.sln"
+if (-not (Test-Path $solutionFile)) {
     Write-Host "   X Solution file not found" -ForegroundColor Red
     Write-Host ""
     Write-Host "DIRECTORY REQUIREMENT:" -ForegroundColor Red
-    Write-Host "   This script must be run from the solution root directory" -ForegroundColor Yellow
-    Write-Host "   Current directory: $(Get-Location)" -ForegroundColor Gray
+    Write-Host "   Expected solution file at: $solutionFile" -ForegroundColor Yellow
+    Write-Host "   Current script directory: $ScriptDir" -ForegroundColor Gray
+    Write-Host "   Calculated solution root: $SolutionRoot" -ForegroundColor Gray
     Write-Host ""
     Write-Host "USAGE:" -ForegroundColor Yellow
-    Write-Host "   cd /path/to/BehavioralHealthSystem" -ForegroundColor Gray
-    Write-Host "   .\deploy-solution.ps1 -ResourceGroupName 'your-rg' -FunctionAppName 'your-app' -KintsugiApiKey 'your-key'" -ForegroundColor Gray
+    Write-Host "   # Run from scripts directory:" -ForegroundColor Gray
+    Write-Host "   .\scripts\deploy-solution.ps1 -ResourceGroupName 'your-rg' -FunctionAppName 'your-app' -KintsugiApiKey 'your-key'" -ForegroundColor Gray
+    Write-Host "   # Or run from solution root:" -ForegroundColor Gray
+    Write-Host "   .\scripts\deploy-solution.ps1 -ResourceGroupName 'your-rg' -FunctionAppName 'your-app' -KintsugiApiKey 'your-key'" -ForegroundColor Gray
     exit 1
 }
 
 Write-Host "   + Solution file found - ready to deploy" -ForegroundColor Green
+Write-Host "   + Script directory: $ScriptDir" -ForegroundColor Gray
+Write-Host "   + Solution root: $SolutionRoot" -ForegroundColor Gray
 
 # Check for required project files
 $requiredProjects = @(
@@ -119,8 +132,9 @@ $requiredProjects = @(
 )
 
 foreach ($project in $requiredProjects) {
-    if (-not (Test-Path $project)) {
-        Write-Host "   X Required project not found: $project" -ForegroundColor Red
+    $projectPath = Join-Path $SolutionRoot $project
+    if (-not (Test-Path $projectPath)) {
+        Write-Host "   X Required project not found: $projectPath" -ForegroundColor Red
         exit 1
     }
 }
@@ -131,33 +145,45 @@ Write-Host ""
 Write-Host "SOLUTION BUILD:" -ForegroundColor Yellow
 Write-Host "   Building solution in Release configuration..." -ForegroundColor Cyan
 
-dotnet build BehavioralHealthSystem.sln --configuration Release --verbosity minimal
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "   X Failed to build solution" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "BUILD TROUBLESHOOTING:" -ForegroundColor Red
-    Write-Host "   • Check for compilation errors in your code" -ForegroundColor Yellow
-    Write-Host "   • Ensure all NuGet packages are restored" -ForegroundColor Yellow
-    Write-Host "   • Verify .NET 8 SDK is installed: dotnet --version" -ForegroundColor Yellow
-    Write-Host "   • Try cleaning first: dotnet clean" -ForegroundColor Yellow
-    exit 1
+# Change to solution root for build
+Push-Location $SolutionRoot
+try {
+    dotnet build BehavioralHealthSystem.sln --configuration Release --verbosity minimal
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "   X Failed to build solution" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "BUILD TROUBLESHOOTING:" -ForegroundColor Red
+        Write-Host "   • Check for compilation errors in your code" -ForegroundColor Yellow
+        Write-Host "   • Ensure all NuGet packages are restored" -ForegroundColor Yellow
+        Write-Host "   • Verify .NET 8 SDK is installed: dotnet --version" -ForegroundColor Yellow
+        Write-Host "   • Try cleaning first: dotnet clean" -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "   + Solution built successfully" -ForegroundColor Green
+} finally {
+    Pop-Location
 }
-Write-Host "   + Solution built successfully" -ForegroundColor Green
 
 # Call the deployment script
 Write-Host ""
 Write-Host "AZURE INFRASTRUCTURE DEPLOYMENT:" -ForegroundColor Yellow
-Write-Host "   Deploying Azure resources using ARM templates..." -ForegroundColor Cyan
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$SolutionRoot = Split-Path -Parent $ScriptDir
+Write-Host "   Deploying Azure resources using Bicep templates..." -ForegroundColor Cyan
 $deployScript = Join-Path $SolutionRoot "BehavioralHealthSystem.Helpers\Deploy\deploy.ps1"
 
 try {
-    if ($SubscriptionId) {
-        & $deployScript -ResourceGroupName $ResourceGroupName -FunctionAppName $FunctionAppName -KintsugiApiKey $KintsugiApiKey -Location $Location -SubscriptionId $SubscriptionId
-    } else {
-        & $deployScript -ResourceGroupName $ResourceGroupName -FunctionAppName $FunctionAppName -KintsugiApiKey $KintsugiApiKey -Location $Location
+    $deployParams = @{
+        ResourceGroupName = $ResourceGroupName
+        FunctionAppName = $FunctionAppName
+        KintsugiApiKey = $KintsugiApiKey
+        Location = $Location
     }
+    
+    # Add optional parameters
+    if ($WebAppName) {
+        $deployParams.WebAppName = $WebAppName
+    }
+    
+    & $deployScript @deployParams
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   + Infrastructure deployment completed successfully" -ForegroundColor Green

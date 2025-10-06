@@ -22,7 +22,8 @@ import {
   Heart,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  X
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
@@ -70,6 +71,38 @@ const SessionDetail: React.FC = () => {
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
   const [isRiskAssessmentExpanded, setIsRiskAssessmentExpanded] = useState(true);
   const [isExtendedRiskExpanded, setIsExtendedRiskExpanded] = useState(true);
+
+  // Toast notifications state
+  const [toasts, setToasts] = useState<Array<{
+    id: string;
+    type: 'error' | 'warning' | 'info' | 'success';
+    title: string;
+    message: string;
+    timestamp: number;
+  }>>([]);
+
+  // Toast notification functions
+  const addToast = useCallback((type: 'error' | 'warning' | 'info' | 'success', title: string, message: string) => {
+    const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    const newToast = {
+      id,
+      type,
+      title,
+      message,
+      timestamp: Date.now()
+    };
+    setToasts(prev => [...prev, newToast]);
+    
+    // Auto-remove toast after 8 seconds for errors, 5 seconds for others
+    const duration = type === 'error' ? 8000 : 5000;
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, duration);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  }, []);
 
   // Load group data when session has a groupId
   const loadGroupData = useCallback(async (groupId: string) => {
@@ -871,6 +904,18 @@ const SessionDetail: React.FC = () => {
               onAssessmentUpdated={(assessment) => {
                 setSession(prev => prev ? { ...prev, riskAssessment: assessment } : null);
               }}
+              onStart={() => {
+                addToast('info', 'Generating Assessment', 'AI Risk Assessment generation started...');
+                announceToScreenReader('AI risk assessment generation started');
+              }}
+              onSuccess={(assessment) => {
+                addToast('success', 'Assessment Complete', `AI Risk Assessment generated successfully with ${assessment.overallRiskLevel} risk level`);
+                announceToScreenReader('AI risk assessment completed successfully');
+              }}
+              onError={(errorMessage) => {
+                addToast('error', 'Assessment Failed', `AI risk assessment failed: ${errorMessage}`);
+                announceToScreenReader(`AI assessment error: ${errorMessage}`);
+              }}
             />
           </div>
         )}
@@ -921,10 +966,17 @@ const SessionDetail: React.FC = () => {
                 apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
                 existingAssessment={session.extendedRiskAssessment}
                 selectedDSM5Conditions={selectedDSM5Conditions}
+                onStart={() => {
+                  addToast('info', 'Assessment Started', 'Extended risk assessment job has been initiated and is now processing...');
+                  announceToScreenReader('Extended risk assessment started');
+                }}
                 onComplete={(assessment) => {
                   setSession(prev => prev ? { ...prev, extendedRiskAssessment: assessment } : null);
+                  addToast('success', 'Assessment Complete', 'Extended risk assessment has been generated successfully');
+                  announceToScreenReader('Extended risk assessment completed successfully');
                 }}
                 onError={(errorMessage) => {
+                  addToast('error', 'Assessment Failed', `Extended risk assessment failed: ${errorMessage}`);
                   announceToScreenReader(`Extended assessment error: ${errorMessage}`);
                 }}
               />
@@ -932,6 +984,58 @@ const SessionDetail: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Toast Notifications */}
+      {toasts.length > 0 && (
+        <div className="fixed top-4 right-4 z-50 space-y-2">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`max-w-sm w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg border-l-4 p-4 transition-all duration-300 transform ${
+                toast.type === 'error' ? 'border-red-500' :
+                toast.type === 'warning' ? 'border-yellow-500' :
+                toast.type === 'success' ? 'border-green-500' : 'border-blue-500'
+              }`}
+              role="alert"
+            >
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {toast.type === 'error' && (
+                    <AlertCircle className="h-5 w-5 text-red-500" aria-hidden="true" />
+                  )}
+                  {toast.type === 'warning' && (
+                    <AlertCircle className="h-5 w-5 text-yellow-500" aria-hidden="true" />
+                  )}
+                  {toast.type === 'success' && (
+                    <CheckCircle className="h-5 w-5 text-green-500" aria-hidden="true" />
+                  )}
+                  {toast.type === 'info' && (
+                    <Info className="h-5 w-5 text-blue-500" aria-hidden="true" />
+                  )}
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {toast.title}
+                  </p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    {toast.message}
+                  </p>
+                </div>
+                <div className="ml-4 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => removeToast(toast.id)}
+                    className="inline-flex text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 rounded"
+                    aria-label="Dismiss notification"
+                  >
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

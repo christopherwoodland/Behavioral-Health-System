@@ -126,8 +126,9 @@ BehavioralHealthSystem/
 │   │   └── InitiateRequestValidator.cs
 │   │   └── UserMetadataValidator.cs
 │   ├── 📁 Deploy/                               # Azure deployment resources
-│   │   ├── azuredeploy.json                     # ARM template
-│   │   └── azuredeploy.parameters.json          # ARM parameters
+│   │   ├── main.bicep                          # Modern Bicep template
+│   │   ├── main.bicepparam                     # Bicep parameters
+│   │   └── deploy.ps1                          # Bicep deployment script
 │   └── GlobalUsings.cs                          # Global using directives
 ├── 📁 BehavioralHealthSystem.Tests/            # Unit test project
 │   ├── 📁 Functions/                            # Function tests
@@ -533,8 +534,12 @@ Add these settings to your Azure Function App configuration:
 Perfect for demos, testing, and rapid prototyping with minimal configuration:
 
 ```powershell
-# From solution root directory - Auto-generates resource group name
+# From solution root directory
 .\scripts\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
+
+# Or from scripts directory
+cd scripts
+.\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
 ```
 
 This creates:
@@ -549,8 +554,12 @@ This creates:
 For production deployments with custom resource group and region:
 
 ```powershell
-# From solution root directory - Full control over resources
+# From solution root directory
 .\scripts\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
+
+# Or from scripts directory
+cd scripts
+.\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
 ```
 
 ### **⚡ Code-Only Deploy (Rapid Updates)**
@@ -558,8 +567,12 @@ For production deployments with custom resource group and region:
 For updating code on existing Azure infrastructure:
 
 ```powershell
-# Deploy only code changes to existing Function App
+# From solution root directory
 .\scripts\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
+
+# Or from scripts directory
+cd scripts
+.\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
 ```
 
 ### **🌐 UI-Only Deploy**
@@ -567,14 +580,15 @@ For updating code on existing Azure infrastructure:
 Deploy just the React web application:
 
 ```powershell
-# Deploy to Azure App Service
+# Deploy to Azure App Service (from solution root)
 .\scripts\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "your-web-app" -ResourceGroupName "your-rg"
 
-# Deploy to Azure Storage static website
-.\scripts\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
+# Deploy to Azure Storage static website (from scripts directory)
+cd scripts
+.\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
 
 # Deploy to Azure Static Web Apps
-.\scripts\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
+.\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
 ```
 
 ### **📋 Deployment Script Overview**
@@ -619,14 +633,13 @@ Deploy just the React web application:
    az group create --name myResourceGroup --location "East US"
    ```
 
-2. **Deploy ARM Template:**
+2. **Deploy Bicep Template:**
 
    ```bash
    az deployment group create \
      --resource-group myResourceGroup \
-     --template-file BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json \
-     --parameters BehavioralHealthSystem.Helpers/Deploy/azuredeploy.parameters.json \
-     --parameters functionAppName=myFunctionApp
+     --template-file BehavioralHealthSystem.Helpers/Deploy/main.bicep \
+     --parameters BehavioralHealthSystem.Helpers/Deploy/main.bicepparam
    ```
 
 3. **Deploy Function Code:**
@@ -649,14 +662,13 @@ Deploy just the React web application:
    az group create --name myResourceGroup --location "East US"
    ```
 
-2. **Deploy ARM Template:**
+2. **Deploy Bicep Template:**
 
    ```bash
    az deployment group create \
      --resource-group myResourceGroup \
-     --template-file BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json \
-     --parameters BehavioralHealthSystem.Helpers/Deploy/azuredeploy.parameters.json \
-     --parameters functionAppName=myFunctionApp
+     --template-file BehavioralHealthSystem.Helpers/Deploy/main.bicep \
+     --parameters BehavioralHealthSystem.Helpers/Deploy/main.bicepparam
    ```
 
 3. **Deploy Function Code:**
@@ -700,7 +712,7 @@ This detailed guide explains how to deploy the complete Behavioral Health System
 
 **What it does**:
 - ✅ Validates solution structure and builds all projects
-- ✅ Deploys Azure infrastructure using ARM templates
+- ✅ Deploys Azure infrastructure using modern Bicep templates
 - ✅ Automatically deploys Function App code
 - ✅ Automatically deploys Web App code
 - ✅ Configures all environment variables and application settings

@@ -151,6 +151,14 @@ public class ExtendedRiskAssessmentFunctions
     /// Retrieves an existing extended risk assessment for a session
     /// GET /api/sessions/{sessionId}/extended-risk-assessment
     /// </summary>
+    /// <remarks>
+    /// Returns 200 OK regardless of whether assessment exists:
+    /// - If assessment exists: Returns the full assessment data
+    /// - If assessment doesn't exist: Returns informational response with hasExtendedAssessment=false
+    /// 
+    /// This is expected behavior for new sessions - use POST endpoint to generate assessment.
+    /// For a simple availability check, consider using GET /api/sessions/{sessionId}/extended-risk-assessment/status
+    /// </remarks>
     [Function("GetExtendedRiskAssessment")]
     public async Task<HttpResponseData> GetExtendedRiskAssessment(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "sessions/{sessionId}/extended-risk-assessment")] HttpRequestData req,
@@ -191,16 +199,20 @@ public class ExtendedRiskAssessmentFunctions
             }
             else
             {
-                _logger.LogInformation("[{FunctionName}] Extended risk assessment not found for session: {SessionId}", 
+                _logger.LogInformation("[{FunctionName}] Extended risk assessment not yet generated for session: {SessionId}", 
                     nameof(GetExtendedRiskAssessment), sessionId);
                 
-                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                // Return 200 OK with informational response - this is expected for new sessions
+                var response = req.CreateResponse(HttpStatusCode.OK);
+                await response.WriteStringAsync(JsonSerializer.Serialize(new
                 {
-                    success = false,
-                    message = "Extended risk assessment not found for this session. Generate one first using POST endpoint."
+                    success = true,
+                    hasExtendedAssessment = false,
+                    message = "Extended risk assessment not yet generated for this session. Use POST endpoint to generate one.",
+                    generateUrl = $"/api/sessions/{sessionId}/extended-risk-assessment",
+                    statusUrl = $"/api/sessions/{sessionId}/extended-risk-assessment/status"
                 }, _jsonOptions));
-                return notFoundResponse;
+                return response;
             }
         }
         catch (Exception ex)

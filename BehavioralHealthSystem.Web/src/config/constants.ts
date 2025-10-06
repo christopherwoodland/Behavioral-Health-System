@@ -9,6 +9,7 @@ export const config = {
   },
   polling: {
     intervalMs: parseInt(import.meta.env.VITE_POLL_INTERVAL_MS || '3000', 10),
+    jobIntervalMs: parseInt(import.meta.env.VITE_JOB_POLL_INTERVAL_MS || '5000', 10),
     maxAttempts: 60, // 3 minutes at 3s intervals
     backoffFactor: 1.2,
   },

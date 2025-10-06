@@ -126,8 +126,9 @@ BehavioralHealthSystem/
 │   │   └── InitiateRequestValidator.cs
 │   │   └── UserMetadataValidator.cs
 │   ├── 📁 Deploy/                               # Azure deployment resources
-│   │   ├── azuredeploy.json                     # ARM template
-│   │   └── azuredeploy.parameters.json          # ARM parameters
+│   │   ├── main.bicep                          # Modern Bicep template
+│   │   ├── main.bicepparam                     # Bicep parameters
+│   │   └── deploy.ps1                          # Bicep deployment script
 │   └── GlobalUsings.cs                          # Global using directives
 ├── 📁 BehavioralHealthSystem.Tests/            # Unit test project
 │   ├── 📁 Functions/                            # Function tests
@@ -533,8 +534,12 @@ Add these settings to your Azure Function App configuration:
 Perfect for demos, testing, and rapid prototyping with minimal configuration:
 
 ```powershell
-# From solution root directory - Auto-generates resource group name
+# From solution root directory
 .\scripts\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
+
+# Or from scripts directory
+cd scripts
+.\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
 ```
 
 This creates:
@@ -549,8 +554,12 @@ This creates:
 For production deployments with custom resource group and region:
 
 ```powershell
-# From solution root directory - Full control over resources
+# From solution root directory
 .\scripts\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
+
+# Or from scripts directory
+cd scripts
+.\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
 ```
 
 ### **⚡ Code-Only Deploy (Rapid Updates)**
@@ -558,8 +567,12 @@ For production deployments with custom resource group and region:
 For updating code on existing Azure infrastructure:
 
 ```powershell
-# Deploy only code changes to existing Function App
+# From solution root directory
 .\scripts\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
+
+# Or from scripts directory
+cd scripts
+.\deploy-code-only.ps1 -FunctionAppName "your-function-app" -ResourceGroupName "your-rg"
 ```
 
 ### **🌐 UI-Only Deploy**
@@ -567,14 +580,15 @@ For updating code on existing Azure infrastructure:
 Deploy just the React web application:
 
 ```powershell
-# Deploy to Azure App Service
+# Deploy to Azure App Service (from solution root)
 .\scripts\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "your-web-app" -ResourceGroupName "your-rg"
 
-# Deploy to Azure Storage static website
-.\scripts\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
+# Deploy to Azure Storage static website (from scripts directory)
+cd scripts
+.\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "your-storage-account" -ResourceGroupName "your-rg"
 
 # Deploy to Azure Static Web Apps
-.\scripts\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
+.\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "your-static-web-app" -ResourceGroupName "your-rg"
 ```
 
 ### **📋 Deployment Script Overview**
@@ -619,14 +633,13 @@ Deploy just the React web application:
    az group create --name myResourceGroup --location "East US"
    ```
 
-2. **Deploy ARM Template:**
+2. **Deploy Bicep Template:**
 
    ```bash
    az deployment group create \
      --resource-group myResourceGroup \
-     --template-file BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json \
-     --parameters BehavioralHealthSystem.Helpers/Deploy/azuredeploy.parameters.json \
-     --parameters functionAppName=myFunctionApp
+     --template-file BehavioralHealthSystem.Helpers/Deploy/main.bicep \
+     --parameters BehavioralHealthSystem.Helpers/Deploy/main.bicepparam
    ```
 
 3. **Deploy Function Code:**
@@ -649,14 +662,13 @@ Deploy just the React web application:
    az group create --name myResourceGroup --location "East US"
    ```
 
-2. **Deploy ARM Template:**
+2. **Deploy Bicep Template:**
 
    ```bash
    az deployment group create \
      --resource-group myResourceGroup \
-     --template-file BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json \
-     --parameters BehavioralHealthSystem.Helpers/Deploy/azuredeploy.parameters.json \
-     --parameters functionAppName=myFunctionApp
+     --template-file BehavioralHealthSystem.Helpers/Deploy/main.bicep \
+     --parameters BehavioralHealthSystem.Helpers/Deploy/main.bicepparam
    ```
 
 3. **Deploy Function Code:**
@@ -686,7 +698,253 @@ After any deployment method:
    curl -X POST https://your-function-app-name.azurewebsites.net/api/TestKintsugiConnection
    ```
 
-## 📊 Application Insights Configuration
+## � Detailed Deployment Guide
+
+### Overview
+
+This detailed guide explains how to deploy the complete Behavioral Health System solution to Azure, including all infrastructure, application code, and configuration. The deployment system has been updated to support complete solution deployment to new resource groups.
+
+### Updated Deployment Scripts
+
+#### 1. `deploy-solution.ps1` (Main Deployment Script)
+
+**Purpose**: Complete solution deployment from scratch to a new Azure resource group.
+
+**What it does**:
+- ✅ Validates solution structure and builds all projects
+- ✅ Deploys Azure infrastructure using modern Bicep templates
+- ✅ Automatically deploys Function App code
+- ✅ Automatically deploys Web App code
+- ✅ Configures all environment variables and application settings
+- ✅ Provides comprehensive deployment validation and next steps
+
+**Usage Examples**:
+
+```powershell
+# Quick Deploy (auto-generated resource group)
+.\scripts\deploy-solution.ps1 -FunctionAppName "myapp-func" -KintsugiApiKey "your-key" -QuickDeploy
+
+# Custom Deploy with specific names
+.\scripts\deploy-solution.ps1 -ResourceGroupName "myapp-rg" -FunctionAppName "myapp-func" -WebAppName "myapp-web" -KintsugiApiKey "your-key"
+
+# Deploy infrastructure only (skip code deployment)
+.\scripts\deploy-solution.ps1 -FunctionAppName "myapp-func" -KintsugiApiKey "your-key" -DeployCode $false
+
+# Skip Web App deployment
+.\scripts\deploy-solution.ps1 -FunctionAppName "myapp-func" -KintsugiApiKey "your-key" -SkipWebApp
+```
+
+**New Parameters**:
+- `WebAppName`: Globally unique Web App name (auto-generated if not provided)
+- `DeployCode`: Deploy application code after infrastructure (default: true)
+- `SkipWebApp`: Skip web application deployment
+
+#### 2. `deploy-environment-variables.ps1`
+
+**Purpose**: Deploy all required environment variables to the Function App.
+
+**Updates**:
+- ✅ Added `VITE_API_BASE_URL` for web app compatibility
+- ✅ Includes all latest configuration values from recent fixes
+- ✅ Updated with Extended Risk Assessment configuration
+
+**Usage**:
+```powershell
+.\scripts\deploy-environment-variables.ps1 -FunctionAppName "myapp-func" -ResourceGroupName "myapp-rg"
+```
+
+#### 3. `deploy-ui.ps1`
+
+**Purpose**: Build and deploy the React/Vite web application.
+
+**Updates**:
+- ✅ Dynamic API base URL configuration based on Function App name
+- ✅ Automatic environment variable setup for production
+- ✅ Supports multiple deployment targets (App Service, Storage, Static Web App)
+
+**Usage**:
+```powershell
+# Deploy to App Service with auto-detected API URL
+.\scripts\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "myapp-web" -ResourceGroupName "myapp-rg" -FunctionAppName "myapp-func"
+
+# Deploy to Azure Storage
+.\scripts\deploy-ui.ps1 -DeploymentTarget "storage" -ResourceName "myappstorageaccount" -ResourceGroupName "myapp-rg"
+
+# Deploy to Static Web App
+.\scripts\deploy-ui.ps1 -DeploymentTarget "static-web-app" -ResourceName "myapp-swa" -ResourceGroupName "myapp-rg"
+```
+
+#### 4. `deploy-code-only.ps1`
+
+**Purpose**: Deploy only application code to existing Azure resources (for rapid updates).
+
+**Updates**:
+- ✅ Dynamic API URL configuration for web applications
+- ✅ Production environment setup for builds
+- ✅ Support for both Function Apps and Web Apps
+
+**Usage**:
+```powershell
+# Deploy Function App code only
+.\scripts\deploy-code-only.ps1 -FunctionAppName "myapp-func" -ResourceGroupName "myapp-rg"
+
+# Deploy Web App code only
+.\scripts\deploy-code-only.ps1 -AppServiceName "myapp-web" -ResourceGroupName "myapp-rg" -TargetFunctionAppName "myapp-func"
+```
+
+### Complete Deployment Workflow
+
+#### For New Resource Groups (Recommended)
+
+1. **Complete Solution Deployment**:
+   ```powershell
+   .\scripts\deploy-solution.ps1 -FunctionAppName "mynewapp-func" -KintsugiApiKey "your-api-key" -QuickDeploy
+   ```
+
+   This single command will:
+   - Create resource group: `rg-mynewapp-func`
+   - Deploy Azure infrastructure (Function App, Web App, Storage, etc.)
+   - Deploy Function App code with all environment variables
+   - Deploy Web App with correct API endpoints
+   - Provide verification steps and endpoint URLs
+
+2. **Verify Deployment**:
+   ```powershell
+   # Test Function App health
+   curl https://mynewapp-func.azurewebsites.net/api/health
+
+   # Test Kintsugi API connection
+   curl -X POST https://mynewapp-func.azurewebsites.net/api/TestKintsugiConnection
+
+   # Open Web App
+   # Navigate to: https://mynewapp-func-web.azurewebsites.net
+   ```
+
+#### For Existing Infrastructure
+
+1. **Code-Only Updates**:
+   ```powershell
+   # Update Function App code
+   .\scripts\deploy-code-only.ps1 -FunctionAppName "existing-func" -ResourceGroupName "existing-rg"
+
+   # Update Web App code
+   .\scripts\deploy-code-only.ps1 -AppServiceName "existing-web" -ResourceGroupName "existing-rg"
+   ```
+
+2. **Environment Variable Updates**:
+   ```powershell
+   .\scripts\deploy-environment-variables.ps1 -FunctionAppName "existing-func" -ResourceGroupName "existing-rg"
+   ```
+
+### Environment Configuration
+
+#### Automatic Configuration
+
+The deployment scripts automatically configure:
+
+- **Function App Environment Variables**: All required settings for API keys, OpenAI endpoints, Document Intelligence, etc.
+- **Web App Environment Variables**: `VITE_API_BASE_URL` dynamically set to match the Function App
+- **Production Build Settings**: Correct API endpoints, blob storage URLs, and feature flags
+
+#### Manual Configuration
+
+If you need to manually configure environment variables:
+
+1. **Function App Settings** (Azure Portal > Function App > Configuration):
+   - All variables from `scripts/deploy-environment-variables.ps1`
+   - Update `KINTSUGI_API_KEY` if needed
+
+2. **Web App Settings** (Azure Portal > App Service > Configuration):
+   - `VITE_API_BASE_URL`: https://your-function-app.azurewebsites.net/api
+   - Other VITE_ variables as needed
+
+### Recent Fixes Included
+
+The updated deployment scripts include all recent code changes:
+
+- ✅ **DSM-5 Import Fixes**: Retry logic and network connectivity improvements
+- ✅ **GlobalUsings.cs Consolidation**: Cleaner code organization across all projects
+- ✅ **Extended Risk Assessment UI**: DSM-5 condition selector integration
+- ✅ **CSS Overlap Fixes**: Resolved visual issues in Extended Risk Assessment
+- ✅ **URL Construction Fixes**: Removed double /api/ path issues
+- ✅ **Environment Variable Standardization**: Consistent VITE_API_BASE_URL usage
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Build Failures**:
+   ```bash
+   # Restore NuGet packages
+   dotnet clean
+   dotnet restore
+   dotnet build
+   
+   # Check Node.js version
+   node --version  # Should be 16+ for Vite
+   ```
+
+2. **API Connection Issues**:
+   - Verify Function App is running: Check Azure Portal > Function App > Overview
+   - Check environment variables: Azure Portal > Function App > Configuration
+   - Test health endpoint: `curl https://your-func-app.azurewebsites.net/api/health`
+
+3. **Web App Issues**:
+   - Check build logs in Azure Portal > App Service > Deployment Center
+   - Verify environment variables include correct `VITE_API_BASE_URL`
+   - Check browser console for API endpoint errors
+
+#### Deployment Script Debug
+
+Add verbose logging:
+```powershell
+$VerbosePreference = "Continue"
+.\scripts\deploy-solution.ps1 -FunctionAppName "test-app" -KintsugiApiKey "key" -Verbose
+```
+
+#### Manual Verification Steps
+
+After deployment, verify each component:
+
+1. **Function App**:
+   ```bash
+   # Health check
+   curl https://your-func-app.azurewebsites.net/api/health
+   
+   # API test
+   curl -X POST https://your-func-app.azurewebsites.net/api/TestKintsugiConnection
+   ```
+
+2. **Web App**:
+   - Navigate to the web application URL
+   - Check browser developer console for errors
+   - Test core functionality (session creation, predictions, etc.)
+
+3. **Azure Resources**:
+   - Azure Portal > Resource Groups > [your-rg]
+   - Verify all resources are created and running
+   - Check Application Insights for logs and metrics
+
+### Deployment Best Practices
+
+1. **Monitor Your Application**:
+   - Set up Application Insights alerts
+   - Configure health check monitoring
+   - Review logs regularly
+
+2. **Security**:
+   - Rotate API keys regularly
+   - Review access policies
+   - Enable Azure AD authentication if needed
+
+3. **Scaling**:
+   - Configure autoscaling for App Services
+   - Monitor Function App consumption
+   - Optimize for your usage patterns
+
+For additional support, refer to the project README files in each component directory.
+
+## �📊 Application Insights Configuration
 
 The application includes comprehensive telemetry:
 

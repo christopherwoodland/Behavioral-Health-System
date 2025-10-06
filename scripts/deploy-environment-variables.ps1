@@ -59,7 +59,8 @@ $environmentVariables = @(
     "DSM5_CONTAINER_NAME=dsm5-data",
     "AZURE_CONTENT_UNDERSTANDING_ENDPOINT=https://csaifcontentunderstanding.services.ai.azure.com/",
     "AZURE_CONTENT_UNDERSTANDING_KEY=REDACTED_CONTENT_UNDERSTANDING_KEY",
-    "DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING"
+    "DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING",
+    "VITE_API_BASE_URL=https://cwbhieastus001.azurewebsites.net/api"
 )
 
 Write-Host "Setting environment variables..." -ForegroundColor Yellow

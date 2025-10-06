@@ -864,6 +864,25 @@ local.settings.*.json
 .env.staging
 .env.test
 
+# Configuration files with secrets (IMPORTANT: Contains API keys and connection strings)
+appsettings.json
+appsettings.*.json
+!appsettings.Development.json
+secrets.json
+*.secrets.json
+
+# User secrets and sensitive configuration
+**/UserSecrets/
+**/.microsoft/usersecrets/
+
+# Azure Publish Profiles (contains deployment credentials)
+*.pubxml
+*.pubxml.user
+*.azurePubxml
+
 # DSM-5 PDF files (proprietary/copyrighted content)
 **/dsm/single-pages/*.pdf
 BehavioralHealthSystem.Console/dsm/single-pages/*.pdf
+
+# Import progress files (may contain file paths and error details)
+**/dsm5-import-progress.json

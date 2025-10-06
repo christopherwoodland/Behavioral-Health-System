@@ -293,6 +293,33 @@ public class HealthCheckCommand : ICommand
 
 ## 🔧 Configuration
 
+### 🔒 Security Setup (IMPORTANT)
+
+This project requires sensitive configuration that **MUST NOT** be committed to Git. Follow these steps to set up your local environment:
+
+1. **Copy the template file:**
+   ```powershell
+   # Copy the template to create your local configuration
+   Copy-Item "appsettings.template.json" "appsettings.json"
+   ```
+
+2. **Update the configuration with your real values:**
+   ```json
+   {
+     "DSM5_STORAGE_ACCOUNT_NAME": "your-actual-storage-account",
+     "DSM5_CONTAINER_NAME": "dsm5-data",
+     "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=your-account;AccountKey=YOUR_ACTUAL_KEY;EndpointSuffix=core.windows.net",
+     "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "https://your-resource.services.ai.azure.com/",
+     "AZURE_CONTENT_UNDERSTANDING_KEY": "YOUR_ACTUAL_API_KEY",
+     "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING"
+   }
+   ```
+
+3. **Never commit appsettings.json:**
+   - The file `appsettings.json` is in `.gitignore` and should never be committed
+   - Only commit changes to `appsettings.template.json` if you add new configuration keys
+   - Use environment variables or Azure Key Vault for production deployments
+
 ### Application Settings
 
 ```json

@@ -17,7 +17,10 @@ param(
     [string]$ResourceName,
     
     [Parameter(Mandatory=$false)]
-    [string]$ResourceGroupName = "bhi"
+    [string]$ResourceGroupName = "bhi",
+    
+    [Parameter(Mandatory=$false)]
+    [string]$FunctionAppName = $null
 )
 
 # Set error handling
@@ -97,10 +100,28 @@ try {
     # Update environment variables for production
     Write-Host "Configuring production environment..." -ForegroundColor Yellow
     
+    # Determine API base URL dynamically based on Function App name pattern
+    $apiBaseUrl = "https://cwbhieastus001.azurewebsites.net/api"
+    
+    # Use provided Function App name if available
+    if ($FunctionAppName) {
+        $apiBaseUrl = "https://$FunctionAppName.azurewebsites.net/api"
+    } 
+    # If we can determine the Function App name from the Web App name, use it
+    elseif ($ResourceName -like "*uibhi*") {
+        $functionAppName = $ResourceName -replace "cwuibhi", "cwbhi"
+        $apiBaseUrl = "https://$functionAppName.azurewebsites.net/api"
+    } elseif ($ResourceName -like "*-web") {
+        $functionAppName = $ResourceName -replace "-web", ""
+        $apiBaseUrl = "https://$functionAppName.azurewebsites.net/api"
+    }
+    
+    Write-Host "   API Base URL: $apiBaseUrl" -ForegroundColor Gray
+    
     # Create production .env file
     $prodEnvContent = @"
 # Production Environment Configuration
-VITE_API_BASE_URL=https://cwbhieastus001.azurewebsites.net/api
+VITE_API_BASE_URL=$apiBaseUrl
 VITE_AZURE_BLOB_SAS_URL=https://aistgvi.blob.core.windows.net/?sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2026-06-26T11:43:55Z&st=2025-09-06T03:28:55Z&spr=https&sig=jlfi75igY6qW805u%2FWErZpEu7AZSll5hJOdvSJU35%2Bo%3D
 VITE_STORAGE_CONTAINER_NAME=audio-uploads
 VITE_POLL_INTERVAL_MS=3000

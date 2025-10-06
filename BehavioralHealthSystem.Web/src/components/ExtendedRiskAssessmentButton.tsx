@@ -122,7 +122,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
     try {
       const response = await apiGet<ExtendedRiskAssessmentStatusResponse>(
-        `${apiBaseUrl}/api/sessions/${sessionId}/extended-risk-assessment/status`
+        `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment/status`
       );
 
       console.log('[ExtendedRiskAssessment] Status response:', JSON.stringify(response, null, 2));
@@ -158,7 +158,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     console.log('[ExtendedRiskAssessment] Fetching existing assessment for session:', sessionId);
     try {
       const response = await apiGet<ExtendedRiskAssessmentResponse>(
-        `${apiBaseUrl}/api/sessions/${sessionId}/extended-risk-assessment`
+        `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment`
       );
 
       console.log('[ExtendedRiskAssessment] Fetch response:', JSON.stringify(response, null, 2));
@@ -210,7 +210,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       console.log('[ExtendedRiskAssessment] Making POST request to start async job...');
       console.log('[ExtendedRiskAssessment] Selected DSM-5 conditions:', selectedDSM5Conditions);
       const response = await apiPost<StartJobResponse>(
-        `${apiBaseUrl}/api/sessions/${sessionId}/extended-risk-assessment`,
+        `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment`,
         {
           selectedConditions: selectedDSM5Conditions.length > 0 ? selectedDSM5Conditions : []
         }
@@ -260,7 +260,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     const pollJob = async () => {
       try {
         const response = await apiGet<JobStatusResponse>(
-          `${apiBaseUrl}/api/jobs/${jobId}`
+          `${apiBaseUrl}/jobs/${jobId}`
         );
         
         // Parse response.data if it's a string

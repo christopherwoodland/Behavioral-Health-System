@@ -22,10 +22,13 @@
 # ===========
 # - ResourceGroupName: Target Azure Resource Group name (default: auto-generated as "rg-{FunctionAppName}")
 # - FunctionAppName: Globally unique Function App name
+# - WebAppName: Globally unique Web App name (default: auto-generated based on FunctionAppName)
 # - KintsugiApiKey: Kintsugi Health API key for service integration
 # - Location: Azure region (default: East US)
 # - SubscriptionId: Azure subscription ID (optional)
 # - QuickDeploy: Use auto-generated resource group name for rapid deployment
+# - DeployCodeOnly: Deploy infrastructure and code (default: true for complete deployment)
+# - SkipWebApp: Skip web application deployment (default: false)
 #
 # EXAMPLE USAGE:
 # ==============
@@ -43,6 +46,10 @@ param(
     [ValidatePattern("^[a-zA-Z0-9\-]{3,60}$")]
     [string]$FunctionAppName,
     
+    [Parameter(Mandatory=$false, HelpMessage="Enter a globally unique Web App name (auto-generated if not provided)")]
+    [ValidatePattern("^[a-zA-Z0-9\-]{3,60}$")]
+    [string]$WebAppName = "",
+    
     [Parameter(Mandatory=$true, HelpMessage="Enter your Kintsugi Health API key")]
     [ValidateNotNullOrEmpty()]
     [string]$KintsugiApiKey,
@@ -54,7 +61,13 @@ param(
     [string]$SubscriptionId = $null,
     
     [Parameter(Mandatory=$false, HelpMessage="Enable quick deploy with auto-generated resource group")]
-    [switch]$QuickDeploy
+    [switch]$QuickDeploy,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Deploy application code after infrastructure (default: true)")]
+    [bool]$DeployCode = $true,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Skip web application deployment")]
+    [switch]$SkipWebApp
 )
 
 # Set error handling
@@ -65,6 +78,15 @@ Set-StrictMode -Version Latest
 if ($QuickDeploy -or [string]::IsNullOrEmpty($ResourceGroupName)) {
     $ResourceGroupName = "rg-$FunctionAppName"
     Write-Host "🚀 QUICK DEPLOY MODE: Auto-generated resource group name: $ResourceGroupName" -ForegroundColor Magenta
+}
+
+# Auto-generate Web App name if not provided
+if ([string]::IsNullOrEmpty($WebAppName)) {
+    $WebAppName = $FunctionAppName -replace "cwbhi", "cwuibhi"
+    if ($WebAppName -eq $FunctionAppName) {
+        $WebAppName = $FunctionAppName + "-web"
+    }
+    Write-Host "🌐 AUTO-GENERATED: Web App name set to: $WebAppName" -ForegroundColor Magenta
 }
 
 Write-Host "================================================================================" -ForegroundColor Blue
@@ -138,35 +160,131 @@ try {
     }
 
     if ($LASTEXITCODE -eq 0) {
+        Write-Host "   + Infrastructure deployment completed successfully" -ForegroundColor Green
+        
+        # Deploy application code if requested
+        if ($DeployCode) {
+            Write-Host ""
+            Write-Host "APPLICATION CODE DEPLOYMENT:" -ForegroundColor Yellow
+            
+            # Deploy environment variables to Function App
+            Write-Host "   Deploying environment variables to Function App..." -ForegroundColor Cyan
+            $envScript = Join-Path $ScriptDir "deploy-environment-variables.ps1"
+            try {
+                if ($SubscriptionId) {
+                    & $envScript -FunctionAppName $FunctionAppName -ResourceGroupName $ResourceGroupName -SubscriptionId $SubscriptionId
+                } else {
+                    & $envScript -FunctionAppName $FunctionAppName -ResourceGroupName $ResourceGroupName
+                }
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "   + Environment variables deployed successfully" -ForegroundColor Green
+                } else {
+                    Write-Host "   ! Environment variable deployment failed, but continuing..." -ForegroundColor Yellow
+                }
+            }
+            catch {
+                Write-Host "   ! Environment variable deployment error: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+            
+            # Deploy Function App code
+            Write-Host "   Deploying Function App code..." -ForegroundColor Cyan
+            $codeScript = Join-Path $ScriptDir "deploy-code-only.ps1"
+            try {
+                & $codeScript -AppServiceName $WebAppName -ResourceGroupName $ResourceGroupName -TargetFunctionAppName $FunctionAppName
+                
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "   + Function App code deployed successfully" -ForegroundColor Green
+                } else {
+                    Write-Host "   ! Function App deployment failed" -ForegroundColor Yellow
+                }
+            }
+            catch {
+                Write-Host "   ! Function App deployment error: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+            
+            # Deploy Web App if not skipped
+            if (-not $SkipWebApp) {
+                Write-Host "   Deploying Web App..." -ForegroundColor Cyan
+                $uiScript = Join-Path $ScriptDir "deploy-ui.ps1"
+                try {
+                    & $uiScript -DeploymentTarget "app-service" -ResourceName $WebAppName -ResourceGroupName $ResourceGroupName -FunctionAppName $FunctionAppName
+                    
+                    if ($LASTEXITCODE -eq 0) {
+                        Write-Host "   + Web App deployed successfully" -ForegroundColor Green
+                    } else {
+                        Write-Host "   ! Web App deployment failed" -ForegroundColor Yellow
+                    }
+                }
+                catch {
+                    Write-Host "   ! Web App deployment error: $($_.Exception.Message)" -ForegroundColor Yellow
+                }
+            } else {
+                Write-Host "   [SKIPPED] Web App deployment" -ForegroundColor Gray
+            }
+        }
+        
         Write-Host ""
         Write-Host "================================================================================" -ForegroundColor Green
         Write-Host "                    SOLUTION DEPLOYMENT COMPLETE!                             " -ForegroundColor Green
         Write-Host "================================================================================" -ForegroundColor Green
         Write-Host ""
-        Write-Host "FINAL DEPLOYMENT STEPS:" -ForegroundColor Yellow
+        Write-Host "DEPLOYMENT SUMMARY:" -ForegroundColor Yellow
+        Write-Host "   Resource Group: $ResourceGroupName" -ForegroundColor White
+        Write-Host "   Function App: $FunctionAppName" -ForegroundColor White
+        if (-not $SkipWebApp) {
+            Write-Host "   Web App: $WebAppName" -ForegroundColor White
+        }
+        Write-Host "   Location: $Location" -ForegroundColor White
         Write-Host ""
-        Write-Host "   1. Deploy Function App Code:" -ForegroundColor Cyan
-        Write-Host "      cd BehavioralHealthSystem.Functions" -ForegroundColor Gray
-        Write-Host "      func azure functionapp publish $FunctionAppName" -ForegroundColor Gray
+        Write-Host "APPLICATION ENDPOINTS:" -ForegroundColor Cyan
+        Write-Host "   Function App API: https://$FunctionAppName.azurewebsites.net/api" -ForegroundColor White
+        Write-Host "   Health Check: https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor White
+        if (-not $SkipWebApp) {
+            Write-Host "   Web Application: https://$WebAppName.azurewebsites.net" -ForegroundColor White
+        }
         Write-Host ""
-        Write-Host "   2. Verify Deployment:" -ForegroundColor Cyan
-        Write-Host "      # Test health endpoint" -ForegroundColor Gray
-        Write-Host "      curl https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor Gray
-        Write-Host ""
-        Write-Host "      # Test API connection" -ForegroundColor Gray
-        Write-Host "      curl -X POST https://$FunctionAppName.azurewebsites.net/api/TestKintsugiConnection" -ForegroundColor Gray
-        Write-Host ""
-        Write-Host "   3. Monitor Your Application:" -ForegroundColor Cyan
-        Write-Host "      • Azure Portal > Function Apps > $FunctionAppName" -ForegroundColor Gray
-        Write-Host "      • Application Insights for logs and metrics" -ForegroundColor Gray
-        Write-Host "      • Set up alerts for errors and performance issues" -ForegroundColor Gray
+        
+        if ($DeployCode) {
+            Write-Host "VERIFICATION STEPS:" -ForegroundColor Cyan
+            Write-Host "   1. Test health endpoint:" -ForegroundColor Gray
+            Write-Host "      curl https://$FunctionAppName.azurewebsites.net/api/health" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "   2. Test API connection:" -ForegroundColor Gray
+            Write-Host "      curl -X POST https://$FunctionAppName.azurewebsites.net/api/TestKintsugiConnection" -ForegroundColor Gray
+            Write-Host ""
+            if (-not $SkipWebApp) {
+                Write-Host "   3. Open web application:" -ForegroundColor Gray
+                Write-Host "      https://$WebAppName.azurewebsites.net" -ForegroundColor Gray
+                Write-Host ""
+            }
+        } else {
+            Write-Host "MANUAL DEPLOYMENT STEPS (since -DeployCode was false):" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "   1. Deploy Function App Code:" -ForegroundColor Cyan
+            Write-Host "      .\scripts\deploy-code-only.ps1 -FunctionAppName '$FunctionAppName' -ResourceGroupName '$ResourceGroupName'" -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "   2. Deploy Environment Variables:" -ForegroundColor Cyan
+            Write-Host "      .\scripts\deploy-environment-variables.ps1 -FunctionAppName '$FunctionAppName' -ResourceGroupName '$ResourceGroupName'" -ForegroundColor Gray
+            Write-Host ""
+            if (-not $SkipWebApp) {
+                Write-Host "   3. Deploy Web App:" -ForegroundColor Cyan
+                Write-Host "      .\scripts\deploy-ui.ps1 -DeploymentTarget 'app-service' -ResourceName '$WebAppName' -ResourceGroupName '$ResourceGroupName'" -ForegroundColor Gray
+                Write-Host ""
+            }
+        }
+        
+        Write-Host "MONITORING & MANAGEMENT:" -ForegroundColor Cyan
+        Write-Host "   • Azure Portal > Resource Groups > $ResourceGroupName" -ForegroundColor Gray
+        Write-Host "   • Application Insights for logs and metrics" -ForegroundColor Gray
+        Write-Host "   • Set up alerts for errors and performance issues" -ForegroundColor Gray
         Write-Host ""
         Write-Host "USEFUL RESOURCES:" -ForegroundColor Cyan
         Write-Host "   • API Usage Examples: sample-requests.md" -ForegroundColor White
         Write-Host "   • Local Development: README.md section" -ForegroundColor White
         Write-Host "   • Azure Functions Docs: https://docs.microsoft.com/azure/azure-functions/" -ForegroundColor White
         Write-Host ""
-        Write-Host "Your Behavioral Health System is ready for production use!" -ForegroundColor Green
+        Write-Host "🎉 Your Behavioral Health System is ready for production use!" -ForegroundColor Green
     } else {
         Write-Host "Infrastructure deployment failed" -ForegroundColor Red
         exit 1

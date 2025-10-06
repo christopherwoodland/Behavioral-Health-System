@@ -13,6 +13,7 @@ import {
   ExtendedRiskAssessmentStatusResponse 
 } from '../types/extendedRiskAssessment';
 import { apiPost, apiGet } from '../utils/api';
+import { config } from '../config/constants';
 
 // Job-related types
 interface ExtendedAssessmentJob {
@@ -58,6 +59,7 @@ interface ExtendedRiskAssessmentButtonProps {
   apiBaseUrl: string;
   existingAssessment?: ExtendedRiskAssessment | null;
   selectedDSM5Conditions?: string[];
+  onStart?: () => void;
   onComplete?: (assessment: ExtendedRiskAssessment) => void;
   onError?: (error: string) => void;
 }
@@ -67,6 +69,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   apiBaseUrl,
   existingAssessment,
   selectedDSM5Conditions = [],
+  onStart,
   onComplete,
   onError
 }) => {
@@ -193,6 +196,10 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   // Start async job for assessment generation
   const generateAssessment = async () => {
     console.log('[ExtendedRiskAssessment] 🚀 Starting async job for session:', sessionId);
+    
+    // Call onStart callback to notify parent component
+    onStart?.();
+    
     setIsLoading(true);
     setError(null);
     setCurrentJob(null);
@@ -256,7 +263,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       }
     }, 1000);
     
-    // Poll job status every 2 seconds
+    // Poll job status at configurable interval (default 5 seconds)
     const pollJob = async () => {
       try {
         const response = await apiGet<JobStatusResponse>(
@@ -297,9 +304,9 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       }
     };
     
-    // Poll immediately and then every 2 seconds
+    // Poll immediately and then every configurable interval (default 5 seconds)
     pollJob();
-    pollingIntervalRef.current = setInterval(pollJob, 2000);
+    pollingIntervalRef.current = setInterval(pollJob, config.polling.jobIntervalMs);
   };
 
   // Stop job polling

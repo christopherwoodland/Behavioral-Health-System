@@ -21,6 +21,9 @@ interface RiskAssessmentProps {
   sessionId: string;
   existingAssessment?: RiskAssessment | null;
   onAssessmentUpdated?: (assessment: RiskAssessment) => void;
+  onStart?: () => void;
+  onSuccess?: (assessment: RiskAssessment) => void;
+  onError?: (error: string) => void;
 }
 
 // Risk level configuration
@@ -54,7 +57,10 @@ const riskLevelConfig = {
 const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
   sessionId,
   existingAssessment,
-  onAssessmentUpdated
+  onAssessmentUpdated,
+  onStart,
+  onSuccess,
+  onError
 }) => {
   const { announceToScreenReader } = useAccessibility();
   const [assessment, setAssessment] = useState<RiskAssessment | null>(existingAssessment || null);
@@ -67,6 +73,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
     try {
       setIsGenerating(true);
       setError(null);
+      onStart?.();
       announceToScreenReader('Generating AI risk assessment...');
 
       const response = await apiService.generateRiskAssessment(sessionId);
@@ -74,6 +81,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
       if (response.success && response.riskAssessment) {
         setAssessment(response.riskAssessment);
         onAssessmentUpdated?.(response.riskAssessment);
+        onSuccess?.(response.riskAssessment);
         announceToScreenReader('Risk assessment generated successfully');
       } else {
         throw new Error(response.message || 'Failed to generate risk assessment');
@@ -81,11 +89,12 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
     } catch (err) {
       const appError = err as AppError;
       setError(appError);
+      onError?.(appError.message);
       announceToScreenReader(`Error generating assessment: ${appError.message}`);
     } finally {
       setIsGenerating(false);
     }
-  }, [sessionId, onAssessmentUpdated, announceToScreenReader]);
+  }, [sessionId, onAssessmentUpdated, onStart, onSuccess, onError, announceToScreenReader]);
 
   // Load existing assessment
   const loadAssessment = useCallback(async () => {

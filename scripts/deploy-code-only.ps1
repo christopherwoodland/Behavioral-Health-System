@@ -35,7 +35,10 @@ param(
     [string]$ResourceGroupName = "bhi",
     
     [Parameter(Mandatory=$false)]
-    [string]$KintsugiApiKey = $null
+    [string]$KintsugiApiKey = $null,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$TargetFunctionAppName = $null
 )
 
 # Set error handling
@@ -146,6 +149,45 @@ if ($DeploymentType -eq "AppService") {
         exit 1
     }
 
+    # Configure environment for production build
+    Write-Host "Configuring production environment..." -ForegroundColor Yellow
+    
+    # Determine API base URL - use Function App pattern if available
+    $apiBaseUrl = "https://cwbhieastus001.azurewebsites.net/api"
+    
+    # Use provided target Function App name if available
+    if ($TargetFunctionAppName) {
+        $apiBaseUrl = "https://$TargetFunctionAppName.azurewebsites.net/api"
+    }
+    # If App Service name follows our pattern, derive Function App name
+    elseif ($AppServiceName -like "*uibhi*") {
+        $functionAppName = $AppServiceName -replace "cwuibhi", "cwbhi"
+        $apiBaseUrl = "https://$functionAppName.azurewebsites.net/api"
+    } elseif ($AppServiceName -like "*-web") {
+        $functionAppName = $AppServiceName -replace "-web", ""
+        $apiBaseUrl = "https://$functionAppName.azurewebsites.net/api"
+    }
+    
+    Write-Host "   API Base URL: $apiBaseUrl" -ForegroundColor Gray
+    
+    # Create production .env file for build
+    $prodEnvContent = @"
+# Production Environment Configuration
+VITE_API_BASE_URL=$apiBaseUrl
+VITE_AZURE_BLOB_SAS_URL=https://aistgvi.blob.core.windows.net/?sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2026-06-26T11:43:55Z&st=2025-09-06T03:28:55Z&spr=https&sig=jlfi75igY6qW805u%2FWErZpEu7AZSll5hJOdvSJU35%2Bo%3D
+VITE_STORAGE_CONTAINER_NAME=audio-uploads
+VITE_POLL_INTERVAL_MS=3000
+VITE_ENABLE_FFMPEG_WORKER=true
+VITE_ENABLE_DEBUG_LOGGING=false
+"@
+    
+    # Backup existing .env and create production version
+    if (Test-Path ".env") {
+        Copy-Item ".env" ".env.backup" -Force
+    }
+    Set-Content ".env" $prodEnvContent -Encoding UTF8
+    Write-Host "   [SUCCESS] Production environment configured" -ForegroundColor Green
+
     Write-Host "Building Web project..." -ForegroundColor Yellow
     try {
         npm run build
@@ -156,7 +198,18 @@ if ($DeploymentType -eq "AppService") {
     }
     catch {
         Write-Host "   [ERROR] Web build failed: $($_.Exception.Message)" -ForegroundColor Red
+        
+        # Restore original .env if backup exists
+        if (Test-Path ".env.backup") {
+            Move-Item ".env.backup" ".env" -Force
+        }
         exit 1
+    }
+    
+    # Restore original .env if backup exists
+    if (Test-Path ".env.backup") {
+        Move-Item ".env.backup" ".env" -Force
+        Write-Host "   [INFO] Restored original .env file" -ForegroundColor Gray
     }
 } else {
     # Function App uses dotnet build process

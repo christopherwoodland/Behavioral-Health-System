@@ -12,6 +12,8 @@ export interface RealtimeMessage {
   content: string;
   timestamp: string;
   audioUrl?: string;
+  isTranscript?: boolean; // Marks messages that are transcripts vs full responses
+  isPartial?: boolean; // For live streaming transcripts
 }
 
 export interface RealtimeSessionConfig {
@@ -21,12 +23,83 @@ export interface RealtimeSessionConfig {
   maxTokens?: number;
   voice?: 'alloy' | 'echo' | 'shimmer';
   instructions?: string;
+  // Server turn detection settings
+  turnDetection?: {
+    threshold?: number;
+    prefixPaddingMs?: number;
+    silenceDurationMs?: number;
+  };
+  // Input audio transcription settings
+  inputAudioTranscription?: {
+    model?: 'whisper-1' | 'gpt-4o-transcribe';
+  };
+}
+
+// Settings interface for the Speech Settings modal
+export interface AzureOpenAIRealtimeSettings {
+  // Server turn detection
+  turnDetectionThreshold: number;
+  turnDetectionPrefixPadding: number;
+  turnDetectionSilenceDuration: number;
+  // Parameters
+  maxResponse: number;
+  temperature: number;
+  voice: 'alloy' | 'echo' | 'shimmer';
+}
+
+/**
+ * Convert UI settings to service config format
+ */
+export function convertSettingsToConfig(
+  settings: AzureOpenAIRealtimeSettings, 
+  enableAudio: boolean = true, 
+  enableVAD: boolean = true,
+  instructions?: string,
+  enableInputTranscription: boolean = true
+): RealtimeSessionConfig {
+  return {
+    enableAudio,
+    enableVAD,
+    temperature: Math.max(0.6, settings.temperature), // Ensure minimum 0.6 for Azure OpenAI
+    maxTokens: settings.maxResponse,
+    voice: settings.voice,
+    instructions,
+    turnDetection: {
+      threshold: settings.turnDetectionThreshold,
+      prefixPaddingMs: settings.turnDetectionPrefixPadding,
+      silenceDurationMs: settings.turnDetectionSilenceDuration
+    },
+    inputAudioTranscription: enableInputTranscription ? {
+      model: 'whisper-1'
+    } : undefined
+  };
 }
 
 export interface VoiceActivity {
   volumeLevel: number;
   isSpeaking: boolean;
   timestamp: number;
+}
+
+// New interfaces for enhanced features
+export interface SpeechDetectionState {
+  isUserSpeaking: boolean;
+  isAISpeaking: boolean;
+  speechStartedAt?: number;
+  speechStoppedAt?: number;
+}
+
+export interface LiveTranscript {
+  id: string;
+  text: string;
+  isPartial: boolean;
+  role: 'user' | 'assistant';
+  timestamp: number;
+}
+
+export interface ConversationState {
+  state: 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
+  message?: string;
 }
 
 export interface SessionStatus {
@@ -65,12 +138,25 @@ export class AzureOpenAIRealtimeService {
   
   private messageHistory: RealtimeMessage[] = [];
   
+  // Enhanced state tracking
+  private currentTranscriptBuffer: string = '';
+  private speechDetectionState: SpeechDetectionState = {
+    isUserSpeaking: false,
+    isAISpeaking: false
+  };
+  private conversationState: ConversationState = { state: 'idle' };
+  
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
   private onVoiceActivityCallback: ((activity: VoiceActivity) => void) | null = null;
   private onStatusChangeCallback: ((status: SessionStatus) => void) | null = null;
   private onErrorCallback: ((error: Error) => void) | null = null;
   private onTranscriptCallback: ((transcript: string, isFinal: boolean) => void) | null = null;
+  
+  // Enhanced event callbacks
+  private onLiveTranscriptCallback: ((transcript: LiveTranscript) => void) | null = null;
+  private onSpeechDetectionCallback: ((state: SpeechDetectionState) => void) | null = null;
+  private onConversationStateCallback: ((state: ConversationState) => void) | null = null;
   
   constructor() {
     // Load configuration from environment variables
@@ -112,6 +198,19 @@ export class AzureOpenAIRealtimeService {
   
   onTranscript(callback: (transcript: string, isFinal: boolean) => void): void {
     this.onTranscriptCallback = callback;
+  }
+  
+  // Enhanced event listeners
+  onLiveTranscript(callback: (transcript: LiveTranscript) => void): void {
+    this.onLiveTranscriptCallback = callback;
+  }
+  
+  onSpeechDetection(callback: (state: SpeechDetectionState) => void): void {
+    this.onSpeechDetectionCallback = callback;
+  }
+  
+  onConversationState(callback: (state: ConversationState) => void): void {
+    this.onConversationStateCallback = callback;
   }
   
   /**
@@ -456,13 +555,37 @@ export class AzureOpenAIRealtimeService {
       return;
     }
     
+    const sessionConfig: any = {
+      instructions: config.instructions || 'You are a helpful behavioral health assistant responding in natural, engaging language.',
+      voice: config.voice || 'alloy',
+      temperature: Math.max(0.6, config.temperature || 0.7) // Ensure temperature is at least 0.6 for Azure OpenAI
+    };
+
+    // Add max tokens if specified
+    if (config.maxTokens) {
+      sessionConfig.max_response_output_tokens = config.maxTokens;
+    }
+
+    // Add turn detection settings if specified
+    if (config.turnDetection) {
+      sessionConfig.turn_detection = {
+        type: 'server_vad',
+        threshold: config.turnDetection.threshold || 0.5,
+        prefix_padding_ms: config.turnDetection.prefixPaddingMs || 200,
+        silence_duration_ms: config.turnDetection.silenceDurationMs || 300
+      };
+    }
+    
+    // Add input audio transcription if specified
+    if (config.inputAudioTranscription) {
+      sessionConfig.input_audio_transcription = {
+        model: config.inputAudioTranscription.model || 'whisper-1'
+      };
+    }
+    
     const event = {
       type: 'session.update',
-      session: {
-        instructions: config.instructions || 'You are a helpful behavioral health assistant responding in natural, engaging language.',
-        voice: config.voice || 'alloy',
-        temperature: config.temperature || 0.8
-      }
+      session: sessionConfig
     };
     
     try {
@@ -490,59 +613,246 @@ export class AzureOpenAIRealtimeService {
   
   /**
    * Handle data channel messages from Azure OpenAI
-   * Handles various event types as per Azure OpenAI Realtime API specification
+   * Comprehensive event handling for all Azure OpenAI Realtime API events
    */
   private handleDataChannelMessage(data: string): void {
     try {
       const realtimeEvent = JSON.parse(data);
       console.log('📥 Received server event:', realtimeEvent.type, realtimeEvent);
       
-      // Handle different event types from Azure OpenAI
-      if (realtimeEvent.type === 'session.update') {
-        const instructions = realtimeEvent.session?.instructions;
-        console.log('📋 Session updated. Instructions:', instructions);
-      } else if (realtimeEvent.type === 'session.error') {
-        console.error('❌ Session error:', realtimeEvent.error?.message);
-        if (this.onErrorCallback) {
-          this.onErrorCallback(new Error(realtimeEvent.error?.message || 'Session error'));
-        }
-      } else if (realtimeEvent.type === 'session.end') {
-        console.log('🛑 Session ended by server');
-        this.cleanup();
-      } else if (realtimeEvent.type === 'response.audio_transcript.delta') {
-        // Handle transcript deltas (partial transcripts)
-        if (this.onTranscriptCallback && realtimeEvent.delta) {
-          this.onTranscriptCallback(realtimeEvent.delta, false);
-        }
-      } else if (realtimeEvent.type === 'response.audio_transcript.done') {
-        // Handle completed transcripts
-        if (this.onTranscriptCallback && realtimeEvent.transcript) {
-          this.onTranscriptCallback(realtimeEvent.transcript, true);
-        }
-      } else if (realtimeEvent.type === 'response.done') {
-        // Handle completed responses
-        console.log('✅ Response completed');
-      } else if (realtimeEvent.type === 'transcript') {
+      // Handle different event types from Azure OpenAI Realtime API
+      switch (realtimeEvent.type) {
+        // Session management
+        case 'session.created':
+          console.log('✅ Session created successfully');
+          this.updateConversationState({ state: 'idle', message: 'Session created' });
+          break;
+          
+        case 'session.update':
+          const instructions = realtimeEvent.session?.instructions;
+          console.log('📋 Session updated. Instructions:', instructions);
+          this.updateConversationState({ state: 'idle', message: 'Session configured' });
+          break;
+          
+        case 'session.error':
+          console.error('❌ Session error:', realtimeEvent.error?.message);
+          this.updateConversationState({ state: 'error', message: realtimeEvent.error?.message });
+          if (this.onErrorCallback) {
+            this.onErrorCallback(new Error(realtimeEvent.error?.message || 'Session error'));
+          }
+          break;
+          
+        case 'session.end':
+          console.log('🛑 Session ended by server');
+          this.updateConversationState({ state: 'idle', message: 'Session ended' });
+          this.cleanup();
+          break;
+
+        // Input audio buffer events (user speech detection)
+        case 'input_audio_buffer.speech_started':
+          console.log('🎤 User started speaking');
+          this.speechDetectionState.isUserSpeaking = true;
+          this.speechDetectionState.speechStartedAt = Date.now();
+          this.updateConversationState({ state: 'listening', message: 'Listening...' });
+          this.emitSpeechDetection();
+          break;
+          
+        case 'input_audio_buffer.speech_stopped':
+          console.log('🔇 User stopped speaking');
+          this.speechDetectionState.isUserSpeaking = false;
+          this.speechDetectionState.speechStoppedAt = Date.now();
+          this.updateConversationState({ state: 'processing', message: 'Processing...' });
+          this.emitSpeechDetection();
+          break;
+
+        // Real-time AI audio transcripts (live captions)
+        case 'response.audio_transcript.delta':
+          if (realtimeEvent.delta) {
+            this.currentTranscriptBuffer += realtimeEvent.delta;
+            
+            // Emit live transcript update
+            const liveTranscript: LiveTranscript = {
+              id: `transcript-${Date.now()}`,
+              text: this.currentTranscriptBuffer,
+              isPartial: true,
+              role: 'assistant',
+              timestamp: Date.now()
+            };
+            
+            if (this.onLiveTranscriptCallback) {
+              this.onLiveTranscriptCallback(liveTranscript);
+            }
+            
+            // Backward compatibility
+            if (this.onTranscriptCallback) {
+              this.onTranscriptCallback(realtimeEvent.delta, false);
+            }
+            
+            this.updateConversationState({ state: 'speaking', message: 'AI Speaking...' });
+            this.speechDetectionState.isAISpeaking = true;
+            this.emitSpeechDetection();
+          }
+          break;
+          
+        case 'response.audio_transcript.done':
+          if (realtimeEvent.transcript) {
+            // Final AI transcript
+            const finalTranscript: LiveTranscript = {
+              id: `transcript-final-${Date.now()}`,
+              text: realtimeEvent.transcript,
+              isPartial: false,
+              role: 'assistant',
+              timestamp: Date.now()
+            };
+            
+            if (this.onLiveTranscriptCallback) {
+              this.onLiveTranscriptCallback(finalTranscript);
+            }
+            
+            // Add to message history as transcript
+            const transcriptMessage: RealtimeMessage = {
+              id: `ai-transcript-${Date.now()}`,
+              role: 'assistant',
+              content: realtimeEvent.transcript,
+              timestamp: new Date().toISOString(),
+              isTranscript: true,
+              isPartial: false
+            };
+            
+            this.messageHistory.push(transcriptMessage);
+            
+            if (this.onMessageCallback) {
+              this.onMessageCallback(transcriptMessage);
+            }
+            
+            // Backward compatibility
+            if (this.onTranscriptCallback) {
+              this.onTranscriptCallback(realtimeEvent.transcript, true);
+            }
+            
+            this.currentTranscriptBuffer = '';
+          }
+          break;
+
+        // Input audio transcription (user speech as text)
+        case 'conversation.item.input_audio_transcription.completed':
+          if (realtimeEvent.transcript) {
+            console.log('👤 User transcript completed:', realtimeEvent.transcript);
+            
+            // Final user transcript
+            const userTranscript: LiveTranscript = {
+              id: `user-transcript-${Date.now()}`,
+              text: realtimeEvent.transcript,
+              isPartial: false,
+              role: 'user',
+              timestamp: Date.now()
+            };
+            
+            if (this.onLiveTranscriptCallback) {
+              this.onLiveTranscriptCallback(userTranscript);
+            }
+            
+            // Add to message history as user transcript
+            const userMessage: RealtimeMessage = {
+              id: `user-transcript-${Date.now()}`,
+              role: 'user',
+              content: realtimeEvent.transcript,
+              timestamp: new Date().toISOString(),
+              isTranscript: true,
+              isPartial: false
+            };
+            
+            this.messageHistory.push(userMessage);
+            
+            if (this.onMessageCallback) {
+              this.onMessageCallback(userMessage);
+            }
+          }
+          break;
+
+        // Response management
+        case 'response.created':
+          console.log('🤖 Response created');
+          this.updateConversationState({ state: 'processing', message: 'Generating response...' });
+          break;
+          
+        case 'response.done':
+          console.log('✅ Response completed');
+          this.speechDetectionState.isAISpeaking = false;
+          this.updateConversationState({ state: 'idle', message: 'Ready for input' });
+          this.emitSpeechDetection();
+          break;
+          
+        case 'response.cancelled':
+          console.log('⚠️ Response cancelled (interrupted)');
+          this.speechDetectionState.isAISpeaking = false;
+          this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
+          this.emitSpeechDetection();
+          this.currentTranscriptBuffer = '';
+          break;
+
+        // Error handling
+        case 'error':
+          console.error('❌ Realtime API error:', realtimeEvent.error?.message);
+          this.updateConversationState({ state: 'error', message: realtimeEvent.error?.message || 'Unknown error' });
+          if (this.onErrorCallback) {
+            this.onErrorCallback(new Error(realtimeEvent.error?.message || 'Realtime API error'));
+          }
+          break;
+
+        // Rate limits monitoring
+        case 'rate_limits.updated':
+          console.log('📊 Rate limits updated:', realtimeEvent.rate_limits);
+          break;
+
         // Legacy handling for backward compatibility
-        if (this.onTranscriptCallback) {
-          this.onTranscriptCallback(realtimeEvent.text, realtimeEvent.isFinal);
-        }
-      } else if (realtimeEvent.type === 'response') {
-        const realtimeMessage: RealtimeMessage = {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: realtimeEvent.text || '',
-          timestamp: new Date().toISOString()
-        };
-        
-        this.messageHistory.push(realtimeMessage);
-        
-        if (this.onMessageCallback) {
-          this.onMessageCallback(realtimeMessage);
-        }
+        case 'transcript':
+          if (this.onTranscriptCallback) {
+            this.onTranscriptCallback(realtimeEvent.text, realtimeEvent.isFinal);
+          }
+          break;
+          
+        case 'response':
+          const realtimeMessage: RealtimeMessage = {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: realtimeEvent.text || '',
+            timestamp: new Date().toISOString()
+          };
+          
+          this.messageHistory.push(realtimeMessage);
+          
+          if (this.onMessageCallback) {
+            this.onMessageCallback(realtimeMessage);
+          }
+          break;
+
+        default:
+          console.log('📨 Unhandled event type:', realtimeEvent.type);
+          break;
       }
     } catch (error) {
       console.error('Failed to parse data channel message:', error);
+      this.updateConversationState({ state: 'error', message: 'Failed to parse server message' });
+    }
+  }
+  
+  /**
+   * Update conversation state and notify listeners
+   */
+  private updateConversationState(newState: ConversationState): void {
+    this.conversationState = newState;
+    if (this.onConversationStateCallback) {
+      this.onConversationStateCallback(newState);
+    }
+  }
+  
+  /**
+   * Emit speech detection state to listeners
+   */
+  private emitSpeechDetection(): void {
+    if (this.onSpeechDetectionCallback) {
+      this.onSpeechDetectionCallback({ ...this.speechDetectionState });
     }
   }
   
@@ -574,6 +884,44 @@ export class AzureOpenAIRealtimeService {
     
     if (this.onMessageCallback) {
       this.onMessageCallback(userMessage);
+    }
+  }
+  
+  /**
+   * Interrupt current AI response
+   * Cancels ongoing response and clears output audio buffer
+   */
+  async interruptResponse(): Promise<void> {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      throw new Error('Data channel is not open');
+    }
+    
+    try {
+      // Send response.cancel event
+      const cancelEvent = {
+        type: 'response.cancel'
+      };
+      
+      this.dataChannel.send(JSON.stringify(cancelEvent));
+      console.log('📤 Sent response.cancel event');
+      
+      // For WebRTC, also clear output audio buffer
+      const clearAudioEvent = {
+        type: 'output_audio_buffer.clear'
+      };
+      
+      this.dataChannel.send(JSON.stringify(clearAudioEvent));
+      console.log('📤 Sent output_audio_buffer.clear event');
+      
+      // Update local state
+      this.speechDetectionState.isAISpeaking = false;
+      this.currentTranscriptBuffer = '';
+      this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
+      this.emitSpeechDetection();
+      
+    } catch (error) {
+      console.error('❌ Failed to interrupt response:', error);
+      throw error;
     }
   }
   
@@ -763,11 +1111,17 @@ export class AzureOpenAIRealtimeService {
   async destroy(): Promise<void> {
     await this.cleanup();
     this.isConnected = false;
+    
+    // Clear all callbacks
     this.onMessageCallback = null;
     this.onVoiceActivityCallback = null;
     this.onStatusChangeCallback = null;
     this.onErrorCallback = null;
     this.onTranscriptCallback = null;
+    this.onLiveTranscriptCallback = null;
+    this.onSpeechDetectionCallback = null;
+    this.onConversationStateCallback = null;
+    
     console.log('🗑️ Service destroyed');
   }
 }

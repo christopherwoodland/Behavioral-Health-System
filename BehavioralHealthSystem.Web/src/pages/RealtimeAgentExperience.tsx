@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Mic, 
-  Send, 
   Trash2, 
   Volume2, 
   VolumeX, 
@@ -13,12 +12,16 @@ import {
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
-import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { announceToScreenReader } from '@/utils';
 import { 
   azureOpenAIRealtimeService,
   RealtimeMessage,
-  RealtimeSessionConfig
+  RealtimeSessionConfig,
+  AzureOpenAIRealtimeSettings,
+  convertSettingsToConfig,
+  SpeechDetectionState,
+  LiveTranscript,
+  ConversationState
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
@@ -46,14 +49,11 @@ interface SessionStatus {
 }
 
 export const RealtimeAgentExperience: React.FC = () => {
-  const { handleEnterSpace } = useKeyboardNavigation();
-  
   // Core service - direct WebRTC connection to Azure OpenAI Realtime API
   const agentService = azureOpenAIRealtimeService;
   
   // UI State
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
-  const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showAgentPanel, setShowAgentPanel] = useState(false);
@@ -80,12 +80,32 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [voiceActivityLevel, setVoiceActivityLevel] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
   
+  // Enhanced features state
+  const [speechDetection, setSpeechDetection] = useState<SpeechDetectionState>({
+    isUserSpeaking: false,
+    isAISpeaking: false
+  });
+  const [conversationState, setConversationState] = useState<ConversationState>({ state: 'idle' });
+  const [liveTranscripts, setLiveTranscripts] = useState<LiveTranscript[]>([]);
+  const [showLiveTranscripts, setShowLiveTranscripts] = useState(true);
+  const [enableInputTranscription, setEnableInputTranscription] = useState(true);
+  const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
+  
+  // Azure OpenAI Realtime Settings
+  const [azureSettings, setAzureSettings] = useState<AzureOpenAIRealtimeSettings>({
+    turnDetectionThreshold: 0.5,
+    turnDetectionPrefixPadding: 200,
+    turnDetectionSilenceDuration: 300,
+    maxResponse: 1638,
+    temperature: 0.7, // Changed from 0.7 to meet Azure OpenAI minimum of 0.6
+    voice: 'alloy'
+  });
+  
   // Assessment State (optional - can be added if needed)
   // const [currentAssessment, setCurrentAssessment] = useState<any | null>(null);
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const voiceActivityIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -173,6 +193,42 @@ export const RealtimeAgentExperience: React.FC = () => {
       }
     });
 
+    // Enhanced: Speech detection events
+    agentService.onSpeechDetection((detection) => {
+      setSpeechDetection(detection);
+      
+      // Update agent typing indicator based on AI speaking state
+      setCurrentAgent(prev => ({ ...prev, isTyping: detection.isAISpeaking }));
+    });
+
+    // Enhanced: Conversation state events
+    agentService.onConversationState((state) => {
+      setConversationState(state);
+      
+      // Announce state changes for accessibility
+      if (state.message) {
+        announceToScreenReader(state.message);
+      }
+    });
+
+    // Enhanced: Live transcript events
+    agentService.onLiveTranscript((transcript) => {
+      setLiveTranscripts(prev => {
+        // Keep only recent transcripts (last 10)
+        const updated = [...prev, transcript].slice(-10);
+        return updated;
+      });
+      
+      // Update current AI transcript for live captions
+      if (transcript.role === 'assistant') {
+        setCurrentAITranscript(transcript.text);
+        if (!transcript.isPartial) {
+          // Clear when transcript is complete
+          setTimeout(() => setCurrentAITranscript(''), 2000);
+        }
+      }
+    });
+
     agentService.onTranscript((transcript, isFinal) => {
       if (isFinal) {
         // Add user's transcribed message to UI
@@ -180,7 +236,9 @@ export const RealtimeAgentExperience: React.FC = () => {
           id: `user-transcript-${Date.now()}`,
           role: 'user',
           content: transcript,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          isTranscript: true,
+          isPartial: false
         };
         setMessages(prev => [...prev, userMessage]);
       }
@@ -190,6 +248,7 @@ export const RealtimeAgentExperience: React.FC = () => {
       console.error('Azure OpenAI Realtime service error:', error);
       announceToScreenReader(`Service error: ${error.message}`);
       setSessionStatus(prev => ({ ...prev, connectionStatus: 'error' }));
+      setConversationState({ state: 'error', message: error.message });
     });
 
   }, []);
@@ -202,16 +261,20 @@ export const RealtimeAgentExperience: React.FC = () => {
     try {
       setIsProcessing(true);
       
-      const sessionConfig: SessionConfig = {
-        enableAudio: isAudioEnabled,
-        enableVAD: true,
-        voice: 'alloy',
-        temperature: 0.8,
-        maxTokens: 4096,
-        instructions: "You are a helpful behavioral health assistant. Provide supportive, empathetic responses to help users with their mental health concerns. Keep responses concise and conversational."
-      };
+      // Convert UI settings to service config format
+      const sessionConfig: SessionConfig = convertSettingsToConfig(
+        azureSettings,
+        isAudioEnabled,
+        true, // enableVAD
+        "You are a helpful behavioral health assistant. Provide supportive, empathetic responses to help users with their mental health concerns. Keep responses concise and conversational.",
+        enableInputTranscription // Enable input audio transcription
+      );
       
       await agentService.startSession('user', sessionConfig);
+      
+      // Clear previous state
+      setLiveTranscripts([]);
+      setCurrentAITranscript('');
       
       // Add welcome message
       const welcomeMessage: ConversationMessage = {
@@ -236,6 +299,14 @@ export const RealtimeAgentExperience: React.FC = () => {
     try {
       await agentService.endSession();
       setMessages([]);
+      setSessionStatus(prev => ({
+        ...prev,
+        isActive: false,
+        sessionId: undefined,
+        messageCount: 0,
+        connectionStatus: 'disconnected'
+      }));
+      setCurrentAgent(prev => ({ ...prev, isActive: false, isTyping: false }));
       announceToScreenReader('Session ended and conversation cleared');
     } catch (error) {
       console.error('Failed to end session:', error);
@@ -254,23 +325,13 @@ export const RealtimeAgentExperience: React.FC = () => {
     announceToScreenReader('Session resumed');
   };
 
-  const sendTextMessage = async () => {
-    if (!inputText.trim() || !sessionStatus.isActive) return;
-
+  const interruptResponse = async () => {
     try {
-      setIsProcessing(true);
-      
-      // Send text message through WebRTC data channel
-      await agentService.sendTextMessage(inputText.trim());
-      
-      setInputText('');
-      textareaRef.current?.focus();
-      
+      await agentService.interruptResponse();
+      announceToScreenReader('Response interrupted');
     } catch (error) {
-      console.error('Failed to send message:', error);
-      announceToScreenReader('Failed to send message');
-    } finally {
-      setIsProcessing(false);
+      console.error('Failed to interrupt response:', error);
+      announceToScreenReader('Failed to interrupt response');
     }
   };
 
@@ -278,13 +339,6 @@ export const RealtimeAgentExperience: React.FC = () => {
   // const manualAgentHandoff = async (targetAgent: string) => {
   //   // Not applicable for single agent model
   // };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendTextMessage();
-    }
-  };
 
   const cleanup = async () => {
     await agentService.destroy();
@@ -367,12 +421,55 @@ export const RealtimeAgentExperience: React.FC = () => {
                 <span className="capitalize">{sessionStatus.connectionStatus}</span>
               </div>
               
-              {/* Real-time AI Assistant */}
+              {/* Conversation State */}
+              {sessionStatus.isActive && (
+                <div className="flex items-center space-x-1">
+                  <Activity size={12} className={`${
+                    conversationState.state === 'listening' ? 'text-green-500 animate-pulse' :
+                    conversationState.state === 'processing' ? 'text-yellow-500 animate-spin' :
+                    conversationState.state === 'speaking' ? 'text-blue-500 animate-pulse' :
+                    conversationState.state === 'error' ? 'text-red-500' :
+                    'text-gray-400'
+                  }`} />
+                  <span className="capitalize">{conversationState.state}</span>
+                  {conversationState.message && (
+                    <span className="text-xs opacity-75">- {conversationState.message}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-2">
+          {/* Interrupt Button - Show when AI is speaking */}
+          {sessionStatus.isActive && speechDetection.isAISpeaking && (
+            <button
+              onClick={interruptResponse}
+              className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Interrupt AI response"
+              title="Interrupt response"
+            >
+              <AlertTriangle size={20} />
+            </button>
+          )}
+
+          {/* Live Transcripts Toggle */}
+          {sessionStatus.isActive && (
+            <button
+              onClick={() => setShowLiveTranscripts(!showLiveTranscripts)}
+              className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                showLiveTranscripts
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+              }`}
+              aria-label={`${showLiveTranscripts ? 'Hide' : 'Show'} live transcripts`}
+              title={`${showLiveTranscripts ? 'Hide' : 'Show'} live captions`}
+            >
+              <span className="text-sm font-medium">CC</span>
+            </button>
+          )}
+
           {/* Agent Panel Toggle */}
           <button
             onClick={() => setShowAgentPanel(!showAgentPanel)}
@@ -445,25 +542,93 @@ export const RealtimeAgentExperience: React.FC = () => {
         </div>
       </div>
 
-      {/* Agent Control Panel - Simplified for single AI agent */}
+      {/* Agent Control Panel - Enhanced with feature toggles */}
       {showAgentPanel && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Assistant</h3>
-            <div className="flex items-center space-x-2">
-              <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
-                {currentAgent.name}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Assistant</h3>
+              <div className="flex items-center space-x-2">
+                <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
+                  {currentAgent.name}
+                </div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  Powered by Azure OpenAI Realtime API
+                </span>
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Powered by Azure OpenAI Realtime API
-              </span>
             </div>
+            
+            {/* Enhanced Features Toggles */}
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={enableInputTranscription}
+                  onChange={(e) => setEnableInputTranscription(e.target.checked)}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Input Transcription</span>
+              </label>
+              
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={showLiveTranscripts}
+                  onChange={(e) => setShowLiveTranscripts(e.target.checked)}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Live Captions</span>
+              </label>
+            </div>
+            
+            {/* Speech Detection Status */}
+            {sessionStatus.isActive && (
+              <div className="text-xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Speech Detection:</span>
+                  <div className="flex space-x-2">
+                    <span className={`px-2 py-1 rounded ${
+                      speechDetection.isUserSpeaking 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                    }`}>
+                      User {speechDetection.isUserSpeaking ? 'Speaking' : 'Silent'}
+                    </span>
+                    <span className={`px-2 py-1 rounded ${
+                      speechDetection.isAISpeaking 
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                    }`}>
+                      AI {speechDetection.isAISpeaking ? 'Speaking' : 'Silent'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Live Captions Display */}
+        {showLiveTranscripts && sessionStatus.isActive && currentAITranscript && (
+          <div className="sticky top-0 z-10 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Volume2 size={16} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Live Caption</span>
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+              </div>
+            </div>
+            <p className="text-blue-800 dark:text-blue-200 text-sm italic">
+              "{currentAITranscript}"
+            </p>
+          </div>
+        )}
+
         {messages.map((message) => (
           <div
             key={message.id}
@@ -474,13 +639,18 @@ export const RealtimeAgentExperience: React.FC = () => {
                 message.role === 'user'
                   ? 'bg-primary-600 text-white'
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              }`}
+              } ${message.isTranscript ? 'border-l-4 border-yellow-400' : ''}`}
             >
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               <div className={`flex items-center justify-between text-xs mt-1 opacity-70 ${
                 message.role === 'user' ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'
               }`}>
                 <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
+                {message.isTranscript && (
+                  <span className="bg-yellow-400 text-yellow-900 px-1 rounded text-xs">
+                    Transcript
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -502,66 +672,83 @@ export const RealtimeAgentExperience: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Area */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-end space-x-2">
-          {/* Voice Input Indicator */}
-          {sessionStatus.isActive && !isSessionPaused && (
-            <div className="flex flex-col items-center">
-              <div className={`p-3 rounded-lg ${
-                voiceActivityLevel > 0.1 
-                  ? 'bg-green-600 text-white' 
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-                <Mic size={20} />
-              </div>
-              <span className="text-xs mt-1 text-gray-500">Voice</span>
+      {/* Voice-Only Input Area */}
+      <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Voice Activity Indicator - Centered */}
+        {sessionStatus.isActive && !isSessionPaused && (
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className={`p-6 rounded-full transition-all duration-200 ${
+              speechDetection.isUserSpeaking 
+                ? 'bg-green-600 text-white animate-pulse scale-110' 
+                : conversationState.state === 'listening'
+                  ? 'bg-yellow-500 text-white scale-105'
+                  : conversationState.state === 'processing'
+                    ? 'bg-blue-500 text-white animate-pulse scale-105'
+                    : voiceActivityLevel > 0.1 
+                      ? 'bg-green-600 text-white scale-110' 
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+            }`}>
+              <Mic size={32} />
             </div>
-          )}
-
-          {/* Text Input */}
-          <div className="flex-1">
-            <textarea
-              ref={textareaRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder={sessionStatus.isActive 
-                ? "Type your message here or use voice input..."
-                : "Start a session to begin conversation..."
-              }
-              disabled={!sessionStatus.isActive || isProcessing || isSessionPaused}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-gray-100 disabled:bg-gray-100 dark:disabled:bg-gray-700 min-h-[44px] max-h-[120px]"
-              rows={1}
-              aria-label="Message input"
-            />
+            
+            <div className="text-center">
+              <div className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                {speechDetection.isUserSpeaking ? 'Speaking...' : 
+                 conversationState.state === 'listening' ? 'Listening...' :
+                 conversationState.state === 'processing' ? 'Processing...' : 
+                 conversationState.state === 'speaking' ? 'AI Responding...' : 'Voice Input Active'}
+              </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                {sessionStatus.isActive ? 'Speak naturally to interact with the AI assistant' : 'Start a session to begin voice conversation'}
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* Send Button */}
-          <button
-            onClick={sendTextMessage}
-            onKeyDown={handleEnterSpace(sendTextMessage)}
-            disabled={!inputText.trim() || !sessionStatus.isActive || isProcessing || isSessionPaused}
-            className="p-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Send message"
-            title="Send message"
-          >
-            <Send size={20} />
-          </button>
-        </div>
+        {/* Message when session is not active */}
+        {!sessionStatus.isActive && (
+          <div className="flex flex-col items-center justify-center space-y-4 py-8">
+            <div className="p-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-400">
+              <Mic size={32} />
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-medium text-gray-500 dark:text-gray-400">
+                Audio Input Demo
+              </div>
+              <div className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                Click "Start Session" to begin voice-only conversation
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Status Bar */}
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+        {/* Enhanced Status Bar */}
+        <div className="flex items-center justify-between mt-6 text-xs text-gray-500 dark:text-gray-400">
           <div className="flex items-center space-x-4">
             {sessionStatus.isActive && (
               <>
                 <span>Session: {sessionStatus.sessionId?.slice(-8)}</span>
                 <span>Messages: {sessionStatus.messageCount}</span>
+                <span>Transcripts: {liveTranscripts.length}</span>
                 {sessionStatus.startTime && (
                   <span>
                     Duration: {Math.floor((Date.now() - sessionStatus.startTime.getTime()) / 60000)}m
                   </span>
                 )}
+                
+                {/* Feature Status */}
+                <div className="flex items-center space-x-2">
+                  {enableInputTranscription && (
+                    <span className="px-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 rounded text-xs">
+                      Input Transcription
+                    </span>
+                  )}
+                  {showLiveTranscripts && (
+                    <span className="px-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded text-xs">
+                      Live Captions
+                    </span>
+                  )}
+                </div>
               </>
             )}
             
@@ -570,27 +757,31 @@ export const RealtimeAgentExperience: React.FC = () => {
             )}
           </div>
           
-          <span>
-            {sessionStatus.isActive ? 'Voice and text input active' : 'Press "Start Session" to begin'}
-          </span>
+          <div className="flex items-center space-x-4">
+            <span>
+              {sessionStatus.isActive ? (
+                speechDetection.isAISpeaking ? 'AI responding with voice' :
+                speechDetection.isUserSpeaking ? 'Listening to your voice' :
+                'Voice input active'
+              ) : 'Voice-only interaction mode'}
+            </span>
+            
+            {/* Interrupt hint */}
+            {sessionStatus.isActive && speechDetection.isAISpeaking && (
+              <span className="text-red-500 animate-pulse">
+                Speak to interrupt AI response
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Settings Modal */}
       <SpeechSettings
-        config={{
-          language: 'en-US',
-          continuous: true,
-          interimResults: true,
-          maxAlternatives: 2,
-          audioTracks: true,
-          noiseReduction: true,
-          echoCancellation: true
+        config={azureSettings}
+        onConfigUpdate={(updates) => {
+          setAzureSettings(prev => ({ ...prev, ...updates }));
         }}
-        availableVoices={[]}
-        selectedVoice={undefined}
-        onConfigUpdate={() => {}}
-        onVoiceSelect={() => {}}
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />

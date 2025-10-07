@@ -5,6 +5,8 @@ import { AzureOpenAIRealtimeSettings } from '@/services/azureOpenAIRealtimeServi
 export interface SpeechSettingsProps {
   config: AzureOpenAIRealtimeSettings;
   onConfigUpdate: (config: Partial<AzureOpenAIRealtimeSettings>) => void;
+  humorLevel: number;
+  onHumorLevelUpdate: (level: number) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -12,6 +14,8 @@ export interface SpeechSettingsProps {
 export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
   config,
   onConfigUpdate,
+  humorLevel,
+  onHumorLevelUpdate,
   isOpen,
   onClose
 }) => {
@@ -101,6 +105,18 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
         "Includes response length limits and creativity levels.",
         "These settings directly impact the quality and characteristics of AI responses.",
         "Adjust based on your specific use case and requirements."
+      ]
+    },
+    humorLevel: {
+      title: "Tars Humor Level",
+      content: [
+        "Controls Tars' personality and humor in responses.",
+        "100%: Maximum wit, sarcasm, and entertaining commentary. Addresses you as 'Slick', 'Champ', 'Ace'",
+        "80%: High humor with clever quips and observations. Uses 'Hotshot', 'Chief', 'Sport'",
+        "60%: Moderate humor with professional balance. Calls you 'Pilot', 'Captain', 'Buddy'",
+        "40%: Professional tone with minimal humor. Uses 'Officer', 'Agent'",
+        "20%: Serious mode with rare humor. Addresses you formally as 'Sir', 'Ma'am'",
+        "0%: Maximum efficiency mode, direct and concise. Strictly formal 'Sir', 'Ma'am', 'Operator'"
       ]
     }
   };
@@ -315,30 +331,68 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
             <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
               <div className="flex items-center space-x-2">
                 <Volume2 className="h-5 w-5 text-gray-500" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Voice</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Voice & Personality</h3>
               </div>
 
-              <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Voice Selection
-                  <InfoButton id="voice" />
-                </label>
-                <select
-                  value={localConfig.voice}
-                  onChange={(e) => handleConfigChange('voice', e.target.value as 'alloy' | 'echo' | 'shimmer')}
-                  aria-label="Select Azure OpenAI voice"
-                  title="Choose voice for AI audio responses"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
-                >
-                  {voices.map((voice) => (
-                    <option key={voice.value} value={voice.value}>
-                      {voice.name}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Select Azure OpenAI voice for audio responses
-                </p>
+              <div className="grid grid-cols-1 gap-4">
+                {/* Voice Selection */}
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Voice Selection
+                    <InfoButton id="voice" />
+                  </label>
+                  <select
+                    value={localConfig.voice}
+                    onChange={(e) => handleConfigChange('voice', e.target.value as 'alloy' | 'echo' | 'shimmer')}
+                    aria-label="Select Azure OpenAI voice"
+                    title="Choose voice for AI audio responses"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    {voices.map((voice) => (
+                      <option key={voice.value} value={voice.value}>
+                        {voice.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Select Azure OpenAI voice for audio responses
+                  </p>
+                </div>
+
+                {/* Humor Level */}
+                <div>
+                  <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tars Humor Level: {humorLevel}%
+                    <InfoButton id="humorLevel" />
+                  </label>
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      step="10"
+                      value={humorLevel}
+                      onChange={(e) => onHumorLevelUpdate(parseInt(e.target.value))}
+                      aria-label="Tars humor level"
+                      title="Adjust Tars personality and humor level"
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500">
+                      <span>0% (Efficiency)</span>
+                      <span className="font-medium">
+                        {humorLevel >= 80 ? 'Maximum Wit' :
+                         humorLevel >= 60 ? 'Moderate' :
+                         humorLevel >= 40 ? 'Professional' :
+                         humorLevel >= 20 ? 'Serious' :
+                         'Efficiency Mode'}
+                      </span>
+                      <span>100% (Maximum Wit)</span>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Controls Tars' personality, humor, and communication style
+                  </p>
+                </div>
               </div>
             </div>
           </div>

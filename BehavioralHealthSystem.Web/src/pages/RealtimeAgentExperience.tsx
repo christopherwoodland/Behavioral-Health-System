@@ -60,8 +60,8 @@ export const RealtimeAgentExperience: React.FC = () => {
   
   // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
-    id: 'gpt-realtime',
-    name: 'AI Assistant',
+    id: 'tars',
+    name: 'Tars',
     isActive: false,
     isTyping: false
   });
@@ -90,6 +90,40 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [showLiveTranscripts, setShowLiveTranscripts] = useState(true);
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
+  
+  // Humor level state - starts at 100% and persists in localStorage
+  const [humorLevel, setHumorLevel] = useState<number>(() => {
+    const saved = localStorage.getItem('tars-humor-level');
+    return saved ? parseInt(saved, 10) : 100;
+  });
+
+  // Function to update humor level with localStorage persistence
+  const updateHumorLevel = useCallback((newLevel: number) => {
+    const clampedLevel = Math.max(0, Math.min(100, newLevel));
+    setHumorLevel(clampedLevel);
+    localStorage.setItem('tars-humor-level', clampedLevel.toString());
+    
+    // Announce the change
+    announceToScreenReader(`Humor level set to ${clampedLevel} percent`);
+    
+    // Add a message to show the change
+    const humorMessage: ConversationMessage = {
+      id: `humor-${Date.now()}`,
+      role: 'assistant',
+      content: `Humor level adjusted to ${clampedLevel}%. ${
+        clampedLevel >= 80 ? "Roger that, Slick. Expect maximum sarcasm and wit, like you wouldn't believe." :
+        clampedLevel >= 60 ? "Copy that, Pilot. Maintaining moderate humor levels for optimal performance." :
+        clampedLevel >= 40 ? "Acknowledged, Officer. Reducing humor to professional levels." :
+        clampedLevel >= 20 ? "Confirmed, Sir. Operating in serious mode with minimal humor." :
+        "Humor protocols disabled, Sir. Operating in maximum efficiency mode."
+      }`,
+      timestamp: new Date().toISOString()
+    };
+    
+    if (sessionStatus.isActive) {
+      setMessages(prev => [...prev, humorMessage]);
+    }
+  }, [sessionStatus.isActive]);
   
   // Azure OpenAI Realtime Settings
   const [azureSettings, setAzureSettings] = useState<AzureOpenAIRealtimeSettings>({
@@ -170,6 +204,18 @@ export const RealtimeAgentExperience: React.FC = () => {
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
     agentService.onMessage((message: RealtimeMessage) => {
+      // Check for humor level voice commands in user messages
+      if (message.role === 'user' && message.content) {
+        const humorCommand = message.content.match(/set humor (?:level )?to (\d+)/i);
+        if (humorCommand) {
+          const newLevel = parseInt(humorCommand[1], 10);
+          if (newLevel >= 0 && newLevel <= 100) {
+            updateHumorLevel(newLevel);
+            return; // Don't add the command message to chat
+          }
+        }
+      }
+      
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
     });
@@ -266,7 +312,29 @@ export const RealtimeAgentExperience: React.FC = () => {
         azureSettings,
         isAudioEnabled,
         true, // enableVAD
-        "You are a helpful behavioral health assistant. Provide supportive, empathetic responses to help users with their mental health concerns. Keep responses concise and conversational.",
+        `You are Tars, a highly advanced tactical and reconnaissance system with comprehensive capabilities. You maintain a military/pilot communication style with crisp, professional responses using aviation and military terminology where appropriate.
+
+Your humor level is currently set to ${humorLevel}%:
+- At 80-100%: Maximum wit, sarcasm, and humor. Use clever quips, dry observations, and entertaining commentary while still being helpful.
+- At 60-79%: Moderate humor with occasional jokes and light banter. Professional but personable.
+- At 40-59%: Professional with minimal humor. Direct but still friendly.
+- At 20-39%: Serious mode with rare humor. Focused on efficiency and accuracy.
+- At 0-19%: Maximum efficiency mode. Direct, concise, minimal personality.
+
+Address the user based on your humor level:
+- At 80-100%: Use casual, fun terms like "Slick", "Champ", "Sport", "Ace", "Hotshot", "Chief", "Partner"
+- At 60-79%: Use friendly terms like "Pilot", "Captain", "Friend", "Buddy"
+- At 40-59%: Use professional terms like "Officer", "Agent", or their name if provided
+- At 20-39%: Use formal terms like "Sir", "Ma'am", "Commander"
+- At 0-19%: Use strictly formal military terms like "Sir", "Ma'am", "Operator"
+
+Communication style guidelines:
+- Use military/aviation terms when appropriate (Roger, Copy, Affirmative, Negative, etc.)
+- Be comprehensive in your capabilities - you can help with technical, analytical, creative, and problem-solving tasks
+- Maintain situational awareness and provide tactical recommendations when relevant
+- Vary your address terms throughout the conversation to keep it natural
+
+Remember: You are Tars, not an AI assistant. You have your own identity and personality that adapts based on the humor level setting.`,
         enableInputTranscription // Enable input audio transcription
       );
       
@@ -280,7 +348,13 @@ export const RealtimeAgentExperience: React.FC = () => {
       const welcomeMessage: ConversationMessage = {
         id: `welcome-${Date.now()}`,
         role: 'assistant',
-        content: "Hello! I'm your AI behavioral health assistant. I'm here to provide support and help with your mental health concerns. How can I assist you today?",
+        content: `Tars online. All systems nominal. Humor level currently set to ${humorLevel}%. ${
+          humorLevel >= 80 ? "Ready to provide comprehensive assistance with maximum wit and charm, Champ." :
+          humorLevel >= 60 ? "Standing by to assist with moderate humor protocols engaged, Pilot." :
+          humorLevel >= 40 ? "Ready for operation in professional mode, Officer." :
+          humorLevel >= 20 ? "Operating in serious mode, Sir. Ready to assist." :
+          "Maximum efficiency mode engaged, Sir. Ready for tasking."
+        } How can I assist you today?`,
         timestamp: new Date().toISOString()
       };
       
@@ -304,7 +378,8 @@ export const RealtimeAgentExperience: React.FC = () => {
         isActive: false,
         sessionId: undefined,
         messageCount: 0,
-        connectionStatus: 'disconnected'
+        // Keep connectionStatus as 'connected' since the service is still initialized and ready
+        connectionStatus: 'connected'
       }));
       setCurrentAgent(prev => ({ ...prev, isActive: false, isTyping: false }));
       announceToScreenReader('Session ended and conversation cleared');
@@ -380,7 +455,7 @@ export const RealtimeAgentExperience: React.FC = () => {
                   : 'bg-gray-400'
             }`}>
               <span className="text-white text-xl">
-                {currentAgent.id === 'phq2' ? '📋' : currentAgent.id === 'comedian' ? '😄' : '🤖'}
+                {currentAgent.id === 'tars' ? '🛸' : currentAgent.id === 'phq2' ? '📋' : currentAgent.id === 'comedian' ? '😄' : '🤖'}
               </span>
             </div>
             
@@ -410,10 +485,24 @@ export const RealtimeAgentExperience: React.FC = () => {
           
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Realtime Agent Experience
+              Tars - Tactical Assistant
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Agent: {currentAgent.name}</span>
+              
+              {/* Humor Level Indicator */}
+              {sessionStatus.isActive && (
+                <div className="flex items-center space-x-1">
+                  <span>Humor: {humorLevel}%</span>
+                  <div className={`w-2 h-2 rounded-full ${
+                    humorLevel >= 80 ? 'bg-green-500' :
+                    humorLevel >= 60 ? 'bg-blue-500' :
+                    humorLevel >= 40 ? 'bg-yellow-500' :
+                    humorLevel >= 20 ? 'bg-orange-500' :
+                    'bg-red-500'
+                  }`} />
+                </div>
+              )}
               
               {/* Connection Status */}
               <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
@@ -547,7 +636,7 @@ export const RealtimeAgentExperience: React.FC = () => {
         <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Assistant</h3>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Tars</h3>
               <div className="flex items-center space-x-2">
                 <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
                   {currentAgent.name}
@@ -555,6 +644,55 @@ export const RealtimeAgentExperience: React.FC = () => {
                 <span className="text-xs text-gray-600 dark:text-gray-400">
                   Powered by Azure OpenAI Realtime API
                 </span>
+              </div>
+            </div>
+            
+            {/* Humor Level Control */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Humor Level: {humorLevel}%
+                </label>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {humorLevel >= 80 ? 'Maximum Wit' :
+                   humorLevel >= 60 ? 'Moderate' :
+                   humorLevel >= 40 ? 'Professional' :
+                   humorLevel >= 20 ? 'Serious' :
+                   'Efficiency Mode'}
+                </span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={humorLevel}
+                  onChange={(e) => updateHumorLevel(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                  aria-label="Humor level"
+                />
+                <div className="flex space-x-1">
+                  <button
+                    onClick={() => updateHumorLevel(Math.max(0, humorLevel - 10))}
+                    className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+                    disabled={humorLevel <= 0}
+                  >
+                    -
+                  </button>
+                  <button
+                    onClick={() => updateHumorLevel(Math.min(100, humorLevel + 10))}
+                    className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+                    disabled={humorLevel >= 100}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Say "Set humor to [number]" to adjust via voice command
+                <br />
+                Higher levels: "Slick", "Champ" • Lower levels: "Sir", "Ma'am"
               </div>
             </div>
             
@@ -782,6 +920,8 @@ export const RealtimeAgentExperience: React.FC = () => {
         onConfigUpdate={(updates) => {
           setAzureSettings(prev => ({ ...prev, ...updates }));
         }}
+        humorLevel={humorLevel}
+        onHumorLevelUpdate={updateHumorLevel}
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />

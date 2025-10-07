@@ -26,10 +26,18 @@ export const Dashboard: React.FC = () => {
 
   const quickActions = [
     {
+      title: 'Agent Experience',
+      description: 'Real-time AI voice & text chat powered by Azure OpenAI',
+      href: '/agent-experience',
+      icon: '🤖',
+      color: 'warning',
+      disabled: false
+    },
+    {
       title: 'Upload & Analyze',
       description: 'Upload audio files for behavioral health analysis',
       href: '/upload',
-      icon: '📤',
+      icon: '�',
       color: 'primary',
       disabled: false
     },
@@ -37,7 +45,7 @@ export const Dashboard: React.FC = () => {
       title: 'View Sessions',
       description: 'Browse all analysis sessions and their results',
       href: '/sessions',
-      icon: '📊',
+      icon: '�',
       color: 'secondary',
       disabled: false
     },
@@ -47,14 +55,6 @@ export const Dashboard: React.FC = () => {
       href: '/predictions',
       icon: '📈',
       color: 'accent',
-      disabled: false
-    },
-    {
-      title: 'Agent Experience',
-      description: 'Real-time AI voice & text chat powered by Azure OpenAI',
-      href: '/agent-experience',
-      icon: '🤖',
-      color: 'warning',
       disabled: false
     }
   ];

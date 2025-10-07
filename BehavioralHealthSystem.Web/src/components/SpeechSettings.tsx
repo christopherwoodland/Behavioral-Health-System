@@ -35,7 +35,9 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
     silenceDuration: "How long to wait (in milliseconds) after speech stops before considering the turn complete. Shorter values (200-400ms) make conversations faster but might cut off slow speakers. Longer values (600-1000ms) are safer for thoughtful responses.",
     maxResponse: "Maximum number of tokens (roughly words) the AI can use in a single response. Higher values allow longer responses but may increase costs and response time. 1000-2000 is typical for conversations.",
     temperature: "Controls how creative vs focused the AI responses are. Lower values (0.6-0.8) give more consistent, factual responses. Higher values (1.2-2.0) produce more creative, varied responses but may be less predictable.",
-    voice: "Selects the voice characteristics for AI audio responses. Each voice has different tone, accent, and speaking style. Alloy is neutral, Echo is more masculine, Shimmer is more feminine."
+    voice: "Selects the voice characteristics for AI audio responses. Each voice has different tone, accent, and speaking style. Alloy is neutral, Echo is more masculine, Shimmer is more feminine.",
+    serverTurnDetection: "Server-side voice activity detection automatically detects when you start and stop speaking, managing conversation turns without manual controls. These settings fine-tune how the system recognizes speech patterns.",
+    parameters: "Core AI model parameters that control response generation behavior, including response length limits and creativity levels."
   };
 
   // Tooltip component
@@ -130,6 +132,9 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
               <div className="flex items-center space-x-2">
                 <Settings className="h-5 w-5 text-gray-500" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Server Turn Detection</h3>
+                <InfoTooltip id="serverTurnDetection">
+                  {tooltips.serverTurnDetection}
+                </InfoTooltip>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -205,7 +210,12 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
 
             {/* Parameters Settings */}
             <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Parameters</h3>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Parameters</h3>
+                <InfoTooltip id="parameters">
+                  {tooltips.parameters}
+                </InfoTooltip>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Max Response */}

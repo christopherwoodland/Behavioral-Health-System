@@ -16,13 +16,16 @@ import {
 import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { announceToScreenReader } from '@/utils';
 import { 
-  semanticKernelAgentService, 
-  ConversationMessage, 
-  Phq2Assessment,
-  SessionConfig
-} from '@/services/semanticKernelAgentService';
+  azureOpenAIRealtimeService,
+  RealtimeMessage,
+  RealtimeSessionConfig
+} from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
+
+// Type alias for backward compatibility with existing UI
+type ConversationMessage = RealtimeMessage;
+type SessionConfig = RealtimeSessionConfig;
 
 interface AgentStatus {
   id: string;
@@ -45,8 +48,8 @@ interface SessionStatus {
 export const RealtimeAgentExperience: React.FC = () => {
   const { handleEnterSpace } = useKeyboardNavigation();
   
-  // Core service - single instance that manages all agents via C# backend
-  const agentService = semanticKernelAgentService;
+  // Core service - direct WebRTC connection to Azure OpenAI Realtime API
+  const agentService = azureOpenAIRealtimeService;
   
   // UI State
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
@@ -55,10 +58,10 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showAgentPanel, setShowAgentPanel] = useState(false);
   
-  // Agent State
+  // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
-    id: 'coordinator',
-    name: 'Maestro (Coordinator)',
+    id: 'gpt-realtime',
+    name: 'AI Assistant',
     isActive: false,
     isTyping: false
   });
@@ -77,9 +80,8 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [voiceActivityLevel, setVoiceActivityLevel] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
   
-  // PHQ-2 State
-  const [currentAssessment, setCurrentAssessment] = useState<Phq2Assessment | null>(null);
-  const [assessmentProgress, setAssessmentProgress] = useState({ current: 0, total: 2, percentage: 0 });
+  // Assessment State (optional - can be added if needed)
+  // const [currentAssessment, setCurrentAssessment] = useState<any | null>(null);
   
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -97,7 +99,7 @@ export const RealtimeAgentExperience: React.FC = () => {
       try {
         setSessionStatus(prev => ({ ...prev, connectionStatus: 'connecting' }));
         
-        // Initialize connection to C# Semantic Kernel backend
+        // Initialize Azure OpenAI Realtime WebRTC service (browser native, no backend)
         await agentService.initialize();
         
         setupEventListeners();
@@ -108,7 +110,7 @@ export const RealtimeAgentExperience: React.FC = () => {
           hasAudioSupport: true
         }));
         
-        announceToScreenReader('Semantic Kernel agent services initialized');
+        announceToScreenReader('Azure OpenAI Realtime service initialized');
         
       } catch (error) {
         console.error('Failed to initialize agent services:', error);
@@ -124,12 +126,12 @@ export const RealtimeAgentExperience: React.FC = () => {
     };
   }, []);
 
-  // Voice activity monitoring - simplified since backend handles this
+  // Voice activity monitoring - handled by Web Audio API AnalyserNode in service
   useEffect(() => {
     if (sessionStatus.isActive && !isSessionPaused) {
       voiceActivityIntervalRef.current = setInterval(() => {
-        // Voice activity is now handled by the backend via events
-        // This interval is kept for UI updates
+        // Voice activity is monitored by azureOpenAIRealtimeService
+        // Updates arrive via onVoiceActivity callback at 50ms intervals
       }, 100);
     } else {
       if (voiceActivityIntervalRef.current) {
@@ -146,90 +148,54 @@ export const RealtimeAgentExperience: React.FC = () => {
   }, [sessionStatus.isActive, isSessionPaused]);
 
   const setupEventListeners = useCallback(() => {
-    // Backend service events
-    agentService.addEventListener('connected', () => {
-      setSessionStatus(prev => ({ ...prev, connectionStatus: 'connected' }));
-      announceToScreenReader('Connected to agent service');
-    });
-
-    agentService.addEventListener('sessionStarted', (event: any) => {
-      const { session } = event.detail;
-      setSessionStatus(prev => ({
-        ...prev,
-        isActive: true,
-        sessionId: session.sessionId,
-        startTime: new Date(session.startTime)
-      }));
-      setCurrentAgent(prev => ({ ...prev, isActive: true }));
-      announceToScreenReader('Speech session started');
-    });
-
-    agentService.addEventListener('messageReceived', (event: any) => {
-      const { message } = event.detail;
+    // Azure OpenAI Realtime service callbacks
+    agentService.onMessage((message: RealtimeMessage) => {
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
     });
 
-    agentService.addEventListener('agentSwitched', (event: any) => {
-      const { toAgent } = event.detail;
-      setCurrentAgent({
-        id: toAgent,
-        name: getAgentDisplayName(toAgent),
-        isActive: true,
-        isTyping: false,
-        lastActivity: new Date()
-      });
-      setSessionStatus(prev => ({ ...prev, currentAgent: toAgent }));
-      announceToScreenReader(`Switched to ${getAgentDisplayName(toAgent)} agent`);
-    });
-
-    agentService.addEventListener('sessionEnded', () => {
-      setSessionStatus(prev => ({ ...prev, isActive: false }));
-      setCurrentAgent(prev => ({ ...prev, isActive: false }));
-      announceToScreenReader('Speech session ended');
-    });
-
-    agentService.addEventListener('phq2QuestionAsked', (event: any) => {
-      const { questionNumber } = event.detail;
-      // Update progress
-      setAssessmentProgress({
-        current: questionNumber,
-        total: 2,
-        percentage: (questionNumber / 2) * 100
-      });
-    });
-
-    agentService.addEventListener('phq2AssessmentCompleted', (event: any) => {
-      const { assessment } = event.detail;
-      setCurrentAssessment(assessment);
-      announceToScreenReader('PHQ-2 assessment completed');
-    });
-
-    agentService.addEventListener('voiceActivityDetected', (event: any) => {
-      const { activity } = event.detail;
+    agentService.onVoiceActivity((activity) => {
       setVoiceActivityLevel(activity.volumeLevel);
     });
 
-    agentService.addEventListener('error', (event: any) => {
-      console.error('Agent service error:', event.detail);
-      announceToScreenReader('Agent service error occurred');
+    agentService.onStatusChange((status) => {
+      setSessionStatus(prev => ({
+        ...prev,
+        isActive: status.isSessionActive,
+        sessionId: status.sessionId || undefined,
+        connectionStatus: status.isConnected ? 'connected' : 'disconnected'
+      }));
+      
+      setCurrentAgent(prev => ({ ...prev, isActive: status.isSessionActive }));
+      
+      if (status.isSessionActive) {
+        announceToScreenReader('Real-time session active');
+      }
     });
 
-    agentService.addEventListener('disconnected', () => {
-      setSessionStatus(prev => ({ ...prev, connectionStatus: 'disconnected' }));
-      announceToScreenReader('Disconnected from agent service');
+    agentService.onTranscript((transcript, isFinal) => {
+      if (isFinal) {
+        // Add user's transcribed message to UI
+        const userMessage: RealtimeMessage = {
+          id: `user-transcript-${Date.now()}`,
+          role: 'user',
+          content: transcript,
+          timestamp: new Date().toISOString()
+        };
+        setMessages(prev => [...prev, userMessage]);
+      }
+    });
+
+    agentService.onError((error) => {
+      console.error('Azure OpenAI Realtime service error:', error);
+      announceToScreenReader(`Service error: ${error.message}`);
+      setSessionStatus(prev => ({ ...prev, connectionStatus: 'error' }));
     });
 
   }, []);
 
-  const getAgentDisplayName = (agentId: string): string => {
-    switch (agentId) {
-      case 'coordinator': return 'Maestro (Coordinator)';
-      case 'phq2': return 'PHQ-2 Assessment Agent';
-      case 'comedian': return 'Therapeutic Comedian';
-      default: return agentId;
-    }
-  };
+  // Agent display name not needed for single agent
+  // const getAgentDisplayName = () => 'AI Assistant';
 
 
   const startSession = async () => {
@@ -237,11 +203,12 @@ export const RealtimeAgentExperience: React.FC = () => {
       setIsProcessing(true);
       
       const sessionConfig: SessionConfig = {
-        enableAudio: true,
+        enableAudio: isAudioEnabled,
         enableVAD: true,
-        preferredVoice: 'alloy',
-        temperature: 0.7,
-        maxTokens: 2048
+        voice: 'alloy',
+        temperature: 0.8,
+        maxTokens: 4096,
+        instructions: "You are a helpful behavioral health assistant. Provide supportive, empathetic responses to help users with their mental health concerns. Keep responses concise and conversational."
       };
       
       await agentService.startSession('user', sessionConfig);
@@ -250,9 +217,8 @@ export const RealtimeAgentExperience: React.FC = () => {
       const welcomeMessage: ConversationMessage = {
         id: `welcome-${Date.now()}`,
         role: 'assistant',
-        content: "Hello! I'm Maestro, your behavioral health coordinator. I can help you with depression screenings, provide support, or connect you with specialized assistance. How can I help you today?",
-        timestamp: new Date().toISOString(),
-        agent: 'coordinator'
+        content: "Hello! I'm your AI behavioral health assistant. I'm here to provide support and help with your mental health concerns. How can I assist you today?",
+        timestamp: new Date().toISOString()
       };
       
       setMessages([welcomeMessage]);
@@ -260,7 +226,7 @@ export const RealtimeAgentExperience: React.FC = () => {
       
     } catch (error) {
       console.error('Failed to start session:', error);
-      announceToScreenReader('Failed to start speech session');
+      announceToScreenReader('Failed to start real-time session');
     } finally {
       setIsProcessing(false);
     }
@@ -270,8 +236,6 @@ export const RealtimeAgentExperience: React.FC = () => {
     try {
       await agentService.endSession();
       setMessages([]);
-      setCurrentAssessment(null);
-      setAssessmentProgress({ current: 0, total: 2, percentage: 0 });
       announceToScreenReader('Session ended and conversation cleared');
     } catch (error) {
       console.error('Failed to end session:', error);
@@ -279,15 +243,13 @@ export const RealtimeAgentExperience: React.FC = () => {
   };
 
   const pauseSession = () => {
-    // Pause functionality will be handled by the backend
-    // For now, just update the UI state
+    agentService.pauseSession();
     setIsSessionPaused(true);
     announceToScreenReader('Session paused');
   };
 
   const resumeSession = async () => {
-    // Resume functionality will be handled by the backend
-    // For now, just update the UI state
+    agentService.resumeSession();
     setIsSessionPaused(false);
     announceToScreenReader('Session resumed');
   };
@@ -298,8 +260,8 @@ export const RealtimeAgentExperience: React.FC = () => {
     try {
       setIsProcessing(true);
       
-      // Send message to backend service
-      await agentService.sendMessage(inputText.trim());
+      // Send text message through WebRTC data channel
+      await agentService.sendTextMessage(inputText.trim());
       
       setInputText('');
       textareaRef.current?.focus();
@@ -312,15 +274,10 @@ export const RealtimeAgentExperience: React.FC = () => {
     }
   };
 
-  const manualAgentHandoff = async (targetAgent: string) => {
-    try {
-      await agentService.requestAgentHandoff(targetAgent, 'Manual agent selection');
-      announceToScreenReader(`Switching to ${getAgentDisplayName(targetAgent)} agent`);
-    } catch (error) {
-      console.error('Failed to switch agent:', error);
-      announceToScreenReader('Failed to switch agent');
-    }
-  };
+  // Agent handoff not needed for single GPT-Realtime agent
+  // const manualAgentHandoff = async (targetAgent: string) => {
+  //   // Not applicable for single agent model
+  // };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -329,8 +286,8 @@ export const RealtimeAgentExperience: React.FC = () => {
     }
   };
 
-  const cleanup = () => {
-    agentService.disconnect();
+  const cleanup = async () => {
+    await agentService.destroy();
     if (voiceActivityIntervalRef.current) {
       clearInterval(voiceActivityIntervalRef.current);
     }
@@ -410,12 +367,7 @@ export const RealtimeAgentExperience: React.FC = () => {
                 <span className="capitalize">{sessionStatus.connectionStatus}</span>
               </div>
               
-              {/* PHQ-2 Progress */}
-              {currentAssessment && !currentAssessment.isCompleted && (
-                <span className="text-blue-600 dark:text-blue-400">
-                  PHQ-2: {assessmentProgress.current}/{assessmentProgress.total} ({assessmentProgress.percentage}%)
-                </span>
-              )}
+              {/* Real-time AI Assistant */}
             </div>
           </div>
         </div>
@@ -493,26 +445,18 @@ export const RealtimeAgentExperience: React.FC = () => {
         </div>
       </div>
 
-      {/* Agent Control Panel */}
+      {/* Agent Control Panel - Simplified for single AI agent */}
       {showAgentPanel && (
         <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Available Agents</h3>
-            <div className="flex space-x-2">
-              {['coordinator', 'phq2', 'comedian'].map((agentId: string) => (
-                <button
-                  key={agentId}
-                  onClick={() => manualAgentHandoff(agentId)}
-                  disabled={currentAgent.id === agentId || isProcessing}
-                  className={`px-3 py-1 text-xs rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                    currentAgent.id === agentId
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 disabled:cursor-not-allowed'
-                  }`}
-                >
-                  {getAgentDisplayName(agentId)}
-                </button>
-              ))}
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Assistant</h3>
+            <div className="flex items-center space-x-2">
+              <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
+                {currentAgent.name}
+              </div>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Powered by Azure OpenAI Realtime API
+              </span>
             </div>
           </div>
         </div>
@@ -537,9 +481,6 @@ export const RealtimeAgentExperience: React.FC = () => {
                 message.role === 'user' ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'
               }`}>
                 <span>{new Date(message.timestamp).toLocaleTimeString()}</span>
-                {message.agent && message.role === 'assistant' && (
-                  <span className="ml-2">{getAgentDisplayName(message.agent)}</span>
-                )}
               </div>
             </div>
           </div>
@@ -626,12 +567,6 @@ export const RealtimeAgentExperience: React.FC = () => {
             
             {isSessionPaused && (
               <span className="text-yellow-600 dark:text-yellow-400">Session Paused</span>
-            )}
-            
-            {currentAssessment && !currentAssessment.isCompleted && (
-              <span className="text-blue-600 dark:text-blue-400">
-                PHQ-2 Assessment in Progress
-              </span>
             )}
           </div>
           

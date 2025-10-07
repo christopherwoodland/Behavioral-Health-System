@@ -490,20 +490,6 @@ Remember: You are Tars, not an AI assistant. You have your own identity and pers
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Agent: {currentAgent.name}</span>
               
-              {/* Humor Level Indicator */}
-              {sessionStatus.isActive && (
-                <div className="flex items-center space-x-1">
-                  <span>Humor: {humorLevel}%</span>
-                  <div className={`w-2 h-2 rounded-full ${
-                    humorLevel >= 80 ? 'bg-green-500' :
-                    humorLevel >= 60 ? 'bg-blue-500' :
-                    humorLevel >= 40 ? 'bg-yellow-500' :
-                    humorLevel >= 20 ? 'bg-orange-500' :
-                    'bg-red-500'
-                  }`} />
-                </div>
-              )}
-              
               {/* Connection Status */}
               <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
                 {getConnectionStatusIcon()}

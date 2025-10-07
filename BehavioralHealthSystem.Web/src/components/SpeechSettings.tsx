@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Volume2, Info } from 'lucide-react';
+import { Settings, Volume2, Info, X } from 'lucide-react';
 import { AzureOpenAIRealtimeSettings } from '@/services/azureOpenAIRealtimeService';
 
 export interface SpeechSettingsProps {
@@ -26,43 +26,95 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
   });
 
   const [localConfig, setLocalConfig] = useState<AzureOpenAIRealtimeSettings>(sanitizeConfig(config));
-  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [activeInfoModal, setActiveInfoModal] = useState<string | null>(null);
 
-  // Tooltip content for each setting
-  const tooltips = {
-    threshold: "Controls how sensitive the voice activity detection is. Lower values (0.1-0.3) detect quieter speech but may pick up background noise. Higher values (0.7-0.9) require louder speech but are more reliable in noisy environments.",
-    prefixPadding: "Amount of audio (in milliseconds) to include before the detected speech starts. This helps capture the beginning of words that might be cut off. Typical range: 100-500ms.",
-    silenceDuration: "How long to wait (in milliseconds) after speech stops before considering the turn complete. Shorter values (200-400ms) make conversations faster but might cut off slow speakers. Longer values (600-1000ms) are safer for thoughtful responses.",
-    maxResponse: "Maximum number of tokens (roughly words) the AI can use in a single response. Higher values allow longer responses but may increase costs and response time. 1000-2000 is typical for conversations.",
-    temperature: "Controls how creative vs focused the AI responses are. Lower values (0.6-0.8) give more consistent, factual responses. Higher values (1.2-2.0) produce more creative, varied responses but may be less predictable.",
-    voice: "Selects the voice characteristics for AI audio responses. Each voice has different tone, accent, and speaking style. Alloy is neutral, Echo is more masculine, Shimmer is more feminine.",
-    serverTurnDetection: "Server-side voice activity detection automatically detects when you start and stop speaking, managing conversation turns without manual controls. These settings fine-tune how the system recognizes speech patterns.",
-    parameters: "Core AI model parameters that control response generation behavior, including response length limits and creativity levels."
+  // Information content for each setting
+  const settingsInfo = {
+    threshold: {
+      title: "Turn Detection Threshold",
+      content: [
+        "Controls how sensitive the voice activity detection is.",
+        "Lower values (0.1-0.3) detect quieter speech but may pick up background noise.",
+        "Higher values (0.7-0.9) require louder speech but are more reliable in noisy environments.",
+        "Recommended: 0.5 for balanced performance in typical environments."
+      ]
+    },
+    prefixPadding: {
+      title: "Prefix Padding",
+      content: [
+        "Amount of audio (in milliseconds) to include before the detected speech starts.",
+        "This helps capture the beginning of words that might be cut off.",
+        "Typical range: 100-500ms depending on speech patterns.",
+        "Higher values provide better word capture but may include more background noise."
+      ]
+    },
+    silenceDuration: {
+      title: "Silence Duration",
+      content: [
+        "How long to wait (in milliseconds) after speech stops before considering the turn complete.",
+        "Shorter values (200-400ms) make conversations faster but might cut off slow speakers.",
+        "Longer values (600-1000ms) are safer for thoughtful responses.",
+        "Recommended: 300-500ms for natural conversation flow."
+      ]
+    },
+    maxResponse: {
+      title: "Maximum Response Length",
+      content: [
+        "Maximum number of tokens (roughly words) the AI can use in a single response.",
+        "Higher values allow longer responses but may increase costs and response time.",
+        "1000-2000 tokens is typical for conversations.",
+        "Consider your use case: shorter for quick interactions, longer for detailed explanations."
+      ]
+    },
+    temperature: {
+      title: "Temperature Setting",
+      content: [
+        "Controls how creative vs focused the AI responses are.",
+        "Lower values (0.6-0.8) give more consistent, factual responses.",
+        "Higher values (1.2-2.0) produce more creative, varied responses but may be less predictable.",
+        "Azure OpenAI requires minimum temperature of 0.6."
+      ]
+    },
+    voice: {
+      title: "Voice Selection",
+      content: [
+        "Selects the voice characteristics for AI audio responses.",
+        "Each voice has different tone, accent, and speaking style:",
+        "• Alloy: Neutral, balanced tone suitable for most applications",
+        "• Echo: More masculine characteristics",
+        "• Shimmer: More feminine characteristics"
+      ]
+    },
+    serverTurnDetection: {
+      title: "Server Turn Detection",
+      content: [
+        "Server-side voice activity detection automatically detects when you start and stop speaking.",
+        "Manages conversation turns without manual controls.",
+        "These settings fine-tune how the system recognizes speech patterns.",
+        "Proper configuration ensures smooth, natural conversation flow."
+      ]
+    },
+    parameters: {
+      title: "AI Model Parameters",
+      content: [
+        "Core AI model parameters that control response generation behavior.",
+        "Includes response length limits and creativity levels.",
+        "These settings directly impact the quality and characteristics of AI responses.",
+        "Adjust based on your specific use case and requirements."
+      ]
+    }
   };
 
-  // Tooltip component
-  const InfoTooltip: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => (
-    <div className="relative inline-block">
-      <button
-        type="button"
-        onMouseEnter={() => setActiveTooltip(id)}
-        onMouseLeave={() => setActiveTooltip(null)}
-        onFocus={() => setActiveTooltip(id)}
-        onBlur={() => setActiveTooltip(null)}
-        className="ml-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-        aria-label={`Information about ${id}`}
-      >
-        <Info size={14} />
-      </button>
-      {activeTooltip === id && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-10">
-          <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs shadow-lg">
-            <div className="whitespace-normal">{children}</div>
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-          </div>
-        </div>
-      )}
-    </div>
+  // Info button component that opens modals
+  const InfoButton: React.FC<{ id: string }> = ({ id }) => (
+    <button
+      type="button"
+      onClick={() => setActiveInfoModal(id)}
+      className="ml-1 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+      aria-label={`Show information about ${settingsInfo[id as keyof typeof settingsInfo]?.title}`}
+    >
+      <Info size={14} />
+    </button>
   );
 
   // Update localConfig when config prop changes
@@ -132,9 +184,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
               <div className="flex items-center space-x-2">
                 <Settings className="h-5 w-5 text-gray-500" />
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Server Turn Detection</h3>
-                <InfoTooltip id="serverTurnDetection">
-                  {tooltips.serverTurnDetection}
-                </InfoTooltip>
+                <InfoButton id="serverTurnDetection" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -142,9 +192,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Threshold
-                    <InfoTooltip id="threshold">
-                      {tooltips.threshold}
-                    </InfoTooltip>
+                    <InfoButton id="threshold" />
                   </label>
                   <input
                     type="range"
@@ -168,9 +216,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Prefix padding (ms)
-                    <InfoTooltip id="prefixPadding">
-                      {tooltips.prefixPadding}
-                    </InfoTooltip>
+                    <InfoButton id="prefixPadding" />
                   </label>
                   <input
                     type="number"
@@ -189,9 +235,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Silence duration (ms)
-                    <InfoTooltip id="silenceDuration">
-                      {tooltips.silenceDuration}
-                    </InfoTooltip>
+                    <InfoButton id="silenceDuration" />
                   </label>
                   <input
                     type="number"
@@ -212,9 +256,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
             <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-6">
               <div className="flex items-center space-x-2">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">Parameters</h3>
-                <InfoTooltip id="parameters">
-                  {tooltips.parameters}
-                </InfoTooltip>
+                <InfoButton id="parameters" />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -222,9 +264,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Max response
-                    <InfoTooltip id="maxResponse">
-                      {tooltips.maxResponse}
-                    </InfoTooltip>
+                    <InfoButton id="maxResponse" />
                   </label>
                   <input
                     type="number"
@@ -246,9 +286,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Temperature
-                    <InfoTooltip id="temperature">
-                      {tooltips.temperature}
-                    </InfoTooltip>
+                    <InfoButton id="temperature" />
                   </label>
                   <input
                     type="range"
@@ -283,9 +321,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
               <div>
                 <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Voice Selection
-                  <InfoTooltip id="voice">
-                    {tooltips.voice}
-                  </InfoTooltip>
+                  <InfoButton id="voice" />
                 </label>
                 <select
                   value={localConfig.voice}
@@ -318,6 +354,34 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Information Modal */}
+      {activeInfoModal && settingsInfo[activeInfoModal as keyof typeof settingsInfo] && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setActiveInfoModal(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {settingsInfo[activeInfoModal as keyof typeof settingsInfo].title}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActiveInfoModal(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              {settingsInfo[activeInfoModal as keyof typeof settingsInfo].content.map((paragraph, index) => (
+                <div key={index} className="leading-relaxed">
+                  {paragraph}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

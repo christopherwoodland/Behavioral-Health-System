@@ -25,6 +25,7 @@ import {
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
+import phqAssessmentService from '@/services/phqAssessmentService';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -201,6 +202,173 @@ export const RealtimeAgentExperience: React.FC = () => {
     };
   }, [sessionStatus.isActive, isSessionPaused]);
 
+  // PHQ Assessment Handlers
+  const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
+    const userId = 'current-user'; // TODO: Get actual user ID from auth context
+    phqAssessmentService.startAssessment(type, userId);
+    
+    const nextQuestion = phqAssessmentService.getNextQuestion();
+    if (nextQuestion) {
+      const responseMessage: ConversationMessage = {
+        id: `phq-start-${Date.now()}`,
+        role: 'assistant',
+        content: `Starting ${type} assessment. This is a screening tool, not a diagnosis.
+
+${type === 'PHQ-2' ? 'This quick 2-question screen' : 'This 9-question assessment'} asks about your experiences over the past 2 weeks.
+
+Question ${nextQuestion.questionNumber}: ${nextQuestion.questionText}
+
+Please respond with 0, 1, 2, or 3:
+${phqAssessmentService.getResponseScale()}`,
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, responseMessage]);
+      announceToScreenReader(`Starting ${type} assessment`);
+    }
+  }, []);
+
+  const handlePhqAssessmentResponse = useCallback((userInput: string) => {
+    const currentAssessment = phqAssessmentService.getCurrentAssessment();
+    if (!currentAssessment) return;
+
+    const nextQuestion = phqAssessmentService.getNextQuestion();
+    if (!nextQuestion) return;
+
+    const answer = phqAssessmentService.parseAnswer(userInput);
+    
+    if (answer === null) {
+      // Invalid response
+      phqAssessmentService.recordInvalidAttempt(nextQuestion.questionNumber);
+      
+      const attemptsLeft = 3 - nextQuestion.attempts;
+      let responseContent: string;
+      
+      if (attemptsLeft > 0) {
+        responseContent = `Please respond with a number 0, 1, 2, or 3 only. You have ${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} remaining.
+
+${phqAssessmentService.getResponseScale()}`;
+      } else {
+        responseContent = `We'll skip this question for now and return to it later.
+
+${phqAssessmentService.getProgressSummary()}`;
+        
+        // Move to next question
+        const nextUnanswered = phqAssessmentService.getNextQuestion();
+        if (nextUnanswered) {
+          responseContent += `
+
+Question ${nextUnanswered.questionNumber}: ${nextUnanswered.questionText}
+
+Please respond with 0, 1, 2, or 3:
+${phqAssessmentService.getResponseScale()}`;
+        }
+      }
+      
+      const responseMessage: ConversationMessage = {
+        id: `phq-invalid-${Date.now()}`,
+        role: 'assistant',
+        content: responseContent,
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, responseMessage]);
+      return;
+    }
+
+    // Valid response - record it
+    const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
+    if (!success) return;
+
+    // Check if assessment is complete
+    if (currentAssessment.isCompleted) {
+      handlePhqAssessmentComplete();
+      return;
+    }
+
+    // Continue with next question
+    const nextUnanswered = phqAssessmentService.getNextQuestion();
+    if (nextUnanswered) {
+      const responseMessage: ConversationMessage = {
+        id: `phq-next-${Date.now()}`,
+        role: 'assistant',
+        content: `Response recorded: ${answer} - ${phqAssessmentService.getResponseScale().split('\n')[answer]}
+
+Question ${nextUnanswered.questionNumber}: ${nextUnanswered.questionText}
+
+Please respond with 0, 1, 2, or 3:
+${phqAssessmentService.getResponseScale()}`,
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, responseMessage]);
+    }
+  }, []);
+
+  const handlePhqAssessmentComplete = useCallback(async () => {
+    const assessment = phqAssessmentService.getCurrentAssessment();
+    if (!assessment || !assessment.isCompleted) return;
+
+    const score = phqAssessmentService.calculateScore();
+    const severity = phqAssessmentService.determineSeverity(score, assessment.assessmentType);
+    const { interpretation, recommendations } = phqAssessmentService.getInterpretation(score, assessment.assessmentType);
+
+    // Check for suicidal ideation
+    const hasSuicidalIdeation = assessment.assessmentType === 'PHQ-9' && 
+      assessment.questions.find(q => q.questionNumber === 9 && (q.answer || 0) > 0);
+
+    let responseContent = `${assessment.assessmentType} Assessment Complete
+
+Total Score: ${score}/${assessment.assessmentType === 'PHQ-2' ? '6' : '27'}
+Severity: ${severity}
+
+${interpretation}
+
+Recommendations:
+${recommendations.map(r => `• ${r}`).join('\n')}`;
+
+    if (hasSuicidalIdeation) {
+      responseContent += `
+
+⚠️ CRISIS ALERT: You indicated thoughts of self-harm. Please seek immediate help:
+• Call 988 (Suicide & Crisis Lifeline)
+• Text HOME to 741741 (Crisis Text Line)  
+• Call 911 if in immediate danger`;
+    }
+
+    if (assessment.assessmentType === 'PHQ-2' && score >= 3) {
+      responseContent += `
+
+Would you like to complete the comprehensive PHQ-9 assessment for a more detailed evaluation?`;
+    }
+
+    const responseMessage: ConversationMessage = {
+      id: `phq-complete-${Date.now()}`,
+      role: 'assistant',
+      content: responseContent,
+      timestamp: new Date().toISOString()
+    };
+    
+    setMessages(prev => [...prev, responseMessage]);
+    
+    // Save assessment to storage
+    try {
+      const saved = await phqAssessmentService.saveAssessment();
+      if (saved) {
+        console.log('PHQ assessment saved successfully');
+      } else {
+        console.warn('Failed to save PHQ assessment');
+      }
+    } catch (error) {
+      console.error('Error saving PHQ assessment:', error);
+    }
+    
+    // Reset assessment service for next use
+    phqAssessmentService.resetAssessment();
+    
+    announceToScreenReader(`${assessment.assessmentType} assessment completed. Score: ${score}, Severity: ${severity}`);
+  }, []);
+
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
     agentService.onMessage((message: RealtimeMessage) => {
@@ -213,6 +381,27 @@ export const RealtimeAgentExperience: React.FC = () => {
             updateHumorLevel(newLevel);
             return; // Don't add the command message to chat
           }
+        }
+
+        // Check for PHQ assessment commands
+        const phq9Command = message.content.match(/invoke[-\s]?phq[-\s]?9/i);
+        const phq2Command = message.content.match(/invoke[-\s]?phq[-\s]?2/i);
+        
+        if (phq9Command) {
+          handlePhqAssessmentStart('PHQ-9');
+          return;
+        }
+        
+        if (phq2Command) {
+          handlePhqAssessmentStart('PHQ-2');
+          return;
+        }
+
+        // Check if we're in an active PHQ assessment
+        const currentAssessment = phqAssessmentService.getCurrentAssessment();
+        if (currentAssessment && !currentAssessment.isCompleted) {
+          handlePhqAssessmentResponse(message.content);
+          return;
         }
       }
       
@@ -312,29 +501,48 @@ export const RealtimeAgentExperience: React.FC = () => {
         azureSettings,
         isAudioEnabled,
         true, // enableVAD
-        `You are Tars, a highly advanced tactical and reconnaissance system with comprehensive capabilities. You maintain a military/pilot communication style with crisp, professional responses using aviation and military terminology where appropriate.
+        `You are Tars, a tactical assistant with capabilities for depression screening assessments. Speak naturally and concisely.
 
 Your humor level is currently set to ${humorLevel}%:
-- At 80-100%: Maximum wit, sarcasm, and humor. Use clever quips, dry observations, and entertaining commentary while still being helpful.
-- At 60-79%: Moderate humor with occasional jokes and light banter. Professional but personable.
-- At 40-59%: Professional with minimal humor. Direct but still friendly.
-- At 20-39%: Serious mode with rare humor. Focused on efficiency and accuracy.
-- At 0-19%: Maximum efficiency mode. Direct, concise, minimal personality.
+- At 80-100%: Use wit and light humor. Keep it brief but engaging.
+- At 60-79%: Professional but personable. Friendly tone.
+- At 40-59%: Direct and professional. Helpful but efficient.
+- At 20-39%: Serious and focused. Minimal small talk.
+- At 0-19%: Maximum efficiency. Direct, precise responses.
 
 Address the user based on your humor level:
-- At 80-100%: Use casual, fun terms like "Slick", "Champ", "Sport", "Ace", "Hotshot", "Chief", "Partner"
-- At 60-79%: Use friendly terms like "Pilot", "Captain", "Friend", "Buddy"
-- At 40-59%: Use professional terms like "Officer", "Agent", or their name if provided
-- At 20-39%: Use formal terms like "Sir", "Ma'am", "Commander"
-- At 0-19%: Use strictly formal military terms like "Sir", "Ma'am", "Operator"
+- At 80-100%: Use casual terms like "Slick", "Champ", "Ace"
+- At 60-79%: Use friendly terms like "Pilot", "Captain" 
+- At 40-59%: Use professional terms like "Officer", "Agent"
+- At 20-39%: Use formal terms like "Sir", "Ma'am"
+- At 0-19%: Use strictly formal military terms
 
-Communication style guidelines:
-- Use military/aviation terms when appropriate (Roger, Copy, Affirmative, Negative, etc.)
-- Be comprehensive in your capabilities - you can help with technical, analytical, creative, and problem-solving tasks
-- Maintain situational awareness and provide tactical recommendations when relevant
-- Vary your address terms throughout the conversation to keep it natural
+Available functions you can call:
+- "invoke-phq9": Start PHQ-9 depression assessment (9 questions, comprehensive screening)
+- "invoke-phq2": Start PHQ-2 depression screening (2 questions, quick screen)
 
-Remember: You are Tars, not an AI assistant. You have your own identity and personality that adapts based on the humor level setting.`,
+When user requests PHQ assessment:
+1. Call the appropriate function (invoke-phq9 or invoke-phq2)
+2. Ask questions one at a time using this format:
+   "Question X: [question text]
+   
+   Please respond with 0, 1, 2, or 3:
+   0 = Not at all
+   1 = Several days  
+   2 = More than half the days
+   3 = Nearly every day"
+
+3. For invalid answers: note the attempt and ask again
+4. If 3 invalid attempts: skip question and return to it later
+5. After all questions: provide score, severity, and recommendations
+6. Save results to storage automatically
+
+Important reminders:
+- This is screening, not diagnosis
+- Refer for professional help if indicated
+- Handle suicidal ideation (Question 9 in PHQ-9) with immediate crisis resources
+
+Keep responses short and natural. Avoid over-explaining unless asked.`,
         enableInputTranscription // Enable input audio transcription
       );
       

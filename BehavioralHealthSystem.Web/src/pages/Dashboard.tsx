@@ -51,11 +51,11 @@ export const Dashboard: React.FC = () => {
     },
     {
       title: 'Agent Experience',
-      description: 'Interactive chat with AI behavioral health agents',
+      description: 'Real-time AI voice & text chat powered by Azure OpenAI',
       href: '/agent-experience',
       icon: '🤖',
       color: 'warning',
-      disabled: true
+      disabled: false
     }
   ];
 

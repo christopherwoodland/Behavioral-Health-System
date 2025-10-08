@@ -331,8 +331,9 @@ ${phqAssessmentService.getResponseScale()}`;
     const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
     if (!success) return;
 
-    // Check if assessment is complete
-    if (currentAssessment.isCompleted) {
+    // Check if assessment is complete (get fresh state after recording answer)
+    const updatedAssessment = phqAssessmentService.getCurrentAssessment();
+    if (updatedAssessment?.isCompleted) {
       handlePhqAssessmentComplete();
       return;
     }

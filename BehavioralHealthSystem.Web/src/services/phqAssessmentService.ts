@@ -189,15 +189,27 @@ class PhqAssessmentService {
     question.answer = answer;
     question.timestamp = new Date().toISOString();
     
-    // Check if assessment is complete
-    const allAnswered = this.currentAssessment.questions.every(q => q.answer !== undefined);
-    if (allAnswered) {
-      console.log('✅ All questions answered - completing assessment...');
+    // Check if assessment is complete (all questions either have answers OR are skipped)
+    const allProcessed = this.currentAssessment.questions.every(q => 
+      (q.answer !== undefined && q.answer !== null) || q.skipped === true
+    );
+    
+    console.log('🔍 Checking completion status:', {
+      totalQuestions: this.currentAssessment.questions.length,
+      answeredCount: this.currentAssessment.questions.filter(q => q.answer !== undefined && q.answer !== null).length,
+      skippedCount: this.currentAssessment.questions.filter(q => q.skipped).length,
+      allProcessed
+    });
+    
+    if (allProcessed) {
+      console.log('✅ All questions processed (answered or skipped) - completing assessment...');
       this.completeAssessment();
       console.log('📊 Assessment completed with:', {
         totalScore: this.currentAssessment.totalScore,
         severity: this.currentAssessment.severity,
-        isCompleted: this.currentAssessment.isCompleted
+        isCompleted: this.currentAssessment.isCompleted,
+        answeredQuestions: this.currentAssessment.questions.filter(q => q.answer !== undefined && q.answer !== null).length,
+        skippedQuestions: this.currentAssessment.questions.filter(q => q.skipped).length
       });
     }
     

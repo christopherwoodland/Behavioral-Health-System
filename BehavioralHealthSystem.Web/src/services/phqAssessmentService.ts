@@ -43,7 +43,8 @@ export interface PhqStorageMetadata {
 
 class PhqAssessmentService {
   private currentAssessment: PhqAssessmentResult | null = null;
-  private readonly storageEndpoint = '/api/assessments'; // Backend endpoint for blob storage
+  // NOTE: PHQ data is now saved directly in chat transcript messages with metadata
+  // No separate storage endpoint needed
 
   /**
    * PHQ-2 Questions (first 2 questions from PHQ-9)
@@ -138,11 +139,9 @@ class PhqAssessmentService {
       }
     };
 
-    // Immediately save the initial assessment state
-    this.saveAssessment().catch(err => {
-      console.error('Failed to save initial assessment state:', err);
-    });
-
+    // NOTE: PHQ data now saved directly in chat transcript messages with metadata
+    // No need for separate PHQ container saving
+    
     return this.currentAssessment;
   }
 
@@ -213,10 +212,8 @@ class PhqAssessmentService {
       });
     }
     
-    // Progressively save after each answer (including completion data if assessment is complete)
-    this.saveAssessment().catch(err => {
-      console.error('Failed to progressively save assessment:', err);
-    });
+    // NOTE: PHQ data now saved directly in chat transcript messages with metadata
+    // No need for separate PHQ container saving
 
     return true;
   }
@@ -236,10 +233,8 @@ class PhqAssessmentService {
         question.skipped = true;
       }
       
-      // Progressively save after invalid attempt
-      this.saveAssessment().catch(err => {
-        console.error('Failed to progressively save assessment after invalid attempt:', err);
-      });
+      // NOTE: PHQ data now saved directly in chat transcript messages with metadata
+      // No need for separate PHQ container saving
     }
   }
 
@@ -363,62 +358,67 @@ class PhqAssessmentService {
   /**
    * Save assessment to blob storage (progressive save - updates file with each answer)
    */
-  async saveAssessment(): Promise<boolean> {
-    if (!this.currentAssessment) {
-      return false;
-    }
+  /**
+   * DEPRECATED: Save assessment to blob storage progressively
+   * NOTE: PHQ data is now saved directly in chat transcript messages with metadata
+   * This method is kept for reference but is no longer used
+   */
+  // async saveAssessment(): Promise<boolean> {
+  //   if (!this.currentAssessment) {
+  //     return false;
+  //   }
 
-    try {
-      // Get the Azure Functions endpoint from environment or use default
-      const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
-      const endpoint = `${functionsBaseUrl}/api/SavePhqAssessment`;
+  //   try {
+  //     // Get the Azure Functions endpoint from environment or use default
+  //     const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
+  //     const endpoint = `${functionsBaseUrl}/api/SavePhqAssessment`;
 
-      console.log('🔵 Saving PHQ assessment to:', endpoint);
-      console.log('📋 Assessment data being saved:', {
-        assessmentId: this.currentAssessment.assessmentId,
-        userId: this.currentAssessment.userId,
-        assessmentType: this.currentAssessment.assessmentType,
-        isCompleted: this.currentAssessment.isCompleted,
-        totalScore: this.currentAssessment.totalScore,
-        severity: this.currentAssessment.severity,
-        interpretation: this.currentAssessment.interpretation?.substring(0, 50) + '...',
-        recommendations: this.currentAssessment.recommendations,
-        questionCount: this.currentAssessment.questions.length,
-        answeredCount: this.currentAssessment.questions.filter(q => q.answer !== undefined).length
-      });
+  //     console.log('🔵 Saving PHQ assessment to:', endpoint);
+  //     console.log('📋 Assessment data being saved:', {
+  //       assessmentId: this.currentAssessment.assessmentId,
+  //       userId: this.currentAssessment.userId,
+  //       assessmentType: this.currentAssessment.assessmentType,
+  //       isCompleted: this.currentAssessment.isCompleted,
+  //       totalScore: this.currentAssessment.totalScore,
+  //       severity: this.currentAssessment.severity,
+  //       interpretation: this.currentAssessment.interpretation?.substring(0, 50) + '...',
+  //       recommendations: this.currentAssessment.recommendations,
+  //       questionCount: this.currentAssessment.questions.length,
+  //       answeredCount: this.currentAssessment.questions.filter(q => q.answer !== undefined).length
+  //     });
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          assessmentData: this.currentAssessment,
-          metadata: {
-            userAgent: navigator.userAgent,
-            timestamp: new Date().toISOString(),
-            sessionId: sessionStorage.getItem('session-id') || 'unknown',
-            clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-          },
-          containerName: 'phq'
-          // fileName omitted - let server generate with proper folder structure: users/{userId}/{type}-{id}.json
-        })
-      });
+  //     const response = await fetch(endpoint, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify({
+  //         assessmentData: this.currentAssessment,
+  //         metadata: {
+  //           userAgent: navigator.userAgent,
+  //           timestamp: new Date().toISOString(),
+  //           sessionId: sessionStorage.getItem('session-id') || 'unknown',
+  //           clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+  //         },
+  //         containerName: 'phq'
+  //         // fileName omitted - let server generate with proper folder structure: users/{userId}/{type}-{id}.json
+  //       })
+  //     });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Failed to save assessment: ${response.status} ${response.statusText} - ${errorText}`);
-        return false;
-      }
+  //     if (!response.ok) {
+  //       const errorText = await response.text();
+  //       console.error(`Failed to save assessment: ${response.status} ${response.statusText} - ${errorText}`);
+  //       return false;
+  //     }
 
-      const result = await response.json();
-      console.log('Assessment saved successfully:', result);
-      return true;
-    } catch (error) {
-      console.error('Failed to save assessment:', error);
-      return false;
-    }
-  }
+  //     const result = await response.json();
+  //     console.log('Assessment saved successfully:', result);
+  //     return true;
+  //   } catch (error) {
+  //     console.error('Failed to save assessment:', error);
+  //     return false;
+  //   }
+  // }
 
   /**
    * Get assessment progress summary

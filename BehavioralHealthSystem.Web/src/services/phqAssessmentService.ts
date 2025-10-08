@@ -192,7 +192,13 @@ class PhqAssessmentService {
     // Check if assessment is complete
     const allAnswered = this.currentAssessment.questions.every(q => q.answer !== undefined);
     if (allAnswered) {
+      console.log('✅ All questions answered - completing assessment...');
       this.completeAssessment();
+      console.log('📊 Assessment completed with:', {
+        totalScore: this.currentAssessment.totalScore,
+        severity: this.currentAssessment.severity,
+        isCompleted: this.currentAssessment.isCompleted
+      });
     }
     
     // Progressively save after each answer (including completion data if assessment is complete)
@@ -319,12 +325,27 @@ class PhqAssessmentService {
     const severity = this.determineSeverity(score, this.currentAssessment.assessmentType);
     const { interpretation, recommendations } = this.getInterpretation(score, this.currentAssessment.assessmentType);
 
+    console.log('🎯 Completing assessment with calculated values:', {
+      score,
+      severity,
+      interpretationLength: interpretation.length,
+      recommendationsCount: recommendations.length
+    });
+
     this.currentAssessment.completedTime = new Date().toISOString();
     this.currentAssessment.isCompleted = true;
     this.currentAssessment.totalScore = score;
     this.currentAssessment.severity = severity;
     this.currentAssessment.interpretation = interpretation;
     this.currentAssessment.recommendations = recommendations;
+    
+    console.log('✅ Assessment object updated:', {
+      totalScore: this.currentAssessment.totalScore,
+      severity: this.currentAssessment.severity,
+      isCompleted: this.currentAssessment.isCompleted,
+      hasInterpretation: !!this.currentAssessment.interpretation,
+      hasRecommendations: !!this.currentAssessment.recommendations
+    });
   }
 
   /**
@@ -341,13 +362,17 @@ class PhqAssessmentService {
       const endpoint = `${functionsBaseUrl}/api/SavePhqAssessment`;
 
       console.log('🔵 Saving PHQ assessment to:', endpoint);
-      console.log('📋 Assessment data:', {
+      console.log('📋 Assessment data being saved:', {
         assessmentId: this.currentAssessment.assessmentId,
         userId: this.currentAssessment.userId,
         assessmentType: this.currentAssessment.assessmentType,
         isCompleted: this.currentAssessment.isCompleted,
         totalScore: this.currentAssessment.totalScore,
-        questionCount: this.currentAssessment.questions.length
+        severity: this.currentAssessment.severity,
+        interpretation: this.currentAssessment.interpretation?.substring(0, 50) + '...',
+        recommendations: this.currentAssessment.recommendations,
+        questionCount: this.currentAssessment.questions.length,
+        answeredCount: this.currentAssessment.questions.filter(q => q.answer !== undefined).length
       });
 
       const response = await fetch(endpoint, {

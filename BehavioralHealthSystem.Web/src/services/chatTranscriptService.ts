@@ -10,6 +10,12 @@ export interface ChatMessage {
   timestamp: string;
   messageType?: string; // Optional: "phq-assessment", "general-chat", etc.
   additionalData?: Record<string, any>;
+  // PHQ Assessment metadata
+  isPhqQuestion?: boolean;
+  isPhqAnswer?: boolean;
+  phqType?: 2 | 9;
+  phqQuestionNumber?: number; // 1-9
+  phqAnswerValue?: number; // 0-3 (the actual answer score)
 }
 
 export interface ChatTranscript {

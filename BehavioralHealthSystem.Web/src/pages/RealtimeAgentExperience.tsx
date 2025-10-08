@@ -283,15 +283,32 @@ Question ${nextQuestion.questionNumber}: ${nextQuestion.questionText}
 
 Please respond with 0, 1, 2, or 3:
 ${phqAssessmentService.getResponseScale()}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        isPhqQuestion: true,
+        phqType: type === 'PHQ-2' ? 2 : 9,
+        phqQuestionNumber: nextQuestion.questionNumber
       };
       
       setMessages(prev => [...prev, responseMessage]);
+      
+      // Save to chat transcript with PHQ metadata
+      if (authenticatedUserId) {
+        chatTranscriptService.addAssistantMessage(
+          responseMessage.content,
+          'phq-question',
+          {
+            isPhqQuestion: true,
+            phqType: type === 'PHQ-2' ? 2 : 9,
+            phqQuestionNumber: nextQuestion.questionNumber
+          }
+        );
+      }
+      
       announceToScreenReader(`Starting ${type} assessment`);
     }
   }, [authenticatedUserId]);
 
-  const handlePhqAssessmentResponse = useCallback((userInput: string) => {
+  const handlePhqAssessmentResponse = useCallback(async (userInput: string) => {
     const currentAssessment = phqAssessmentService.getCurrentAssessment();
     if (!currentAssessment) return;
 
@@ -328,6 +345,33 @@ Question ${nextUnanswered.questionNumber}: ${nextUnanswered.questionText}
 
 Please respond with 0, 1, 2, or 3:
 ${phqAssessmentService.getResponseScale()}`;
+          
+          // This message includes the next question, so add PHQ metadata
+          const responseMessage: ConversationMessage = {
+            id: `phq-skip-next-${Date.now()}`,
+            role: 'assistant',
+            content: responseContent,
+            timestamp: new Date().toISOString(),
+            isPhqQuestion: true,
+            phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
+            phqQuestionNumber: nextUnanswered.questionNumber
+          };
+          
+          setMessages(prev => [...prev, responseMessage]);
+          
+          // Save to chat transcript with metadata
+          if (authenticatedUserId) {
+            await chatTranscriptService.addAssistantMessage(
+              responseContent,
+              'phq-question',
+              {
+                isPhqQuestion: true,
+                phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
+                phqQuestionNumber: nextUnanswered.questionNumber
+              }
+            );
+          }
+          return;
         }
       }
       
@@ -339,12 +383,38 @@ ${phqAssessmentService.getResponseScale()}`;
       };
       
       setMessages(prev => [...prev, responseMessage]);
+      
+      // Save invalid response instruction to chat transcript
+      if (authenticatedUserId) {
+        await chatTranscriptService.addAssistantMessage(
+          responseContent,
+          'phq-instruction',
+          {
+            phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
+            phqQuestionNumber: nextQuestion.questionNumber
+          }
+        );
+      }
       return;
     }
 
     // Valid response - record it
     const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
     if (!success) return;
+
+    // Save PHQ answer to chat transcript with metadata
+    if (authenticatedUserId) {
+      await chatTranscriptService.addUserMessage(
+        userInput,
+        'phq-answer',
+        {
+          isPhqAnswer: true,
+          phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
+          phqQuestionNumber: nextQuestion.questionNumber,
+          phqAnswerValue: answer
+        }
+      );
+    }
 
     // Note: phqAssessmentService now saves progressively automatically after recordAnswer()
     // No need for separate phqProgressService.recordAnswer() call
@@ -368,10 +438,26 @@ Question ${nextUnanswered.questionNumber}: ${nextUnanswered.questionText}
 
 Please respond with 0, 1, 2, or 3:
 ${phqAssessmentService.getResponseScale()}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        isPhqQuestion: true,
+        phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
+        phqQuestionNumber: nextUnanswered.questionNumber
       };
       
       setMessages(prev => [...prev, responseMessage]);
+      
+      // Save next question to chat transcript with metadata
+      if (authenticatedUserId) {
+        await chatTranscriptService.addAssistantMessage(
+          responseMessage.content,
+          'phq-question',
+          {
+            isPhqQuestion: true,
+            phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
+            phqQuestionNumber: nextUnanswered.questionNumber
+          }
+        );
+      }
     }
   }, []);
 
@@ -424,6 +510,19 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
     };
     
     setMessages(prev => [...prev, responseMessage]);
+    
+    // Save completion message to chat transcript with metadata
+    if (authenticatedUserId) {
+      await chatTranscriptService.addAssistantMessage(
+        responseContent,
+        'phq-completion',
+        {
+          phqType: assessment.assessmentType === 'PHQ-2' ? 2 : 9,
+          totalScore: score,
+          severity: severity
+        }
+      );
+    }
     
     // Show saving indicator
     const savingMessage: ConversationMessage = {

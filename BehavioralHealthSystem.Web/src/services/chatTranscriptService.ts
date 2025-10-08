@@ -133,7 +133,16 @@ class ChatTranscriptService {
    * End the current session
    */
   endSession(): void {
-    if (!this.currentTranscript) return;
+    if (!this.currentTranscript) {
+      console.warn('No active chat transcript session to end');
+      return;
+    }
+
+    // Validate session has required data before ending
+    if (!this.currentTranscript.userId || !this.currentTranscript.sessionId) {
+      console.warn('Cannot end chat transcript session: missing userId or sessionId');
+      return;
+    }
 
     this.currentTranscript.isActive = false;
     this.currentTranscript.sessionEndedAt = new Date().toISOString();
@@ -193,6 +202,12 @@ class ChatTranscriptService {
   private async saveTranscriptImmediate(): Promise<void> {
     if (!this.currentTranscript || this.isSaving) return;
 
+    // Validate required fields before attempting save
+    if (!this.currentTranscript.userId || !this.currentTranscript.sessionId) {
+      console.warn('Cannot save chat transcript: missing userId or sessionId');
+      return;
+    }
+
     try {
       this.isSaving = true;
 
@@ -205,8 +220,10 @@ class ChatTranscriptService {
         this.saveTimer = null;
       }
 
-      const functionsBaseUrl = process.env.REACT_APP_FUNCTIONS_URL || 'http://localhost:7071';
-      const endpoint = `${functionsBaseUrl}/api/SaveChatTranscript`;
+      const functionsBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      // Remove trailing slash if present to avoid double slashes
+      const baseUrl = functionsBaseUrl.endsWith('/') ? functionsBaseUrl.slice(0, -1) : functionsBaseUrl;
+      const endpoint = `${baseUrl}/SaveChatTranscript`;
 
       const request: ChatTranscriptSaveRequest = {
         transcriptData: { ...this.currentTranscript },

@@ -319,7 +319,7 @@ class PhqAssessmentService {
 
     try {
       // Get the Azure Functions endpoint from environment or use default
-      const functionsBaseUrl = process.env.REACT_APP_FUNCTIONS_URL || 'http://localhost:7071';
+      const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
       const endpoint = `${functionsBaseUrl}/api/SavePhqAssessment`;
 
       const response = await fetch(endpoint, {
@@ -335,8 +335,8 @@ class PhqAssessmentService {
             sessionId: sessionStorage.getItem('session-id') || 'unknown',
             clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           },
-          containerName: 'phq-assessments',
-          fileName: `${this.currentAssessment.assessmentType.toLowerCase().replace('-', '')}-${this.currentAssessment.assessmentId}.json`
+          containerName: 'phq-assessments'
+          // fileName omitted - let server generate with proper folder structure: users/{userId}/assessments/{type}-{id}.json
         })
       });
 

@@ -34,7 +34,21 @@ public class SaveChatTranscriptFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var requestData = JsonSerializer.Deserialize<SaveChatTranscriptRequest>(requestBody);
+            
+            if (string.IsNullOrWhiteSpace(requestBody))
+            {
+                _logger.LogWarning("Invalid request: request body is empty");
+                var badResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+                await badResponse.WriteStringAsync("Invalid request: request body is empty");
+                return badResponse;
+            }
+
+            _logger.LogDebug("Request body length: {Length}", requestBody.Length);
+            
+            var requestData = JsonSerializer.Deserialize<SaveChatTranscriptRequest>(requestBody, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
 
             if (requestData?.TranscriptData == null)
             {

@@ -739,6 +739,18 @@ Just speak naturally - I understand variations of these commands!`,
           handlePhqAssessmentResponse(message.content);
           return;
         }
+        
+        // CRITICAL: Prevent AI's own speech from being added to chat
+        // Azure Realtime API captures AI speech and incorrectly labels it as user input
+        const recentAIMessages = messages.filter(m => m.role === 'assistant').slice(-5);
+        const isDuplicateAIContent = recentAIMessages.some(aiMsg => 
+          aiMsg.content.trim() === message.content.trim()
+        );
+        
+        if (isDuplicateAIContent) {
+          console.warn('⚠️ BLOCKED: AI speech incorrectly transcribed as user input:', message.content.substring(0, 60) + '...');
+          return; // Don't add this message at all
+        }
       }
       
       setMessages(prev => [...prev, message]);
@@ -747,24 +759,6 @@ Just speak naturally - I understand variations of these commands!`,
       // Save message to chat transcript
       if (authenticatedUserId) {
         if (message.role === 'user') {
-          // CRITICAL: Prevent AI's own speech from being saved as user input
-          // Check if this message ID indicates it's an AI transcript being misidentified
-          if (message.id && message.id.includes('ai-transcript')) {
-            console.warn('⚠️ Filtered out AI transcript incorrectly labeled as user message:', message.id);
-            return; // Don't save AI speech as user input
-          }
-          
-          // Additional check: if message content matches recent AI messages, skip it
-          const recentAIMessages = messages.filter(m => m.role === 'assistant').slice(-3);
-          const isDuplicateAIContent = recentAIMessages.some(aiMsg => 
-            aiMsg.content.trim() === message.content.trim()
-          );
-          
-          if (isDuplicateAIContent) {
-            console.warn('⚠️ Filtered out duplicate AI content incorrectly labeled as user message');
-            return; // Don't save duplicate AI content as user input
-          }
-          
           // Check if this is a PHQ answer
           const currentAssessment = phqAssessmentService.getCurrentAssessment();
           const isPhqAnswer = currentAssessment && !currentAssessment.isCompleted;

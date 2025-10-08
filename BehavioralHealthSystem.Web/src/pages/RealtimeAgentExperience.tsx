@@ -10,7 +10,8 @@ import {
   Pause,
   Play,
   AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Bot
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import { 
@@ -28,7 +29,7 @@ import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
 import phqAssessmentService from '@/services/phqAssessmentService';
 import chatTranscriptService from '@/services/chatTranscriptService';
-import phqProgressService from '@/services/phqProgressService';
+// phqProgressService no longer needed - phqAssessmentService handles all PHQ tracking with single assessment ID
 import { useAuth } from '@/contexts/AuthContext';
 
 // Type alias for backward compatibility with existing UI
@@ -266,12 +267,8 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // PHQ Assessment Handlers
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
-    const assessment = phqAssessmentService.startAssessment(type, authenticatedUserId);
-    
-    // Initialize PHQ progress tracking
-    if (authenticatedUserId) {
-      phqProgressService.startAssessment(authenticatedUserId, type, assessment.assessmentId);
-    }
+    // Start assessment - this generates assessment ID once and saves initial state progressively
+    phqAssessmentService.startAssessment(type, authenticatedUserId);
     
     const nextQuestion = phqAssessmentService.getNextQuestion();
     if (nextQuestion) {
@@ -319,14 +316,8 @@ ${phqAssessmentService.getResponseScale()}`;
 
 ${phqAssessmentService.getProgressSummary()}`;
         
-        // Record question as skipped in progress tracking
-        if (authenticatedUserId) {
-          phqProgressService.skipQuestion(
-            nextQuestion.questionNumber,
-            nextQuestion.questionText,
-            nextQuestion.attempts
-          );
-        }
+        // Note: phqAssessmentService already tracks skipped questions via recordInvalidAttempt()
+        // which triggers progressive save automatically
         
         // Move to next question
         const nextUnanswered = phqAssessmentService.getNextQuestion();
@@ -355,16 +346,8 @@ ${phqAssessmentService.getResponseScale()}`;
     const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
     if (!success) return;
 
-    // Save answer to PHQ progress
-    if (authenticatedUserId) {
-      phqProgressService.recordAnswer(
-        nextQuestion.questionNumber,
-        nextQuestion.questionText,
-        answer,
-        nextQuestion.attempts || 1,
-        false // not skipped
-      );
-    }
+    // Note: phqAssessmentService now saves progressively automatically after recordAnswer()
+    // No need for separate phqProgressService.recordAnswer() call
 
     // Check if assessment is complete (get fresh state after recording answer)
     const updatedAssessment = phqAssessmentService.getCurrentAssessment();
@@ -401,9 +384,8 @@ ${phqAssessmentService.getResponseScale()}`,
     const { interpretation, recommendations } = phqAssessmentService.getInterpretation(score, assessment.assessmentType);
 
     // Complete PHQ progress tracking with final results
-    if (authenticatedUserId) {
-      phqProgressService.completeAssessment(score, severity, interpretation, recommendations);
-    }
+    // Note: phqAssessmentService.completeAssessment() already saved the final assessment
+    // with score, severity, interpretation, and recommendations via progressive save
 
     // Check for suicidal ideation
     const hasSuicidalIdeation = assessment.assessmentType === 'PHQ-9' && 
@@ -960,18 +942,23 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       agentService.onFunctionCall(async (functionName, args) => {
         console.log(`🎯 Function called: ${functionName}`, args);
         
+        // Get the current conversation session ID to link PHQ assessment to chat history
+        const conversationSessionId = sessionStorage.getItem('chat-session-id') || undefined;
+        
         switch (functionName) {
           case 'invoke-phq2':
-            // Start PHQ-2 assessment
+            // Start PHQ-2 assessment with conversation session ID for mapping back to chat history
             console.log('Starting PHQ-2 assessment...');
-            const phq2 = phqAssessmentService.startAssessment('PHQ-2', authenticatedUserId || getUserId());
-            return { success: true, assessmentId: phq2.assessmentId, type: 'phq2' };
+            console.log('📎 Linking to conversation session:', conversationSessionId);
+            const phq2 = phqAssessmentService.startAssessment('PHQ-2', authenticatedUserId || getUserId(), conversationSessionId);
+            return { success: true, assessmentId: phq2.assessmentId, type: 'phq2', sessionId: conversationSessionId };
             
           case 'invoke-phq9':
-            // Start PHQ-9 assessment
+            // Start PHQ-9 assessment with conversation session ID for mapping back to chat history
             console.log('Starting PHQ-9 assessment...');
-            const phq9 = phqAssessmentService.startAssessment('PHQ-9', authenticatedUserId || getUserId());
-            return { success: true, assessmentId: phq9.assessmentId, type: 'phq9' };
+            console.log('📎 Linking to conversation session:', conversationSessionId);
+            const phq9 = phqAssessmentService.startAssessment('PHQ-9', authenticatedUserId || getUserId(), conversationSessionId);
+            return { success: true, assessmentId: phq9.assessmentId, type: 'phq9', sessionId: conversationSessionId };
             
           case 'pause-session':
             console.log('Pausing session...');
@@ -1006,8 +993,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       
       // Initialize chat transcript session
       if (authenticatedUserId) {
-        const sessionId = sessionStorage.getItem('chat-session-id') || undefined;
-        chatTranscriptService.initializeSession(authenticatedUserId, sessionId);
+        const existingSessionId = sessionStorage.getItem('chat-session-id') || undefined;
+        const transcript = chatTranscriptService.initializeSession(authenticatedUserId, existingSessionId);
+        // Store the session ID for PHQ assessments to use the same ID
+        sessionStorage.setItem('chat-session-id', transcript.sessionId);
+        console.log('📎 Chat session initialized:', transcript.sessionId);
       }
       
       // Clear previous state
@@ -1094,9 +1084,9 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
   // };
 
   const cleanup = async () => {
-    // Cleanup transcript and progress services
+    // Cleanup transcript service
     chatTranscriptService.cleanup();
-    phqProgressService.cleanup();
+    // Note: phqProgressService no longer used - phqAssessmentService handles all PHQ tracking
     
     await agentService.destroy();
     if (voiceActivityIntervalRef.current) {
@@ -1182,9 +1172,13 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   ? 'bg-green-500' 
                   : 'bg-gray-400'
             }`}>
-              <span className="text-white text-xl">
-                {currentAgent.id === 'tars' ? '🛸' : currentAgent.id === 'phq2' ? '📋' : currentAgent.id === 'comedian' ? '😄' : '🤖'}
-              </span>
+              {currentAgent.id === 'tars' ? (
+                <Bot className="text-white" size={24} />
+              ) : (
+                <span className="text-white text-xl">
+                  {currentAgent.id === 'phq2' ? '📋' : currentAgent.id === 'comedian' ? '😄' : '🤖'}
+                </span>
+              )}
             </div>
             
             {/* Voice Activity Indicator */}

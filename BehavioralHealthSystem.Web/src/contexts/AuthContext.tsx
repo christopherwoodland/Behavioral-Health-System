@@ -214,8 +214,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...request,
       };
 
-      // Use popup login (you can change to redirect if preferred)
-      await instance.loginPopup(loginRequestWithDefaults);
+      // Use redirect login (avoids COOP warnings with Azure AD)
+      await instance.loginRedirect(loginRequestWithDefaults);
     } catch (error: any) {
       console.error('[Auth] Login error:', error);
       setError(error.message || 'Login failed');
@@ -235,8 +235,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         ...request,
       };
 
-      // Use popup logout (you can change to redirect if preferred)
-      await instance.logoutPopup(logoutRequest);
+      // Use redirect logout (avoids COOP warnings with Azure AD)
+      await instance.logoutRedirect(logoutRequest);
     } catch (error: any) {
       console.error('[Auth] Logout error:', error);
       setError(error.message || 'Logout failed');

@@ -205,7 +205,7 @@ class ChatTranscriptService {
         this.saveTimer = null;
       }
 
-      const functionsBaseUrl = process.env.REACT_APP_FUNCTIONS_URL || 'http://localhost:7071';
+      const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
       const endpoint = `${functionsBaseUrl}/api/SaveChatTranscript`;
 
       const request: ChatTranscriptSaveRequest = {

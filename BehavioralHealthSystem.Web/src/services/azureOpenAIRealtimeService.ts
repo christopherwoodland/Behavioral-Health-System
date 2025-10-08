@@ -16,6 +16,21 @@ export interface RealtimeMessage {
   isPartial?: boolean; // For live streaming transcripts
 }
 
+export interface ToolDefinition {
+  type: 'function';
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, {
+      type: string;
+      description: string;
+      enum?: string[];
+    }>;
+    required?: string[];
+  };
+}
+
 export interface RealtimeSessionConfig {
   enableAudio: boolean;
   enableVAD: boolean; // Voice Activity Detection
@@ -23,6 +38,7 @@ export interface RealtimeSessionConfig {
   maxTokens?: number;
   voice?: 'alloy' | 'echo' | 'shimmer';
   instructions?: string;
+  tools?: ToolDefinition[]; // Function calling tools
   // Server turn detection settings
   turnDetection?: {
     threshold?: number;
@@ -110,6 +126,88 @@ export interface SessionStatus {
 }
 
 /**
+ * Standard tool definitions for PHQ assessments and session control
+ * These must be registered with the Azure OpenAI Realtime API session
+ */
+export const REALTIME_TOOLS: ToolDefinition[] = [
+  {
+    type: 'function',
+    name: 'invoke-phq2',
+    description: 'Initiates a PHQ-2 (Patient Health Questionnaire-2) depression screening. This is a quick 2-question assessment used for initial screening. Call this when the user wants to START, BEGIN, TAKE, DO, COMMENCE, COMPLETE, or INITIATE a PHQ-2 assessment, quick mental health screening, or brief depression check. Recognize phrases like: "start PHQ-2", "begin the screening", "take a quick assessment", "do the PHQ-2", "I want to complete a mental health check".',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: 'Brief reason for initiating the assessment (e.g., "User requested quick screening", "Follow-up check")'
+        }
+      },
+      required: []
+    }
+  },
+  {
+    type: 'function',
+    name: 'invoke-phq9',
+    description: 'Initiates a PHQ-9 (Patient Health Questionnaire-9) comprehensive depression assessment. This is a detailed 9-question evaluation. Call this when the user wants to START, BEGIN, TAKE, DO, COMMENCE, COMPLETE, or INITIATE a PHQ-9 assessment, full mental health evaluation, or comprehensive depression screening. Recognize phrases like: "start the PHQ-9", "begin the full assessment", "take the comprehensive screening", "do the depression evaluation", "I want to complete the mental health assessment".',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          description: 'Brief reason for initiating the assessment (e.g., "User requested full assessment", "Detailed evaluation needed")'
+        }
+      },
+      required: []
+    }
+  },
+  {
+    type: 'function',
+    name: 'pause-session',
+    description: 'Temporarily pauses the current conversation session. The user can resume later. Call this when the user says "pause session" or indicates they need to pause.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    type: 'function',
+    name: 'resume-session',
+    description: 'Resumes a previously paused conversation session. Call this when the user says "resume session" or indicates they want to continue.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    type: 'function',
+    name: 'close-session',
+    description: 'Ends the current conversation session permanently. Call this when the user says "close session", "end session", "goodbye", or clearly indicates they want to end the conversation.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    type: 'function',
+    name: 'set-humor-level',
+    description: 'Adjusts the AI personality humor level between 0-100. Higher values make the AI more casual and friendly, lower values make it more formal and professional. Call this when the user requests a personality adjustment.',
+    parameters: {
+      type: 'object',
+      properties: {
+        level: {
+          type: 'string',
+          description: 'The humor level as a number between 0 and 100 (e.g., "0", "50", "100")'
+        }
+      },
+      required: ['level']
+    }
+  }
+];
+
+/**
  * Azure OpenAI Realtime WebRTC Service
  * Handles direct browser-to-Azure OpenAI connection via WebRTC
  */
@@ -166,6 +264,9 @@ export class AzureOpenAIRealtimeService {
   private onLiveTranscriptCallback: ((transcript: LiveTranscript) => void) | null = null;
   private onSpeechDetectionCallback: ((state: SpeechDetectionState) => void) | null = null;
   private onConversationStateCallback: ((state: ConversationState) => void) | null = null;
+  
+  // Function calling callbacks
+  private onFunctionCallCallback: ((functionName: string, args: Record<string, unknown>) => Promise<unknown>) | null = null;
   
   constructor() {
     // Load configuration from environment variables
@@ -224,6 +325,58 @@ export class AzureOpenAIRealtimeService {
   
   onConnectionLost(callback: (attempts: number, maxAttempts: number) => void): void {
     this.onConnectionLostCallback = callback;
+  }
+  
+  /**
+   * Register callback for function calls from the AI
+   * This callback will be invoked when the AI calls a registered tool/function
+   */
+  onFunctionCall(callback: (functionName: string, args: Record<string, unknown>) => Promise<unknown>): void {
+    this.onFunctionCallCallback = callback;
+  }
+
+  /**
+   * Send function call result back to the API
+   */
+  private sendFunctionResult(callId: string, result: unknown): void {
+    if (!this.dataChannel) {
+      console.error('❌ Cannot send function result: data channel not connected');
+      return;
+    }
+
+    const resultEvent = {
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: callId,
+        output: JSON.stringify(result)
+      }
+    };
+
+    console.log('📤 Sending function result:', resultEvent);
+    this.dataChannel.send(JSON.stringify(resultEvent));
+  }
+
+  /**
+   * Send function call error back to the API
+   */
+  private sendFunctionError(callId: string, errorMessage: string): void {
+    if (!this.dataChannel) {
+      console.error('❌ Cannot send function error: data channel not connected');
+      return;
+    }
+
+    const errorEvent = {
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: callId,
+        output: JSON.stringify({ error: errorMessage })
+      }
+    };
+
+    console.log('📤 Sending function error:', errorEvent);
+    this.dataChannel.send(JSON.stringify(errorEvent));
   }
   
   /**
@@ -611,6 +764,12 @@ export class AzureOpenAIRealtimeService {
       };
     }
     
+    // Add tools/functions if specified
+    if (config.tools && config.tools.length > 0) {
+      sessionConfig.tools = config.tools;
+      console.log(`🔧 Registering ${config.tools.length} tools:`, config.tools.map(t => t.name).join(', '));
+    }
+    
     const event = {
       type: 'session.update',
       session: sessionConfig
@@ -837,6 +996,35 @@ export class AzureOpenAIRealtimeService {
         case 'output_audio_buffer.stopped':
           console.log('🔇 Audio output buffer stopped');
           // This is a normal event when audio playback completes
+          break;
+
+        // Function calling events
+        case 'response.function_call_arguments.delta':
+          // Function arguments streaming (accumulate if needed)
+          console.log('🔧 Function call argument delta:', realtimeEvent);
+          break;
+          
+        case 'response.function_call_arguments.done':
+          console.log('🔧 Function call arguments complete:', realtimeEvent);
+          // Extract function name and arguments
+          if (realtimeEvent.name && this.onFunctionCallCallback) {
+            const functionName = realtimeEvent.name;
+            const args = realtimeEvent.arguments ? JSON.parse(realtimeEvent.arguments) : {};
+            console.log(`🎯 Executing function: ${functionName}`, args);
+            
+            // Execute the function asynchronously
+            this.onFunctionCallCallback(functionName, args)
+              .then((result) => {
+                console.log(`✅ Function ${functionName} completed:`, result);
+                // Send function result back to the API
+                this.sendFunctionResult(realtimeEvent.call_id, result);
+              })
+              .catch((error) => {
+                console.error(`❌ Function ${functionName} failed:`, error);
+                // Send error back to the API
+                this.sendFunctionError(realtimeEvent.call_id, error.message);
+              });
+          }
           break;
 
         // Legacy handling for backward compatibility

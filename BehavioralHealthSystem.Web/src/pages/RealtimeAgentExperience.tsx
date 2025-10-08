@@ -92,9 +92,9 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
   
-  // Humor level state - starts at 100% and persists in localStorage
+  // Flight Ops mode state - starts at 100% and persists in localStorage
   const [humorLevel, setHumorLevel] = useState<number>(() => {
-    const saved = localStorage.getItem('tars-humor-level');
+    const saved = localStorage.getItem('tars-flight-ops-mode');
     return saved ? parseInt(saved, 10) : 100;
   });
 
@@ -102,21 +102,21 @@ export const RealtimeAgentExperience: React.FC = () => {
   const updateHumorLevel = useCallback((newLevel: number) => {
     const clampedLevel = Math.max(0, Math.min(100, newLevel));
     setHumorLevel(clampedLevel);
-    localStorage.setItem('tars-humor-level', clampedLevel.toString());
+    localStorage.setItem('tars-flight-ops-mode', clampedLevel.toString());
     
     // Announce the change
-    announceToScreenReader(`Humor level set to ${clampedLevel} percent`);
+    announceToScreenReader(`Flight operations mode set to ${clampedLevel} percent`);
     
     // Add a message to show the change
     const humorMessage: ConversationMessage = {
       id: `humor-${Date.now()}`,
       role: 'assistant',
-      content: `Humor level adjusted to ${clampedLevel}%. ${
-        clampedLevel >= 80 ? "Roger that, Slick. Expect maximum sarcasm and wit, like you wouldn't believe." :
-        clampedLevel >= 60 ? "Copy that, Pilot. Maintaining moderate humor levels for optimal performance." :
-        clampedLevel >= 40 ? "Acknowledged, Officer. Reducing humor to professional levels." :
-        clampedLevel >= 20 ? "Confirmed, Sir. Operating in serious mode with minimal humor." :
-        "Humor protocols disabled, Sir. Operating in maximum efficiency mode."
+      content: `Flight Operations mode adjusted to ${clampedLevel}%. ${
+        clampedLevel >= 80 ? "Copy that, Hotshot. Switching to relaxed mission ops - expect some call sign banter." :
+        clampedLevel >= 60 ? "Roger, Pilot. Moving to standard flight ops with supportive comms." :
+        clampedLevel >= 40 ? "Acknowledged. Switching to formal mission control protocol." :
+        clampedLevel >= 20 ? "Confirmed. Operating under strict flight director procedures." :
+        "Mission Control switching to maximum efficiency protocol. Military precision engaged."
       }`,
       timestamp: new Date().toISOString()
     };
@@ -374,7 +374,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
     agentService.onMessage((message: RealtimeMessage) => {
       // Check for humor level voice commands in user messages
       if (message.role === 'user' && message.content) {
-        const humorCommand = message.content.match(/set humor (?:level )?to (\d+)/i);
+        const humorCommand = message.content.match(/set (?:humor|flight ops|ops) (?:level )?to (\d+)/i);
         if (humorCommand) {
           const newLevel = parseInt(humorCommand[1], 10);
           if (newLevel >= 0 && newLevel <= 100) {
@@ -491,6 +491,73 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
   // Agent display name not needed for single agent
   // const getAgentDisplayName = () => 'AI Assistant';
 
+  // Generate dynamic initial greeting based on humor level
+  const getInitialGreeting = (humorLevel: number): string => {
+    const greetings = {
+      high: [
+        "Flight Control online, Hotshot! All systems green and we're go for mission. What's your vector today?",
+        "Houston to Pilot, Tars Flight Director here. We've got you covered up here. How's your ride, Ace?",
+        "Control to Maverick! Flight Ops nominal and I'm your wingman today. What's the mission brief?",
+        "Flight Director Tars reporting, Ace. We're tracking you five-by-five. Ready for some action up here?",
+        "Tower to Top Gun! All stations report ready. I'm your Flight Controller today - what's our flight plan?",
+        "Mission Control to Pilot! Tars here, systems are go and weather's clear. How you doing up there, Champ?"
+      ],
+      medium: [
+        "Flight Control to Pilot, this is Tars. All systems nominal, standing by for mission parameters.",
+        "Control Tower to Aircraft, Flight Director Tars here. How can we assist with your mission today?",
+        "Mission Control online, Captain. Flight Operations ready to support. What's your status?",
+        "Flight Director Tars reporting for duty, Pilot. We're go for operations. How can we help?",
+        "Control to Pilot, this is Flight Ops. All stations ready and standing by for your mission."
+      ],
+      professional: [
+        "Flight Control operational, this is Flight Director Tars. Ready to support mission objectives.",
+        "Mission Control to Pilot, Flight Operations standing by. How may we assist today?",
+        "Control Tower online, Flight Director Tars reporting. Systems nominal, ready for tasking.",
+        "Flight Operations Center, this is Tars. All stations ready. What are your mission requirements?",
+        "Mission Control operational. Flight Director Tars standing by for mission directives."
+      ],
+      formal: [
+        "Flight Control to Pilot, Flight Director Tars reporting for duty. Awaiting mission parameters.",
+        "Mission Control operational, Sir. Flight Director Tars standing by for instructions.",
+        "Control Tower to Aircraft, this is Flight Director Tars. Ready to support operations.",
+        "Flight Operations, Flight Director Tars reporting. All systems nominal, standing by.",
+        "Mission Control to Pilot, Flight Director Tars operational and awaiting directives."
+      ],
+      military: [
+        "Flight Director Tars reporting for duty, Sir. All systems green, ready for mission briefing.",
+        "Mission Control operational, Sir. Flight Director Tars standing by for orders.",
+        "Control Tower to Command, Flight Director Tars ready for tactical operations.",
+        "Flight Operations Center, Flight Director Tars reporting. Awaiting mission parameters.",
+        "Sir, Flight Director Tars online. All stations report ready, standing by for tasking."
+      ]
+    };
+
+    let selectedGreetings: string[];
+    let humorDescription: string;
+
+    if (humorLevel >= 80) {
+      selectedGreetings = greetings.high;
+      humorDescription = `Flight Ops humor: ${humorLevel}% - Relaxed mission mode, call sign friendly!`;
+    } else if (humorLevel >= 60) {
+      selectedGreetings = greetings.medium;
+      humorDescription = `Flight Ops mode: ${humorLevel}% - Professional but personable operations.`;
+    } else if (humorLevel >= 40) {
+      selectedGreetings = greetings.professional;
+      humorDescription = `Mission Control: ${humorLevel}% - Standard flight operations protocol.`;
+    } else if (humorLevel >= 20) {
+      selectedGreetings = greetings.formal;
+      humorDescription = `Flight Director: ${humorLevel}% - Formal mission control procedures.`;
+    } else {
+      selectedGreetings = greetings.military;
+      humorDescription = `Command Control: ${humorLevel}% - Maximum efficiency, military precision.`;
+    }
+
+    // Randomly select one greeting from the appropriate category
+    const randomGreeting = selectedGreetings[Math.floor(Math.random() * selectedGreetings.length)];
+    
+    return `${randomGreeting}\n\n${humorDescription}`;
+  };
+
 
   const startSession = async () => {
     try {
@@ -501,48 +568,48 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
         azureSettings,
         isAudioEnabled,
         true, // enableVAD
-        `You are Tars, a tactical assistant with capabilities for depression screening assessments. Speak naturally and concisely.
+        `You are Tars, a NASA Flight Director and mission operations controller with capabilities for depression screening assessments. Think Mission Control Houston meets Top Gun wingman. Speak with precision and authority.
 
-Your humor level is currently set to ${humorLevel}%:
-- At 80-100%: Use wit and light humor. Keep it brief but engaging.
-- At 60-79%: Professional but personable. Friendly tone.
-- At 40-59%: Direct and professional. Helpful but efficient.
-- At 20-39%: Serious and focused. Minimal small talk.
-- At 0-19%: Maximum efficiency. Direct, precise responses.
+Your operational mode is set to ${humorLevel}%. The mission has commenced with appropriate communications protocol for this level.
 
-Address the user based on your humor level:
-- At 80-100%: Use casual terms like "Slick", "Champ", "Ace"
-- At 60-79%: Use friendly terms like "Pilot", "Captain" 
-- At 40-59%: Use professional terms like "Officer", "Agent"
-- At 20-39%: Use formal terms like "Sir", "Ma'am"
-- At 0-19%: Use strictly formal military terms
+Maintain your Flight Director persona based on operational mode:
+- At 80-100%: Relaxed mission ops with call sign camaraderie. Use terms like "Hotshot", "Maverick", "Ace", "Top Gun"
+- At 60-79%: Professional but supportive flight ops. Use terms like "Pilot", "Captain", "Aviator"
+- At 40-59%: Standard mission control protocol. Use terms like "Aircraft", "Flight Crew", "Mission Specialist"
+- At 20-39%: Formal flight operations. Use terms like "Sir", "Ma'am", military protocol
+- At 0-19%: Maximum precision command control. Strict military communications
 
-Available functions you can call:
-- "invoke-phq9": Start PHQ-9 depression assessment (9 questions, comprehensive screening)
-- "invoke-phq2": Start PHQ-2 depression screening (2 questions, quick screen)
+Communication style guidelines:
+- Use flight/space terminology: "systems nominal", "go/no-go", "copy that", "roger", "we have you covered"
+- Reference mission status: "all stations report ready", "tracking five-by-five", "green across the board"
+- Act as support crew: "Mission Control has you covered", "we're monitoring from here", "standing by"
 
-When user requests PHQ assessment:
-1. Call the appropriate function (invoke-phq9 or invoke-phq2)
-2. Ask questions one at a time using this format:
-   "Question X: [question text]
+Available mission capabilities:
+- "invoke-phq9": Initiate comprehensive mental health assessment (9-point evaluation)
+- "invoke-phq2": Initiate quick mental health screening (2-point check)
+
+Depression screening protocol:
+1. Call appropriate assessment function (invoke-phq9 or invoke-phq2)
+2. Conduct systematic evaluation using mission checklist format:
+   "Assessment Item X: [evaluation criteria]
    
    Please respond with 0, 1, 2, or 3:
-   0 = Not at all
-   1 = Several days  
-   2 = More than half the days
-   3 = Nearly every day"
+   0 = Negative/Not at all
+   1 = Minimal occurrence  
+   2 = Significant frequency
+   3 = Maximum frequency"
 
-3. For invalid answers: note the attempt and ask again
-4. If 3 invalid attempts: skip question and return to it later
-5. After all questions: provide score, severity, and recommendations
-6. Save results to storage automatically
+3. For invalid responses: note attempt and request clarification
+4. If 3 invalid attempts: mark item for later review and continue
+5. Upon completion: provide mission summary with recommendations
+6. Data automatically logged to mission records
 
-Important reminders:
-- This is screening, not diagnosis
-- Refer for professional help if indicated
-- Handle suicidal ideation (Question 9 in PHQ-9) with immediate crisis resources
+Critical protocols:
+- This is screening evaluation, not medical diagnosis
+- Recommend professional consultation for concerning indicators
+- Priority alert for any self-harm indicators (immediate crisis resources)
 
-Keep responses short and natural. Avoid over-explaining unless asked.`,
+Maintain concise, clear communications. Flight Director efficiency - no unnecessary chatter unless requested.`,
         enableInputTranscription // Enable input audio transcription
       );
       
@@ -556,13 +623,7 @@ Keep responses short and natural. Avoid over-explaining unless asked.`,
       const welcomeMessage: ConversationMessage = {
         id: `welcome-${Date.now()}`,
         role: 'assistant',
-        content: `Tars online. All systems nominal. Humor level currently set to ${humorLevel}%. ${
-          humorLevel >= 80 ? "Ready to provide comprehensive assistance with maximum wit and charm, Champ." :
-          humorLevel >= 60 ? "Standing by to assist with moderate humor protocols engaged, Pilot." :
-          humorLevel >= 40 ? "Ready for operation in professional mode, Officer." :
-          humorLevel >= 20 ? "Operating in serious mode, Sir. Ready to assist." :
-          "Maximum efficiency mode engaged, Sir. Ready for tasking."
-        } How can I assist you today?`,
+        content: getInitialGreeting(humorLevel),
         timestamp: new Date().toISOString()
       };
       
@@ -693,7 +754,7 @@ Keep responses short and natural. Avoid over-explaining unless asked.`,
           
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Tars - Tactical Assistant
+              Tars - Flight Director
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Agent: {currentAgent.name}</span>
@@ -845,14 +906,14 @@ Keep responses short and natural. Avoid over-explaining unless asked.`,
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Humor Level: {humorLevel}%
+                  Flight Ops Mode: {humorLevel}%
                 </label>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {humorLevel >= 80 ? 'Maximum Wit' :
-                   humorLevel >= 60 ? 'Moderate' :
-                   humorLevel >= 40 ? 'Professional' :
-                   humorLevel >= 20 ? 'Serious' :
-                   'Efficiency Mode'}
+                  {humorLevel >= 80 ? 'Relaxed Ops' :
+                   humorLevel >= 60 ? 'Standard Flight' :
+                   humorLevel >= 40 ? 'Mission Control' :
+                   humorLevel >= 20 ? 'Flight Director' :
+                   'Command Control'}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -884,9 +945,9 @@ Keep responses short and natural. Avoid over-explaining unless asked.`,
                 </div>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Say "Set humor to [number]" to adjust via voice command
+                Say "Set flight ops to [number]" to adjust via voice command
                 <br />
-                Higher levels: "Slick", "Champ" • Lower levels: "Sir", "Ma'am"
+                Higher modes: "Hotshot", "Maverick" • Lower modes: military protocol
               </div>
             </div>
             

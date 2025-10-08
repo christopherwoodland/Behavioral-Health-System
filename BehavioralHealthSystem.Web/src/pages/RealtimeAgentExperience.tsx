@@ -142,6 +142,13 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
   
+  // Connection notification state
+  const [connectionNotification, setConnectionNotification] = useState<{
+    show: boolean;
+    message: string;
+    type: 'warning' | 'error' | 'info';
+  }>({ show: false, message: '', type: 'info' });
+  
   // Humor level state - starts at 100% and persists in localStorage
   const [humorLevel, setHumorLevel] = useState<number>(() => {
     const saved = localStorage.getItem('tars-flight-ops-mode');
@@ -743,6 +750,32 @@ Just speak naturally - I understand variations of these commands!`,
       }
     });
 
+    // Connection lost handler - show notification and attempt reconnection
+    agentService.onConnectionLost((attempts, maxAttempts) => {
+      if (attempts >= maxAttempts) {
+        // Max reconnection attempts reached
+        setConnectionNotification({
+          show: true,
+          message: `Connection lost. Unable to reconnect after ${maxAttempts} attempts. Please refresh the page.`,
+          type: 'error'
+        });
+        announceToScreenReader('Connection lost. Please refresh the page.');
+      } else {
+        // Attempting to reconnect
+        setConnectionNotification({
+          show: true,
+          message: `Connection lost. Reconnecting... (Attempt ${attempts}/${maxAttempts})`,
+          type: 'warning'
+        });
+        announceToScreenReader(`Connection lost. Attempting to reconnect. Attempt ${attempts} of ${maxAttempts}.`);
+        
+        // Auto-hide notification after 5 seconds if reconnection succeeds
+        setTimeout(() => {
+          setConnectionNotification(prev => ({ ...prev, show: false }));
+        }, 5000);
+      }
+    });
+
     agentService.onTranscript((transcript, isFinal) => {
       if (isFinal) {
         // Add user's transcribed message to UI
@@ -1041,6 +1074,52 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+      {/* Connection Notification Toast */}
+      {connectionNotification.show && (
+        <div className={`absolute top-4 right-4 z-50 max-w-md rounded-lg shadow-lg p-4 animate-slide-in-right ${
+          connectionNotification.type === 'error' 
+            ? 'bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700' 
+            : connectionNotification.type === 'warning'
+              ? 'bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700'
+              : 'bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700'
+        }`}>
+          <div className="flex items-start space-x-3">
+            <div className={`flex-shrink-0 ${
+              connectionNotification.type === 'error' 
+                ? 'text-red-600 dark:text-red-400' 
+                : connectionNotification.type === 'warning'
+                  ? 'text-yellow-600 dark:text-yellow-400'
+                  : 'text-blue-600 dark:text-blue-400'
+            }`}>
+              <AlertTriangle size={20} />
+            </div>
+            <div className="flex-1">
+              <p className={`text-sm font-medium ${
+                connectionNotification.type === 'error' 
+                  ? 'text-red-900 dark:text-red-100' 
+                  : connectionNotification.type === 'warning'
+                    ? 'text-yellow-900 dark:text-yellow-100'
+                    : 'text-blue-900 dark:text-blue-100'
+              }`}>
+                {connectionNotification.message}
+              </p>
+            </div>
+            <button
+              onClick={() => setConnectionNotification(prev => ({ ...prev, show: false }))}
+              className={`flex-shrink-0 ${
+                connectionNotification.type === 'error' 
+                  ? 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200' 
+                  : connectionNotification.type === 'warning'
+                    ? 'text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200'
+                    : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'
+              }`}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">

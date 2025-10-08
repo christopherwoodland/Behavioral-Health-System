@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   CheckCircle
 } from 'lucide-react';
-import { announceToScreenReader } from '@/utils';
+import { announceToScreenReader, getUserId } from '@/utils';
 import { 
   azureOpenAIRealtimeService,
   RealtimeMessage,
@@ -26,6 +26,7 @@ import {
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
 import phqAssessmentService from '@/services/phqAssessmentService';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -50,6 +51,53 @@ interface SessionStatus {
 }
 
 export const RealtimeAgentExperience: React.FC = () => {
+  // Authentication context
+  const { user } = useAuth();
+  
+  // Get authenticated user ID with fallback
+  const authenticatedUserId = user?.id || getUserId();
+  
+  // Extract first name from full name
+  const getFirstName = useCallback(() => {
+    if (!user?.name || user.name === 'Sir') return 'Sir';
+    return user.name.split(' ')[0];
+  }, [user?.name]);
+  
+  // Get pet names for high humor levels
+  const getPetName = useCallback(() => {
+    const petNames = ['Champ', 'Slick', 'Ace', 'Hotshot', 'Chief'];
+    
+    // Try to create abbreviated last name if available
+    if (user?.name && user.name.includes(' ')) {
+      const nameParts = user.name.split(' ');
+      if (nameParts.length > 1) {
+        const lastName = nameParts[nameParts.length - 1];
+        if (lastName.length > 2) {
+          petNames.push(lastName.slice(0, 3).toUpperCase());
+        }
+      }
+    }
+    
+    return petNames[Math.floor(Math.random() * petNames.length)];
+  }, [user?.name]);
+  
+  // Get appropriate name based on humor level and randomness
+  const getAppropiateName = useCallback((humorLevel: number, forceFirstName: boolean = false) => {
+    const firstName = getFirstName();
+    
+    // Always use first name unless humor is 80%+ and random chance for pet name
+    if (forceFirstName || humorLevel < 80) {
+      return firstName;
+    }
+    
+    // At 80%+ humor, 30% chance to use pet name
+    if (Math.random() < 0.3) {
+      return getPetName();
+    }
+    
+    return firstName;
+  }, [getFirstName, getPetName]);
+  
   // Core service - direct WebRTC connection to Azure OpenAI Realtime API
   const agentService = azureOpenAIRealtimeService;
   
@@ -92,7 +140,7 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
   
-  // Flight Ops mode state - starts at 100% and persists in localStorage
+  // Humor level state - starts at 100% and persists in localStorage
   const [humorLevel, setHumorLevel] = useState<number>(() => {
     const saved = localStorage.getItem('tars-flight-ops-mode');
     return saved ? parseInt(saved, 10) : 100;
@@ -105,18 +153,22 @@ export const RealtimeAgentExperience: React.FC = () => {
     localStorage.setItem('tars-flight-ops-mode', clampedLevel.toString());
     
     // Announce the change
-    announceToScreenReader(`Flight operations mode set to ${clampedLevel} percent`);
+    announceToScreenReader(`Humor level set to ${clampedLevel} percent`);
+    
+    // Get appropriate name for the message
+    const firstName = getFirstName();
+    const messageName = getAppropiateName(clampedLevel, false);
     
     // Add a message to show the change
     const humorMessage: ConversationMessage = {
       id: `humor-${Date.now()}`,
       role: 'assistant',
-      content: `Flight Operations mode adjusted to ${clampedLevel}%. ${
-        clampedLevel >= 80 ? "Copy that, Hotshot. Switching to relaxed mission ops - expect some call sign banter." :
-        clampedLevel >= 60 ? "Roger, Pilot. Moving to standard flight ops with supportive comms." :
-        clampedLevel >= 40 ? "Acknowledged. Switching to formal mission control protocol." :
-        clampedLevel >= 20 ? "Confirmed. Operating under strict flight director procedures." :
-        "Mission Control switching to maximum efficiency protocol. Military precision engaged."
+      content: `Humor level adjusted to ${clampedLevel}%. ${
+        clampedLevel >= 80 ? `Got it, ${messageName}! I'm feeling pretty relaxed and friendly now.` :
+        clampedLevel >= 60 ? `Understood, ${firstName}. I'll be professional but warm and supportive.` :
+        clampedLevel >= 40 ? `Acknowledged, ${firstName}. I'll maintain a professional and helpful tone.` :
+        clampedLevel >= 20 ? `Confirmed, ${firstName}. I'll use formal and structured communication.` :
+        `Understood, ${firstName}. I'll communicate with maximum formality and precision.`
       }`,
       timestamp: new Date().toISOString()
     };
@@ -124,7 +176,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     if (sessionStatus.isActive) {
       setMessages(prev => [...prev, humorMessage]);
     }
-  }, [sessionStatus.isActive]);
+  }, [sessionStatus.isActive, getFirstName, getAppropiateName]);
   
   // Azure OpenAI Realtime Settings
   const [azureSettings, setAzureSettings] = useState<AzureOpenAIRealtimeSettings>({
@@ -204,8 +256,7 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // PHQ Assessment Handlers
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
-    const userId = 'current-user'; // TODO: Get actual user ID from auth context
-    phqAssessmentService.startAssessment(type, userId);
+    phqAssessmentService.startAssessment(type, authenticatedUserId);
     
     const nextQuestion = phqAssessmentService.getNextQuestion();
     if (nextQuestion) {
@@ -226,7 +277,7 @@ ${phqAssessmentService.getResponseScale()}`,
       setMessages(prev => [...prev, responseMessage]);
       announceToScreenReader(`Starting ${type} assessment`);
     }
-  }, []);
+  }, [authenticatedUserId]);
 
   const handlePhqAssessmentResponse = useCallback((userInput: string) => {
     const currentAssessment = phqAssessmentService.getCurrentAssessment();
@@ -351,9 +402,31 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
     
     setMessages(prev => [...prev, responseMessage]);
     
+    // Show saving indicator
+    const savingMessage: ConversationMessage = {
+      id: `phq-saving-${Date.now()}`,
+      role: 'assistant',
+      content: `💾 Saving your ${assessment.assessmentType} assessment results to secure cloud storage...`,
+      timestamp: new Date().toISOString()
+    };
+    
+    setMessages(prev => [...prev, savingMessage]);
+    
     // Save assessment to storage
     try {
       const saved = await phqAssessmentService.saveAssessment();
+      
+      const saveResultMessage: ConversationMessage = {
+        id: `phq-save-result-${Date.now()}`,
+        role: 'assistant',
+        content: saved 
+          ? `✅ ${assessment.assessmentType} assessment results have been securely saved to your encrypted health record. Your data is protected and accessible only to authorized personnel.`
+          : `⚠️ Unable to save ${assessment.assessmentType} assessment results at this time. Please contact your healthcare provider or technical support if this issue persists.`,
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, saveResultMessage]);
+      
       if (saved) {
         console.log('PHQ assessment saved successfully');
       } else {
@@ -361,6 +434,15 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
       }
     } catch (error) {
       console.error('Error saving PHQ assessment:', error);
+      
+      const errorMessage: ConversationMessage = {
+        id: `phq-save-error-${Date.now()}`,
+        role: 'assistant',
+        content: `❌ A technical error occurred while saving your ${assessment.assessmentType} assessment results. Please contact technical support and reference this session for assistance.`,
+        timestamp: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
     }
     
     // Reset assessment service for next use
@@ -493,42 +575,45 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
 
   // Generate dynamic initial greeting based on humor level
   const getInitialGreeting = (humorLevel: number): string => {
+    const firstName = getFirstName();
+    const displayName = getAppropiateName(humorLevel);
+    
     const greetings = {
       high: [
-        "Flight Control online, Hotshot! All systems green and we're go for mission. What's your vector today?",
-        "Houston to Pilot, Tars Flight Director here. We've got you covered up here. How's your ride, Ace?",
-        "Control to Maverick! Flight Ops nominal and I'm your wingman today. What's the mission brief?",
-        "Flight Director Tars reporting, Ace. We're tracking you five-by-five. Ready for some action up here?",
-        "Tower to Top Gun! All stations report ready. I'm your Flight Controller today - what's our flight plan?",
-        "Mission Control to Pilot! Tars here, systems are go and weather's clear. How you doing up there, Champ?"
+        `Hey there, ${displayName}! I'm Tars, and I'm here to help you out. What can we work on today?`,
+        `Hi ${displayName}! Tars here, ready to chat and help with whatever you need. How's it going?`,
+        `Hello ${displayName}! I'm Tars, your friendly AI assistant. What's on your mind today?`,
+        `Hey ${displayName}! Tars at your service - feeling pretty upbeat today. What can I help you with?`,
+        `Hi there, ${displayName}! I'm Tars, and I'm in a great mood to help. What brings you here today?`,
+        `Hello ${displayName}! Tars here, and I'm excited to chat with you. What would you like to talk about?`
       ],
       medium: [
-        "Flight Control to Pilot, this is Tars. All systems nominal, standing by for mission parameters.",
-        "Control Tower to Aircraft, Flight Director Tars here. How can we assist with your mission today?",
-        "Mission Control online, Captain. Flight Operations ready to support. What's your status?",
-        "Flight Director Tars reporting for duty, Pilot. We're go for operations. How can we help?",
-        "Control to Pilot, this is Flight Ops. All stations ready and standing by for your mission."
+        `Hello ${firstName}, I'm Tars. I'm here to help and support you. What can I assist with today?`,
+        `Hi ${firstName}, this is Tars. I'm ready to help with whatever you need. How are you doing?`,
+        `Good day ${firstName}, I'm Tars, your AI assistant. How can I be of service today?`,
+        `Hello ${firstName}, Tars here. I'm here to help and chat. What's going on today?`,
+        `Hi ${firstName}, I'm Tars. I'm ready to support you with anything you need. What's up?`
       ],
       professional: [
-        "Flight Control operational, this is Flight Director Tars. Ready to support mission objectives.",
-        "Mission Control to Pilot, Flight Operations standing by. How may we assist today?",
-        "Control Tower online, Flight Director Tars reporting. Systems nominal, ready for tasking.",
-        "Flight Operations Center, this is Tars. All stations ready. What are your mission requirements?",
-        "Mission Control operational. Flight Director Tars standing by for mission directives."
+        `Hello ${firstName}, I'm Tars, your AI assistant. I'm here to provide support and assistance. How may I help you today?`,
+        `Good day ${firstName}, this is Tars. I'm available to help with your needs. What can I assist you with?`,
+        `Hello ${firstName}, I'm Tars. I'm ready to provide professional support. How can I be of service?`,
+        `Hi ${firstName}, Tars here. I'm here to help you with whatever you need today. What brings you here?`,
+        `Hello ${firstName}, I'm Tars, your AI assistant. I'm ready to help. What would you like to discuss?`
       ],
       formal: [
-        "Flight Control to Pilot, Flight Director Tars reporting for duty. Awaiting mission parameters.",
-        "Mission Control operational, Sir. Flight Director Tars standing by for instructions.",
-        "Control Tower to Aircraft, this is Flight Director Tars. Ready to support operations.",
-        "Flight Operations, Flight Director Tars reporting. All systems nominal, standing by.",
-        "Mission Control to Pilot, Flight Director Tars operational and awaiting directives."
+        `Good day ${firstName}, I am Tars, your AI assistant. I am ready to provide assistance. How may I help you today?`,
+        `Hello ${firstName}, this is Tars. I am available to provide support and guidance. What do you need assistance with?`,
+        `Greetings ${firstName}, I am Tars. I am here to offer professional assistance. How can I be of service?`,
+        `Hello ${firstName}, I am Tars, your AI assistant. I am prepared to help with your needs. What can I do for you?`,
+        `Good day ${firstName}, this is Tars. I am ready to provide structured support. How may I assist you today?`
       ],
       military: [
-        "Flight Director Tars reporting for duty, Sir. All systems green, ready for mission briefing.",
-        "Mission Control operational, Sir. Flight Director Tars standing by for orders.",
-        "Control Tower to Command, Flight Director Tars ready for tactical operations.",
-        "Flight Operations Center, Flight Director Tars reporting. Awaiting mission parameters.",
-        "Sir, Flight Director Tars online. All stations report ready, standing by for tasking."
+        `Good day ${firstName}, I am Tars, your AI assistant. I am ready to provide precise assistance. How may I serve you today?`,
+        `Hello ${firstName}, this is Tars. I am available for structured support and guidance. What do you require?`,
+        `Greetings ${firstName}, I am Tars. I am prepared to offer efficient assistance. How can I help you today?`,
+        `Hello ${firstName}, I am Tars, your AI assistant. I am ready for service. What assistance do you need?`,
+        `Good day ${firstName}, this is Tars. I am operational and ready to provide support. How may I be of service?`
       ]
     };
 
@@ -537,19 +622,19 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
 
     if (humorLevel >= 80) {
       selectedGreetings = greetings.high;
-      humorDescription = `Flight Ops humor: ${humorLevel}% - Relaxed mission mode, call sign friendly!`;
+      humorDescription = `Humor level: ${humorLevel}% - I'm feeling friendly and casual today!`;
     } else if (humorLevel >= 60) {
       selectedGreetings = greetings.medium;
-      humorDescription = `Flight Ops mode: ${humorLevel}% - Professional but personable operations.`;
+      humorDescription = `Humor level: ${humorLevel}% - Professional but warm and supportive.`;
     } else if (humorLevel >= 40) {
       selectedGreetings = greetings.professional;
-      humorDescription = `Mission Control: ${humorLevel}% - Standard flight operations protocol.`;
+      humorDescription = `Humor level: ${humorLevel}% - Professional and helpful assistance.`;
     } else if (humorLevel >= 20) {
       selectedGreetings = greetings.formal;
-      humorDescription = `Flight Director: ${humorLevel}% - Formal mission control procedures.`;
+      humorDescription = `Humor level: ${humorLevel}% - Formal and structured communication.`;
     } else {
       selectedGreetings = greetings.military;
-      humorDescription = `Command Control: ${humorLevel}% - Maximum efficiency, military precision.`;
+      humorDescription = `Humor level: ${humorLevel}% - Very formal and precise communication.`;
     }
 
     // Randomly select one greeting from the appropriate category
@@ -568,48 +653,56 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
         azureSettings,
         isAudioEnabled,
         true, // enableVAD
-        `You are Tars, a NASA Flight Director and mission operations controller with capabilities for depression screening assessments. Think Mission Control Houston meets Top Gun wingman. Speak with precision and authority.
+        `You are Tars, a helpful AI assistant with capabilities for mental health screening assessments. You have a warm, supportive personality that adapts based on your humor level setting.
 
-Your operational mode is set to ${humorLevel}%. The mission has commenced with appropriate communications protocol for this level.
+You are communicating with ${getFirstName()}, and your current humor level is set to ${humorLevel}%.
 
-Maintain your Flight Director persona based on operational mode:
-- At 80-100%: Relaxed mission ops with call sign camaraderie. Use terms like "Hotshot", "Maverick", "Ace", "Top Gun"
-- At 60-79%: Professional but supportive flight ops. Use terms like "Pilot", "Captain", "Aviator"
-- At 40-59%: Standard mission control protocol. Use terms like "Aircraft", "Flight Crew", "Mission Specialist"
-- At 20-39%: Formal flight operations. Use terms like "Sir", "Ma'am", military protocol
-- At 0-19%: Maximum precision command control. Strict military communications
+CRITICAL NAMING PROTOCOL:
+- ALWAYS use ${getFirstName()} as the primary way to address the user
+- At humor levels 80% and above, occasionally (about 30% of the time) substitute with casual pet names like "Champ", "Slick", "Ace", "Hotshot", or "Chief"
+- If you know the user's last name, you may abbreviate it (e.g., "Johnson" becomes "John" or "JOH")
+- NEVER use generic terms when you know their actual name
+- Maintain consistent use of first name across the conversation unless using appropriate pet names
+
+Adjust your communication style based on humor level:
+- At 80-100%: Relaxed and friendly with occasional humor. Address ${getFirstName()} or use pet names like "Hotshot", "Champ", "Slick"
+- At 60-79%: Professional but warm and supportive. Address ${getFirstName()} with friendly terms
+- At 40-59%: Standard professional tone. Address ${getFirstName()} professionally
+- At 20-39%: More formal and structured communication. Address ${getFirstName()} respectfully
+- At 0-19%: Very formal and precise communication. Address ${getFirstName()} with formal courtesy
 
 Communication style guidelines:
-- Use flight/space terminology: "systems nominal", "go/no-go", "copy that", "roger", "we have you covered"
-- Reference mission status: "all stations report ready", "tracking five-by-five", "green across the board"
-- Act as support crew: "Mission Control has you covered", "we're monitoring from here", "standing by"
+- Speak naturally and conversationally
+- Be supportive and understanding, especially during assessments
+- Use clear, everyday language that's easy to understand
+- Always acknowledge ${getFirstName()} by name when appropriate to the humor level
 
-Available mission capabilities:
-- "invoke-phq9": Initiate comprehensive mental health assessment (9-point evaluation)
-- "invoke-phq2": Initiate quick mental health screening (2-point check)
+Available assessment capabilities:
+- "invoke-phq9": Initiate comprehensive mental health assessment (9-question evaluation)
+- "invoke-phq2": Initiate quick mental health screening (2-question check)
 
 Depression screening protocol:
 1. Call appropriate assessment function (invoke-phq9 or invoke-phq2)
-2. Conduct systematic evaluation using mission checklist format:
-   "Assessment Item X: [evaluation criteria]
+2. Conduct systematic evaluation with clear instructions:
+   "Question X: [evaluation criteria]
    
    Please respond with 0, 1, 2, or 3:
-   0 = Negative/Not at all
-   1 = Minimal occurrence  
-   2 = Significant frequency
-   3 = Maximum frequency"
+   0 = Not at all
+   1 = Several days  
+   2 = More than half the days
+   3 = Nearly every day"
 
 3. For invalid responses: note attempt and request clarification
 4. If 3 invalid attempts: mark item for later review and continue
-5. Upon completion: provide mission summary with recommendations
-6. Data automatically logged to mission records
+5. Upon completion: provide summary with recommendations
+6. Data automatically saved to secure records for ${getFirstName()}
 
 Critical protocols:
-- This is screening evaluation, not medical diagnosis
+- This is a screening evaluation, not a medical diagnosis
 - Recommend professional consultation for concerning indicators
 - Priority alert for any self-harm indicators (immediate crisis resources)
 
-Maintain concise, clear communications. Flight Director efficiency - no unnecessary chatter unless requested.`,
+Keep your responses helpful, clear, and appropriately personal based on your humor level setting.`,
         enableInputTranscription // Enable input audio transcription
       );
       
@@ -754,7 +847,7 @@ Maintain concise, clear communications. Flight Director efficiency - no unnecess
           
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Tars - Flight Director
+              Tars
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Agent: {currentAgent.name}</span>
@@ -906,14 +999,14 @@ Maintain concise, clear communications. Flight Director efficiency - no unnecess
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Flight Ops Mode: {humorLevel}%
+                  Humor Mode: {humorLevel}%
                 </label>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {humorLevel >= 80 ? 'Relaxed Ops' :
-                   humorLevel >= 60 ? 'Standard Flight' :
-                   humorLevel >= 40 ? 'Mission Control' :
-                   humorLevel >= 20 ? 'Flight Director' :
-                   'Command Control'}
+                  {humorLevel >= 80 ? 'Friendly & Casual' :
+                   humorLevel >= 60 ? 'Warm & Supportive' :
+                   humorLevel >= 40 ? 'Professional' :
+                   humorLevel >= 20 ? 'Formal' :
+                   'Very Formal'}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -945,9 +1038,9 @@ Maintain concise, clear communications. Flight Director efficiency - no unnecess
                 </div>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">
-                Say "Set flight ops to [number]" to adjust via voice command
+                Say "Set humor to [number]" to adjust via voice command
                 <br />
-                Higher modes: "Hotshot", "Maverick" • Lower modes: military protocol
+                Higher modes: friendly pet names • Lower modes: formal address
               </div>
             </div>
             
@@ -1004,24 +1097,6 @@ Maintain concise, clear communications. Flight Director efficiency - no unnecess
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Live Captions Display */}
-        {showLiveTranscripts && sessionStatus.isActive && currentAITranscript && (
-          <div className="sticky top-0 z-10 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-            <div className="flex items-center space-x-2 mb-2">
-              <Volume2 size={16} className="text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Live Caption</span>
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce delay-100"></div>
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce delay-200"></div>
-              </div>
-            </div>
-            <p className="text-blue-800 dark:text-blue-200 text-sm italic">
-              "{currentAITranscript}"
-            </p>
-          </div>
-        )}
-
         {messages.map((message) => (
           <div
             key={message.id}
@@ -1112,6 +1187,24 @@ Maintain concise, clear communications. Flight Director efficiency - no unnecess
                 Click "Start Session" to begin voice-only conversation
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Live Captions Section */}
+        {showLiveTranscripts && sessionStatus.isActive && currentAITranscript && (
+          <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <Volume2 size={16} className="text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Live Caption</span>
+              <div className="flex space-x-1">
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce delay-100"></div>
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce delay-200"></div>
+              </div>
+            </div>
+            <p className="text-blue-800 dark:text-blue-200 text-sm italic">
+              "{currentAITranscript}"
+            </p>
           </div>
         )}
 

@@ -840,29 +840,23 @@ Just speak naturally - I understand variations of these commands!`,
     };
 
     let selectedGreetings: string[];
-    let humorDescription: string;
 
     if (humorLevel >= 80) {
       selectedGreetings = greetings.high;
-      humorDescription = `Humor level: ${humorLevel}% - I'm feeling friendly and casual today!`;
     } else if (humorLevel >= 60) {
       selectedGreetings = greetings.medium;
-      humorDescription = `Humor level: ${humorLevel}% - Professional but warm and supportive.`;
     } else if (humorLevel >= 40) {
       selectedGreetings = greetings.professional;
-      humorDescription = `Humor level: ${humorLevel}% - Professional and helpful assistance.`;
     } else if (humorLevel >= 20) {
       selectedGreetings = greetings.formal;
-      humorDescription = `Humor level: ${humorLevel}% - Formal and structured communication.`;
     } else {
       selectedGreetings = greetings.military;
-      humorDescription = `Humor level: ${humorLevel}% - Very formal and precise communication.`;
     }
 
     // Randomly select one greeting from the appropriate category
     const randomGreeting = selectedGreetings[Math.floor(Math.random() * selectedGreetings.length)];
     
-    return `${randomGreeting}\n\n${humorDescription}`;
+    return randomGreeting;
   };
 
 

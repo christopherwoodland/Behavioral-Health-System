@@ -270,6 +270,9 @@ export const RealtimeAgentExperience: React.FC = () => {
     // Start assessment - this generates assessment ID once and saves initial state progressively
     phqAssessmentService.startAssessment(type, authenticatedUserId);
     
+    const currentAssessment = phqAssessmentService.getCurrentAssessment();
+    if (!currentAssessment) return;
+    
     const nextQuestion = phqAssessmentService.getNextQuestion();
     if (nextQuestion) {
       const responseMessage: ConversationMessage = {
@@ -286,7 +289,8 @@ ${phqAssessmentService.getResponseScale()}`,
         timestamp: new Date().toISOString(),
         isPhqQuestion: true,
         phqType: type === 'PHQ-2' ? 2 : 9,
-        phqQuestionNumber: nextQuestion.questionNumber
+        phqQuestionNumber: nextQuestion.questionNumber,
+        assessmentId: currentAssessment.assessmentId
       };
       
       setMessages(prev => [...prev, responseMessage]);
@@ -299,7 +303,8 @@ ${phqAssessmentService.getResponseScale()}`,
           {
             isPhqQuestion: true,
             phqType: type === 'PHQ-2' ? 2 : 9,
-            phqQuestionNumber: nextQuestion.questionNumber
+            phqQuestionNumber: nextQuestion.questionNumber,
+            assessmentId: currentAssessment.assessmentId
           }
         );
       }
@@ -354,7 +359,8 @@ ${phqAssessmentService.getResponseScale()}`;
             timestamp: new Date().toISOString(),
             isPhqQuestion: true,
             phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
-            phqQuestionNumber: nextUnanswered.questionNumber
+            phqQuestionNumber: nextUnanswered.questionNumber,
+            assessmentId: currentAssessment.assessmentId
           };
           
           setMessages(prev => [...prev, responseMessage]);
@@ -367,7 +373,8 @@ ${phqAssessmentService.getResponseScale()}`;
               {
                 isPhqQuestion: true,
                 phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
-                phqQuestionNumber: nextUnanswered.questionNumber
+                phqQuestionNumber: nextUnanswered.questionNumber,
+                assessmentId: currentAssessment.assessmentId
               }
             );
           }
@@ -391,7 +398,8 @@ ${phqAssessmentService.getResponseScale()}`;
           'phq-instruction',
           {
             phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
-            phqQuestionNumber: nextQuestion.questionNumber
+            phqQuestionNumber: nextQuestion.questionNumber,
+            assessmentId: currentAssessment.assessmentId
           }
         );
       }
@@ -411,7 +419,8 @@ ${phqAssessmentService.getResponseScale()}`;
           isPhqAnswer: true,
           phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
           phqQuestionNumber: nextQuestion.questionNumber,
-          phqAnswerValue: answer
+          phqAnswerValue: answer,
+          assessmentId: currentAssessment.assessmentId
         }
       );
     }
@@ -441,7 +450,8 @@ ${phqAssessmentService.getResponseScale()}`,
         timestamp: new Date().toISOString(),
         isPhqQuestion: true,
         phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
-        phqQuestionNumber: nextUnanswered.questionNumber
+        phqQuestionNumber: nextUnanswered.questionNumber,
+        assessmentId: currentAssessment.assessmentId
       };
       
       setMessages(prev => [...prev, responseMessage]);
@@ -454,7 +464,8 @@ ${phqAssessmentService.getResponseScale()}`,
           {
             isPhqQuestion: true,
             phqType: currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9,
-            phqQuestionNumber: nextUnanswered.questionNumber
+            phqQuestionNumber: nextUnanswered.questionNumber,
+            assessmentId: currentAssessment.assessmentId
           }
         );
       }
@@ -519,7 +530,8 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
         {
           phqType: assessment.assessmentType === 'PHQ-2' ? 2 : 9,
           totalScore: score,
-          severity: severity
+          severity: severity,
+          assessmentId: assessment.assessmentId
         }
       );
     }

@@ -64,9 +64,10 @@ public class SaveChatTranscriptFunction
             }
 
             // Generate blob name with session ID and user ID
+            // Structure: users/{userId}/conversations/{sessionId}.json
             var containerName = requestData.ContainerName ?? "chat-transcripts";
             var fileName = requestData.FileName ?? 
-                $"{requestData.TranscriptData.UserId}/session-{requestData.TranscriptData.SessionId}.json";
+                $"users/{requestData.TranscriptData.UserId}/conversations/{requestData.TranscriptData.SessionId}.json";
 
             // Get or create container
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
@@ -208,7 +209,11 @@ public class SaveChatTranscriptFunction
         if (existing == null)
         {
             // Return new transcript with updated metadata
-            newData.CreatedAt = DateTime.UtcNow.ToString("O");
+            // Ensure createdAt is set if not provided
+            if (string.IsNullOrWhiteSpace(newData.CreatedAt))
+            {
+                newData.CreatedAt = DateTime.UtcNow.ToString("O");
+            }
             newData.LastUpdated = DateTime.UtcNow.ToString("O");
             return newData;
         }
@@ -224,9 +229,28 @@ public class SaveChatTranscriptFunction
             }
         }
 
-        // Update metadata
+        // Update metadata but preserve original creation info
         existing.LastUpdated = DateTime.UtcNow.ToString("O");
         existing.IsActive = newData.IsActive;
+        
+        // Preserve userId and sessionId from existing if new data has empty values
+        if (string.IsNullOrWhiteSpace(newData.UserId) && !string.IsNullOrWhiteSpace(existing.UserId))
+        {
+            // Keep existing userId
+        }
+        else if (!string.IsNullOrWhiteSpace(newData.UserId))
+        {
+            existing.UserId = newData.UserId;
+        }
+        
+        if (string.IsNullOrWhiteSpace(newData.SessionId) && !string.IsNullOrWhiteSpace(existing.SessionId))
+        {
+            // Keep existing sessionId
+        }
+        else if (!string.IsNullOrWhiteSpace(newData.SessionId))
+        {
+            existing.SessionId = newData.SessionId;
+        }
         
         // Update session end time if session is no longer active
         if (!newData.IsActive && string.IsNullOrEmpty(existing.SessionEndedAt))

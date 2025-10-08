@@ -14,6 +14,12 @@ export interface RealtimeMessage {
   audioUrl?: string;
   isTranscript?: boolean; // Marks messages that are transcripts vs full responses
   isPartial?: boolean; // For live streaming transcripts
+  // PHQ Assessment metadata
+  isPhqQuestion?: boolean;
+  isPhqAnswer?: boolean;
+  phqType?: 2 | 9;
+  phqQuestionNumber?: number; // 1-9
+  phqAnswerValue?: number; // 0-3 (the actual answer score)
 }
 
 export interface ToolDefinition {

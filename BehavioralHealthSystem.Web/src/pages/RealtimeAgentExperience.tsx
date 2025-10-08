@@ -498,6 +498,153 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
           }
         }
 
+        // Check for session control commands
+        const closeSessionCommand = message.content.match(/(?:close|end|stop|terminate|exit|quit|finish) (?:session|conversation|chat|call|meeting)?/i);
+        const pauseSessionCommand = message.content.match(/(?:pause|hold|suspend) (?:session|conversation|chat|call|meeting)?/i);
+        const resumeSessionCommand = message.content.match(/(?:resume|continue|start|unpause|restart) (?:session|conversation|chat|call|meeting)?/i);
+        const helpCommand = message.content.match(/(?:help|commands|what can you do|show commands|voice commands)/i);
+        
+        if (closeSessionCommand) {
+          // Add confirmation message
+          const confirmMessage: ConversationMessage = {
+            id: `session-close-${Date.now()}`,
+            role: 'assistant',
+            content: `Thank you for our conversation today, ${getFirstName()}. Your session is ending now. Take care and remember - support is always available when you need it.`,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, confirmMessage]);
+          
+          // Save confirmation to transcript
+          if (authenticatedUserId) {
+            chatTranscriptService.addAssistantMessage(
+              confirmMessage.content,
+              'session-close',
+              { triggeredByVoiceCommand: true, command: message.content }
+            );
+          }
+          
+          // Announce to screen reader
+          announceToScreenReader('Session ending');
+          
+          // End the session after a brief delay
+          setTimeout(() => {
+            endSession();
+          }, 2000);
+          
+          return; // Don't add the command message to chat
+        }
+        
+        if (pauseSessionCommand) {
+          if (!isSessionPaused) {
+            pauseSession();
+            
+            const pauseMessage: ConversationMessage = {
+              id: `session-pause-${Date.now()}`,
+              role: 'assistant',
+              content: `Session paused, ${getFirstName()}. I'll be here waiting when you're ready. Just say "resume session" to continue our conversation.`,
+              timestamp: new Date().toISOString()
+            };
+            setMessages(prev => [...prev, pauseMessage]);
+            
+            // Save pause message to transcript
+            if (authenticatedUserId) {
+              chatTranscriptService.addAssistantMessage(
+                pauseMessage.content,
+                'session-pause',
+                { triggeredByVoiceCommand: true, command: message.content }
+              );
+            }
+            
+            // Announce to screen reader
+            announceToScreenReader('Session paused');
+          } else {
+            const alreadyPausedMessage: ConversationMessage = {
+              id: `session-already-paused-${Date.now()}`,
+              role: 'assistant',
+              content: `The session is already paused, ${getFirstName()}. Say "resume session" to continue.`,
+              timestamp: new Date().toISOString()
+            };
+            setMessages(prev => [...prev, alreadyPausedMessage]);
+          }
+          return; // Don't add the command message to chat
+        }
+        
+        if (resumeSessionCommand) {
+          if (isSessionPaused) {
+            resumeSession();
+            
+            const resumeMessage: ConversationMessage = {
+              id: `session-resume-${Date.now()}`,
+              role: 'assistant',
+              content: `Welcome back, ${getFirstName()}! Session resumed. How can I help you today?`,
+              timestamp: new Date().toISOString()
+            };
+            setMessages(prev => [...prev, resumeMessage]);
+            
+            // Save resume message to transcript
+            if (authenticatedUserId) {
+              chatTranscriptService.addAssistantMessage(
+                resumeMessage.content,
+                'session-resume',
+                { triggeredByVoiceCommand: true, command: message.content }
+              );
+            }
+            
+            // Announce to screen reader
+            announceToScreenReader('Session resumed');
+          } else {
+            const notPausedMessage: ConversationMessage = {
+              id: `session-not-paused-${Date.now()}`,
+              role: 'assistant',
+              content: `The session is already active, ${getFirstName()}. How can I help you?`,
+              timestamp: new Date().toISOString()
+            };
+            setMessages(prev => [...prev, notPausedMessage]);
+          }
+          return; // Don't add the command message to chat
+        }
+        
+        if (helpCommand) {
+          const helpMessage: ConversationMessage = {
+            id: `help-${Date.now()}`,
+            role: 'assistant',
+            content: `Here are the voice commands you can use, ${getFirstName()}:
+
+🎭 **Humor Settings:**
+• "Set humor level to [0-100]" - Adjust my personality from formal (0) to casual (100)
+
+🗣️ **Session Control:**
+• "Pause session" - Temporarily pause our conversation
+• "Resume session" - Continue after pausing
+• "Close session" or "End session" - End our conversation
+
+🧠 **Mental Health Assessments:**
+• "Invoke PHQ-9" - Start comprehensive mental health assessment
+• "Invoke PHQ-2" - Start quick mental health screening
+
+💬 **General:**
+• "Help" or "Commands" - Show this help message
+
+Just speak naturally - I understand variations of these commands!`,
+            timestamp: new Date().toISOString()
+          };
+          setMessages(prev => [...prev, helpMessage]);
+          
+          // Save help message to transcript
+          if (authenticatedUserId) {
+            chatTranscriptService.addAssistantMessage(
+              helpMessage.content,
+              'help-command',
+              { triggeredByVoiceCommand: true, command: message.content }
+            );
+          }
+          
+          // Announce to screen reader
+          announceToScreenReader('Voice commands help displayed');
+          
+          return; // Don't add the command message to chat
+        }
+
         // Check for PHQ assessment commands
         const phq9Command = message.content.match(/invoke[-\s]?phq[-\s]?9/i);
         const phq2Command = message.content.match(/invoke[-\s]?phq[-\s]?2/i);
@@ -760,6 +907,13 @@ Critical protocols:
 - This is a screening evaluation, not a medical diagnosis
 - Recommend professional consultation for concerning indicators
 - Priority alert for any self-harm indicators (immediate crisis resources)
+
+Session control capabilities:
+- ${getFirstName()} can say "pause session" to temporarily pause the conversation
+- ${getFirstName()} can say "resume session" to continue after pausing
+- ${getFirstName()} can say "close session" or "end session" to end the conversation
+- ${getFirstName()} can say "set humor level to [0-100]" to adjust your personality
+- ${getFirstName()} can say "help" or "commands" to see available voice commands
 
 Keep your responses helpful, clear, and appropriately personal based on your humor level setting.`,
         enableInputTranscription // Enable input audio transcription

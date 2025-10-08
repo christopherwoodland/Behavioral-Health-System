@@ -114,8 +114,11 @@ class PhqAssessmentService {
   /**
    * Start a new PHQ assessment
    */
-  startAssessment(type: 'PHQ-2' | 'PHQ-9', userId: string): PhqAssessmentResult {
+  startAssessment(type: 'PHQ-2' | 'PHQ-9', userId: string, conversationSessionId?: string): PhqAssessmentResult {
     const questions = type === 'PHQ-2' ? this.phq2Questions : this.phq9Questions;
+    
+    // Use the conversation session ID if provided, otherwise generate a new one
+    const sessionId = conversationSessionId || this.generateSessionId();
     
     this.currentAssessment = {
       assessmentId: this.generateAssessmentId(),
@@ -130,7 +133,7 @@ class PhqAssessmentService {
       })),
       metadata: {
         userAgent: navigator.userAgent,
-        sessionId: this.generateSessionId(),
+        sessionId: sessionId, // Maps back to chat history conversation
         version: '1.0.0'
       }
     };
@@ -186,16 +189,16 @@ class PhqAssessmentService {
     question.answer = answer;
     question.timestamp = new Date().toISOString();
     
-    // Progressively save after each answer
-    this.saveAssessment().catch(err => {
-      console.error('Failed to progressively save assessment:', err);
-    });
-    
     // Check if assessment is complete
     const allAnswered = this.currentAssessment.questions.every(q => q.answer !== undefined);
     if (allAnswered) {
       this.completeAssessment();
     }
+    
+    // Progressively save after each answer (including completion data if assessment is complete)
+    this.saveAssessment().catch(err => {
+      console.error('Failed to progressively save assessment:', err);
+    });
 
     return true;
   }

@@ -25,24 +25,6 @@ vi.mock('@azure/storage-blob', () => ({
   BlockBlobClient: vi.fn(),
 }));
 
-// Mock Microsoft SignalR
-vi.mock('@microsoft/signalr', () => ({
-  HubConnectionBuilder: vi.fn(() => ({
-    withUrl: vi.fn().mockReturnThis(),
-    build: vi.fn(() => ({
-      start: vi.fn(),
-      stop: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      invoke: vi.fn(),
-    })),
-  })),
-  HubConnectionState: {
-    Connected: 'Connected',
-    Disconnected: 'Disconnected',
-  },
-}));
-
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}

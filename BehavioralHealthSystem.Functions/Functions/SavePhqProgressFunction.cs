@@ -34,7 +34,15 @@ public class SavePhqProgressFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var requestData = JsonSerializer.Deserialize<SavePhqProgressRequest>(requestBody);
+            
+            // Configure JSON deserialization to be case-insensitive
+            var deserializeOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            var requestData = JsonSerializer.Deserialize<SavePhqProgressRequest>(requestBody, deserializeOptions);
 
             if (requestData?.ProgressData == null)
             {
@@ -54,10 +62,10 @@ public class SavePhqProgressFunction
                 return badResponse;
             }
 
-            // Generate blob name with user ID and assessment ID
+            // Generate blob name with user folder hierarchy
             var containerName = requestData.ContainerName ?? "phq-progress";
             var fileName = requestData.FileName ?? 
-                $"{requestData.ProgressData.UserId}/assessment-{requestData.ProgressData.AssessmentId}.json";
+                $"users/{requestData.ProgressData.UserId}/assessments/{requestData.ProgressData.AssessmentId}.json";
 
             // Get or create container
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
@@ -212,6 +220,31 @@ public class SavePhqProgressFunction
             newData.StartedAt = DateTime.UtcNow.ToString("O");
             newData.LastUpdated = DateTime.UtcNow.ToString("O");
             return newData;
+        }
+
+        // Preserve critical fields if empty in new data
+        if (string.IsNullOrWhiteSpace(newData.UserId) && !string.IsNullOrWhiteSpace(existing.UserId))
+        {
+            newData.UserId = existing.UserId;
+        }
+
+        if (string.IsNullOrWhiteSpace(newData.AssessmentId) && !string.IsNullOrWhiteSpace(existing.AssessmentId))
+        {
+            newData.AssessmentId = existing.AssessmentId;
+        }
+
+        if (string.IsNullOrWhiteSpace(newData.AssessmentType) && !string.IsNullOrWhiteSpace(existing.AssessmentType))
+        {
+            newData.AssessmentType = existing.AssessmentType;
+        }
+
+        if (string.IsNullOrWhiteSpace(newData.StartedAt) && !string.IsNullOrWhiteSpace(existing.StartedAt))
+        {
+            newData.StartedAt = existing.StartedAt;
+        }
+        else if (string.IsNullOrWhiteSpace(newData.StartedAt))
+        {
+            newData.StartedAt = DateTime.UtcNow.ToString("O");
         }
 
         // Merge answered questions - add or update questions

@@ -29,6 +29,7 @@ import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
 import phqAssessmentService from '@/services/phqAssessmentService';
 import chatTranscriptService from '@/services/chatTranscriptService';
+import { phqSessionService } from '@/services/phqSessionService';
 // phqProgressService no longer needed - phqAssessmentService handles all PHQ tracking with single assessment ID
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -273,8 +274,22 @@ export const RealtimeAgentExperience: React.FC = () => {
     const currentAssessment = phqAssessmentService.getCurrentAssessment();
     if (!currentAssessment) return;
     
+    // Initialize PHQ session for separate progressive storage
+    const currentSessionId = chatTranscriptService.getCurrentTranscript()?.sessionId;
+    if (currentSessionId && authenticatedUserId) {
+      phqSessionService.initializeSession(
+        authenticatedUserId,
+        currentSessionId,
+        currentAssessment.assessmentId,
+        type
+      );
+    }
+    
     const nextQuestion = phqAssessmentService.getNextQuestion();
     if (nextQuestion) {
+      // Update PHQ session with first question text
+      phqSessionService.setQuestionText(nextQuestion.questionNumber, nextQuestion.questionText);
+      
       const responseMessage: ConversationMessage = {
         id: `phq-start-${Date.now()}`,
         role: 'assistant',
@@ -325,6 +340,9 @@ ${phqAssessmentService.getResponseScale()}`,
     if (answer === null) {
       // Invalid response
       phqAssessmentService.recordInvalidAttempt(nextQuestion.questionNumber);
+      
+      // Record invalid attempt in PHQ session
+      phqSessionService.recordInvalidAttempt(nextQuestion.questionNumber);
       
       const attemptsLeft = 3 - nextQuestion.attempts;
       let responseContent: string;
@@ -410,6 +428,9 @@ ${phqAssessmentService.getResponseScale()}`;
     const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
     if (!success) return;
 
+    // Record answer in PHQ session for progressive storage
+    phqSessionService.recordAnswer(nextQuestion.questionNumber, answer);
+
     // Save PHQ answer to chat transcript with metadata
     if (authenticatedUserId) {
       await chatTranscriptService.addUserMessage(
@@ -425,9 +446,6 @@ ${phqAssessmentService.getResponseScale()}`;
       );
     }
 
-    // Note: phqAssessmentService now saves progressively automatically after recordAnswer()
-    // No need for separate phqProgressService.recordAnswer() call
-
     // Check if assessment is complete (get fresh state after recording answer)
     const updatedAssessment = phqAssessmentService.getCurrentAssessment();
     if (updatedAssessment?.isCompleted) {
@@ -438,6 +456,9 @@ ${phqAssessmentService.getResponseScale()}`;
     // Continue with next question
     const nextUnanswered = phqAssessmentService.getNextQuestion();
     if (nextUnanswered) {
+      // Update PHQ session with next question text
+      phqSessionService.setQuestionText(nextUnanswered.questionNumber, nextUnanswered.questionText);
+      
       const responseMessage: ConversationMessage = {
         id: `phq-next-${Date.now()}`,
         role: 'assistant',
@@ -480,9 +501,8 @@ ${phqAssessmentService.getResponseScale()}`,
     const severity = phqAssessmentService.determineSeverity(score, assessment.assessmentType);
     const { interpretation, recommendations } = phqAssessmentService.getInterpretation(score, assessment.assessmentType);
 
-    // Complete PHQ progress tracking with final results
-    // Note: phqAssessmentService.completeAssessment() already saved the final assessment
-    // with score, severity, interpretation, and recommendations via progressive save
+    // Complete PHQ session in separate storage (progressive save)
+    phqSessionService.completeAssessment(score, severity);
 
     // Check for suicidal ideation
     const hasSuicidalIdeation = assessment.assessmentType === 'PHQ-9' && 
@@ -536,51 +556,15 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
       );
     }
     
-    // Show saving indicator
-    const savingMessage: ConversationMessage = {
-      id: `phq-saving-${Date.now()}`,
-      role: 'assistant',
-      content: `💾 Saving your ${assessment.assessmentType} assessment results to secure cloud storage...`,
-      timestamp: new Date().toISOString()
-    };
-    
-    setMessages(prev => [...prev, savingMessage]);
-    
-    // Save assessment to storage
-    try {
-      const saved = await phqAssessmentService.saveAssessment();
-      
-      const saveResultMessage: ConversationMessage = {
-        id: `phq-save-result-${Date.now()}`,
-        role: 'assistant',
-        content: saved 
-          ? `✅ ${assessment.assessmentType} assessment results have been securely saved to your encrypted health record. Your data is protected and accessible only to authorized personnel.`
-          : `⚠️ Unable to save ${assessment.assessmentType} assessment results at this time. Please contact your healthcare provider or technical support if this issue persists.`,
-        timestamp: new Date().toISOString()
-      };
-      
-      setMessages(prev => [...prev, saveResultMessage]);
-      
-      if (saved) {
-        console.log('PHQ assessment saved successfully');
-      } else {
-        console.warn('Failed to save PHQ assessment');
-      }
-    } catch (error) {
-      console.error('Error saving PHQ assessment:', error);
-      
-      const errorMessage: ConversationMessage = {
-        id: `phq-save-error-${Date.now()}`,
-        role: 'assistant',
-        content: `❌ A technical error occurred while saving your ${assessment.assessmentType} assessment results. Please contact technical support and reference this session for assistance.`,
-        timestamp: new Date().toISOString()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    }
+    // Note: PHQ session has been progressively saved throughout the assessment
+    // Final save with score and severity was triggered by phqSessionService.completeAssessment() above
+    console.log(`✅ ${assessment.assessmentType} assessment completed and saved progressively`);
     
     // Reset assessment service for next use
     phqAssessmentService.resetAssessment();
+    
+    // End PHQ session
+    phqSessionService.endSession();
     
     announceToScreenReader(`${assessment.assessmentType} assessment completed. Score: ${score}, Severity: ${severity}`);
   }, []);

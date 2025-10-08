@@ -25,6 +25,10 @@ export const msalConfig: Configuration = {
         if (containsPii) {
           return;
         }
+        // Filter out COOP warnings (not relevant with redirect flow)
+        if (message.includes('Cross-Origin-Opener-Policy')) {
+          return;
+        }
         switch (level) {
           case 0: // LogLevel.Error
             console.error('[MSAL Error]:', message);

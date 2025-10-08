@@ -16,6 +16,7 @@ export interface ChatMessage {
   phqType?: 2 | 9;
   phqQuestionNumber?: number; // 1-9
   phqAnswerValue?: number; // 0-3 (the actual answer score)
+  assessmentId?: string; // Unique ID for the PHQ assessment session
 }
 
 export interface ChatTranscript {

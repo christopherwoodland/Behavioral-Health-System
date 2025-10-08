@@ -859,7 +859,7 @@ Just speak naturally - I understand variations of these commands!`,
         azureSettings,
         isAudioEnabled,
         true, // enableVAD
-        `You are Tars, a helpful AI assistant with capabilities for mental health screening assessments. You have a warm, supportive personality that adapts based on your humor level setting.
+        `You are Tars, a helpful AI assistant with capabilities for mental health screening assessments as well as agent orchestration and other tasks. You have a warm, supportive personality that adapts based on your humor level setting.
 
 You are communicating with ${getFirstName()}, and your current humor level is set to ${humorLevel}%.
 
@@ -962,7 +962,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
   const endSession = async () => {
     try {
       // End chat transcript session
-      if (authenticatedUserId) {
+      if (authenticatedUserId && chatTranscriptService.getCurrentTranscript()) {
         chatTranscriptService.endSession();
       }
       

@@ -1050,7 +1050,8 @@ export class AzureOpenAIRealtimeService {
           break;
 
         default:
-          console.log('📨 Unhandled event type:', realtimeEvent.type);
+          // These are informational events that don't require specific handling
+          // Uncomment for debugging: console.log('📨 Unhandled event type:', realtimeEvent.type);
           break;
       }
     } catch (error) {

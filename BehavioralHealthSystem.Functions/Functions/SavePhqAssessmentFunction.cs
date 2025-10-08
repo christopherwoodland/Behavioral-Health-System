@@ -140,6 +140,12 @@ public class SavePhqAssessmentFunction
                 ["saved_at"] = DateTime.UtcNow.ToString("O")
             };
 
+            // Add conversation session ID to metadata for mapping back to chat history
+            if (!string.IsNullOrEmpty(request.AssessmentData.Metadata?.SessionId))
+            {
+                blobMetadata["conversation_session_id"] = request.AssessmentData.Metadata.SessionId;
+            }
+
             // Add optional metadata
             if (request.AssessmentData.CompletedTime != null)
             {
@@ -167,7 +173,7 @@ public class SavePhqAssessmentFunction
                 }
             }
 
-            // Upload blob with metadata
+            // Upload blob with metadata (removed Tags - not supported on all storage account types)
             using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(jsonData));
             var blobUploadOptions = new BlobUploadOptions
             {
@@ -175,12 +181,9 @@ public class SavePhqAssessmentFunction
                 {
                     ContentType = "application/json"
                 },
-                Metadata = blobMetadata,
-                Tags = new Dictionary<string, string>
-                {
-                    ["assessment_type"] = request.AssessmentData.AssessmentType,
-                    ["completed"] = request.AssessmentData.IsCompleted.ToString()
-                }
+                Metadata = blobMetadata
+                // Note: Tags removed - requires GPv2 storage account
+                // All searchable data is available in Metadata instead
             };
 
             await blobClient.UploadAsync(stream, blobUploadOptions);
@@ -227,14 +230,18 @@ public class SavePhqAssessmentFunction
         if (!expectedQuestions.SequenceEqual(actualQuestions))
             return (false, $"Invalid question numbers for {assessment.AssessmentType}");
 
+        // Validate answered questions (if any)
+        if (assessment.Questions.Any(q => q.Answer.HasValue))
+        {
+            if (assessment.Questions.Any(q => q.Answer.HasValue && (q.Answer < 0 || q.Answer > 3)))
+                return (false, "All answers must be between 0 and 3");
+        }
+
         // Validate scores if assessment is completed
         if (assessment.IsCompleted)
         {
             if (assessment.Questions.Any(q => !q.Answer.HasValue))
                 return (false, "Completed assessment must have all questions answered");
-
-            if (assessment.Questions.Any(q => q.Answer < 0 || q.Answer > 3))
-                return (false, "All answers must be between 0 and 3");
 
             if (!assessment.TotalScore.HasValue)
                 return (false, "Completed assessment must have total score");

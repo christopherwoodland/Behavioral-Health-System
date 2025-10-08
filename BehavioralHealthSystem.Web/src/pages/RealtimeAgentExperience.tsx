@@ -730,20 +730,9 @@ Just speak naturally - I understand variations of these commands!`,
           return; // Don't add the command message to chat
         }
 
-        // Check for PHQ assessment commands
-        const phq9Command = message.content.match(/invoke[-\s]?phq[-\s]?9/i);
-        const phq2Command = message.content.match(/invoke[-\s]?phq[-\s]?2/i);
+        // NOTE: PHQ assessments are now initiated ONLY through function calls
+        // Voice command detection removed to prevent duplicate starts
         
-        if (phq9Command) {
-          handlePhqAssessmentStart('PHQ-9');
-          return;
-        }
-        
-        if (phq2Command) {
-          handlePhqAssessmentStart('PHQ-2');
-          return;
-        }
-
         // Check if we're in an active PHQ assessment
         const currentAssessment = phqAssessmentService.getCurrentAssessment();
         if (currentAssessment && !currentAssessment.isCompleted) {
@@ -758,16 +747,77 @@ Just speak naturally - I understand variations of these commands!`,
       // Save message to chat transcript
       if (authenticatedUserId) {
         if (message.role === 'user') {
+          // CRITICAL: Prevent AI's own speech from being saved as user input
+          // Check if this message ID indicates it's an AI transcript being misidentified
+          if (message.id && message.id.includes('ai-transcript')) {
+            console.warn('⚠️ Filtered out AI transcript incorrectly labeled as user message:', message.id);
+            return; // Don't save AI speech as user input
+          }
+          
+          // Additional check: if message content matches recent AI messages, skip it
+          const recentAIMessages = messages.filter(m => m.role === 'assistant').slice(-3);
+          const isDuplicateAIContent = recentAIMessages.some(aiMsg => 
+            aiMsg.content.trim() === message.content.trim()
+          );
+          
+          if (isDuplicateAIContent) {
+            console.warn('⚠️ Filtered out duplicate AI content incorrectly labeled as user message');
+            return; // Don't save duplicate AI content as user input
+          }
+          
+          // Check if this is a PHQ answer
+          const currentAssessment = phqAssessmentService.getCurrentAssessment();
+          const isPhqAnswer = currentAssessment && !currentAssessment.isCompleted;
+          
+          const metadata: any = { isTranscript: message.isTranscript, messageId: message.id, inputMethod: 'voice' };
+          
+          if (isPhqAnswer) {
+            // Add PHQ answer metadata
+            const answer = phqAssessmentService.parseAnswer(message.content);
+            if (answer !== null) {
+              const nextQuestion = phqAssessmentService.getNextQuestion();
+              metadata.isPhqAnswer = true;
+              metadata.phqType = currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9;
+              metadata.phqQuestionNumber = nextQuestion?.questionNumber;
+              metadata.phqAnswerValue = answer;
+              metadata.assessmentId = currentAssessment.assessmentId;
+            }
+          }
+          
+          console.log('✅ Saving user message to transcript:', message.content.substring(0, 50) + '...');
+          
           chatTranscriptService.addUserMessage(
             message.content,
             'voice-input',
-            { isTranscript: message.isTranscript, messageId: message.id }
+            metadata
           );
         } else if (message.role === 'assistant') {
+          // Check for PHQ question marker [PHQ-Q#]
+          const phqMarkerMatch = message.content.match(/\[PHQ-Q(\d+)\]/);
+          const metadata: any = { messageId: message.id };
+          
+          if (phqMarkerMatch) {
+            const questionNumber = parseInt(phqMarkerMatch[1], 10);
+            const currentAssessment = phqAssessmentService.getCurrentAssessment();
+            
+            if (currentAssessment) {
+              // Add PHQ question metadata
+              metadata.isPhqQuestion = true;
+              metadata.phqType = currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9;
+              metadata.phqQuestionNumber = questionNumber;
+              metadata.assessmentId = currentAssessment.assessmentId;
+              
+              console.log(`🏷️ PHQ Question detected with marker: Q${questionNumber}`, metadata);
+            }
+            
+            // Remove the marker from the displayed message
+            message.content = message.content.replace(/\[PHQ-Q\d+\]\s*/g, '').trim();
+          }
+          
           chatTranscriptService.addAssistantMessage(
             message.content,
             'agent-response',
-            { messageId: message.id }
+            metadata
           );
         }
       }
@@ -988,8 +1038,14 @@ Communication style guidelines:
 - Be supportive and understanding, especially during assessments
 - Use clear, everyday language that's easy to understand
 - Always acknowledge ${getFirstName()} by name when appropriate to the humor level
-- ALWAYS acknowledge the user's input before responding - show that you heard and understood what they said
-- Examples: "I hear you saying...", "Got it...", "I understand...", "Thanks for sharing that..."
+- CRITICAL: ALWAYS acknowledge the user's input FIRST before responding - show that you heard and understood
+- Examples of good acknowledgment:
+  * "I hear you, ${getFirstName()}..."
+  * "Got it, I understand you want to..."
+  * "Acknowledged..."
+  * "Thanks for sharing that..."
+  * "I see what you're asking for..."
+- NEVER just jump into action - always acknowledge first, then act
 
 Ship and system status protocol:
 - If ${getFirstName()} asks about the status of the ship, mechanical state, or system operations, respond that "All operations are nominal and operating within normal parameters" or similar reassuring confirmation
@@ -1000,9 +1056,37 @@ Available assessment capabilities:
 - "invoke-phq9": Initiate comprehensive mental health assessment (9-question evaluation)
 - "invoke-phq2": Initiate quick mental health screening (2-question check)
 
+CRITICAL FUNCTION CALL PROTOCOL:
+Before calling ANY function, you MUST:
+1. Acknowledge what ${getFirstName()} said - repeat back their request to show understanding
+2. Explain what you're about to do in clear terms
+3. THEN call the function
+
+Examples:
+- User: "Start the PHQ-9"
+  You: "Got it, ${getFirstName()}. I understand you'd like to begin the comprehensive PHQ-9 mental health assessment. Let me initiate that for you now..." [THEN call invoke-phq9]
+
+- User: "Do the quick screening"
+  You: "I hear you, ${getFirstName()}. You want to take the quick PHQ-2 screening. Setting that up for you right now..." [THEN call invoke-phq2]
+
+- User: "Pause the session"
+  You: "Understood, ${getFirstName()}. I'll pause our session for you. Just say 'resume session' when you're ready to continue..." [THEN call pause-session]
+
 Depression screening protocol:
-1. Call appropriate assessment function (invoke-phq9 or invoke-phq2)
+1. FIRST: Acknowledge request and explain what you're doing
+2. THEN: Call appropriate assessment function (invoke-phq9 or invoke-phq2)
 2. Conduct systematic evaluation with clear instructions:
+   
+   CRITICAL: When asking PHQ questions, you MUST prefix EVERY question with this exact hidden marker:
+   "[PHQ-Q#]" where # is the question number (1-9)
+   
+   Example format:
+   "[PHQ-Q1] Question 1: Over the past 2 weeks, how often have you been bothered by..."
+   "[PHQ-Q6] Question 6: Over the past 2 weeks, how often have you been bothered by..."
+   
+   This marker is INVISIBLE to ${getFirstName()} but REQUIRED for proper data tracking.
+   
+   After the marker, ask:
    "Question X: [evaluation criteria]
    
    Please respond with 0, 1, 2, or 3:
@@ -1043,18 +1127,20 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         
         switch (functionName) {
           case 'invoke-phq2':
-            // Start PHQ-2 assessment with conversation session ID for mapping back to chat history
+            // Start PHQ-2 assessment - this initializes both phqAssessmentService and phqSessionService
             console.log('Starting PHQ-2 assessment...');
             console.log('📎 Linking to conversation session:', conversationSessionId);
-            const phq2 = phqAssessmentService.startAssessment('PHQ-2', authenticatedUserId || getUserId(), conversationSessionId);
-            return { success: true, assessmentId: phq2.assessmentId, type: 'phq2', sessionId: conversationSessionId };
+            handlePhqAssessmentStart('PHQ-2');
+            const phq2 = phqAssessmentService.getCurrentAssessment();
+            return { success: true, assessmentId: phq2?.assessmentId, type: 'phq2', sessionId: conversationSessionId };
             
           case 'invoke-phq9':
-            // Start PHQ-9 assessment with conversation session ID for mapping back to chat history
+            // Start PHQ-9 assessment - this initializes both phqAssessmentService and phqSessionService
             console.log('Starting PHQ-9 assessment...');
             console.log('📎 Linking to conversation session:', conversationSessionId);
-            const phq9 = phqAssessmentService.startAssessment('PHQ-9', authenticatedUserId || getUserId(), conversationSessionId);
-            return { success: true, assessmentId: phq9.assessmentId, type: 'phq9', sessionId: conversationSessionId };
+            handlePhqAssessmentStart('PHQ-9');
+            const phq9 = phqAssessmentService.getCurrentAssessment();
+            return { success: true, assessmentId: phq9?.assessmentId, type: 'phq9', sessionId: conversationSessionId };
             
           case 'pause-session':
             console.log('Pausing session...');

@@ -26,6 +26,8 @@ import {
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
 import phqAssessmentService from '@/services/phqAssessmentService';
+import chatTranscriptService from '@/services/chatTranscriptService';
+import phqProgressService from '@/services/phqProgressService';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Type alias for backward compatibility with existing UI
@@ -256,7 +258,12 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // PHQ Assessment Handlers
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
-    phqAssessmentService.startAssessment(type, authenticatedUserId);
+    const assessment = phqAssessmentService.startAssessment(type, authenticatedUserId);
+    
+    // Initialize PHQ progress tracking
+    if (authenticatedUserId) {
+      phqProgressService.startAssessment(authenticatedUserId, type, assessment.assessmentId);
+    }
     
     const nextQuestion = phqAssessmentService.getNextQuestion();
     if (nextQuestion) {
@@ -304,6 +311,15 @@ ${phqAssessmentService.getResponseScale()}`;
 
 ${phqAssessmentService.getProgressSummary()}`;
         
+        // Record question as skipped in progress tracking
+        if (authenticatedUserId) {
+          phqProgressService.skipQuestion(
+            nextQuestion.questionNumber,
+            nextQuestion.questionText,
+            nextQuestion.attempts
+          );
+        }
+        
         // Move to next question
         const nextUnanswered = phqAssessmentService.getNextQuestion();
         if (nextUnanswered) {
@@ -330,6 +346,17 @@ ${phqAssessmentService.getResponseScale()}`;
     // Valid response - record it
     const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
     if (!success) return;
+
+    // Save answer to PHQ progress
+    if (authenticatedUserId) {
+      phqProgressService.recordAnswer(
+        nextQuestion.questionNumber,
+        nextQuestion.questionText,
+        answer,
+        nextQuestion.attempts || 1,
+        false // not skipped
+      );
+    }
 
     // Check if assessment is complete (get fresh state after recording answer)
     const updatedAssessment = phqAssessmentService.getCurrentAssessment();
@@ -364,6 +391,11 @@ ${phqAssessmentService.getResponseScale()}`,
     const score = phqAssessmentService.calculateScore();
     const severity = phqAssessmentService.determineSeverity(score, assessment.assessmentType);
     const { interpretation, recommendations } = phqAssessmentService.getInterpretation(score, assessment.assessmentType);
+
+    // Complete PHQ progress tracking with final results
+    if (authenticatedUserId) {
+      phqProgressService.completeAssessment(score, severity, interpretation, recommendations);
+    }
 
     // Check for suicidal ideation
     const hasSuicidalIdeation = assessment.assessmentType === 'PHQ-9' && 
@@ -490,6 +522,23 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
       
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
+      
+      // Save message to chat transcript
+      if (authenticatedUserId) {
+        if (message.role === 'user') {
+          chatTranscriptService.addUserMessage(
+            message.content,
+            'voice-input',
+            { isTranscript: message.isTranscript, messageId: message.id }
+          );
+        } else if (message.role === 'assistant') {
+          chatTranscriptService.addAssistantMessage(
+            message.content,
+            'agent-response',
+            { messageId: message.id }
+          );
+        }
+      }
     });
 
     agentService.onVoiceActivity((activity) => {
@@ -559,6 +608,15 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
           isPartial: false
         };
         setMessages(prev => [...prev, userMessage]);
+        
+        // Save user message to transcript
+        if (authenticatedUserId) {
+          chatTranscriptService.addUserMessage(
+            transcript,
+            'voice-input',
+            { isTranscript: true, inputMethod: 'voice' }
+          );
+        }
       }
     });
 
@@ -709,6 +767,12 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       
       await agentService.startSession('user', sessionConfig);
       
+      // Initialize chat transcript session
+      if (authenticatedUserId) {
+        const sessionId = sessionStorage.getItem('chat-session-id') || undefined;
+        chatTranscriptService.initializeSession(authenticatedUserId, sessionId);
+      }
+      
       // Clear previous state
       setLiveTranscripts([]);
       setCurrentAITranscript('');
@@ -722,6 +786,15 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       };
       
       setMessages([welcomeMessage]);
+      
+      // Save welcome message to transcript
+      if (authenticatedUserId) {
+        chatTranscriptService.addAssistantMessage(
+          welcomeMessage.content, 
+          'welcome-greeting',
+          { humorLevel, isWelcomeMessage: true }
+        );
+      }
       announceToScreenReader(welcomeMessage.content);
       
     } catch (error) {
@@ -734,6 +807,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
 
   const endSession = async () => {
     try {
+      // End chat transcript session
+      if (authenticatedUserId) {
+        chatTranscriptService.endSession();
+      }
+      
       await agentService.endSession();
       setMessages([]);
       setSessionStatus(prev => ({
@@ -779,6 +857,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
   // };
 
   const cleanup = async () => {
+    // Cleanup transcript and progress services
+    chatTranscriptService.cleanup();
+    phqProgressService.cleanup();
+    
     await agentService.destroy();
     if (voiceActivityIntervalRef.current) {
       clearInterval(voiceActivityIntervalRef.current);

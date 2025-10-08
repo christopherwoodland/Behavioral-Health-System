@@ -33,7 +33,15 @@ public class SavePhqAssessmentFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var requestData = JsonSerializer.Deserialize<SaveAssessmentRequest>(requestBody);
+            
+            // Configure JSON deserialization to be case-insensitive
+            var deserializeOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            var requestData = JsonSerializer.Deserialize<SaveAssessmentRequest>(requestBody, deserializeOptions);
 
             if (requestData?.AssessmentData == null)
             {
@@ -87,9 +95,9 @@ public class SavePhqAssessmentFunction
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
-            // Generate filename if not provided
+            // Generate filename if not provided with user folder hierarchy
             var fileName = request.FileName ?? 
-                $"{request.AssessmentData.AssessmentType.ToLower().Replace("-", "")}-{request.AssessmentData.AssessmentId}.json";
+                $"users/{request.AssessmentData.UserId}/assessments/{request.AssessmentData.AssessmentType.ToLower().Replace("-", "")}-{request.AssessmentData.AssessmentId}.json";
 
             // Ensure filename ends with .json
             if (!fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))

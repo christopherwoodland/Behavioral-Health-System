@@ -1167,7 +1167,12 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   : 'bg-gray-400'
             }`}>
               {currentAgent.id === 'tars' ? (
-                <Bot className="text-white" size={24} />
+                <Bot 
+                  className={`text-white transition-transform duration-300 ${
+                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
+                  }`} 
+                  size={24} 
+                />
               ) : (
                 <span className="text-white text-xl">
                   {currentAgent.id === 'phq2' ? '📋' : currentAgent.id === 'comedian' ? '😄' : '🤖'}

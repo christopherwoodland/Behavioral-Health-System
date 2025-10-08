@@ -90,14 +90,14 @@ public class SavePhqAssessmentFunction
     {
         try
         {
-            // Get or create container
-            var containerName = request.ContainerName ?? "phq-assessments";
+            // Get or create container (unified 'phq' container for all PHQ data)
+            var containerName = request.ContainerName ?? "phq";
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
-            // Generate filename if not provided with user folder hierarchy
+            // Generate filename if not provided with simplified user folder hierarchy
             var fileName = request.FileName ?? 
-                $"users/{request.AssessmentData.UserId}/assessments/{request.AssessmentData.AssessmentType.ToLower().Replace("-", "")}-{request.AssessmentData.AssessmentId}.json";
+                $"users/{request.AssessmentData.UserId}/{request.AssessmentData.AssessmentType.ToLower().Replace("-", "")}-{request.AssessmentData.AssessmentId}.json";
 
             // Ensure filename ends with .json
             if (!fileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))

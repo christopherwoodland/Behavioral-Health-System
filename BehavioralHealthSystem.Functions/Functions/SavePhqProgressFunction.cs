@@ -62,10 +62,10 @@ public class SavePhqProgressFunction
                 return badResponse;
             }
 
-            // Generate blob name with user folder hierarchy
-            var containerName = requestData.ContainerName ?? "phq-progress";
+            // Generate blob name with simplified user folder hierarchy (unified 'phq' container)
+            var containerName = requestData.ContainerName ?? "phq";
             var fileName = requestData.FileName ?? 
-                $"users/{requestData.ProgressData.UserId}/assessments/{requestData.ProgressData.AssessmentId}.json";
+                $"users/{requestData.ProgressData.UserId}/{requestData.ProgressData.AssessmentId}.json";
 
             // Get or create container
             var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);

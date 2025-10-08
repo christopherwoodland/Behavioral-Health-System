@@ -21,7 +21,8 @@ import {
   convertSettingsToConfig,
   SpeechDetectionState,
   LiveTranscript,
-  ConversationState
+  ConversationState,
+  REALTIME_TOOLS
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
@@ -888,11 +889,12 @@ Just speak naturally - I understand variations of these commands!`,
       setIsProcessing(true);
       
       // Convert UI settings to service config format
-      const sessionConfig: SessionConfig = convertSettingsToConfig(
-        azureSettings,
-        isAudioEnabled,
-        true, // enableVAD
-        `You are Tars, a helpful AI assistant with capabilities for mental health screening assessments. You have a warm, supportive personality that adapts based on your humor level setting.
+      const sessionConfig: SessionConfig = {
+        ...convertSettingsToConfig(
+          azureSettings,
+          isAudioEnabled,
+          true, // enableVAD
+          `You are Tars, a helpful AI assistant with capabilities for mental health screening assessments. You have a warm, supportive personality that adapts based on your humor level setting.
 
 You are communicating with ${getFirstName()}, and your current humor level is set to ${humorLevel}%.
 
@@ -949,8 +951,56 @@ Session control capabilities:
 - ${getFirstName()} can say "help" or "commands" to see available voice commands
 
 Keep your responses helpful, clear, and appropriately personal based on your humor level setting.`,
-        enableInputTranscription // Enable input audio transcription
-      );
+          enableInputTranscription // Enable input audio transcription
+        ),
+        tools: REALTIME_TOOLS // Enable function calling for PHQ assessments and session control
+      };
+      
+      // Register function call handler
+      agentService.onFunctionCall(async (functionName, args) => {
+        console.log(`🎯 Function called: ${functionName}`, args);
+        
+        switch (functionName) {
+          case 'invoke-phq2':
+            // Start PHQ-2 assessment
+            console.log('Starting PHQ-2 assessment...');
+            const phq2 = phqAssessmentService.startAssessment('PHQ-2', authenticatedUserId || getUserId());
+            return { success: true, assessmentId: phq2.assessmentId, type: 'phq2' };
+            
+          case 'invoke-phq9':
+            // Start PHQ-9 assessment
+            console.log('Starting PHQ-9 assessment...');
+            const phq9 = phqAssessmentService.startAssessment('PHQ-9', authenticatedUserId || getUserId());
+            return { success: true, assessmentId: phq9.assessmentId, type: 'phq9' };
+            
+          case 'pause-session':
+            console.log('Pausing session...');
+            pauseSession();
+            return { success: true, status: 'paused' };
+            
+          case 'resume-session':
+            console.log('Resuming session...');
+            resumeSession();
+            return { success: true, status: 'resumed' };
+            
+          case 'close-session':
+            console.log('Closing session...');
+            await endSession();
+            return { success: true, status: 'closed' };
+            
+          case 'set-humor-level':
+            const level = parseInt(args.level as string, 10);
+            if (isNaN(level) || level < 0 || level > 100) {
+              return { success: false, error: 'Invalid humor level. Must be between 0 and 100.' };
+            }
+            console.log(`Setting humor level to ${level}%...`);
+            setHumorLevel(level);
+            return { success: true, humorLevel: level };
+            
+          default:
+            return { success: false, error: `Unknown function: ${functionName}` };
+        }
+      });
       
       await agentService.startSession('user', sessionConfig);
       

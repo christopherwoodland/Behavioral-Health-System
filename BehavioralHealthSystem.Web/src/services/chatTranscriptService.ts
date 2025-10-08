@@ -133,10 +133,7 @@ class ChatTranscriptService {
    * End the current session
    */
   endSession(): void {
-    if (!this.currentTranscript) {
-      console.warn('No active chat session to end');
-      return;
-    }
+    if (!this.currentTranscript) return;
 
     this.currentTranscript.isActive = false;
     this.currentTranscript.sessionEndedAt = new Date().toISOString();
@@ -194,15 +191,7 @@ class ChatTranscriptService {
    * Save transcript immediately
    */
   private async saveTranscriptImmediate(): Promise<void> {
-    if (!this.currentTranscript) {
-      console.warn('No active transcript to save');
-      return;
-    }
-    
-    if (this.isSaving) {
-      console.log('Save already in progress, skipping duplicate save');
-      return;
-    }
+    if (!this.currentTranscript || this.isSaving) return;
 
     try {
       this.isSaving = true;
@@ -214,15 +203,6 @@ class ChatTranscriptService {
       if (this.saveTimer) {
         clearTimeout(this.saveTimer);
         this.saveTimer = null;
-      }
-
-      // Validate transcript data before sending
-      if (!this.currentTranscript.userId || !this.currentTranscript.sessionId) {
-        console.error('Invalid transcript data: missing userId or sessionId', {
-          userId: this.currentTranscript.userId,
-          sessionId: this.currentTranscript.sessionId
-        });
-        return;
       }
 
       const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
@@ -237,13 +217,6 @@ class ChatTranscriptService {
         },
         containerName: 'chat-transcripts'
       };
-
-      console.log('Saving chat transcript:', {
-        userId: request.transcriptData.userId,
-        sessionId: request.transcriptData.sessionId,
-        messageCount: request.transcriptData.messages.length,
-        isActive: request.transcriptData.isActive
-      });
 
       const response = await fetch(endpoint, {
         method: 'POST',

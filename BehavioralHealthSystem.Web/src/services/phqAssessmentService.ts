@@ -135,6 +135,11 @@ class PhqAssessmentService {
       }
     };
 
+    // Immediately save the initial assessment state
+    this.saveAssessment().catch(err => {
+      console.error('Failed to save initial assessment state:', err);
+    });
+
     return this.currentAssessment;
   }
 
@@ -181,6 +186,11 @@ class PhqAssessmentService {
     question.answer = answer;
     question.timestamp = new Date().toISOString();
     
+    // Progressively save after each answer
+    this.saveAssessment().catch(err => {
+      console.error('Failed to progressively save assessment:', err);
+    });
+    
     // Check if assessment is complete
     const allAnswered = this.currentAssessment.questions.every(q => q.answer !== undefined);
     if (allAnswered) {
@@ -204,6 +214,11 @@ class PhqAssessmentService {
       if (question.attempts >= 3) {
         question.skipped = true;
       }
+      
+      // Progressively save after invalid attempt
+      this.saveAssessment().catch(err => {
+        console.error('Failed to progressively save assessment after invalid attempt:', err);
+      });
     }
   }
 
@@ -310,10 +325,10 @@ class PhqAssessmentService {
   }
 
   /**
-   * Save assessment to blob storage
+   * Save assessment to blob storage (progressive save - updates file with each answer)
    */
   async saveAssessment(): Promise<boolean> {
-    if (!this.currentAssessment || !this.currentAssessment.isCompleted) {
+    if (!this.currentAssessment) {
       return false;
     }
 
@@ -321,6 +336,16 @@ class PhqAssessmentService {
       // Get the Azure Functions endpoint from environment or use default
       const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
       const endpoint = `${functionsBaseUrl}/api/SavePhqAssessment`;
+
+      console.log('🔵 Saving PHQ assessment to:', endpoint);
+      console.log('📋 Assessment data:', {
+        assessmentId: this.currentAssessment.assessmentId,
+        userId: this.currentAssessment.userId,
+        assessmentType: this.currentAssessment.assessmentType,
+        isCompleted: this.currentAssessment.isCompleted,
+        totalScore: this.currentAssessment.totalScore,
+        questionCount: this.currentAssessment.questions.length
+      });
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -335,8 +360,8 @@ class PhqAssessmentService {
             sessionId: sessionStorage.getItem('session-id') || 'unknown',
             clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
           },
-          containerName: 'phq-assessments'
-          // fileName omitted - let server generate with proper folder structure: users/{userId}/assessments/{type}-{id}.json
+          containerName: 'phq'
+          // fileName omitted - let server generate with proper folder structure: users/{userId}/{type}-{id}.json
         })
       });
 

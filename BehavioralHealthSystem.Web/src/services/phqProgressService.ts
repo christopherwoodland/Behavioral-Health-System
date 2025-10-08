@@ -275,6 +275,16 @@ class PhqProgressService {
       const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
       const endpoint = `${functionsBaseUrl}/api/SavePhqProgress`;
 
+      console.log('🟢 Saving PHQ progress to:', endpoint);
+      console.log('📊 Progress data:', {
+        assessmentId: this.currentProgress.assessmentId,
+        userId: this.currentProgress.userId,
+        assessmentType: this.currentProgress.assessmentType,
+        isCompleted: this.currentProgress.isCompleted,
+        questionsAnswered: this.currentProgress.answeredQuestions.length,
+        totalQuestions: this.currentProgress.totalQuestions
+      });
+
       const request: PhqProgressSaveRequest = {
         progressData: { ...this.currentProgress },
         metadata: {
@@ -282,7 +292,7 @@ class PhqProgressService {
           questionsAnswered: this.currentProgress.answeredQuestions.length,
           isCompleted: this.currentProgress.isCompleted
         },
-        containerName: 'phq-progress'
+        containerName: 'phq'
       };
 
       const response = await fetch(endpoint, {

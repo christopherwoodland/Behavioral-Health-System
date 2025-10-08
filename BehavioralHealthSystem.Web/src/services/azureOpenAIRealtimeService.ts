@@ -146,12 +146,21 @@ export class AzureOpenAIRealtimeService {
   };
   private conversationState: ConversationState = { state: 'idle' };
   
+  // Reconnection state
+  private reconnectionAttempts: number = 0;
+  private maxReconnectionAttempts: number = 3;
+  private reconnectionDelay: number = 2000; // Start with 2 seconds
+  private reconnectionTimer: NodeJS.Timeout | null = null;
+  private lastConfig: RealtimeSessionConfig | null = null;
+  private isReconnecting: boolean = false;
+  
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
   private onVoiceActivityCallback: ((activity: VoiceActivity) => void) | null = null;
   private onStatusChangeCallback: ((status: SessionStatus) => void) | null = null;
   private onErrorCallback: ((error: Error) => void) | null = null;
   private onTranscriptCallback: ((transcript: string, isFinal: boolean) => void) | null = null;
+  private onConnectionLostCallback: ((attempts: number, maxAttempts: number) => void) | null = null;
   
   // Enhanced event callbacks
   private onLiveTranscriptCallback: ((transcript: LiveTranscript) => void) | null = null;
@@ -213,6 +222,10 @@ export class AzureOpenAIRealtimeService {
     this.onConversationStateCallback = callback;
   }
   
+  onConnectionLost(callback: (attempts: number, maxAttempts: number) => void): void {
+    this.onConnectionLostCallback = callback;
+  }
+  
   /**
    * Initialize the service
    */
@@ -248,6 +261,9 @@ export class AzureOpenAIRealtimeService {
       }
       
       console.log('🚀 Starting Azure OpenAI Realtime session...');
+      
+      // Save config for potential reconnection
+      this.lastConfig = { ...config };
       
       this.sessionId = `session-${userId}-${Date.now()}`;
       
@@ -405,7 +421,19 @@ export class AzureOpenAIRealtimeService {
     
     // Handle connection state changes
     this.peerConnection.onconnectionstatechange = () => {
-      console.log('🔌 Connection state:', this.peerConnection?.connectionState);
+      const state = this.peerConnection?.connectionState;
+      console.log('🔌 Connection state:', state);
+      
+      // Handle connection failures and disconnections
+      if (state === 'failed' || state === 'disconnected') {
+        console.warn('⚠️ Connection lost:', state);
+        this.handleConnectionLost();
+      } else if (state === 'connected') {
+        // Reset reconnection attempts on successful connection
+        this.reconnectionAttempts = 0;
+        this.isReconnecting = false;
+      }
+      
       this.emitStatusChange();
     };
     
@@ -805,6 +833,12 @@ export class AzureOpenAIRealtimeService {
           console.log('📊 Rate limits updated:', realtimeEvent.rate_limits);
           break;
 
+        // Audio buffer events
+        case 'output_audio_buffer.stopped':
+          console.log('🔇 Audio output buffer stopped');
+          // This is a normal event when audio playback completes
+          break;
+
         // Legacy handling for backward compatibility
         case 'transcript':
           if (this.onTranscriptCallback) {
@@ -1047,6 +1081,12 @@ export class AzureOpenAIRealtimeService {
       this.audioElement = null;
     }
     
+    // Clear reconnection timer
+    if (this.reconnectionTimer) {
+      clearTimeout(this.reconnectionTimer);
+      this.reconnectionTimer = null;
+    }
+    
     this.remoteStream = null;
     this.analyser = null;
     this.microphoneSource = null;
@@ -1103,6 +1143,71 @@ export class AzureOpenAIRealtimeService {
     if (this.onErrorCallback) {
       this.onErrorCallback(error);
     }
+  }
+  
+  /**
+   * Handle connection lost - attempt automatic reconnection
+   */
+  private async handleConnectionLost(): Promise<void> {
+    // Prevent multiple simultaneous reconnection attempts
+    if (this.isReconnecting) {
+      console.log('🔄 Reconnection already in progress...');
+      return;
+    }
+    
+    // Check if we've exceeded max attempts
+    if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
+      console.error('❌ Max reconnection attempts reached. Please refresh the page.');
+      if (this.onConnectionLostCallback) {
+        this.onConnectionLostCallback(this.reconnectionAttempts, this.maxReconnectionAttempts);
+      }
+      return;
+    }
+    
+    this.isReconnecting = true;
+    this.reconnectionAttempts++;
+    
+    console.log(`🔄 Attempting to reconnect (${this.reconnectionAttempts}/${this.maxReconnectionAttempts})...`);
+    
+    // Notify UI about connection loss
+    if (this.onConnectionLostCallback) {
+      this.onConnectionLostCallback(this.reconnectionAttempts, this.maxReconnectionAttempts);
+    }
+    
+    // Cleanup current connection
+    await this.cleanup();
+    
+    // Wait before reconnecting (exponential backoff)
+    const delay = this.reconnectionDelay * Math.pow(2, this.reconnectionAttempts - 1);
+    console.log(`⏳ Waiting ${delay}ms before reconnection...`);
+    
+    this.reconnectionTimer = setTimeout(async () => {
+      try {
+        if (!this.lastConfig || !this.sessionId) {
+          throw new Error('Cannot reconnect: missing session configuration');
+        }
+        
+        console.log('🔄 Reconnecting...');
+        
+        // Extract userId from sessionId (format: session-{userId}-{timestamp})
+        const userId = this.sessionId.split('-')[1] || 'user';
+        
+        // Restart session with saved config
+        await this.startSession(userId, this.lastConfig);
+        
+        console.log('✅ Reconnection successful');
+        this.isReconnecting = false;
+        
+      } catch (error) {
+        console.error('❌ Reconnection failed:', error);
+        this.isReconnecting = false;
+        
+        // Try again if we haven't exceeded max attempts
+        if (this.reconnectionAttempts < this.maxReconnectionAttempts) {
+          await this.handleConnectionLost();
+        }
+      }
+    }, delay);
   }
   
   /**

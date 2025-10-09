@@ -1021,7 +1021,9 @@ export class AzureOpenAIRealtimeService {
 
         // Input audio buffer events (user speech detection)
         case 'input_audio_buffer.speech_started':
-          console.log('🎤 User started speaking');
+          console.log('👤 ========================================');
+          console.log('👤 USER STARTED SPEAKING');
+          console.log('👤 ========================================');
           this.speechDetectionState.isUserSpeaking = true;
           this.speechDetectionState.speechStartedAt = Date.now();
           this.updateConversationState({ state: 'listening', message: 'Listening...' });
@@ -1032,7 +1034,8 @@ export class AzureOpenAIRealtimeService {
           break;
           
         case 'input_audio_buffer.speech_stopped':
-          console.log('🔇 User stopped speaking');
+          console.log('� USER STOPPED SPEAKING');
+          console.log('👤 ========================================');
           this.speechDetectionState.isUserSpeaking = false;
           this.speechDetectionState.speechStoppedAt = Date.now();
           this.updateConversationState({ state: 'processing', message: 'Processing...' });
@@ -1066,6 +1069,11 @@ export class AzureOpenAIRealtimeService {
           
           // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
+            console.log('🤖 ========================================');
+            console.log('🤖 AGENT SAID:');
+            console.log('🤖 "' + realtimeEvent.transcript + '"');
+            console.log('🤖 ========================================');
+            
             // Complete agent utterance and link to message
             const utteranceId = this.trackUtterance('agent', 'speech-complete', realtimeEvent.transcript);
             
@@ -1098,7 +1106,10 @@ export class AzureOpenAIRealtimeService {
           
           // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
-            console.log('👤 User transcript completed:', realtimeEvent.transcript);
+            console.log('👤 ========================================');
+            console.log('👤 USER SAID:');
+            console.log('👤 "' + realtimeEvent.transcript + '"');
+            console.log('👤 ========================================');
             
             // Complete user utterance and link to message
             const utteranceId = this.trackUtterance('user', 'speech-complete', realtimeEvent.transcript);
@@ -1125,6 +1136,9 @@ export class AzureOpenAIRealtimeService {
 
         // Response management - DELEGATED TO AgentResponseHandler
         case 'response.created':
+          console.log('🤖 ========================================');
+          console.log('🤖 AGENT STARTED RESPONDING');
+          console.log('🤖 ========================================');
           this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
           

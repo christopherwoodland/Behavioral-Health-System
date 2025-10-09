@@ -937,6 +937,12 @@ export class AzureOpenAIRealtimeService {
             
             this.messageHistory.push(transcriptMessage);
             
+            // Agent's audio transcript is complete - unmute microphone after 1.5s delay
+            console.log('🎤 Agent utterance complete - will unmute microphone in 1.5 seconds');
+            setTimeout(() => {
+              this.muteMicrophone(false);
+            }, 1500);
+            
             if (this.onMessageCallback) {
               this.onMessageCallback(transcriptMessage);
             }
@@ -988,13 +994,21 @@ export class AzureOpenAIRealtimeService {
 
         // Response management
         case 'response.created':
-          console.log('🤖 Response created');
+          console.log('🤖 Response created - Agent about to speak');
+          
+          // CRITICAL: Mute microphone BEFORE agent starts speaking
+          this.muteMicrophone(true);
+          
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
           break;
           
         case 'response.done':
           console.log('✅ Response completed');
           this.speechDetectionState.isAISpeaking = false;
+          
+          // Note: Microphone unmuting is handled in 'response.audio_transcript.done'
+          // after the agent's utterance is complete + 1.5s delay
+          
           this.updateConversationState({ state: 'idle', message: 'Ready for input' });
           this.emitSpeechDetection();
           break;
@@ -1002,6 +1016,10 @@ export class AzureOpenAIRealtimeService {
         case 'response.cancelled':
           console.log('⚠️ Response cancelled (interrupted)');
           this.speechDetectionState.isAISpeaking = false;
+          
+          // Unmute immediately if response was cancelled
+          this.muteMicrophone(false);
+          
           this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
           this.emitSpeechDetection();
           this.currentTranscriptBuffer = '';

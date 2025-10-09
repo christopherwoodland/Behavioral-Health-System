@@ -132,7 +132,7 @@ export const Dashboard: React.FC = () => {
               <Link
                 key={action.href}
                 to={action.href}
-                className={getActionClasses(action.color, false)}
+                className={`${getActionClasses(action.color, false)} relative`}
                 aria-label={`${action.title}: ${action.description}`}
               >
                 <div className="text-center">
@@ -146,6 +146,12 @@ export const Dashboard: React.FC = () => {
                     {action.description}
                   </p>
                 </div>
+                {/* NEW badge for Agent Experience */}
+                {action.title === 'Agent Experience' && (
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                    NEW
+                  </div>
+                )}
               </Link>
             );
           })}

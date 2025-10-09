@@ -214,9 +214,13 @@ export const REALTIME_TOOLS: ToolDefinition[] = [
   }
 ];
 
+import { UserInputHandler } from './handlers/UserInputHandler';
+import { AgentResponseHandler } from './handlers/AgentResponseHandler';
+
 /**
  * Azure OpenAI Realtime WebRTC Service
  * Handles direct browser-to-Azure OpenAI connection via WebRTC
+ * Uses separated handlers for user input and agent responses
  */
 export class AzureOpenAIRealtimeService {
   private peerConnection: RTCPeerConnection | null = null;
@@ -229,6 +233,11 @@ export class AzureOpenAIRealtimeService {
   private isConnected: boolean = false;
   private isSessionActive: boolean = false;
   
+  // Separated handlers for independent processing
+  private userInputHandler: UserInputHandler;
+  private agentResponseHandler: AgentResponseHandler;
+  
+  // Legacy VAD fields (now managed by UserInputHandler)
   private voiceActivityInterval: NodeJS.Timeout | null = null;
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
@@ -289,9 +298,43 @@ export class AzureOpenAIRealtimeService {
     console.log('  Deployment:', this.deploymentName);
     console.log('  API Version:', this.apiVersion);
     console.log('  WebRTC Region:', this.webrtcRegion);
-    console.log('  Env Var Loaded:', import.meta.env.VITE_AZURE_OPENAI_WEBRTC_REGION ? 'YES ✅' : 'NO ❌ (using default)');    if (!this.endpoint || !this.apiKey) {
+    console.log('  Env Var Loaded:', import.meta.env.VITE_AZURE_OPENAI_WEBRTC_REGION ? 'YES ✅' : 'NO ❌ (using default)');
+    
+    if (!this.endpoint || !this.apiKey) {
       console.warn('⚠️ Azure OpenAI Realtime credentials not configured');
     }
+
+    // Initialize separated handlers
+    this.userInputHandler = new UserInputHandler();
+    this.agentResponseHandler = new AgentResponseHandler();
+    
+    // Connect agent handler's mute callback to this service
+    this.agentResponseHandler.onMuteMicrophone((mute: boolean) => {
+      this.muteMicrophone(mute);
+    });
+    
+    // Forward agent handler messages/transcripts to main service callbacks
+    this.agentResponseHandler.onMessage((message) => {
+      if (this.onMessageCallback) {
+        this.onMessageCallback(message);
+      }
+    });
+    
+    this.agentResponseHandler.onLiveTranscript((transcript) => {
+      if (this.onLiveTranscriptCallback) {
+        this.onLiveTranscriptCallback(transcript);
+      }
+    });
+    
+    this.agentResponseHandler.onSpeechDetection((state) => {
+      // Merge agent state with user state
+      this.speechDetectionState.isAISpeaking = state.isAISpeaking;
+      if (this.onSpeechDetectionCallback) {
+        this.onSpeechDetectionCallback(this.speechDetectionState);
+      }
+    });
+    
+    console.log('✅ Independent user/agent handlers initialized');
   }
   
   /**
@@ -510,57 +553,51 @@ export class AzureOpenAIRealtimeService {
   /**
    * Setup voice activity detection
    */
-  private setupVoiceActivityDetection(): void {
+  /**
+   * Setup voice activity detection using UserInputHandler
+   */
+  private async setupVoiceActivityDetection(): Promise<void> {
     if (!this.localStream) return;
     
     try {
-      this.audioContext = new AudioContext({ sampleRate: 24000 });
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 256;
+      // Delegate VAD to UserInputHandler
+      await this.userInputHandler.initializeVAD(this.localStream);
       
-      this.microphoneSource = this.audioContext.createMediaStreamSource(this.localStream);
-      this.microphoneSource.connect(this.analyser);
+      // Forward user handler callbacks to legacy callbacks for backward compatibility
+      this.userInputHandler.onVoiceActivity((activity) => {
+        if (this.onVoiceActivityCallback) {
+          this.onVoiceActivityCallback(activity);
+        }
+      });
       
-      // Start monitoring voice activity
-      this.startVoiceActivityMonitoring();
+      this.userInputHandler.onLiveTranscript((transcript) => {
+        if (this.onLiveTranscriptCallback) {
+          this.onLiveTranscriptCallback(transcript);
+        }
+      });
       
-      console.log('🎙️ Voice activity detection enabled');
+      this.userInputHandler.onSpeechDetection((state) => {
+        // Merge user state with agent state
+        this.speechDetectionState.isUserSpeaking = state.isUserSpeaking;
+        if (this.onSpeechDetectionCallback) {
+          this.onSpeechDetectionCallback(this.speechDetectionState);
+        }
+      });
+      
+      console.log('🎙️ Voice activity detection enabled (via UserInputHandler)');
     } catch (error) {
       console.error('Failed to setup voice activity detection:', error);
     }
   }
   
   /**
-   * Monitor voice activity levels
+   * Legacy method - now delegated to UserInputHandler
+   * @deprecated Use UserInputHandler directly
    */
   private startVoiceActivityMonitoring(): void {
-    if (!this.analyser) return;
-    
-    const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
-    
-    this.voiceActivityInterval = setInterval(() => {
-      if (!this.analyser) return;
-      
-      this.analyser.getByteFrequencyData(dataArray);
-      
-      // Calculate average volume level
-      const sum = dataArray.reduce((a, b) => a + b, 0);
-      const average = sum / dataArray.length;
-      const volumeLevel = average / 255; // Normalize to 0-1
-      
-      // Detect if speaking (threshold: 0.05)
-      const isSpeaking = volumeLevel > 0.05;
-      
-      const activity: VoiceActivity = {
-        volumeLevel,
-        isSpeaking,
-        timestamp: Date.now()
-      };
-      
-      if (this.onVoiceActivityCallback) {
-        this.onVoiceActivityCallback(activity);
-      }
-    }, 50); // Update every 50ms for smooth visualization
+    // This method is now handled by UserInputHandler
+    // Kept for backward compatibility but does nothing
+    console.warn('⚠️ startVoiceActivityMonitoring is deprecated - using UserInputHandler');
   }
   
   /**
@@ -881,100 +918,56 @@ export class AzureOpenAIRealtimeService {
           this.emitSpeechDetection();
           break;
 
-        // Real-time AI audio transcripts (live captions)
+        // Real-time AI audio transcripts (live captions) - DELEGATED TO AgentResponseHandler
         case 'response.audio_transcript.delta':
+          this.agentResponseHandler.handleAudioTranscriptDelta(realtimeEvent);
+          
+          // Update service-level state for backward compatibility
           if (realtimeEvent.delta) {
             this.currentTranscriptBuffer += realtimeEvent.delta;
-            
-            // Emit live transcript update
-            const liveTranscript: LiveTranscript = {
-              id: `transcript-${Date.now()}`,
-              text: this.currentTranscriptBuffer,
-              isPartial: true,
-              role: 'assistant',
-              timestamp: Date.now()
-            };
-            
-            if (this.onLiveTranscriptCallback) {
-              this.onLiveTranscriptCallback(liveTranscript);
-            }
+            this.updateConversationState({ state: 'speaking', message: 'AI Speaking...' });
+            this.speechDetectionState.isAISpeaking = true;
+            this.emitSpeechDetection();
             
             // Backward compatibility
             if (this.onTranscriptCallback) {
               this.onTranscriptCallback(realtimeEvent.delta, false);
             }
-            
-            this.updateConversationState({ state: 'speaking', message: 'AI Speaking...' });
-            this.speechDetectionState.isAISpeaking = true;
-            this.emitSpeechDetection();
           }
           break;
           
         case 'response.audio_transcript.done':
+          // DELEGATED TO AgentResponseHandler
+          this.agentResponseHandler.handleAudioTranscriptDone(realtimeEvent);
+          
+          // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
-            // Final AI transcript
-            const finalTranscript: LiveTranscript = {
-              id: `transcript-final-${Date.now()}`,
-              text: realtimeEvent.transcript,
-              isPartial: false,
-              role: 'assistant',
-              timestamp: Date.now()
-            };
-            
-            if (this.onLiveTranscriptCallback) {
-              this.onLiveTranscriptCallback(finalTranscript);
-            }
-            
-            // Add to message history as transcript
-            const transcriptMessage: RealtimeMessage = {
+            this.messageHistory.push({
               id: `ai-transcript-${Date.now()}`,
               role: 'assistant',
               content: realtimeEvent.transcript,
               timestamp: new Date().toISOString(),
               isTranscript: true,
               isPartial: false
-            };
+            });
             
-            this.messageHistory.push(transcriptMessage);
-            
-            // Agent's audio transcript is complete - unmute microphone after 1.5s delay
-            console.log('🎤 Agent utterance complete - will unmute microphone in 1.5 seconds');
-            setTimeout(() => {
-              this.muteMicrophone(false);
-            }, 1500);
-            
-            if (this.onMessageCallback) {
-              this.onMessageCallback(transcriptMessage);
-            }
+            this.currentTranscriptBuffer = '';
             
             // Backward compatibility
             if (this.onTranscriptCallback) {
               this.onTranscriptCallback(realtimeEvent.transcript, true);
             }
-            
-            this.currentTranscriptBuffer = '';
           }
           break;
 
-        // Input audio transcription (user speech as text)
+        // Input audio transcription (user speech as text) - DELEGATED TO UserInputHandler
         case 'conversation.item.input_audio_transcription.completed':
+          this.userInputHandler.handleTranscriptEvent(realtimeEvent);
+          
+          // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
             console.log('👤 User transcript completed:', realtimeEvent.transcript);
             
-            // Final user transcript
-            const userTranscript: LiveTranscript = {
-              id: `user-transcript-${Date.now()}`,
-              text: realtimeEvent.transcript,
-              isPartial: false,
-              role: 'user',
-              timestamp: Date.now()
-            };
-            
-            if (this.onLiveTranscriptCallback) {
-              this.onLiveTranscriptCallback(userTranscript);
-            }
-            
-            // Add to message history as user transcript
             const userMessage: RealtimeMessage = {
               id: `user-transcript-${Date.now()}`,
               role: 'user',
@@ -992,34 +985,26 @@ export class AzureOpenAIRealtimeService {
           }
           break;
 
-        // Response management
+        // Response management - DELEGATED TO AgentResponseHandler
         case 'response.created':
-          console.log('🤖 Response created - Agent about to speak');
-          
-          // CRITICAL: Mute microphone BEFORE agent starts speaking
-          this.muteMicrophone(true);
-          
+          this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
           break;
           
         case 'response.done':
-          console.log('✅ Response completed');
+          this.agentResponseHandler.handleResponseDone(realtimeEvent);
+          
+          // Update service-level state for backward compatibility
           this.speechDetectionState.isAISpeaking = false;
-          
-          // Note: Microphone unmuting is handled in 'response.audio_transcript.done'
-          // after the agent's utterance is complete + 1.5s delay
-          
           this.updateConversationState({ state: 'idle', message: 'Ready for input' });
           this.emitSpeechDetection();
           break;
           
         case 'response.cancelled':
-          console.log('⚠️ Response cancelled (interrupted)');
+          this.agentResponseHandler.handleResponseCancelled(realtimeEvent);
+          
+          // Update service-level state for backward compatibility
           this.speechDetectionState.isAISpeaking = false;
-          
-          // Unmute immediately if response was cancelled
-          this.muteMicrophone(false);
-          
           this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
           this.emitSpeechDetection();
           this.currentTranscriptBuffer = '';
@@ -1300,13 +1285,17 @@ export class AzureOpenAIRealtimeService {
    * Cleanup resources
    */
   private async cleanup(): Promise<void> {
-    // Stop voice activity monitoring
+    // Cleanup independent handlers
+    this.userInputHandler.cleanup();
+    this.agentResponseHandler.cleanup();
+    
+    // Stop legacy voice activity monitoring (if any)
     if (this.voiceActivityInterval) {
       clearInterval(this.voiceActivityInterval);
       this.voiceActivityInterval = null;
     }
     
-    // Close audio context
+    // Close legacy audio context (if any)
     if (this.audioContext) {
       await this.audioContext.close();
       this.audioContext = null;
@@ -1346,6 +1335,8 @@ export class AzureOpenAIRealtimeService {
     this.remoteStream = null;
     this.analyser = null;
     this.microphoneSource = null;
+    
+    console.log('🧹 All resources cleaned up (including handlers)');
   }
   
   /**

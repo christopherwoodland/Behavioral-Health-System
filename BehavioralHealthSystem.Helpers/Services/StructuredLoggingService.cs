@@ -11,34 +11,34 @@ public static class LogContextKeys
     public const string ElapsedMs = "ElapsedMs";
     public const string UserId = "UserId";
     public const string SessionId = "SessionId";
-    
+
     // HTTP-specific keys
     public const string HttpMethod = "HttpMethod";
     public const string HttpStatusCode = "HttpStatusCode";
     public const string RequestPath = "RequestPath";
     public const string RequestSize = "RequestSize";
     public const string ResponseSize = "ResponseSize";
-    
+
     // External service keys
     public const string ExternalService = "ExternalService";
     public const string ExternalEndpoint = "ExternalEndpoint";
     public const string ExternalRequestId = "ExternalRequestId";
     public const string ExternalStatusCode = "ExternalStatusCode";
-    
+
     // Business logic keys
     public const string AssessmentType = "AssessmentType";
     public const string AssessmentScore = "AssessmentScore";
     public const string RiskLevel = "RiskLevel";
     public const string AgentName = "AgentName";
     public const string ChatTurn = "ChatTurn";
-    
+
     // Error context keys
     public const string ErrorCode = "ErrorCode";
     public const string ErrorCategory = "ErrorCategory";
     public const string ExceptionType = "ExceptionType";
     public const string RetryAttempt = "RetryAttempt";
     public const string IsRetryable = "IsRetryable";
-    
+
     // Performance keys
     public const string MemoryUsageBytes = "MemoryUsageBytes";
     public const string CpuUsagePercent = "CpuUsagePercent";
@@ -66,7 +66,7 @@ public static class LogCategories
 /// <summary>
 /// Centralized structured logging service with consistent patterns
 /// </summary>
-public class StructuredLoggingService
+public class StructuredLoggingService : IStructuredLoggingService
 {
     private readonly ILogger<StructuredLoggingService> _logger;
 
@@ -87,7 +87,7 @@ public class StructuredLoggingService
     {
         var context = CreateBaseContext(operation, correlationId, userId, sessionId);
         context[LogContextKeys.Operation] = operation;
-        
+
         if (additionalContext != null)
         {
             foreach (var item in additionalContext)
@@ -111,7 +111,7 @@ public class StructuredLoggingService
     {
         var context = CreateBaseContext(operation, correlationId, userId, sessionId);
         context[LogContextKeys.ElapsedMs] = elapsedMs;
-        
+
         if (additionalContext != null)
         {
             foreach (var item in additionalContext)
@@ -119,12 +119,12 @@ public class StructuredLoggingService
         }
 
         using var logScope = _logger.BeginScope(context);
-        
-        var logLevel = elapsedMs > ApplicationConstants.Performance.SlowOperationThresholdMs 
-            ? LogLevel.Warning 
+
+        var logLevel = elapsedMs > ApplicationConstants.Performance.SlowOperationThresholdMs
+            ? LogLevel.Warning
             : LogLevel.Information;
-            
-        _logger.Log(logLevel, "[{Category}] Completed operation: {Operation} in {ElapsedMs}ms", 
+
+        _logger.Log(logLevel, "[{Category}] Completed operation: {Operation} in {ElapsedMs}ms",
             LogCategories.Response, operation, elapsedMs);
     }
 
@@ -152,7 +152,7 @@ public class StructuredLoggingService
 
         if (correlationId != null) context[LogContextKeys.CorrelationId] = correlationId;
         if (externalRequestId != null) context[LogContextKeys.ExternalRequestId] = externalRequestId;
-        
+
         if (additionalContext != null)
         {
             foreach (var item in additionalContext)
@@ -163,8 +163,8 @@ public class StructuredLoggingService
 
         var logLevel = statusCode >= 400 ? LogLevel.Warning : LogLevel.Information;
         var isSuccess = statusCode < 400;
-        
-        _logger.Log(logLevel, "[{Category}] External call to {ServiceName}: {Method} {Endpoint} - {StatusCode} in {ElapsedMs}ms", 
+
+        _logger.Log(logLevel, "[{Category}] External call to {ServiceName}: {Method} {Endpoint} - {StatusCode} in {ElapsedMs}ms",
             LogCategories.ExternalCall, serviceName, method, endpoint, statusCode, elapsedMs);
     }
 
@@ -179,7 +179,7 @@ public class StructuredLoggingService
         Dictionary<string, object>? businessContext = null)
     {
         var context = CreateBaseContext(eventName, correlationId, userId, sessionId);
-        
+
         if (businessContext != null)
         {
             foreach (var item in businessContext)
@@ -208,7 +208,7 @@ public class StructuredLoggingService
         if (userId != null) context[LogContextKeys.UserId] = userId;
         if (ipAddress != null) context["IpAddress"] = ipAddress;
         if (userAgent != null) context["UserAgent"] = userAgent;
-        
+
         if (securityContext != null)
         {
             foreach (var item in securityContext)
@@ -237,7 +237,7 @@ public class StructuredLoggingService
         };
 
         if (correlationId != null) context[LogContextKeys.CorrelationId] = correlationId;
-        
+
         if (performanceContext != null)
         {
             foreach (var item in performanceContext)
@@ -246,11 +246,11 @@ public class StructuredLoggingService
 
         using var logScope = _logger.BeginScope(context);
 
-        var logLevel = elapsedMs > ApplicationConstants.Performance.SlowOperationThresholdMs 
-            ? LogLevel.Warning 
+        var logLevel = elapsedMs > ApplicationConstants.Performance.SlowOperationThresholdMs
+            ? LogLevel.Warning
             : LogLevel.Information;
 
-        _logger.Log(logLevel, "[{Category}] Performance metrics for {Operation}: {ElapsedMs}ms, {MemoryMB}MB", 
+        _logger.Log(logLevel, "[{Category}] Performance metrics for {Operation}: {ElapsedMs}ms, {MemoryMB}MB",
             LogCategories.Performance, operation, elapsedMs, memoryUsageBytes / (1024 * 1024));
     }
 
@@ -270,7 +270,7 @@ public class StructuredLoggingService
         };
 
         if (correlationId != null) context[LogContextKeys.CorrelationId] = correlationId;
-        
+
         if (validationErrors != null)
         {
             foreach (var item in validationErrors)
@@ -278,7 +278,7 @@ public class StructuredLoggingService
         }
 
         using var logScope = _logger.BeginScope(context);
-        _logger.LogWarning("[{Category}] Validation failed in {Operation}: {Message}", 
+        _logger.LogWarning("[{Category}] Validation failed in {Operation}: {Message}",
             LogCategories.Validation, operation, validationMessage);
     }
 
@@ -296,7 +296,7 @@ public class StructuredLoggingService
             [LogContextKeys.Operation] = "ConfigurationValidation",
             ["ConfigurationKey"] = configurationKey
         };
-        
+
         if (configContext != null)
         {
             foreach (var item in configContext)
@@ -304,7 +304,7 @@ public class StructuredLoggingService
         }
 
         using var logScope = _logger.BeginScope(context);
-        _logger.Log(severity, "[{Category}] Configuration issue with {ConfigKey}: {Issue}", 
+        _logger.Log(severity, "[{Category}] Configuration issue with {ConfigKey}: {Issue}",
             LogCategories.Configuration, configurationKey, issue);
     }
 
@@ -325,7 +325,7 @@ public class StructuredLoggingService
             [LogContextKeys.ElapsedMs] = responseTimeMs,
             ["IsHealthy"] = isHealthy
         };
-        
+
         if (healthContext != null)
         {
             foreach (var item in healthContext)
@@ -336,10 +336,10 @@ public class StructuredLoggingService
 
         var logLevel = isHealthy ? LogLevel.Information : LogLevel.Error;
         var status = isHealthy ? "Healthy" : "Unhealthy";
-        
-        _logger.Log(logLevel, "[{Category}] Health check {HealthCheckName}: {Status} in {ElapsedMs}ms", 
+
+        _logger.Log(logLevel, "[{Category}] Health check {HealthCheckName}: {Status} in {ElapsedMs}ms",
             LogCategories.Health, healthCheckName, status, responseTimeMs);
-            
+
         if (!string.IsNullOrEmpty(details))
         {
             _logger.Log(logLevel, "[{Category}] Health check details: {Details}", LogCategories.Health, details);
@@ -410,7 +410,7 @@ public static class LoggerExtensions
         };
 
         if (correlationId != null) logContext[LogContextKeys.CorrelationId] = correlationId;
-        
+
         if (context != null)
         {
             foreach (var item in context)
@@ -418,7 +418,7 @@ public static class LoggerExtensions
         }
 
         logger.LogInformation("[{Category}] Starting {Operation}", LogCategories.Request, operation);
-        
+
         return new OperationLogger(logger, operation, logContext);
     }
 }
@@ -447,14 +447,14 @@ public class OperationLogger : IDisposable
     {
         _stopwatch.Stop();
         _context[LogContextKeys.ElapsedMs] = _stopwatch.ElapsedMilliseconds;
-        
-        var logLevel = _stopwatch.ElapsedMilliseconds > ApplicationConstants.Performance.SlowOperationThresholdMs 
-            ? LogLevel.Warning 
+
+        var logLevel = _stopwatch.ElapsedMilliseconds > ApplicationConstants.Performance.SlowOperationThresholdMs
+            ? LogLevel.Warning
             : LogLevel.Information;
-            
-        _logger.Log(logLevel, "[{Category}] Completed {Operation} in {ElapsedMs}ms", 
+
+        _logger.Log(logLevel, "[{Category}] Completed {Operation} in {ElapsedMs}ms",
             LogCategories.Response, _operation, _stopwatch.ElapsedMilliseconds);
-            
+
         _logScope?.Dispose();
     }
 }

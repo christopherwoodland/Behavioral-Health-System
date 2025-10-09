@@ -1,10 +1,4 @@
-using System.Text.Json;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using System.Text;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -34,14 +28,14 @@ public class SavePhqProgressFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
+
             // Configure JSON deserialization to be case-insensitive
             var deserializeOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
-            
+
             var requestData = JsonSerializer.Deserialize<SavePhqProgressRequest>(requestBody, deserializeOptions);
 
             if (requestData?.ProgressData == null)
@@ -64,7 +58,7 @@ public class SavePhqProgressFunction
 
             // Generate blob name with simplified user folder hierarchy (unified 'phq' container)
             var containerName = requestData.ContainerName ?? "phq";
-            var fileName = requestData.FileName ?? 
+            var fileName = requestData.FileName ??
                 $"users/{requestData.ProgressData.UserId}/{requestData.ProgressData.AssessmentId}.json";
 
             // Get or create container
@@ -73,7 +67,7 @@ public class SavePhqProgressFunction
 
             // Get blob client
             var blobClient = containerClient.GetBlobClient(fileName);
-            
+
             // Try to get existing progress
             PhqProgressData existingProgress = null!;
             try
@@ -143,7 +137,7 @@ public class SavePhqProgressFunction
 
             await blobClient.UploadAsync(content, uploadOptions);
 
-            _logger.LogInformation("Successfully saved PHQ progress for user {UserId}, assessment {AssessmentId}, {AnsweredCount}/{TotalCount} questions", 
+            _logger.LogInformation("Successfully saved PHQ progress for user {UserId}, assessment {AssessmentId}, {AnsweredCount}/{TotalCount} questions",
                 finalProgress.UserId, finalProgress.AssessmentId, finalProgress.AnsweredQuestions.Count, finalProgress.TotalQuestions);
 
             // Return success response
@@ -164,7 +158,7 @@ public class SavePhqProgressFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving PHQ assessment progress");
-            
+
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync("An error occurred while saving the PHQ assessment progress");
             return errorResponse;
@@ -195,7 +189,7 @@ public class SavePhqProgressFunction
         for (int i = 0; i < progress.AnsweredQuestions.Count; i++)
         {
             var question = progress.AnsweredQuestions[i];
-            
+
             if (question.QuestionNumber <= 0)
                 return (false, $"Question {i}: Question number must be greater than 0");
 
@@ -249,7 +243,7 @@ public class SavePhqProgressFunction
 
         // Merge answered questions - add or update questions
         var existingQuestionNumbers = new HashSet<int>(existing.AnsweredQuestions.Select(q => q.QuestionNumber));
-        
+
         foreach (var newQuestion in newData.AnsweredQuestions)
         {
             if (!existingQuestionNumbers.Contains(newQuestion.QuestionNumber))
@@ -274,7 +268,7 @@ public class SavePhqProgressFunction
         existing.Severity = newData.Severity;
         existing.Interpretation = newData.Interpretation;
         existing.Recommendations = newData.Recommendations;
-        
+
         // Update completion time if completed
         if (newData.IsCompleted && string.IsNullOrEmpty(existing.CompletedAt))
         {

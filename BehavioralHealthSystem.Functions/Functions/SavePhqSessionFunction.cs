@@ -1,8 +1,3 @@
-using System.Text.Json;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
 namespace BehavioralHealthSystem.Functions.Functions;
@@ -34,14 +29,14 @@ public class SavePhqSessionFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
+
             // Configure JSON deserialization to be case-insensitive
             var deserializeOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
-            
+
             var requestData = JsonSerializer.Deserialize<SaveSessionRequest>(requestBody, deserializeOptions);
 
             if (requestData?.SessionData == null)
@@ -75,9 +70,9 @@ public class SavePhqSessionFunction
             _logger.LogInformation("Successfully saved PHQ session: {SessionId}", requestData.SessionData.SessionId);
 
             var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            await response.WriteStringAsync(JsonSerializer.Serialize(new 
-            { 
-                success = true, 
+            await response.WriteStringAsync(JsonSerializer.Serialize(new
+            {
+                success = true,
                 sessionId = requestData.SessionData.SessionId,
                 assessmentId = requestData.SessionData.AssessmentId,
                 isCompleted = requestData.SessionData.IsCompleted
@@ -103,7 +98,7 @@ public class SavePhqSessionFunction
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
             // Generate filename if not provided
-            var fileName = request.FileName ?? 
+            var fileName = request.FileName ??
                 $"users/{request.SessionData.UserId}/{request.SessionData.AssessmentType.ToLower().Replace("-", "")}-{request.SessionData.AssessmentId}.json";
 
             // Ensure filename ends with .json

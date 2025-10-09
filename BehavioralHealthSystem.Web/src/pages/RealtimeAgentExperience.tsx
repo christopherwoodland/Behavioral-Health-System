@@ -206,7 +206,6 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceActivityIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const micUnmuteTimeoutRef = useRef<number | null>(null); // For mic muting during agent speech
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -266,16 +265,6 @@ export const RealtimeAgentExperience: React.FC = () => {
       }
     };
   }, [sessionStatus.isActive, isSessionPaused]);
-
-  // Cleanup microphone unmute timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (micUnmuteTimeoutRef.current) {
-        clearTimeout(micUnmuteTimeoutRef.current);
-        micUnmuteTimeoutRef.current = null;
-      }
-    };
-  }, []);
 
   // PHQ Assessment Handlers
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
@@ -585,26 +574,9 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
     agentService.onMessage((message: RealtimeMessage) => {
       // NO LEXICAL/WORD-BASED ECHO PREVENTION
       // Relying 100% on WebRTC AEC3 + Mic Muting Strategy
-      
-      // Mic Muting Strategy: When agent speaks, mute user mic for 2.5 seconds
-      if (message.role === 'assistant' && message.content) {
-        console.log('🤖 Agent speaking - muting user microphone for 2.5 seconds');
-        
-        // Mute the microphone immediately
-        agentService.muteMicrophone(true);
-        
-        // Clear any existing unmute timeout
-        if (micUnmuteTimeoutRef.current) {
-          clearTimeout(micUnmuteTimeoutRef.current);
-        }
-        
-        // Schedule unmute after 2.5 seconds
-        micUnmuteTimeoutRef.current = window.setTimeout(() => {
-          console.log('🔊 Reactivating user microphone after 2.5s');
-          agentService.muteMicrophone(false);
-          micUnmuteTimeoutRef.current = null;
-        }, 2500);
-      }
+      // Mic muting is now handled automatically in azureOpenAIRealtimeService.ts:
+      //   - Mutes on 'response.created' (before agent speaks)
+      //   - Unmutes on 'response.done' (after 2.5s delay)
       
       // Check for humor level voice commands in user messages
       if (message.role === 'user' && message.content) {

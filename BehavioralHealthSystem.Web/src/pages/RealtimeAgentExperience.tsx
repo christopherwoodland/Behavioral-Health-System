@@ -239,9 +239,14 @@ export const RealtimeAgentExperience: React.FC = () => {
 
         announceToScreenReader('Azure OpenAI Realtime service initialized');
 
-        // Auto-start session after initialization
-        console.log('🚀 Auto-starting session...');
-        await startSession();
+        // Auto-start session after initialization (controlled by environment variable)
+        const autoStartEnabled = import.meta.env.VITE_AUTO_START_SESSION === 'true';
+        if (autoStartEnabled) {
+          console.log('🚀 Auto-starting session...');
+          await startSession();
+        } else {
+          console.log('ℹ️ Auto-start disabled. Click "Start Session" to begin.');
+        }
 
       } catch (error) {
         console.error('Failed to initialize agent services:', error);
@@ -1111,8 +1116,17 @@ Just speak naturally - I understand variations of these commands!`,
 
 
   const startSession = async () => {
+    // Guard: Don't start if already active or connecting
+    if (sessionStatus.isActive || sessionStatus.connectionStatus === 'connecting') {
+      console.log('⚠️ Session already active or connecting, skipping start');
+      return;
+    }
+
     try {
       setIsProcessing(true);
+
+      // CRITICAL: Set connection status to 'connecting' IMMEDIATELY to prevent double-start
+      setSessionStatus(prev => ({ ...prev, connectionStatus: 'connecting' }));
 
       // =============================================================================
       // MULTI-AGENT SETUP: Register specialized agents with orchestration service
@@ -1489,19 +1503,21 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       announceToScreenReader(welcomeContent);
 
       // Have AI speak the welcome message
-      // Small delay to ensure session is fully established
+      // The service will wait for data channel to be ready before speaking
       setTimeout(async () => {
         try {
           await agentService.speakAssistantMessage(welcomeContent);
-          console.log('🎤 Welcome message will be spoken by AI');
+          console.log('🎤 Welcome message spoken by AI');
         } catch (error) {
           console.error('Failed to speak welcome message:', error);
         }
-      }, 500);
+      }, 100); // Minimal delay, service handles waiting for ready state
 
     } catch (error) {
       console.error('Failed to start session:', error);
       announceToScreenReader('Failed to start real-time session');
+      // Reset connection status on error so user can try again
+      setSessionStatus(prev => ({ ...prev, connectionStatus: 'error' }));
     } finally {
       setIsProcessing(false);
     }

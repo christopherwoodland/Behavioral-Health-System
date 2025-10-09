@@ -290,6 +290,7 @@ export class AzureOpenAIRealtimeService {
   private reconnectionTimer: NodeJS.Timeout | null = null;
   private lastConfig: RealtimeSessionConfig | null = null;
   private isReconnecting: boolean = false;
+  private isConnecting: boolean = false; // Guard flag to prevent concurrent connection attempts
 
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
@@ -619,6 +620,18 @@ export class AzureOpenAIRealtimeService {
         throw new Error('Azure OpenAI Realtime credentials not configured. Please set environment variables.');
       }
 
+      // Guard: Prevent starting if session is already active or connecting
+      if (this.isSessionActive) {
+        console.log('⚠️ Session already active, skipping start');
+        return;
+      }
+
+      if (this.isConnecting) {
+        console.log('⚠️ Connection already in progress, skipping start');
+        return;
+      }
+
+      this.isConnecting = true; // Set flag to prevent concurrent attempts
       console.log('🚀 Starting Azure OpenAI Realtime session...');
 
       // Save config for potential reconnection
@@ -645,11 +658,13 @@ export class AzureOpenAIRealtimeService {
       await this.connectToAzureOpenAI();
 
       this.isSessionActive = true;
+      this.isConnecting = false; // Connection successful, reset flag
       this.emitStatusChange();
 
       console.log('✅ Session started successfully:', this.sessionId);
     } catch (error) {
       console.error('❌ Failed to start session:', error);
+      this.isConnecting = false; // Reset flag on error
       this.handleError(error as Error);
       await this.cleanup();
       throw error;
@@ -735,6 +750,18 @@ export class AzureOpenAIRealtimeService {
    * Create RTCPeerConnection
    */
   private async createPeerConnection(_config: RealtimeSessionConfig): Promise<void> {
+    // CRITICAL: Close existing peer connection if it exists to prevent "wrong state" errors
+    if (this.peerConnection) {
+      console.log('⚠️ Closing existing peer connection before creating new one');
+      try {
+        this.peerConnection.close();
+      } catch (error) {
+        console.warn('Error closing existing peer connection:', error);
+      }
+      this.peerConnection = null;
+      this.dataChannel = null;
+    }
+
     const configuration: RTCConfiguration = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -830,6 +857,15 @@ export class AzureOpenAIRealtimeService {
 
       // Send offer to Azure OpenAI and get answer
       const answer = await this.exchangeSDPWithAzure(offer);
+
+      // Check peer connection state before setting remote description
+      const currentState = this.peerConnection.signalingState;
+      console.log(`🔍 Peer connection signaling state: ${currentState}`);
+
+      if (currentState === 'stable') {
+        console.warn('⚠️ Peer connection already in stable state, skipping setRemoteDescription');
+        return;
+      }
 
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       console.log('📥 Set remote answer from Azure OpenAI');
@@ -1304,10 +1340,32 @@ export class AzureOpenAIRealtimeService {
   }
 
   /**
+   * Wait for data channel to be ready
+   * Polls the data channel status with timeout
+   */
+  private async waitForDataChannelReady(timeoutMs: number = 5000): Promise<void> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+      if (this.dataChannel && this.dataChannel.readyState === 'open') {
+        return;
+      }
+      // Wait 100ms before checking again
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    throw new Error(`Data channel did not open within ${timeoutMs}ms`);
+  }
+
+  /**
    * Speak an assistant message
    * Adds the message to conversation and triggers AI to speak it with audio output
+   * Waits for data channel to be ready before attempting to speak
    */
   async speakAssistantMessage(text: string): Promise<void> {
+    // Wait for data channel to be ready (with 5 second timeout)
+    await this.waitForDataChannelReady(5000);
+
     if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
       throw new Error('Data channel is not open');
     }
@@ -1490,6 +1548,10 @@ export class AzureOpenAIRealtimeService {
    * Cleanup resources
    */
   private async cleanup(): Promise<void> {
+    // Reset connection flags
+    this.isConnecting = false;
+    this.isSessionActive = false;
+
     // Cleanup independent handlers
     this.userInputHandler.cleanup();
     this.agentResponseHandler.cleanup();

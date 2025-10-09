@@ -3,16 +3,17 @@
 ## Issues Fixed
 
 ### 1. AI Speech Being Saved as User Messages (Duplicate Content)
-**Problem:** Azure OpenAI Realtime API was capturing the AI's own speech through the microphone and transcribing it as user input with `role: 'user'`, causing duplicate messages where the AI's words appeared as both assistant and user messages.
+**Problem:** Azure OpenAI Realtime API was capturing the AI's own speech through the microphone and transcribing it as user input with `role: 'user'`, causing duplicate messages where the AI's words appeared as both assistant and user messages. Some duplicates had identical timestamps and content.
 
-**Root Cause:** The duplicate check was comparing against the `messages` state array, but assistant messages were being saved to the transcript BEFORE being added to state, so the comparison failed.
+**Root Cause:** The duplicate check was comparing against the `messages` state array, but assistant messages were being saved to the transcript BEFORE being added to state, so the comparison failed. Additionally, some duplicate checks happened too late in the message processing flow.
 
-**Solution:**
-- Check against BOTH `messages` state AND saved transcript messages
-- Block duplicate content BEFORE it gets added to messages state
-- Compare user message content against last 5 assistant messages from both sources
+**Solution:** Multi-layer filtering at the VERY START of message processing (before any other logic):
 
-**File:** `RealtimeAgentExperience.tsx` lines 743-759
+1. **Content Match Check** - Compare against last 10 assistant messages from BOTH state and transcript
+2. **Timestamp Match Check** - Block user messages with identical timestamp to recent AI messages
+3. **AI Phrase Pattern Check** - Detect long messages starting with AI-typical phrases (greetings, acknowledgments)
+
+**File:** `RealtimeAgentExperience.tsx` lines 577-617
 
 ```typescript
 // Check against BOTH messages state AND saved transcript
@@ -163,6 +164,36 @@ if (answerAckMatch) {
   - [ ] User messages in different color
   - [ ] No duplicate messages on screen
 
+## How Null Answers Work
+
+**Valid Scenarios for `answer: null`:**
+
+1. **Skipped Questions:** After 3 invalid attempts, a question is marked as `skipped: true` with `answer: null`
+2. **Score Calculation:** The `calculateScore()` method filters out null answers (only counts answered questions)
+3. **Completion:** An assessment can be marked complete even with null answers for skipped questions
+
+**Example Valid PHQ Session:**
+```json
+{
+  "questions": [
+    {
+      "questionNumber": 1,
+      "answer": 0,           // ✅ Answered
+      "skipped": false
+    },
+    {
+      "questionNumber": 2,
+      "answer": null,        // ✅ Valid - skipped after 3 attempts
+      "attempts": 3,
+      "skipped": true
+    }
+  ],
+  "isCompleted": true,       // ✅ Can complete with skipped questions
+  "totalScore": 0,           // ✅ Score only counts answered questions
+  "severity": "Negative Screen"
+}
+```
+
 ## Benefits
 
 1. **Clean Transcripts:** Chat transcripts now only contain legitimate user input and agent responses
@@ -170,6 +201,7 @@ if (answerAckMatch) {
 3. **Complete Data:** PHQ sessions capture both structured data AND conversational flow
 4. **Question Tracking:** All question texts automatically extracted and saved
 5. **Single Assessment Start:** PHQ assessments start exactly once via function calling
+6. **Flexible Completion:** Assessments can complete with skipped questions (null answers)
 
 ## Related Files
 

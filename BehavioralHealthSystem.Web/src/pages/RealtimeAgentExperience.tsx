@@ -742,7 +742,13 @@ Just speak naturally - I understand variations of these commands!`,
         
         // CRITICAL: Prevent AI's own speech from being added to chat
         // Azure Realtime API captures AI speech and incorrectly labels it as user input
-        const recentAIMessages = messages.filter(m => m.role === 'assistant').slice(-5);
+        // Check against BOTH messages state AND saved transcript
+        const currentTranscript = chatTranscriptService.getCurrentTranscript();
+        const recentAIMessages = [
+          ...messages.filter(m => m.role === 'assistant').slice(-5),
+          ...(currentTranscript?.messages.filter(m => m.role === 'assistant').slice(-5) || [])
+        ];
+        
         const isDuplicateAIContent = recentAIMessages.some(aiMsg => 
           aiMsg.content.trim() === message.content.trim()
         );
@@ -785,6 +791,11 @@ Just speak naturally - I understand variations of these commands!`,
             'voice-input',
             metadata
           );
+          
+          // If this is during a PHQ assessment, also add to PHQ session messages
+          if (isPhqAnswer && currentAssessment) {
+            phqSessionService.addMessage('user', message.content, 'voice-input', metadata);
+          }
         } else if (message.role === 'assistant') {
           // Check for PHQ question marker [PHQ-Q#]
           const phqMarkerMatch = message.content.match(/\[PHQ-Q(\d+)\]/);
@@ -801,11 +812,77 @@ Just speak naturally - I understand variations of these commands!`,
               metadata.phqQuestionNumber = questionNumber;
               metadata.assessmentId = currentAssessment.assessmentId;
               
+              // Extract the question text from the AI's message
+              // Look for "Question X: [question text]" pattern
+              const questionTextMatch = message.content.match(/Question \d+:\s*([^?]+\?)/);
+              if (questionTextMatch && questionTextMatch[1]) {
+                const questionText = questionTextMatch[1].trim();
+                console.log(`📝 Extracted question text for Q${questionNumber}:`, questionText);
+                
+                // Save question text to PHQ session
+                phqSessionService.setQuestionText(questionNumber, questionText);
+              }
+              
               console.log(`🏷️ PHQ Question detected with marker: Q${questionNumber}`, metadata);
+              
+              // Add to PHQ session messages
+              phqSessionService.addMessage('assistant', message.content, 'phq-question', metadata);
             }
             
             // Remove the marker from the displayed message
             message.content = message.content.replace(/\[PHQ-Q\d+\]\s*/g, '').trim();
+          }
+          
+          // Check if AI is acknowledging a PHQ answer or skipping a question
+          const currentAssessment = phqAssessmentService.getCurrentAssessment();
+          if (currentAssessment && !currentAssessment.isCompleted) {
+            // Look for answer acknowledgment patterns (e.g., "I've noted your response as 0")
+            const answerAckMatch = message.content.match(/(?:noted|recorded|noted down|captured|registered|logged)\s+(?:your\s+)?(?:response|answer)?\s+(?:as|of)?\s*(\d)/i);
+            
+            if (answerAckMatch) {
+              const acknowledgedAnswer = parseInt(answerAckMatch[1], 10);
+              const currentQuestion = phqAssessmentService.getNextQuestion();
+              
+              if (currentQuestion && acknowledgedAnswer >= 0 && acknowledgedAnswer <= 3) {
+                console.log(`🎯 AI acknowledged answer ${acknowledgedAnswer} for Q${currentQuestion.questionNumber}`);
+                
+                // Record the answer in both services
+                phqAssessmentService.recordAnswer(currentQuestion.questionNumber, acknowledgedAnswer);
+                phqSessionService.recordAnswer(currentQuestion.questionNumber, acknowledgedAnswer);
+                
+                // Check if assessment is now complete
+                const updatedAssessment = phqAssessmentService.getCurrentAssessment();
+                if (updatedAssessment?.isCompleted) {
+                  // Calculate final score and complete
+                  const score = phqAssessmentService.calculateScore();
+                  const severity = phqAssessmentService.determineSeverity(score, updatedAssessment.assessmentType);
+                  phqSessionService.completeAssessment(score, severity);
+                  console.log(`✅ PHQ Assessment completed! Score: ${score}, Severity: ${severity}`);
+                }
+              }
+            }
+            
+            // Look for skip/completion patterns (e.g., "We'll skip this question", "That completes the PHQ-2")
+            const skipMatch = message.content.match(/(?:skip|skipping|skipped)\s+(?:this\s+)?(?:question|item)/i);
+            const completeMatch = message.content.match(/(?:completes?|completed|finished)\s+(?:the\s+)?(?:PHQ-2|PHQ-9|assessment|screening)/i);
+            
+            if (skipMatch) {
+              console.log('⏭️ AI indicated question will be skipped');
+              // Question is already marked as skipped by recordInvalidAttempt, just log it
+            }
+            
+            if (completeMatch) {
+              console.log('🏁 AI indicated assessment is complete');
+              // Check if we need to force completion (in case some questions were skipped)
+              const updatedAssessment = phqAssessmentService.getCurrentAssessment();
+              if (updatedAssessment && !updatedAssessment.isCompleted) {
+                // Force completion even with null answers (skipped questions)
+                const score = phqAssessmentService.calculateScore();
+                const severity = phqAssessmentService.determineSeverity(score, updatedAssessment.assessmentType);
+                phqSessionService.completeAssessment(score, severity);
+                console.log(`✅ PHQ Assessment force-completed! Score: ${score}, Severity: ${severity}`);
+              }
+            }
           }
           
           chatTranscriptService.addAssistantMessage(

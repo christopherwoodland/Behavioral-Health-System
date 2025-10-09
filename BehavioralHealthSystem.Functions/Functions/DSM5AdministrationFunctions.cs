@@ -1,7 +1,6 @@
 using Microsoft.DurableTask.Client;
 using Azure.AI.DocumentIntelligence;
 using Azure.Identity;
-using Azure.Storage.Blobs;
 
 namespace BehavioralHealthSystem.Functions;
 
@@ -44,7 +43,7 @@ public class DSM5AdministrationFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Starting DSM-5 PDF validation and extraction", 
+            _logger.LogInformation("[{FunctionName}] Starting DSM-5 PDF validation and extraction",
                 nameof(ValidateAndExtractDSM5Data));
 
             // Parse request body
@@ -63,19 +62,19 @@ public class DSM5AdministrationFunctions
             }
 
             var sourceType = !string.IsNullOrEmpty(request.PdfUrl) ? "URL" : "Base64";
-            _logger.LogInformation("[{FunctionName}] Extracting from PDF ({SourceType}), Pages: {PageRanges}", 
+            _logger.LogInformation("[{FunctionName}] Extracting from PDF ({SourceType}), Pages: {PageRanges}",
                 nameof(ValidateAndExtractDSM5Data), sourceType, request.PageRanges ?? "all");
 
             // Extract data using Document Intelligence
             var extractionResult = await _dsm5DataService.ExtractDiagnosticCriteriaAsync(
-                request.PdfUrl, 
+                request.PdfUrl,
                 request.PdfBase64,
-                request.PageRanges, 
+                request.PageRanges,
                 request.AutoUpload);
 
             if (extractionResult.Success)
             {
-                _logger.LogInformation("[{FunctionName}] Successfully extracted {ConditionCount} conditions from DSM-5 PDF", 
+                _logger.LogInformation("[{FunctionName}] Successfully extracted {ConditionCount} conditions from DSM-5 PDF",
                     nameof(ValidateAndExtractDSM5Data), extractionResult.ExtractedConditions?.Count ?? 0);
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
@@ -103,7 +102,7 @@ public class DSM5AdministrationFunctions
             }
             else
             {
-                _logger.LogError("[{FunctionName}] DSM-5 extraction failed: {ErrorMessage}", 
+                _logger.LogError("[{FunctionName}] DSM-5 extraction failed: {ErrorMessage}",
                     nameof(ValidateAndExtractDSM5Data), extractionResult.ErrorMessage);
 
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -119,7 +118,7 @@ public class DSM5AdministrationFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error during DSM-5 validation and extraction", 
+            _logger.LogError(ex, "[{FunctionName}] Error during DSM-5 validation and extraction",
                 nameof(ValidateAndExtractDSM5Data));
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -149,7 +148,7 @@ public class DSM5AdministrationFunctions
             var searchTerm = query["searchTerm"];
             var includeDetails = bool.Parse(query["includeDetails"] ?? "false");
 
-            _logger.LogInformation("[{FunctionName}] Getting DSM-5 conditions. Category: {Category}, Search: {SearchTerm}, Details: {IncludeDetails}", 
+            _logger.LogInformation("[{FunctionName}] Getting DSM-5 conditions. Category: {Category}, Search: {SearchTerm}, Details: {IncludeDetails}",
                 nameof(GetAvailableDSM5Conditions), category, searchTerm, includeDetails);
 
             var conditions = await _dsm5DataService.GetAvailableConditionsAsync(category, searchTerm, includeDetails);
@@ -177,7 +176,7 @@ public class DSM5AdministrationFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error getting DSM-5 conditions", 
+            _logger.LogError(ex, "[{FunctionName}] Error getting DSM-5 conditions",
                 nameof(GetAvailableDSM5Conditions));
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -202,7 +201,7 @@ public class DSM5AdministrationFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Getting DSM-5 condition details for: {ConditionId}", 
+            _logger.LogInformation("[{FunctionName}] Getting DSM-5 condition details for: {ConditionId}",
                 nameof(GetDSM5ConditionDetails), conditionId);
 
             var condition = await _dsm5DataService.GetConditionDetailsAsync(conditionId);
@@ -244,7 +243,7 @@ public class DSM5AdministrationFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error getting DSM-5 condition details for: {ConditionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error getting DSM-5 condition details for: {ConditionId}",
                 nameof(GetDSM5ConditionDetails), conditionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -269,7 +268,7 @@ public class DSM5AdministrationFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Starting DSM-5 data upload to blob storage", 
+            _logger.LogInformation("[{FunctionName}] Starting DSM-5 data upload to blob storage",
                 nameof(UploadDSM5DataToStorage));
 
             var requestBody = await req.ReadAsStringAsync();
@@ -290,7 +289,7 @@ public class DSM5AdministrationFunctions
 
             if (uploadResult.Success)
             {
-                _logger.LogInformation("[{FunctionName}] Successfully uploaded {ConditionCount} DSM-5 conditions to storage", 
+                _logger.LogInformation("[{FunctionName}] Successfully uploaded {ConditionCount} DSM-5 conditions to storage",
                     nameof(UploadDSM5DataToStorage), uploadResult.UploadedCount);
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
@@ -308,7 +307,7 @@ public class DSM5AdministrationFunctions
             }
             else
             {
-                _logger.LogError("[{FunctionName}] DSM-5 data upload failed: {ErrorMessage}", 
+                _logger.LogError("[{FunctionName}] DSM-5 data upload failed: {ErrorMessage}",
                     nameof(UploadDSM5DataToStorage), uploadResult.ErrorMessage);
 
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -324,7 +323,7 @@ public class DSM5AdministrationFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error during DSM-5 data upload", 
+            _logger.LogError(ex, "[{FunctionName}] Error during DSM-5 data upload",
                 nameof(UploadDSM5DataToStorage));
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -348,7 +347,7 @@ public class DSM5AdministrationFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Getting DSM-5 data status from storage", 
+            _logger.LogInformation("[{FunctionName}] Getting DSM-5 data status from storage",
                 nameof(GetDSM5DataStatus));
 
             var status = await _dsm5DataService.GetDataStatusAsync();
@@ -377,7 +376,7 @@ public class DSM5AdministrationFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error getting DSM-5 data status", 
+            _logger.LogError(ex, "[{FunctionName}] Error getting DSM-5 data status",
                 nameof(GetDSM5DataStatus));
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);

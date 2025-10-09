@@ -469,36 +469,35 @@ export class AzureOpenAIRealtimeService {
     try {
       const constraints: MediaStreamConstraints = {
         audio: {
-          // AGGRESSIVE echo cancellation settings
-          echoCancellation: { ideal: true, exact: true }, // Force enable - non-negotiable
-          noiseSuppression: { ideal: true, exact: true }, // Force noise suppression
-          autoGainControl: { ideal: true, exact: true }, // Force AGC
+          // WebRTC AEC3 (Acoustic Echo Cancellation v3) - Hardware/Browser level
+          echoCancellation: { ideal: true, exact: true }, // Standard WebRTC
+          noiseSuppression: { ideal: true, exact: true },
+          autoGainControl: { ideal: true, exact: true },
           sampleRate: { ideal: 24000 }, // Azure OpenAI recommended sample rate
-          channelCount: { ideal: 1, max: 1 }, // Force mono (stereo can cause echo)
-          latency: { ideal: 0.01, max: 0.02 }, // Ultra-low latency
+          channelCount: { ideal: 1, max: 1 }, // Mono audio
+          latency: { ideal: 0.01, max: 0.02 },
           
-          // Chrome-specific AGGRESSIVE echo prevention
+          // Chrome/Edge WebRTC AEC3 specific constraints
           googEchoCancellation: true,
-          googEchoCancellation2: true, // Enhanced version
+          googEchoCancellation2: true, // AEC2 (enhanced)
+          googDAEchoCancellation: true, // Drift-Aware Echo Cancellation (AEC3)
+          googExperimentalEchoCancellation: true, // Experimental AEC3 features
           googAutoGainControl: true,
-          googAutoGainControl2: true, // Enhanced version
-          googNoiseSuppression: true,
-          googNoiseSuppression2: true, // Enhanced version
-          googHighpassFilter: true, // Remove low-frequency echo
-          googTypingNoiseDetection: true,
-          googAudioMirroring: false, // Disable audio mirroring
-          googExperimentalEchoCancellation: true, // Experimental features
+          googAutoGainControl2: true,
           googExperimentalAutoGainControl: true,
+          googNoiseSuppression: true,
+          googNoiseSuppression2: true,
           googExperimentalNoiseSuppression: true,
-          googBeamforming: true, // Directional audio focus
-          googArrayGeometry: true, // Microphone array optimization
-          googAudioProcessing: true, // Enable all audio processing
-          googDAEchoCancellation: true, // Drift-aware echo cancellation
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false,
+          googBeamforming: true,
+          googArrayGeometry: true,
         } as MediaTrackConstraints,
         video: false
       };
       
-      console.log('🎙️ AGGRESSIVE ECHO CANCELLATION: Requesting microphone with maximum echo prevention...');
+      console.log('🎙️ WebRTC AEC3 ENABLED: Requesting microphone with hardware echo cancellation...');
       
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log('🎤 Microphone access granted');
@@ -1188,11 +1187,11 @@ export class AzureOpenAIRealtimeService {
         this.localStream.getTracks().forEach(track => track.stop());
       }
       
-      // Get new stream with selected device (with AGGRESSIVE echo cancellation)
+      // Get new stream with selected device (with WebRTC AEC3)
       const constraints: MediaStreamConstraints = {
         audio: {
           deviceId: { exact: deviceId },
-          // AGGRESSIVE echo cancellation settings
+          // WebRTC AEC3 (Acoustic Echo Cancellation v3)
           echoCancellation: { ideal: true, exact: true },
           noiseSuppression: { ideal: true, exact: true },
           autoGainControl: { ideal: true, exact: true },
@@ -1200,23 +1199,22 @@ export class AzureOpenAIRealtimeService {
           channelCount: { ideal: 1, max: 1 },
           latency: { ideal: 0.01, max: 0.02 },
           
-          // Chrome-specific AGGRESSIVE echo prevention
+          // Chrome/Edge WebRTC AEC3 specific
           googEchoCancellation: true,
           googEchoCancellation2: true,
+          googDAEchoCancellation: true, // AEC3
+          googExperimentalEchoCancellation: true,
           googAutoGainControl: true,
           googAutoGainControl2: true,
+          googExperimentalAutoGainControl: true,
           googNoiseSuppression: true,
           googNoiseSuppression2: true,
+          googExperimentalNoiseSuppression: true,
           googHighpassFilter: true,
           googTypingNoiseDetection: true,
           googAudioMirroring: false,
-          googExperimentalEchoCancellation: true,
-          googExperimentalAutoGainControl: true,
-          googExperimentalNoiseSuppression: true,
           googBeamforming: true,
           googArrayGeometry: true,
-          googAudioProcessing: true,
-          googDAEchoCancellation: true,
         } as MediaTrackConstraints
       };
       
@@ -1448,6 +1446,36 @@ export class AzureOpenAIRealtimeService {
         }
       }
     }, delay);
+  }
+  
+  /**
+   * Mute or unmute the user's microphone
+   * Used for preventing echo during agent speech
+   */
+  muteMicrophone(mute: boolean): void {
+    if (this.localStream) {
+      const audioTracks = this.localStream.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = !mute;
+      });
+      console.log(mute ? '🔇 Microphone muted (agent speaking)' : '🔊 Microphone unmuted');
+    }
+  }
+  
+  /**
+   * Get the current media stream (for external mic control)
+   */
+  getMediaStream(): MediaStream | null {
+    return this.localStream;
+  }
+  
+  /**
+   * Check if microphone is currently muted
+   */
+  isMicrophoneMuted(): boolean {
+    if (!this.localStream) return true;
+    const audioTracks = this.localStream.getAudioTracks();
+    return audioTracks.length === 0 || !audioTracks[0].enabled;
   }
   
   /**

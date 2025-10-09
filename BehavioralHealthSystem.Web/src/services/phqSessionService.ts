@@ -12,6 +12,15 @@ export interface PhqQuestionResponse {
   answeredAt?: string;
 }
 
+export interface PhqSessionMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  messageType: string;
+  additionalData?: Record<string, any>;
+}
+
 export interface PhqSession {
   userId: string;
   sessionId: string; // Same as chat transcript session ID
@@ -21,7 +30,8 @@ export interface PhqSession {
   lastUpdated: string;
   completedAt?: string;
   isCompleted: boolean;
-  questions: PhqQuestionResponse[];
+  questions: PhqQuestionResponse[]; // Structured question/answer data
+  messages: PhqSessionMessage[]; // Complete conversational flow during assessment
   totalScore?: number;
   severity?: string;
   metadata?: {
@@ -71,6 +81,7 @@ class PhqSessionService {
         attempts: 0,
         skipped: false
       })),
+      messages: [], // Will be filled as conversation progresses
       metadata: {
         conversationSessionId: sessionId,
         userAgent: navigator.userAgent,
@@ -152,6 +163,36 @@ class PhqSessionService {
       this.currentSession.lastUpdated = new Date().toISOString();
       this.scheduleDelayedSave();
     }
+  }
+
+  /**
+   * Add a message to the PHQ session (captures conversational flow)
+   */
+  addMessage(
+    role: 'user' | 'assistant',
+    content: string,
+    messageType: string,
+    additionalData?: Record<string, any>
+  ): void {
+    if (!this.currentSession) {
+      console.warn('No active PHQ session.');
+      return;
+    }
+
+    const message: PhqSessionMessage = {
+      id: `phq-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      role,
+      content,
+      timestamp: new Date().toISOString(),
+      messageType,
+      additionalData
+    };
+
+    this.currentSession.messages.push(message);
+    this.currentSession.lastUpdated = new Date().toISOString();
+
+    // Schedule save after adding message
+    this.scheduleDelayedSave();
   }
 
   /**

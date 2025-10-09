@@ -14,6 +14,13 @@ export interface RealtimeMessage {
   audioUrl?: string;
   isTranscript?: boolean; // Marks messages that are transcripts vs full responses
   isPartial?: boolean; // For live streaming transcripts
+  
+  // Utterance tracking - links messages to real-time speech events
+  utteranceId?: string; // Links this message to a specific utterance
+  speaker?: 'user' | 'agent'; // Explicit speaker identifier (redundant with role but clearer)
+  speechDuration?: number; // How long the speech took in milliseconds
+  wasInterrupted?: boolean; // If the speech was cut off mid-utterance
+  
   // PHQ Assessment metadata
   isPhqQuestion?: boolean;
   isPhqAnswer?: boolean;
@@ -21,6 +28,21 @@ export interface RealtimeMessage {
   phqQuestionNumber?: number; // 1-9
   phqAnswerValue?: number; // 0-3 (the actual answer score)
   assessmentId?: string; // Unique ID for the PHQ assessment session
+}
+
+/**
+ * Utterance - Real-time speech event tracking
+ * Tracks actual speech events as they happen, separate from completed messages
+ */
+export interface Utterance {
+  id: string;
+  speaker: 'user' | 'agent';
+  type: 'speech-start' | 'speech-in-progress' | 'speech-complete';
+  content: string; // Accumulates as speech progresses
+  startTime: number;
+  endTime?: number;
+  duration?: number; // Milliseconds
+  isInterrupted?: boolean; // True if response.cancelled or user interrupted agent
 }
 
 export interface ToolDefinition {
@@ -237,11 +259,7 @@ export class AzureOpenAIRealtimeService {
   private userInputHandler: UserInputHandler;
   private agentResponseHandler: AgentResponseHandler;
   
-  // Legacy VAD fields (now managed by UserInputHandler)
-  private voiceActivityInterval: NodeJS.Timeout | null = null;
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private microphoneSource: MediaStreamAudioSourceNode | null = null;
+  // Note: Local VAD removed - relying on Azure server-side VAD
   
   private endpoint: string;
   private apiKey: string;
@@ -259,6 +277,11 @@ export class AzureOpenAIRealtimeService {
     isAISpeaking: false
   };
   private conversationState: ConversationState = { state: 'idle' };
+  
+  // Utterance tracking - real-time speech event monitoring
+  private activeUtterances: Map<string, Utterance> = new Map();
+  private currentUserUtteranceId: string | null = null;
+  private currentAgentUtteranceId: string | null = null;
   
   // Reconnection state
   private reconnectionAttempts: number = 0;
@@ -280,6 +303,7 @@ export class AzureOpenAIRealtimeService {
   private onLiveTranscriptCallback: ((transcript: LiveTranscript) => void) | null = null;
   private onSpeechDetectionCallback: ((state: SpeechDetectionState) => void) | null = null;
   private onConversationStateCallback: ((state: ConversationState) => void) | null = null;
+  private onUtteranceCallback: ((utterance: Utterance) => void) | null = null;
   
   // Function calling callbacks
   private onFunctionCallCallback: ((functionName: string, args: Record<string, unknown>) => Promise<unknown>) | null = null;
@@ -344,8 +368,15 @@ export class AzureOpenAIRealtimeService {
     this.onMessageCallback = callback;
   }
   
+  /**
+   * Voice activity monitoring - DEPRECATED
+   * Local VAD removed. This method is kept for backward compatibility but does nothing.
+   * Use Azure's server-side VAD events instead (input_audio_buffer.speech_started/stopped)
+   */
   onVoiceActivity(callback: (activity: VoiceActivity) => void): void {
+    // Callback registered but not used since local VAD is removed
     this.onVoiceActivityCallback = callback;
+    console.warn('⚠️ onVoiceActivity is deprecated - local VAD removed, use Azure server-side VAD events');
   }
   
   onStatusChange(callback: (status: SessionStatus) => void): void {
@@ -375,6 +406,118 @@ export class AzureOpenAIRealtimeService {
   
   onConnectionLost(callback: (attempts: number, maxAttempts: number) => void): void {
     this.onConnectionLostCallback = callback;
+  }
+  
+  /**
+   * Register callback for utterance tracking events
+   * Called when utterances are created, updated, or completed
+   */
+  onUtterance(callback: (utterance: Utterance) => void): void {
+    this.onUtteranceCallback = callback;
+  }
+
+  /**
+   * Get all tracked utterances
+   */
+  getUtterances(): Utterance[] {
+    return Array.from(this.activeUtterances.values());
+  }
+
+  /**
+   * Get utterances by speaker
+   */
+  getUtterancesBySpeaker(speaker: 'user' | 'agent'): Utterance[] {
+    return this.getUtterances().filter(u => u.speaker === speaker);
+  }
+
+  /**
+   * Clear all tracked utterances
+   */
+  clearUtterances(): void {
+    this.activeUtterances.clear();
+    this.currentUserUtteranceId = null;
+    this.currentAgentUtteranceId = null;
+  }
+
+  /**
+   * Track or update an utterance
+   * Creates new utterance or updates existing one based on speech events
+   */
+  private trackUtterance(
+    speaker: 'user' | 'agent',
+    type: 'speech-start' | 'speech-in-progress' | 'speech-complete',
+    content: string = ''
+  ): string {
+    const currentIdKey = speaker === 'user' ? 'currentUserUtteranceId' : 'currentAgentUtteranceId';
+    let utteranceId = this[currentIdKey];
+
+    if (type === 'speech-start') {
+      // Create new utterance
+      utteranceId = `${speaker}_${Date.now()}`;
+      this[currentIdKey] = utteranceId;
+      
+      const utterance: Utterance = {
+        id: utteranceId,
+        speaker,
+        type,
+        content,
+        startTime: Date.now(),
+        isInterrupted: false
+      };
+      
+      this.activeUtterances.set(utteranceId, utterance);
+      
+      // Emit callback
+      if (this.onUtteranceCallback) {
+        this.onUtteranceCallback(utterance);
+      }
+      
+      console.log(`🎤 Speech started: ${speaker} (${utteranceId})`);
+    } else if (utteranceId && this.activeUtterances.has(utteranceId)) {
+      // Update existing utterance
+      const utterance = this.activeUtterances.get(utteranceId)!;
+      utterance.type = type;
+      utterance.content = content;
+      
+      if (type === 'speech-complete') {
+        utterance.endTime = Date.now();
+        utterance.duration = utterance.endTime - utterance.startTime;
+        this[currentIdKey] = null; // Clear current ID
+        console.log(`✅ Speech completed: ${speaker} (${utteranceId}) - ${utterance.duration}ms`);
+      }
+      
+      // Emit callback
+      if (this.onUtteranceCallback) {
+        this.onUtteranceCallback(utterance);
+      }
+    }
+
+    return utteranceId || '';
+  }
+
+  /**
+   * Mark an utterance as interrupted
+   */
+  private interruptUtterance(speaker: 'user' | 'agent'): void {
+    const currentIdKey = speaker === 'user' ? 'currentUserUtteranceId' : 'currentAgentUtteranceId';
+    const utteranceId = this[currentIdKey];
+    
+    if (utteranceId && this.activeUtterances.has(utteranceId)) {
+      const utterance = this.activeUtterances.get(utteranceId)!;
+      utterance.type = 'speech-complete';
+      utterance.isInterrupted = true;
+      utterance.endTime = Date.now();
+      utterance.duration = utterance.endTime - utterance.startTime;
+      
+      this[currentIdKey] = null;
+      
+      // Emit callback
+      if (this.onUtteranceCallback) {
+        this.onUtteranceCallback(utterance);
+      }
+      
+      console.log(`⚠️ Speech interrupted: ${speaker} (${utteranceId})`);
+    }
   }
   
   /**
@@ -557,49 +700,24 @@ export class AzureOpenAIRealtimeService {
    * Setup voice activity detection using UserInputHandler
    */
   private async setupVoiceActivityDetection(): Promise<void> {
-    if (!this.localStream) return;
+    // LOCAL VAD REMOVED - Now relying entirely on Azure OpenAI's server-side VAD
+    // Azure's `input_audio_buffer.speech_started` and `speech_stopped` events
+    // provide more accurate speech detection than local audio analysis
     
-    try {
-      // Delegate VAD to UserInputHandler
-      await this.userInputHandler.initializeVAD(this.localStream);
-      
-      // Forward user handler callbacks to legacy callbacks for backward compatibility
-      this.userInputHandler.onVoiceActivity((activity) => {
-        if (this.onVoiceActivityCallback) {
-          this.onVoiceActivityCallback(activity);
-        }
-      });
-      
-      this.userInputHandler.onLiveTranscript((transcript) => {
-        if (this.onLiveTranscriptCallback) {
-          this.onLiveTranscriptCallback(transcript);
-        }
-      });
-      
-      this.userInputHandler.onSpeechDetection((state) => {
-        // Merge user state with agent state
-        this.speechDetectionState.isUserSpeaking = state.isUserSpeaking;
-        if (this.onSpeechDetectionCallback) {
-          this.onSpeechDetectionCallback(this.speechDetectionState);
-        }
-      });
-      
-      console.log('🎙️ Voice activity detection enabled (via UserInputHandler)');
-    } catch (error) {
-      console.error('Failed to setup voice activity detection:', error);
-    }
+    // Forward user transcript handler for backward compatibility
+    this.userInputHandler.onLiveTranscript((transcript) => {
+      if (this.onLiveTranscriptCallback) {
+        this.onLiveTranscriptCallback(transcript);
+      }
+    });
+    
+    console.log('✅ Using Azure OpenAI server-side VAD (local VAD removed)');
   }
   
   /**
    * Legacy method - now delegated to UserInputHandler
    * @deprecated Use UserInputHandler directly
    */
-  private startVoiceActivityMonitoring(): void {
-    // This method is now handled by UserInputHandler
-    // Kept for backward compatibility but does nothing
-    console.warn('⚠️ startVoiceActivityMonitoring is deprecated - using UserInputHandler');
-  }
-  
   /**
    * Create RTCPeerConnection
    */
@@ -908,6 +1026,9 @@ export class AzureOpenAIRealtimeService {
           this.speechDetectionState.speechStartedAt = Date.now();
           this.updateConversationState({ state: 'listening', message: 'Listening...' });
           this.emitSpeechDetection();
+          
+          // Track user utterance start
+          this.trackUtterance('user', 'speech-start');
           break;
           
         case 'input_audio_buffer.speech_stopped':
@@ -929,6 +1050,9 @@ export class AzureOpenAIRealtimeService {
             this.speechDetectionState.isAISpeaking = true;
             this.emitSpeechDetection();
             
+            // Track agent utterance in progress
+            this.trackUtterance('agent', 'speech-in-progress', this.currentTranscriptBuffer);
+            
             // Backward compatibility
             if (this.onTranscriptCallback) {
               this.onTranscriptCallback(realtimeEvent.delta, false);
@@ -942,14 +1066,22 @@ export class AzureOpenAIRealtimeService {
           
           // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
-            this.messageHistory.push({
+            // Complete agent utterance and link to message
+            const utteranceId = this.trackUtterance('agent', 'speech-complete', realtimeEvent.transcript);
+            
+            const agentMessage: RealtimeMessage = {
               id: `ai-transcript-${Date.now()}`,
               role: 'assistant',
               content: realtimeEvent.transcript,
               timestamp: new Date().toISOString(),
               isTranscript: true,
-              isPartial: false
-            });
+              isPartial: false,
+              utteranceId,
+              speaker: 'agent',
+              speechDuration: this.activeUtterances.get(utteranceId)?.duration
+            };
+            
+            this.messageHistory.push(agentMessage);
             
             this.currentTranscriptBuffer = '';
             
@@ -968,13 +1100,19 @@ export class AzureOpenAIRealtimeService {
           if (realtimeEvent.transcript) {
             console.log('👤 User transcript completed:', realtimeEvent.transcript);
             
+            // Complete user utterance and link to message
+            const utteranceId = this.trackUtterance('user', 'speech-complete', realtimeEvent.transcript);
+            
             const userMessage: RealtimeMessage = {
               id: `user-transcript-${Date.now()}`,
               role: 'user',
               content: realtimeEvent.transcript,
               timestamp: new Date().toISOString(),
               isTranscript: true,
-              isPartial: false
+              isPartial: false,
+              utteranceId,
+              speaker: 'user',
+              speechDuration: this.activeUtterances.get(utteranceId)?.duration
             };
             
             this.messageHistory.push(userMessage);
@@ -989,6 +1127,9 @@ export class AzureOpenAIRealtimeService {
         case 'response.created':
           this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
+          
+          // Track agent utterance start
+          this.trackUtterance('agent', 'speech-start');
           break;
           
         case 'response.done':
@@ -1008,6 +1149,9 @@ export class AzureOpenAIRealtimeService {
           this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
           this.emitSpeechDetection();
           this.currentTranscriptBuffer = '';
+          
+          // Mark agent utterance as interrupted
+          this.interruptUtterance('agent');
           break;
 
         // Error handling
@@ -1233,10 +1377,8 @@ export class AzureOpenAIRealtimeService {
         }
       }
       
-      // Restart voice activity detection
-      if (this.analyser) {
-        this.setupVoiceActivityDetection();
-      }
+      // Voice activity detection (Azure server-side only now)
+      await this.setupVoiceActivityDetection();
     } catch (error) {
       console.error('Failed to change microphone:', error);
       throw error;
@@ -1289,18 +1431,6 @@ export class AzureOpenAIRealtimeService {
     this.userInputHandler.cleanup();
     this.agentResponseHandler.cleanup();
     
-    // Stop legacy voice activity monitoring (if any)
-    if (this.voiceActivityInterval) {
-      clearInterval(this.voiceActivityInterval);
-      this.voiceActivityInterval = null;
-    }
-    
-    // Close legacy audio context (if any)
-    if (this.audioContext) {
-      await this.audioContext.close();
-      this.audioContext = null;
-    }
-    
     // Stop local stream
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
@@ -1333,8 +1463,6 @@ export class AzureOpenAIRealtimeService {
     }
     
     this.remoteStream = null;
-    this.analyser = null;
-    this.microphoneSource = null;
     
     console.log('🧹 All resources cleaned up (including handlers)');
   }

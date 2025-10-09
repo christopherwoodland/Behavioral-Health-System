@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Mic, 
-  Trash2, 
-  Volume2, 
-  VolumeX, 
-  Settings, 
+import {
+  Mic,
+  Trash2,
+  Volume2,
+  VolumeX,
+  Settings,
   Users,
   Activity,
   Pause,
@@ -14,7 +14,7 @@ import {
   Bot
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
-import { 
+import {
   azureOpenAIRealtimeService,
   RealtimeMessage,
   RealtimeSessionConfig,
@@ -58,20 +58,20 @@ interface SessionStatus {
 export const RealtimeAgentExperience: React.FC = () => {
   // Authentication context
   const { user } = useAuth();
-  
+
   // Get authenticated user ID with fallback
   const authenticatedUserId = user?.id || getUserId();
-  
+
   // Extract first name from full name
   const getFirstName = useCallback(() => {
     if (!user?.name || user.name === 'Sir') return 'Sir';
     return user.name.split(' ')[0];
   }, [user?.name]);
-  
+
   // Get pet names for high humor levels
   const getPetName = useCallback(() => {
     const petNames = ['Champ', 'Slick', 'Ace', 'Hotshot', 'Chief'];
-    
+
     // Try to create abbreviated last name if available
     if (user?.name && user.name.includes(' ')) {
       const nameParts = user.name.split(' ');
@@ -82,36 +82,36 @@ export const RealtimeAgentExperience: React.FC = () => {
         }
       }
     }
-    
+
     return petNames[Math.floor(Math.random() * petNames.length)];
   }, [user?.name]);
-  
+
   // Get appropriate name based on humor level and randomness
   const getAppropiateName = useCallback((humorLevel: number, forceFirstName: boolean = false) => {
     const firstName = getFirstName();
-    
+
     // Always use first name unless humor is 80%+ and random chance for pet name
     if (forceFirstName || humorLevel < 80) {
       return firstName;
     }
-    
+
     // At 80%+ humor, 30% chance to use pet name
     if (Math.random() < 0.3) {
       return getPetName();
     }
-    
+
     return firstName;
   }, [getFirstName, getPetName]);
-  
+
   // Core service - direct WebRTC connection to Azure OpenAI Realtime API
   const agentService = azureOpenAIRealtimeService;
-  
+
   // UI State
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showAgentPanel, setShowAgentPanel] = useState(false);
-  
+
   // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
     id: 'tars',
@@ -119,7 +119,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     isActive: false,
     isTyping: false
   });
-  
+
   // Session State
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>({
     isActive: false,
@@ -128,12 +128,12 @@ export const RealtimeAgentExperience: React.FC = () => {
     hasAudioSupport: false,
     connectionStatus: 'disconnected'
   });
-  
+
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [voiceActivityLevel, setVoiceActivityLevel] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
-  
+
   // Enhanced features state
   const [speechDetection, setSpeechDetection] = useState<SpeechDetectionState>({
     isUserSpeaking: false,
@@ -144,14 +144,14 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [showLiveTranscripts, setShowLiveTranscripts] = useState(true);
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
-  
+
   // Connection notification state
   const [connectionNotification, setConnectionNotification] = useState<{
     show: boolean;
     message: string;
     type: 'warning' | 'error' | 'info';
   }>({ show: false, message: '', type: 'info' });
-  
+
   // Humor level state - starts at 100% and persists in localStorage
   const [humorLevel, setHumorLevel] = useState<number>(() => {
     const saved = localStorage.getItem('tars-flight-ops-mode');
@@ -163,14 +163,14 @@ export const RealtimeAgentExperience: React.FC = () => {
     const clampedLevel = Math.max(0, Math.min(100, newLevel));
     setHumorLevel(clampedLevel);
     localStorage.setItem('tars-flight-ops-mode', clampedLevel.toString());
-    
+
     // Announce the change
     announceToScreenReader(`Humor level set to ${clampedLevel} percent`);
-    
+
     // Get appropriate name for the message
     const firstName = getFirstName();
     const messageName = getAppropiateName(clampedLevel, false);
-    
+
     // Add a message to show the change
     const humorMessage: ConversationMessage = {
       id: `humor-${Date.now()}`,
@@ -184,12 +184,12 @@ export const RealtimeAgentExperience: React.FC = () => {
       }`,
       timestamp: new Date().toISOString()
     };
-    
+
     if (sessionStatus.isActive) {
       setMessages(prev => [...prev, humorMessage]);
     }
   }, [sessionStatus.isActive, getFirstName, getAppropiateName]);
-  
+
   // Azure OpenAI Realtime Settings
   const [azureSettings, setAzureSettings] = useState<AzureOpenAIRealtimeSettings>({
     turnDetectionThreshold: 0.5,
@@ -199,10 +199,10 @@ export const RealtimeAgentExperience: React.FC = () => {
     temperature: 0.7, // Changed from 0.7 to meet Azure OpenAI minimum of 0.6
     voice: 'alloy'
   });
-  
+
   // Assessment State (optional - can be added if needed)
   // const [currentAssessment, setCurrentAssessment] = useState<any | null>(null);
-  
+
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceActivityIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -217,20 +217,20 @@ export const RealtimeAgentExperience: React.FC = () => {
     const initializeServices = async () => {
       try {
         setSessionStatus(prev => ({ ...prev, connectionStatus: 'connecting' }));
-        
+
         // Initialize Azure OpenAI Realtime WebRTC service (browser native, no backend)
         await agentService.initialize();
-        
+
         setupEventListeners();
-        
+
         setSessionStatus(prev => ({
           ...prev,
           connectionStatus: 'connected',
           hasAudioSupport: true
         }));
-        
+
         announceToScreenReader('Azure OpenAI Realtime service initialized');
-        
+
       } catch (error) {
         console.error('Failed to initialize agent services:', error);
         setSessionStatus(prev => ({ ...prev, connectionStatus: 'error' }));
@@ -268,12 +268,22 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // PHQ Assessment Handlers
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
+    console.log('📋 ========================================');
+    console.log(`📋 STARTING ${type} ASSESSMENT`);
+    console.log('📋 ========================================');
+
     // Start assessment - this generates assessment ID once and saves initial state progressively
     phqAssessmentService.startAssessment(type, authenticatedUserId);
-    
+
     const currentAssessment = phqAssessmentService.getCurrentAssessment();
-    if (!currentAssessment) return;
-    
+    if (!currentAssessment) {
+      console.log('❌ Failed to initialize assessment');
+      return;
+    }
+
+    console.log('📋 Assessment ID:', currentAssessment.assessmentId);
+    console.log('📋 User ID:', authenticatedUserId);
+
     // Initialize PHQ session for separate progressive storage
     const currentSessionId = chatTranscriptService.getCurrentTranscript()?.sessionId;
     if (currentSessionId && authenticatedUserId) {
@@ -284,48 +294,14 @@ export const RealtimeAgentExperience: React.FC = () => {
         type
       );
     }
-    
-    const nextQuestion = phqAssessmentService.getNextQuestion();
-    if (nextQuestion) {
-      // Update PHQ session with first question text
-      phqSessionService.setQuestionText(nextQuestion.questionNumber, nextQuestion.questionText);
-      
-      const responseMessage: ConversationMessage = {
-        id: `phq-start-${Date.now()}`,
-        role: 'assistant',
-        content: `Starting ${type} assessment. This is a screening tool, not a diagnosis.
 
-${type === 'PHQ-2' ? 'This quick 2-question screen' : 'This 9-question assessment'} asks about your experiences over the past 2 weeks.
+    // NOTE: Don't manually add messages here - the AI will present the questions
+    // based on the function return value. This prevents duplicate messages.
+    console.log('📋 ========================================');
+    console.log('📋 Assessment initialized - AI will present questions');
+    console.log('📋 ========================================');
 
-Question ${nextQuestion.questionNumber}: ${nextQuestion.questionText}
-
-Please respond with 0, 1, 2, or 3:
-${phqAssessmentService.getResponseScale()}`,
-        timestamp: new Date().toISOString(),
-        isPhqQuestion: true,
-        phqType: type === 'PHQ-2' ? 2 : 9,
-        phqQuestionNumber: nextQuestion.questionNumber,
-        assessmentId: currentAssessment.assessmentId
-      };
-      
-      setMessages(prev => [...prev, responseMessage]);
-      
-      // Save to chat transcript with PHQ metadata
-      if (authenticatedUserId) {
-        chatTranscriptService.addAssistantMessage(
-          responseMessage.content,
-          'phq-question',
-          {
-            isPhqQuestion: true,
-            phqType: type === 'PHQ-2' ? 2 : 9,
-            phqQuestionNumber: nextQuestion.questionNumber,
-            assessmentId: currentAssessment.assessmentId
-          }
-        );
-      }
-      
-      announceToScreenReader(`Starting ${type} assessment`);
-    }
+    announceToScreenReader(`Starting ${type} assessment`);
   }, [authenticatedUserId]);
 
   const handlePhqAssessmentResponse = useCallback(async (userInput: string) => {
@@ -335,30 +311,40 @@ ${phqAssessmentService.getResponseScale()}`,
     const nextQuestion = phqAssessmentService.getNextQuestion();
     if (!nextQuestion) return;
 
+    console.log('📋 ========================================');
+    console.log('📋 PROCESSING USER RESPONSE');
+    console.log('📋 Question:', nextQuestion.questionNumber);
+    console.log('📋 User input:', userInput);
+    console.log('📋 ========================================');
+
     const answer = phqAssessmentService.parseAnswer(userInput);
-    
+
     if (answer === null) {
+      console.log('❌ Invalid response - not a valid number (0-3)');
       // Invalid response
       phqAssessmentService.recordInvalidAttempt(nextQuestion.questionNumber);
-      
+
       // Record invalid attempt in PHQ session
       phqSessionService.recordInvalidAttempt(nextQuestion.questionNumber);
-      
+
       const attemptsLeft = 3 - nextQuestion.attempts;
+      console.log('📋 Invalid attempts:', nextQuestion.attempts, '| Attempts left:', attemptsLeft);
       let responseContent: string;
-      
+
       if (attemptsLeft > 0) {
         responseContent = `Please respond with a number 0, 1, 2, or 3 only. You have ${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} remaining.
 
 ${phqAssessmentService.getResponseScale()}`;
       } else {
+        console.log('📋 ⏩ SKIPPING QUESTION', nextQuestion.questionNumber, '- Too many invalid attempts');
+
         responseContent = `We'll skip this question for now and return to it later.
 
 ${phqAssessmentService.getProgressSummary()}`;
-        
+
         // Note: phqAssessmentService already tracks skipped questions via recordInvalidAttempt()
         // which triggers progressive save automatically
-        
+
         // Move to next question
         const nextUnanswered = phqAssessmentService.getNextQuestion();
         if (nextUnanswered) {
@@ -368,7 +354,7 @@ Question ${nextUnanswered.questionNumber}: ${nextUnanswered.questionText}
 
 Please respond with 0, 1, 2, or 3:
 ${phqAssessmentService.getResponseScale()}`;
-          
+
           // This message includes the next question, so add PHQ metadata
           const responseMessage: ConversationMessage = {
             id: `phq-skip-next-${Date.now()}`,
@@ -380,9 +366,9 @@ ${phqAssessmentService.getResponseScale()}`;
             phqQuestionNumber: nextUnanswered.questionNumber,
             assessmentId: currentAssessment.assessmentId
           };
-          
+
           setMessages(prev => [...prev, responseMessage]);
-          
+
           // Save to chat transcript with metadata
           if (authenticatedUserId) {
             await chatTranscriptService.addAssistantMessage(
@@ -399,16 +385,16 @@ ${phqAssessmentService.getResponseScale()}`;
           return;
         }
       }
-      
+
       const responseMessage: ConversationMessage = {
         id: `phq-invalid-${Date.now()}`,
         role: 'assistant',
         content: responseContent,
         timestamp: new Date().toISOString()
       };
-      
+
       setMessages(prev => [...prev, responseMessage]);
-      
+
       // Save invalid response instruction to chat transcript
       if (authenticatedUserId) {
         await chatTranscriptService.addAssistantMessage(
@@ -425,8 +411,15 @@ ${phqAssessmentService.getResponseScale()}`;
     }
 
     // Valid response - record it
+    console.log('✅ Valid answer:', answer);
+
     const success = phqAssessmentService.recordAnswer(nextQuestion.questionNumber, answer);
-    if (!success) return;
+    if (!success) {
+      console.log('❌ Failed to record answer');
+      return;
+    }
+
+    console.log('📋 Answer recorded successfully');
 
     // Record answer in PHQ session for progressive storage
     phqSessionService.recordAnswer(nextQuestion.questionNumber, answer);
@@ -449,6 +442,10 @@ ${phqAssessmentService.getResponseScale()}`;
     // Check if assessment is complete (get fresh state after recording answer)
     const updatedAssessment = phqAssessmentService.getCurrentAssessment();
     if (updatedAssessment?.isCompleted) {
+      console.log('📋 ========================================');
+      console.log('📋 ✅ ASSESSMENT COMPLETE');
+      console.log('📋 All questions answered');
+      console.log('📋 ========================================');
       handlePhqAssessmentComplete();
       return;
     }
@@ -456,9 +453,14 @@ ${phqAssessmentService.getResponseScale()}`;
     // Continue with next question
     const nextUnanswered = phqAssessmentService.getNextQuestion();
     if (nextUnanswered) {
+      console.log('📋 ========================================');
+      console.log('📋 NEXT QUESTION:', nextUnanswered.questionNumber);
+      console.log('📋', nextUnanswered.questionText);
+      console.log('📋 ========================================');
+
       // Update PHQ session with next question text
       phqSessionService.setQuestionText(nextUnanswered.questionNumber, nextUnanswered.questionText);
-      
+
       const responseMessage: ConversationMessage = {
         id: `phq-next-${Date.now()}`,
         role: 'assistant',
@@ -474,9 +476,9 @@ ${phqAssessmentService.getResponseScale()}`,
         phqQuestionNumber: nextUnanswered.questionNumber,
         assessmentId: currentAssessment.assessmentId
       };
-      
+
       setMessages(prev => [...prev, responseMessage]);
-      
+
       // Save next question to chat transcript with metadata
       if (authenticatedUserId) {
         await chatTranscriptService.addAssistantMessage(
@@ -497,16 +499,33 @@ ${phqAssessmentService.getResponseScale()}`,
     const assessment = phqAssessmentService.getCurrentAssessment();
     if (!assessment || !assessment.isCompleted) return;
 
+    console.log('📋 ========================================');
+    console.log('📋 CALCULATING ASSESSMENT RESULTS');
+    console.log('📋 ========================================');
+
     const score = phqAssessmentService.calculateScore();
     const severity = phqAssessmentService.determineSeverity(score, assessment.assessmentType);
     const { interpretation, recommendations } = phqAssessmentService.getInterpretation(score, assessment.assessmentType);
+
+    console.log('📋 Assessment Type:', assessment.assessmentType);
+    console.log('📋 Total Score:', score);
+    console.log('📋 Severity:', severity);
+    console.log('📋 Answered Questions:', assessment.questions.filter(q => q.answer !== null).length);
+    console.log('📋 ========================================');
 
     // Complete PHQ session in separate storage (progressive save)
     phqSessionService.completeAssessment(score, severity);
 
     // Check for suicidal ideation
-    const hasSuicidalIdeation = assessment.assessmentType === 'PHQ-9' && 
+    const hasSuicidalIdeation = assessment.assessmentType === 'PHQ-9' &&
       assessment.questions.find(q => q.questionNumber === 9 && (q.answer || 0) > 0);
+
+    if (hasSuicidalIdeation) {
+      console.log('⚠️ ========================================');
+      console.log('⚠️ CRISIS ALERT: SUICIDAL IDEATION DETECTED');
+      console.log('⚠️ Question 9 answered with value > 0');
+      console.log('⚠️ ========================================');
+    }
 
     let responseContent = `${assessment.assessmentType} Assessment Complete
 
@@ -523,7 +542,7 @@ ${recommendations.map(r => `• ${r}`).join('\n')}`;
 
 ⚠️ CRISIS ALERT: You indicated thoughts of self-harm. Please seek immediate help:
 • Call 988 (Suicide & Crisis Lifeline)
-• Text HOME to 741741 (Crisis Text Line)  
+• Text HOME to 741741 (Crisis Text Line)
 • Call 911 if in immediate danger`;
     }
 
@@ -539,9 +558,9 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
       content: responseContent,
       timestamp: new Date().toISOString()
     };
-    
+
     setMessages(prev => [...prev, responseMessage]);
-    
+
     // Save completion message to chat transcript with metadata
     if (authenticatedUserId) {
       await chatTranscriptService.addAssistantMessage(
@@ -555,17 +574,17 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
         }
       );
     }
-    
+
     // Note: PHQ session has been progressively saved throughout the assessment
     // Final save with score and severity was triggered by phqSessionService.completeAssessment() above
     console.log(`✅ ${assessment.assessmentType} assessment completed and saved progressively`);
-    
+
     // Reset assessment service for next use
     phqAssessmentService.resetAssessment();
-    
+
     // End PHQ session
     phqSessionService.endSession();
-    
+
     announceToScreenReader(`${assessment.assessmentType} assessment completed. Score: ${score}, Severity: ${severity}`);
   }, []);
 
@@ -578,17 +597,17 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
       console.log('🎭 Content:', message.content?.substring(0, 100));
       console.log('🎭 Message ID:', message.id);
       console.log('🎭 ========================================');
-      
+
       // NO LEXICAL/WORD-BASED ECHO PREVENTION
       // Relying 100% on WebRTC AEC3 + Mic Muting Strategy
       // Mic muting is now handled automatically in azureOpenAIRealtimeService.ts:
       //   - Mutes on 'response.created' (before agent speaks)
       //   - Unmutes on 'response.done' (after 2.5s delay)
-      
+
       // IMPORTANT: User messages come through this callback for processing (voice commands, etc)
       // but should NOT be added to the message display since they're already added
       // via the transcript event in the service. Only add assistant messages to chat bubbles.
-      
+
       // Check for humor level voice commands in user messages
       if (message.role === 'user' && message.content) {
         const humorCommand = message.content.match(/set (?:humor|flight ops|ops) (?:level )?to (\d+)/i);
@@ -605,7 +624,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
         const pauseSessionCommand = message.content.match(/(?:pause|hold|suspend) (?:session|conversation|chat|call|meeting)?/i);
         const resumeSessionCommand = message.content.match(/(?:resume|continue|start|unpause|restart) (?:session|conversation|chat|call|meeting)?/i);
         const helpCommand = message.content.match(/(?:help|commands|what can you do|show commands|voice commands)/i);
-        
+
         if (closeSessionCommand) {
           // Add confirmation message
           const confirmMessage: ConversationMessage = {
@@ -615,7 +634,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
             timestamp: new Date().toISOString()
           };
           setMessages(prev => [...prev, confirmMessage]);
-          
+
           // Save confirmation to transcript
           if (authenticatedUserId) {
             chatTranscriptService.addAssistantMessage(
@@ -624,22 +643,22 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
               { triggeredByVoiceCommand: true, command: message.content }
             );
           }
-          
+
           // Announce to screen reader
           announceToScreenReader('Session ending');
-          
+
           // End the session after a brief delay
           setTimeout(() => {
             endSession();
           }, 2000);
-          
+
           return; // Don't add the command message to chat
         }
-        
+
         if (pauseSessionCommand) {
           if (!isSessionPaused) {
             pauseSession();
-            
+
             const pauseMessage: ConversationMessage = {
               id: `session-pause-${Date.now()}`,
               role: 'assistant',
@@ -647,7 +666,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
               timestamp: new Date().toISOString()
             };
             setMessages(prev => [...prev, pauseMessage]);
-            
+
             // Save pause message to transcript
             if (authenticatedUserId) {
               chatTranscriptService.addAssistantMessage(
@@ -656,7 +675,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
                 { triggeredByVoiceCommand: true, command: message.content }
               );
             }
-            
+
             // Announce to screen reader
             announceToScreenReader('Session paused');
           } else {
@@ -670,11 +689,11 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
           }
           return; // Don't add the command message to chat
         }
-        
+
         if (resumeSessionCommand) {
           if (isSessionPaused) {
             resumeSession();
-            
+
             const resumeMessage: ConversationMessage = {
               id: `session-resume-${Date.now()}`,
               role: 'assistant',
@@ -682,7 +701,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
               timestamp: new Date().toISOString()
             };
             setMessages(prev => [...prev, resumeMessage]);
-            
+
             // Save resume message to transcript
             if (authenticatedUserId) {
               chatTranscriptService.addAssistantMessage(
@@ -691,7 +710,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
                 { triggeredByVoiceCommand: true, command: message.content }
               );
             }
-            
+
             // Announce to screen reader
             announceToScreenReader('Session resumed');
           } else {
@@ -705,7 +724,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
           }
           return; // Don't add the command message to chat
         }
-        
+
         if (helpCommand) {
           const helpMessage: ConversationMessage = {
             id: `help-${Date.now()}`,
@@ -731,7 +750,7 @@ Just speak naturally - I understand variations of these commands!`,
             timestamp: new Date().toISOString()
           };
           setMessages(prev => [...prev, helpMessage]);
-          
+
           // Save help message to transcript
           if (authenticatedUserId) {
             chatTranscriptService.addAssistantMessage(
@@ -740,16 +759,16 @@ Just speak naturally - I understand variations of these commands!`,
               { triggeredByVoiceCommand: true, command: message.content }
             );
           }
-          
+
           // Announce to screen reader
           announceToScreenReader('Voice commands help displayed');
-          
+
           return; // Don't add the command message to chat
         }
 
         // NOTE: PHQ assessments are now initiated ONLY through function calls
         // Voice command detection removed to prevent duplicate starts
-        
+
         // Check if we're in an active PHQ assessment
         const currentAssessment = phqAssessmentService.getCurrentAssessment();
         if (currentAssessment && !currentAssessment.isCompleted) {
@@ -757,21 +776,21 @@ Just speak naturally - I understand variations of these commands!`,
           return;
         }
       }
-      
+
       // Add ALL messages to the chat display (both user and assistant)
       console.log(`✅ Adding ${message.role} message to chat display`);
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
-      
+
       // Save message to chat transcript
       if (authenticatedUserId) {
         if (message.role === 'user') {
           // Check if this is a PHQ answer
           const currentAssessment = phqAssessmentService.getCurrentAssessment();
           const isPhqAnswer = currentAssessment && !currentAssessment.isCompleted;
-          
+
           const metadata: any = { isTranscript: message.isTranscript, messageId: message.id, inputMethod: 'voice' };
-          
+
           if (isPhqAnswer) {
             // Add PHQ answer metadata
             const answer = phqAssessmentService.parseAnswer(message.content);
@@ -784,15 +803,15 @@ Just speak naturally - I understand variations of these commands!`,
               metadata.assessmentId = currentAssessment.assessmentId;
             }
           }
-          
+
           console.log('✅ Saving user message to transcript:', message.content.substring(0, 50) + '...');
-          
+
           chatTranscriptService.addUserMessage(
             message.content,
             'voice-input',
             metadata
           );
-          
+
           // If this is during a PHQ assessment, also add to PHQ session messages
           if (isPhqAnswer && currentAssessment) {
             phqSessionService.addMessage('user', message.content, 'voice-input', metadata);
@@ -801,56 +820,56 @@ Just speak naturally - I understand variations of these commands!`,
           // Check for PHQ question marker [PHQ-Q#]
           const phqMarkerMatch = message.content.match(/\[PHQ-Q(\d+)\]/);
           const metadata: any = { messageId: message.id };
-          
+
           if (phqMarkerMatch) {
             const questionNumber = parseInt(phqMarkerMatch[1], 10);
             const currentAssessment = phqAssessmentService.getCurrentAssessment();
-            
+
             if (currentAssessment) {
               // Add PHQ question metadata
               metadata.isPhqQuestion = true;
               metadata.phqType = currentAssessment.assessmentType === 'PHQ-2' ? 2 : 9;
               metadata.phqQuestionNumber = questionNumber;
               metadata.assessmentId = currentAssessment.assessmentId;
-              
+
               // Extract the question text from the AI's message
               // Look for "Question X: [question text]" pattern
               const questionTextMatch = message.content.match(/Question \d+:\s*([^?]+\?)/);
               if (questionTextMatch && questionTextMatch[1]) {
                 const questionText = questionTextMatch[1].trim();
                 console.log(`📝 Extracted question text for Q${questionNumber}:`, questionText);
-                
+
                 // Save question text to PHQ session
                 phqSessionService.setQuestionText(questionNumber, questionText);
               }
-              
+
               console.log(`🏷️ PHQ Question detected with marker: Q${questionNumber}`, metadata);
-              
+
               // Add to PHQ session messages
               phqSessionService.addMessage('assistant', message.content, 'phq-question', metadata);
             }
-            
+
             // Remove the marker from the displayed message
             message.content = message.content.replace(/\[PHQ-Q\d+\]\s*/g, '').trim();
           }
-          
+
           // Check if AI is acknowledging a PHQ answer or skipping a question
           const currentAssessment = phqAssessmentService.getCurrentAssessment();
           if (currentAssessment && !currentAssessment.isCompleted) {
             // Look for answer acknowledgment patterns (e.g., "I've noted your response as 0")
             const answerAckMatch = message.content.match(/(?:noted|recorded|noted down|captured|registered|logged)\s+(?:your\s+)?(?:response|answer)?\s+(?:as|of)?\s*(\d)/i);
-            
+
             if (answerAckMatch) {
               const acknowledgedAnswer = parseInt(answerAckMatch[1], 10);
               const currentQuestion = phqAssessmentService.getNextQuestion();
-              
+
               if (currentQuestion && acknowledgedAnswer >= 0 && acknowledgedAnswer <= 3) {
                 console.log(`🎯 AI acknowledged answer ${acknowledgedAnswer} for Q${currentQuestion.questionNumber}`);
-                
+
                 // Record the answer in both services
                 phqAssessmentService.recordAnswer(currentQuestion.questionNumber, acknowledgedAnswer);
                 phqSessionService.recordAnswer(currentQuestion.questionNumber, acknowledgedAnswer);
-                
+
                 // Check if assessment is now complete
                 const updatedAssessment = phqAssessmentService.getCurrentAssessment();
                 if (updatedAssessment?.isCompleted) {
@@ -862,16 +881,16 @@ Just speak naturally - I understand variations of these commands!`,
                 }
               }
             }
-            
+
             // Look for skip/completion patterns (e.g., "We'll skip this question", "That completes the PHQ-2")
             const skipMatch = message.content.match(/(?:skip|skipping|skipped)\s+(?:this\s+)?(?:question|item)/i);
             const completeMatch = message.content.match(/(?:completes?|completed|finished)\s+(?:the\s+)?(?:PHQ-2|PHQ-9|assessment|screening)/i);
-            
+
             if (skipMatch) {
               console.log('⏭️ AI indicated question will be skipped');
               // Question is already marked as skipped by recordInvalidAttempt, just log it
             }
-            
+
             if (completeMatch) {
               console.log('🏁 AI indicated assessment is complete');
               // Check if we need to force completion (in case some questions were skipped)
@@ -885,7 +904,7 @@ Just speak naturally - I understand variations of these commands!`,
               }
             }
           }
-          
+
           chatTranscriptService.addAssistantMessage(
             message.content,
             'agent-response',
@@ -906,9 +925,9 @@ Just speak naturally - I understand variations of these commands!`,
         sessionId: status.sessionId || undefined,
         connectionStatus: status.isConnected ? 'connected' : 'disconnected'
       }));
-      
+
       setCurrentAgent(prev => ({ ...prev, isActive: status.isSessionActive }));
-      
+
       if (status.isSessionActive) {
         announceToScreenReader('Real-time session active');
       }
@@ -917,7 +936,7 @@ Just speak naturally - I understand variations of these commands!`,
     // Enhanced: Speech detection events
     agentService.onSpeechDetection((detection) => {
       setSpeechDetection(detection);
-      
+
       // Update agent typing indicator based on AI speaking state
       setCurrentAgent(prev => ({ ...prev, isTyping: detection.isAISpeaking }));
     });
@@ -925,7 +944,7 @@ Just speak naturally - I understand variations of these commands!`,
     // Enhanced: Conversation state events
     agentService.onConversationState((state) => {
       setConversationState(state);
-      
+
       // Announce state changes for accessibility
       if (state.message) {
         announceToScreenReader(state.message);
@@ -939,7 +958,7 @@ Just speak naturally - I understand variations of these commands!`,
         const updated = [...prev, transcript].slice(-10);
         return updated;
       });
-      
+
       // Update current AI transcript for live captions
       if (transcript.role === 'assistant') {
         setCurrentAITranscript(transcript.text);
@@ -968,7 +987,7 @@ Just speak naturally - I understand variations of these commands!`,
           type: 'warning'
         });
         announceToScreenReader(`Connection lost. Attempting to reconnect. Attempt ${attempts} of ${maxAttempts}.`);
-        
+
         // Auto-hide notification after 5 seconds if reconnection succeeds
         setTimeout(() => {
           setConnectionNotification(prev => ({ ...prev, show: false }));
@@ -995,7 +1014,7 @@ Just speak naturally - I understand variations of these commands!`,
   const getInitialGreeting = (humorLevel: number): string => {
     const firstName = getFirstName();
     const displayName = getAppropiateName(humorLevel);
-    
+
     const greetings = {
       high: [
         `Hey there, ${displayName}! I'm Tars, and I'm here to help you out. What can we work on today?`,
@@ -1051,7 +1070,7 @@ Just speak naturally - I understand variations of these commands!`,
 
     // Randomly select one greeting from the appropriate category
     const randomGreeting = selectedGreetings[Math.floor(Math.random() * selectedGreetings.length)];
-    
+
     return randomGreeting;
   };
 
@@ -1059,7 +1078,7 @@ Just speak naturally - I understand variations of these commands!`,
   const startSession = async () => {
     try {
       setIsProcessing(true);
-      
+
       // Convert UI settings to service config format
       const sessionConfig: SessionConfig = {
         ...convertSettingsToConfig(
@@ -1127,22 +1146,22 @@ Depression screening protocol:
 1. FIRST: Acknowledge request and explain what you're doing
 2. THEN: Call appropriate assessment function (invoke-phq9 or invoke-phq2)
 2. Conduct systematic evaluation with clear instructions:
-   
+
    CRITICAL: When asking PHQ questions, you MUST prefix EVERY question with this exact hidden marker:
    "[PHQ-Q#]" where # is the question number (1-9)
-   
+
    Example format:
    "[PHQ-Q1] Question 1: Over the past 2 weeks, how often have you been bothered by..."
    "[PHQ-Q6] Question 6: Over the past 2 weeks, how often have you been bothered by..."
-   
+
    This marker is INVISIBLE to ${getFirstName()} but REQUIRED for proper data tracking.
-   
+
    After the marker, ask:
    "Question X: [evaluation criteria]
-   
+
    Please respond with 0, 1, 2, or 3:
    0 = Not at all
-   1 = Several days  
+   1 = Several days
    2 = More than half the days
    3 = Nearly every day"
 
@@ -1168,46 +1187,70 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         ),
         tools: REALTIME_TOOLS // Enable function calling for PHQ assessments and session control
       };
-      
+
       // Register function call handler
       agentService.onFunctionCall(async (functionName, args) => {
         console.log(`🎯 Function called: ${functionName}`, args);
-        
+
         // Get the current conversation session ID to link PHQ assessment to chat history
         const conversationSessionId = sessionStorage.getItem('chat-session-id') || undefined;
-        
+
         switch (functionName) {
           case 'invoke-phq2':
             // Start PHQ-2 assessment - this initializes both phqAssessmentService and phqSessionService
-            console.log('Starting PHQ-2 assessment...');
-            console.log('📎 Linking to conversation session:', conversationSessionId);
+            console.log('📋 ========================================');
+            console.log('� FUNCTION CALL: invoke-phq2');
+            console.log('📋 Conversation session:', conversationSessionId);
+            console.log('📋 ========================================');
             handlePhqAssessmentStart('PHQ-2');
             const phq2 = phqAssessmentService.getCurrentAssessment();
-            return { success: true, assessmentId: phq2?.assessmentId, type: 'phq2', sessionId: conversationSessionId };
-            
+            const phq2Question = phqAssessmentService.getNextQuestion();
+            return {
+              success: true,
+              assessmentId: phq2?.assessmentId,
+              type: 'phq2',
+              totalQuestions: 2,
+              currentQuestionNumber: phq2Question?.questionNumber || 1,
+              questionText: phq2Question?.questionText,
+              responseScale: phqAssessmentService.getResponseScale(),
+              sessionId: conversationSessionId
+            };
+
           case 'invoke-phq9':
             // Start PHQ-9 assessment - this initializes both phqAssessmentService and phqSessionService
-            console.log('Starting PHQ-9 assessment...');
-            console.log('📎 Linking to conversation session:', conversationSessionId);
+            console.log('📋 ========================================');
+            console.log('� FUNCTION CALL: invoke-phq9');
+            console.log('📋 Conversation session:', conversationSessionId);
+            console.log('📋 ========================================');
             handlePhqAssessmentStart('PHQ-9');
             const phq9 = phqAssessmentService.getCurrentAssessment();
-            return { success: true, assessmentId: phq9?.assessmentId, type: 'phq9', sessionId: conversationSessionId };
-            
+            const phq9Question = phqAssessmentService.getNextQuestion();
+            return {
+              success: true,
+              assessmentId: phq9?.assessmentId,
+              type: 'phq9',
+              totalQuestions: 9,
+              currentQuestionNumber: phq9Question?.questionNumber || 1,
+              questionText: phq9Question?.questionText,
+              responseScale: phqAssessmentService.getResponseScale(),
+              sessionId: conversationSessionId
+            };
+
           case 'pause-session':
             console.log('Pausing session...');
             pauseSession();
             return { success: true, status: 'paused' };
-            
+
           case 'resume-session':
             console.log('Resuming session...');
             resumeSession();
             return { success: true, status: 'resumed' };
-            
+
           case 'close-session':
             console.log('Closing session...');
             await endSession();
             return { success: true, status: 'closed' };
-            
+
           case 'set-humor-level':
             const level = parseInt(args.level as string, 10);
             if (isNaN(level) || level < 0 || level > 100) {
@@ -1216,14 +1259,14 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             console.log(`Setting humor level to ${level}%...`);
             setHumorLevel(level);
             return { success: true, humorLevel: level };
-            
+
           default:
             return { success: false, error: `Unknown function: ${functionName}` };
         }
       });
-      
+
       await agentService.startSession('user', sessionConfig);
-      
+
       // Initialize chat transcript session
       if (authenticatedUserId) {
         const existingSessionId = sessionStorage.getItem('chat-session-id') || undefined;
@@ -1232,11 +1275,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         sessionStorage.setItem('chat-session-id', transcript.sessionId);
         console.log('📎 Chat session initialized:', transcript.sessionId);
       }
-      
+
       // Clear previous state
       setLiveTranscripts([]);
       setCurrentAITranscript('');
-      
+
       // Add welcome message
       const welcomeMessage: ConversationMessage = {
         id: `welcome-${Date.now()}`,
@@ -1244,19 +1287,19 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         content: getInitialGreeting(humorLevel),
         timestamp: new Date().toISOString()
       };
-      
+
       setMessages([welcomeMessage]);
-      
+
       // Save welcome message to transcript
       if (authenticatedUserId) {
         chatTranscriptService.addAssistantMessage(
-          welcomeMessage.content, 
+          welcomeMessage.content,
           'welcome-greeting',
           { humorLevel, isWelcomeMessage: true }
         );
       }
       announceToScreenReader(welcomeMessage.content);
-      
+
     } catch (error) {
       console.error('Failed to start session:', error);
       announceToScreenReader('Failed to start real-time session');
@@ -1271,7 +1314,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       if (authenticatedUserId) {
         chatTranscriptService.endSession();
       }
-      
+
       await agentService.endSession();
       setMessages([]);
       setSessionStatus(prev => ({
@@ -1320,7 +1363,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
     // Cleanup transcript service
     chatTranscriptService.cleanup();
     // Note: phqProgressService no longer used - phqAssessmentService handles all PHQ tracking
-    
+
     await agentService.destroy();
     if (voiceActivityIntervalRef.current) {
       clearInterval(voiceActivityIntervalRef.current);
@@ -1350,16 +1393,16 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       {/* Connection Notification Toast */}
       {connectionNotification.show && (
         <div className={`absolute top-4 right-4 z-50 max-w-md rounded-lg shadow-lg p-4 animate-slide-in-right ${
-          connectionNotification.type === 'error' 
-            ? 'bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700' 
+          connectionNotification.type === 'error'
+            ? 'bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700'
             : connectionNotification.type === 'warning'
               ? 'bg-yellow-50 dark:bg-yellow-900 border border-yellow-200 dark:border-yellow-700'
               : 'bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700'
         }`}>
           <div className="flex items-start space-x-3">
             <div className={`flex-shrink-0 ${
-              connectionNotification.type === 'error' 
-                ? 'text-red-600 dark:text-red-400' 
+              connectionNotification.type === 'error'
+                ? 'text-red-600 dark:text-red-400'
                 : connectionNotification.type === 'warning'
                   ? 'text-yellow-600 dark:text-yellow-400'
                   : 'text-blue-600 dark:text-blue-400'
@@ -1368,8 +1411,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             </div>
             <div className="flex-1">
               <p className={`text-sm font-medium ${
-                connectionNotification.type === 'error' 
-                  ? 'text-red-900 dark:text-red-100' 
+                connectionNotification.type === 'error'
+                  ? 'text-red-900 dark:text-red-100'
                   : connectionNotification.type === 'warning'
                     ? 'text-yellow-900 dark:text-yellow-100'
                     : 'text-blue-900 dark:text-blue-100'
@@ -1380,8 +1423,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             <button
               onClick={() => setConnectionNotification(prev => ({ ...prev, show: false }))}
               className={`flex-shrink-0 ${
-                connectionNotification.type === 'error' 
-                  ? 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200' 
+                connectionNotification.type === 'error'
+                  ? 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200'
                   : connectionNotification.type === 'warning'
                     ? 'text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200'
                     : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200'
@@ -1392,25 +1435,25 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
         </div>
       )}
-      
+
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           {/* Agent Avatar with Voice Activity */}
           <div className="relative">
             <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-              currentAgent.isTyping 
-                ? 'bg-primary-500 animate-pulse' 
-                : currentAgent.isActive 
-                  ? 'bg-green-500' 
+              currentAgent.isTyping
+                ? 'bg-primary-500 animate-pulse'
+                : currentAgent.isActive
+                  ? 'bg-green-500'
                   : 'bg-gray-400'
             }`}>
               {currentAgent.id === 'tars' ? (
-                <Bot 
+                <Bot
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
-                  }`} 
-                  size={24} 
+                  }`}
+                  size={24}
                 />
               ) : (
                 <span className="text-white text-xl">
@@ -1418,11 +1461,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 </span>
               )}
             </div>
-            
+
             {/* Voice Activity Indicator */}
             {sessionStatus.isActive && !isSessionPaused && (
               <div className="absolute -inset-1">
-                <VoiceActivityVisualizer 
+                <VoiceActivityVisualizer
                   volume={voiceActivityLevel}
                   isVoiceActive={voiceActivityLevel > 0.1}
                   isListening={sessionStatus.isActive}
@@ -1430,32 +1473,32 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 />
               </div>
             )}
-            
+
             {/* Session Status Indicator */}
             <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-900 rounded-full p-1">
               <div className={`w-3 h-3 rounded-full ${
-                sessionStatus.isActive 
-                  ? isSessionPaused 
-                    ? 'bg-yellow-500' 
-                    : 'bg-green-500' 
+                sessionStatus.isActive
+                  ? isSessionPaused
+                    ? 'bg-yellow-500'
+                    : 'bg-green-500'
                   : 'bg-gray-400'
               }`} />
             </div>
           </div>
-          
+
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               Tars
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Agent: {currentAgent.name}</span>
-              
+
               {/* Connection Status */}
               <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
                 {getConnectionStatusIcon()}
                 <span className="capitalize">{sessionStatus.connectionStatus}</span>
               </div>
-              
+
               {/* Conversation State */}
               {sessionStatus.isActive && (
                 <div className="flex items-center space-x-1">
@@ -1530,7 +1573,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               >
                 {isSessionPaused ? <Play size={20} /> : <Pause size={20} />}
               </button>
-              
+
               <button
                 onClick={endSession}
                 className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -1592,7 +1635,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 </span>
               </div>
             </div>
-            
+
             {/* Humor Level Control */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -1641,7 +1684,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 Higher modes: friendly pet names • Lower modes: formal address
               </div>
             </div>
-            
+
             {/* Enhanced Features Toggles */}
             <div className="grid grid-cols-2 gap-4">
               <label className="flex items-center space-x-2">
@@ -1653,7 +1696,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Input Transcription</span>
               </label>
-              
+
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
@@ -1664,7 +1707,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 <span className="text-sm text-gray-700 dark:text-gray-300">Live Captions</span>
               </label>
             </div>
-            
+
             {/* Speech Detection Status */}
             {sessionStatus.isActive && (
               <div className="text-xs space-y-1">
@@ -1672,15 +1715,15 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   <span className="text-gray-600 dark:text-gray-400">Speech Detection:</span>
                   <div className="flex space-x-2">
                     <span className={`px-2 py-1 rounded ${
-                      speechDetection.isUserSpeaking 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                      speechDetection.isUserSpeaking
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                     }`}>
                       User {speechDetection.isUserSpeaking ? 'Speaking' : 'Silent'}
                     </span>
                     <span className={`px-2 py-1 rounded ${
-                      speechDetection.isAISpeaking 
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                      speechDetection.isAISpeaking
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                         : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
                     }`}>
                       AI {speechDetection.isAISpeaking ? 'Speaking' : 'Silent'}
@@ -1724,7 +1767,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
           );
         })}
-        
+
         {/* Typing Indicator */}
         {currentAgent.isTyping && (
           <div className="flex justify-start">
@@ -1737,7 +1780,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             </div>
           </div>
         )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -1747,24 +1790,24 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         {sessionStatus.isActive && !isSessionPaused && (
           <div className="flex flex-col items-center justify-center space-y-4">
             <div className={`p-6 rounded-full transition-all duration-200 ${
-              speechDetection.isUserSpeaking 
-                ? 'bg-green-600 text-white animate-pulse scale-110' 
+              speechDetection.isUserSpeaking
+                ? 'bg-green-600 text-white animate-pulse scale-110'
                 : conversationState.state === 'listening'
                   ? 'bg-yellow-500 text-white scale-105'
                   : conversationState.state === 'processing'
                     ? 'bg-blue-500 text-white animate-pulse scale-105'
-                    : voiceActivityLevel > 0.1 
-                      ? 'bg-green-600 text-white scale-110' 
+                    : voiceActivityLevel > 0.1
+                      ? 'bg-green-600 text-white scale-110'
                       : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
             }`}>
               <Mic size={32} />
             </div>
-            
+
             <div className="text-center">
               <div className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                {speechDetection.isUserSpeaking ? 'Speaking...' : 
+                {speechDetection.isUserSpeaking ? 'Speaking...' :
                  conversationState.state === 'listening' ? 'Listening...' :
-                 conversationState.state === 'processing' ? 'Processing...' : 
+                 conversationState.state === 'processing' ? 'Processing...' :
                  conversationState.state === 'speaking' ? 'AI Responding...' : 'Voice Input Active'}
               </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -1822,7 +1865,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                     Duration: {Math.floor((Date.now() - sessionStatus.startTime.getTime()) / 60000)}m
                   </span>
                 )}
-                
+
                 {/* Feature Status */}
                 <div className="flex items-center space-x-2">
                   {enableInputTranscription && (
@@ -1838,12 +1881,12 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 </div>
               </>
             )}
-            
+
             {isSessionPaused && (
               <span className="text-yellow-600 dark:text-yellow-400">Session Paused</span>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <span>
               {sessionStatus.isActive ? (
@@ -1852,7 +1895,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 'Voice input active'
               ) : 'Voice-only interaction mode'}
             </span>
-            
+
             {/* Interrupt hint */}
             {sessionStatus.isActive && speechDetection.isAISpeaking && (
               <span className="text-red-500 animate-pulse">

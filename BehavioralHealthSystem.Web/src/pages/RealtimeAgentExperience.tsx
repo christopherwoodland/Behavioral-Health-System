@@ -239,6 +239,10 @@ export const RealtimeAgentExperience: React.FC = () => {
 
         announceToScreenReader('Azure OpenAI Realtime service initialized');
 
+        // Auto-start session after initialization
+        console.log('🚀 Auto-starting session...');
+        await startSession();
+
       } catch (error) {
         console.error('Failed to initialize agent services:', error);
         setSessionStatus(prev => ({ ...prev, connectionStatus: 'error' }));
@@ -1461,11 +1465,14 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       setLiveTranscripts([]);
       setCurrentAITranscript('');
 
-      // Add welcome message
+      // Generate welcome message content
+      const welcomeContent = getInitialGreeting(humorLevel);
+
+      // Add welcome message to UI
       const welcomeMessage: ConversationMessage = {
         id: `welcome-${Date.now()}`,
         role: 'assistant',
-        content: getInitialGreeting(humorLevel),
+        content: welcomeContent,
         timestamp: new Date().toISOString()
       };
 
@@ -1474,12 +1481,23 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       // Save welcome message to transcript
       if (authenticatedUserId) {
         chatTranscriptService.addAssistantMessage(
-          welcomeMessage.content,
+          welcomeContent,
           'welcome-greeting',
           { humorLevel, isWelcomeMessage: true }
         );
       }
-      announceToScreenReader(welcomeMessage.content);
+      announceToScreenReader(welcomeContent);
+
+      // Have AI speak the welcome message
+      // Small delay to ensure session is fully established
+      setTimeout(async () => {
+        try {
+          await agentService.speakAssistantMessage(welcomeContent);
+          console.log('🎤 Welcome message will be spoken by AI');
+        } catch (error) {
+          console.error('Failed to speak welcome message:', error);
+        }
+      }, 500);
 
     } catch (error) {
       console.error('Failed to start session:', error);

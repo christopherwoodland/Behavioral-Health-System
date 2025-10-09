@@ -1304,6 +1304,52 @@ export class AzureOpenAIRealtimeService {
   }
 
   /**
+   * Speak an assistant message
+   * Adds the message to conversation and triggers AI to speak it with audio output
+   */
+  async speakAssistantMessage(text: string): Promise<void> {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      throw new Error('Data channel is not open');
+    }
+
+    try {
+      // Add assistant message to conversation
+      const greetingEvent = {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: text
+            }
+          ]
+        }
+      };
+
+      this.dataChannel.send(JSON.stringify(greetingEvent));
+      console.log('📤 Sent assistant message to conversation');
+
+      // Trigger AI to speak it
+      const responseEvent = {
+        type: 'response.create',
+        response: {
+          modalities: ['text', 'audio'],
+          instructions: `Speak this exact message naturally and warmly: "${text}"`
+        }
+      };
+
+      this.dataChannel.send(JSON.stringify(responseEvent));
+      console.log('🎤 Triggered AI to speak the message');
+
+    } catch (error) {
+      console.error('Failed to speak assistant message:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Interrupt current AI response
    * Cancels ongoing response and clears output audio buffer
    */

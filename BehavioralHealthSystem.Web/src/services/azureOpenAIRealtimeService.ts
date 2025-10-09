@@ -296,7 +296,7 @@ export class AzureOpenAIRealtimeService {
   private onVoiceActivityCallback: ((activity: VoiceActivity) => void) | null = null;
   private onStatusChangeCallback: ((status: SessionStatus) => void) | null = null;
   private onErrorCallback: ((error: Error) => void) | null = null;
-  private onTranscriptCallback: ((transcript: string, isFinal: boolean) => void) | null = null;
+  // REMOVED: onTranscriptCallback - deprecated, use onMessage instead
   private onConnectionLostCallback: ((attempts: number, maxAttempts: number) => void) | null = null;
   
   // Enhanced event callbacks
@@ -387,8 +387,13 @@ export class AzureOpenAIRealtimeService {
     this.onErrorCallback = callback;
   }
   
-  onTranscript(callback: (transcript: string, isFinal: boolean) => void): void {
-    this.onTranscriptCallback = callback;
+  /**
+   * @deprecated onTranscript is deprecated - use onMessage callback instead
+   * Messages now flow through onMessage with proper role attribution (user/assistant)
+   */
+  onTranscript(_callback: (transcript: string, isFinal: boolean) => void): void {
+    console.warn('⚠️ onTranscript is deprecated - use onMessage callback instead for proper message handling');
+    // Callback registration removed - no longer functional
   }
   
   // Enhanced event listeners
@@ -1056,10 +1061,7 @@ export class AzureOpenAIRealtimeService {
             // Track agent utterance in progress
             this.trackUtterance('agent', 'speech-in-progress', this.currentTranscriptBuffer);
             
-            // Backward compatibility
-            if (this.onTranscriptCallback) {
-              this.onTranscriptCallback(realtimeEvent.delta, false);
-            }
+            // REMOVED: onTranscriptCallback - deprecated, messages flow through onMessage
           }
           break;
           
@@ -1093,10 +1095,7 @@ export class AzureOpenAIRealtimeService {
             
             this.currentTranscriptBuffer = '';
             
-            // Backward compatibility
-            if (this.onTranscriptCallback) {
-              this.onTranscriptCallback(realtimeEvent.transcript, true);
-            }
+            // REMOVED: onTranscriptCallback - deprecated, messages flow through onMessage
           }
           break;
 
@@ -1217,12 +1216,7 @@ export class AzureOpenAIRealtimeService {
           }
           break;
 
-        // Legacy handling for backward compatibility
-        case 'transcript':
-          if (this.onTranscriptCallback) {
-            this.onTranscriptCallback(realtimeEvent.text, realtimeEvent.isFinal);
-          }
-          break;
+        // REMOVED: Legacy 'transcript' event handling - deprecated, use onMessage instead
           
         case 'response':
           const realtimeMessage: RealtimeMessage = {
@@ -1641,7 +1635,7 @@ export class AzureOpenAIRealtimeService {
     this.onVoiceActivityCallback = null;
     this.onStatusChangeCallback = null;
     this.onErrorCallback = null;
-    this.onTranscriptCallback = null;
+    // REMOVED: onTranscriptCallback - deprecated
     this.onLiveTranscriptCallback = null;
     this.onSpeechDetectionCallback = null;
     this.onConversationStateCallback = null;

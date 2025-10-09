@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye } from 'lucide-react';
+import { Eye, Upload, History, Bot, TrendingUp } from 'lucide-react';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,13 +9,13 @@ import { getUserId } from '@/utils';
 export const Dashboard: React.FC = () => {
   const { announce } = useAnnouncements();
   const { canAccessControlPanel, user } = useAuth();
-  
+
   // Get authenticated user ID for API calls (matches blob storage folder structure)
   const getAuthenticatedUserId = (): string => {
     // Use authenticated user ID if available, otherwise fall back to getUserId utility
     return user?.id || getUserId();
   };
-  
+
   // Fetch health status and recent sessions
   const { data: healthStatus, isLoading: isHealthLoading, error: healthError } = useHealthCheck();
   const { data: sessionsResponse, isLoading: isSessionsLoading } = useUserSessions(getAuthenticatedUserId());
@@ -29,7 +29,7 @@ export const Dashboard: React.FC = () => {
       title: 'Agent Experience',
       description: 'Real-time AI voice & text chat powered by Azure OpenAI',
       href: '/agent-experience',
-      icon: '🤖',
+      icon: Bot,
       color: 'warning',
       disabled: false
     },
@@ -37,7 +37,7 @@ export const Dashboard: React.FC = () => {
       title: 'Upload & Analyze',
       description: 'Upload audio files for behavioral health analysis',
       href: '/upload',
-      icon: '�',
+      icon: Upload,
       color: 'primary',
       disabled: false
     },
@@ -45,7 +45,7 @@ export const Dashboard: React.FC = () => {
       title: 'View Sessions',
       description: 'Browse all analysis sessions and their results',
       href: '/sessions',
-      icon: '�',
+      icon: History,
       color: 'secondary',
       disabled: false
     },
@@ -53,17 +53,17 @@ export const Dashboard: React.FC = () => {
       title: 'My Predictions',
       description: 'View your complete prediction history',
       href: '/predictions',
-      icon: '📈',
+      icon: TrendingUp,
       color: 'accent',
       disabled: false
     }
   ];
 
   const getActionClasses = (color: string, disabled: boolean = false) => {
-    const baseClasses = disabled 
-      ? 'block p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-not-allowed opacity-60' 
+    const baseClasses = disabled
+      ? 'block p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-not-allowed opacity-60'
       : 'block p-4 rounded-lg border-2 transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2';
-    
+
     switch (color) {
       case 'primary':
         return `${baseClasses} border-primary-200 bg-primary-50 ${!disabled && 'hover:border-primary-300 hover:bg-primary-100'} dark:border-primary-800 dark:bg-primary-900 ${!disabled && 'dark:hover:border-primary-700 dark:hover:bg-primary-800'} focus:ring-primary-500`;
@@ -98,6 +98,7 @@ export const Dashboard: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickActions.map((action) => {
             if (action.disabled) {
+              const IconComponent = action.icon;
               return (
                 <div
                   key={action.href}
@@ -105,8 +106,8 @@ export const Dashboard: React.FC = () => {
                   aria-label={`${action.title}: Coming Soon`}
                 >
                   <div className="text-center">
-                    <div className="text-2xl mb-2" role="img" aria-hidden="true">
-                      {action.icon}
+                    <div className="mb-2 flex justify-center" role="img" aria-hidden="true">
+                      <IconComponent size={32} className="text-text-primary-light dark:text-text-primary-dark" />
                     </div>
                     <h3 className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
                       {action.title}
@@ -125,7 +126,8 @@ export const Dashboard: React.FC = () => {
                 </div>
               );
             }
-            
+
+            const IconComponent = action.icon;
             return (
               <Link
                 key={action.href}
@@ -134,8 +136,8 @@ export const Dashboard: React.FC = () => {
                 aria-label={`${action.title}: ${action.description}`}
               >
                 <div className="text-center">
-                  <div className="text-2xl mb-2" role="img" aria-hidden="true">
-                    {action.icon}
+                  <div className="mb-2 flex justify-center" role="img" aria-hidden="true">
+                    <IconComponent size={32} className="text-text-primary-light dark:text-text-primary-dark" />
                   </div>
                   <h3 className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
                     {action.title}
@@ -188,9 +190,9 @@ export const Dashboard: React.FC = () => {
           <div className="text-center py-8">
             <div className="text-4xl mb-4" role="img" aria-label="No data">📭</div>
             <p className="text-text-secondary-light dark:text-text-secondary-dark">
-              No sessions yet. 
-              <Link 
-                to="/upload" 
+              No sessions yet.
+              <Link
+                to="/upload"
                 className="text-primary-600 dark:text-primary-400 hover:underline ml-1"
               >
                 Upload your first audio file

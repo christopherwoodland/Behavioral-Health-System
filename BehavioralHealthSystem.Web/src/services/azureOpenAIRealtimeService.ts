@@ -469,13 +469,36 @@ export class AzureOpenAIRealtimeService {
     try {
       const constraints: MediaStreamConstraints = {
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 24000, // Azure OpenAI recommended sample rate
-        },
+          // AGGRESSIVE echo cancellation settings
+          echoCancellation: { ideal: true, exact: true }, // Force enable - non-negotiable
+          noiseSuppression: { ideal: true, exact: true }, // Force noise suppression
+          autoGainControl: { ideal: true, exact: true }, // Force AGC
+          sampleRate: { ideal: 24000 }, // Azure OpenAI recommended sample rate
+          channelCount: { ideal: 1, max: 1 }, // Force mono (stereo can cause echo)
+          latency: { ideal: 0.01, max: 0.02 }, // Ultra-low latency
+          
+          // Chrome-specific AGGRESSIVE echo prevention
+          googEchoCancellation: true,
+          googEchoCancellation2: true, // Enhanced version
+          googAutoGainControl: true,
+          googAutoGainControl2: true, // Enhanced version
+          googNoiseSuppression: true,
+          googNoiseSuppression2: true, // Enhanced version
+          googHighpassFilter: true, // Remove low-frequency echo
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false, // Disable audio mirroring
+          googExperimentalEchoCancellation: true, // Experimental features
+          googExperimentalAutoGainControl: true,
+          googExperimentalNoiseSuppression: true,
+          googBeamforming: true, // Directional audio focus
+          googArrayGeometry: true, // Microphone array optimization
+          googAudioProcessing: true, // Enable all audio processing
+          googDAEchoCancellation: true, // Drift-aware echo cancellation
+        } as MediaTrackConstraints,
         video: false
       };
+      
+      console.log('🎙️ AGGRESSIVE ECHO CANCELLATION: Requesting microphone with maximum echo prevention...');
       
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log('🎤 Microphone access granted');
@@ -1165,15 +1188,36 @@ export class AzureOpenAIRealtimeService {
         this.localStream.getTracks().forEach(track => track.stop());
       }
       
-      // Get new stream with selected device
+      // Get new stream with selected device (with AGGRESSIVE echo cancellation)
       const constraints: MediaStreamConstraints = {
         audio: {
           deviceId: { exact: deviceId },
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 24000
-        }
+          // AGGRESSIVE echo cancellation settings
+          echoCancellation: { ideal: true, exact: true },
+          noiseSuppression: { ideal: true, exact: true },
+          autoGainControl: { ideal: true, exact: true },
+          sampleRate: { ideal: 24000 },
+          channelCount: { ideal: 1, max: 1 },
+          latency: { ideal: 0.01, max: 0.02 },
+          
+          // Chrome-specific AGGRESSIVE echo prevention
+          googEchoCancellation: true,
+          googEchoCancellation2: true,
+          googAutoGainControl: true,
+          googAutoGainControl2: true,
+          googNoiseSuppression: true,
+          googNoiseSuppression2: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false,
+          googExperimentalEchoCancellation: true,
+          googExperimentalAutoGainControl: true,
+          googExperimentalNoiseSuppression: true,
+          googBeamforming: true,
+          googArrayGeometry: true,
+          googAudioProcessing: true,
+          googDAEchoCancellation: true,
+        } as MediaTrackConstraints
       };
       
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);

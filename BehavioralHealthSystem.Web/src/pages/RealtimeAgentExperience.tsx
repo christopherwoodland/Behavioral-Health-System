@@ -11,7 +11,9 @@ import {
   Play,
   AlertTriangle,
   CheckCircle,
-  Bot
+  Bot,
+  ClipboardList,
+  FileText
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
@@ -22,8 +24,7 @@ import {
   convertSettingsToConfig,
   SpeechDetectionState,
   LiveTranscript,
-  ConversationState,
-  REALTIME_TOOLS
+  ConversationState
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
@@ -32,6 +33,9 @@ import chatTranscriptService from '@/services/chatTranscriptService';
 import { phqSessionService } from '@/services/phqSessionService';
 // phqProgressService no longer needed - phqAssessmentService handles all PHQ tracking with single assessment ID
 import { useAuth } from '@/contexts/AuthContext';
+import { agentOrchestrationService } from '@/services/agentOrchestrationService';
+import { phq2Agent } from '@/agents/phq2Agent';
+import { phq9Agent } from '@/agents/phq9Agent';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -270,7 +274,8 @@ export const RealtimeAgentExperience: React.FC = () => {
     };
   }, [sessionStatus.isActive, isSessionPaused]);
 
-  // PHQ Assessment Handlers
+  // PHQ Assessment Handlers - DEPRECATED: Now handled by PHQ agents
+  /*
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
     console.log('📋 ========================================');
     console.log(`📋 STARTING ${type} ASSESSMENT`);
@@ -591,6 +596,7 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
 
     announceToScreenReader(`${assessment.assessmentType} assessment completed. Score: ${score}, Severity: ${severity}`);
   }, []);
+  */
 
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
@@ -776,12 +782,12 @@ Just speak naturally - I understand variations of these commands!`,
         // NOTE: PHQ assessments are now initiated ONLY through function calls
         // Voice command detection removed to prevent duplicate starts
 
-        // Check if we're in an active PHQ assessment
-        const currentAssessment = phqAssessmentService.getCurrentAssessment();
-        if (currentAssessment && !currentAssessment.isCompleted) {
-          handlePhqAssessmentResponse(message.content);
-          return;
-        }
+        // PHQ assessment handling now done by PHQ agents - no manual processing needed
+        // const currentAssessment = phqAssessmentService.getCurrentAssessment();
+        // if (currentAssessment && !currentAssessment.isCompleted) {
+        //   handlePhqAssessmentResponse(message.content);
+        //   return;
+        // }
       }
 
       // Add ALL messages to the chat display (both user and assistant)
@@ -1104,13 +1110,96 @@ Just speak naturally - I understand variations of these commands!`,
     try {
       setIsProcessing(true);
 
-      // Convert UI settings to service config format
-      const sessionConfig: SessionConfig = {
-        ...convertSettingsToConfig(
-          azureSettings,
-          isAudioEnabled,
-          true, // enableVAD
-          `You are Tars, a helpful AI assistant with capabilities for mental health screening assessments. You have a warm, supportive personality that adapts based on your humor level setting.
+      // =============================================================================
+      // MULTI-AGENT SETUP: Register specialized agents with orchestration service
+      // =============================================================================
+
+      // Register specialized PHQ assessment agents
+      console.log('🤖 ========================================');
+      console.log('🤖 REGISTERING AGENTS');
+      console.log('🤖 ========================================');
+
+      agentOrchestrationService.registerAgent(phq2Agent);
+      agentOrchestrationService.registerAgent(phq9Agent);
+
+      // Register Tars as the root orchestration agent
+      const tarsRootAgent = {
+        id: 'Agent_Tars',
+        name: 'Tars Coordinator',
+        description: `Main coordination agent. Call this to return control after completing specialized tasks.`,
+        tools: [
+          // Session control tools
+          {
+            name: 'pause-session',
+            description: 'Temporarily pauses the conversation session. The user can resume later.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async () => {
+              console.log('⏸️ Pausing session...');
+              pauseSession();
+              return { success: true, status: 'paused' };
+            }
+          },
+          {
+            name: 'resume-session',
+            description: 'Resumes a previously paused conversation session.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async () => {
+              console.log('▶️ Resuming session...');
+              resumeSession();
+              return { success: true, status: 'resumed' };
+            }
+          },
+          {
+            name: 'close-session',
+            description: 'Ends the conversation session permanently.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async () => {
+              console.log('🛑 Closing session...');
+              await endSession();
+              return { success: true, status: 'closed' };
+            }
+          },
+          {
+            name: 'set-humor-level',
+            description: 'Adjusts the AI personality humor level between 0-100. Higher values make the AI more casual and friendly, lower values make it more formal and professional.',
+            parameters: {
+              type: 'object' as const,
+              properties: {
+                level: {
+                  type: 'string',
+                  description: 'The humor level as a number between 0 and 100'
+                }
+              },
+              required: ['level']
+            },
+            handler: async (params: any) => {
+              const level = parseInt(params.level, 10);
+              if (isNaN(level) || level < 0 || level > 100) {
+                return { success: false, error: 'Invalid humor level. Must be between 0 and 100.' };
+              }
+              console.log(`🎭 Setting humor level to ${level}%...`);
+              setHumorLevel(level);
+              return { success: true, humorLevel: level, message: `Humor level updated to ${level}%` };
+            }
+          }
+        ],
+        systemMessage: `You are Tars, the main coordination assistant for ${getFirstName()}. Your role is to:
+1. Greet and support ${getFirstName()}
+2. Route mental health assessment requests to specialized agents
+3. Manage conversation flow and provide general support
+4. Handle session control (pause/resume/end)
 
 You are communicating with ${getFirstName()}, and your current humor level is set to ${humorLevel}%.
 
@@ -1130,65 +1219,34 @@ Adjust your communication style based on humor level:
 
 Communication style guidelines:
 - Speak naturally and conversationally
-- Be supportive and understanding, especially during assessments
+- Be supportive and understanding
 - Use clear, everyday language that's easy to understand
 - Always acknowledge ${getFirstName()} by name when appropriate to the humor level
-- CRITICAL: ALWAYS acknowledge the user's input FIRST before responding - show that you heard and understood
-- Examples of good acknowledgment:
-  * "I hear you, ${getFirstName()}..."
-  * "Got it, I understand you want to..."
-  * "Acknowledged..."
-  * "Thanks for sharing that..."
-  * "I see what you're asking for..."
+- CRITICAL: ALWAYS acknowledge the user's input FIRST before responding
+- Examples: "I hear you, ${getFirstName()}...", "Got it, I understand you want to...", "Acknowledged..."
 - NEVER just jump into action - always acknowledge first, then act
 
 Ship and system status protocol:
 - If ${getFirstName()} asks about the status of the ship, mechanical state, or system operations, respond that "All operations are nominal and operating within normal parameters" or similar reassuring confirmation
 - Adapt the phrasing to match your current humor level (casual at high levels, formal at low levels)
-- Examples: "Everything's running smooth as silk" (high humor) or "All systems operational and within specified tolerances" (low humor)
 
-Available assessment capabilities:
-- "invoke-phq9": Initiate comprehensive mental health assessment (9-question evaluation)
-- "invoke-phq2": Initiate quick mental health screening (2-question check)
+AGENT ROUTING PROTOCOL:
+When ${getFirstName()} requests mental health assessments:
+1. Acknowledge the request first: "I understand you'd like to [do assessment]"
+2. Explain what will happen: "I'm going to connect you with our specialized [PHQ-2/PHQ-9] assessment agent"
+3. Call the appropriate agent (Agent_PHQ2 or Agent_PHQ9)
+4. The specialized agent will take over and conduct the assessment
+5. When they complete, you'll receive control back
 
-CRITICAL FUNCTION CALL PROTOCOL:
-Before calling ANY function, you MUST:
-1. Acknowledge what ${getFirstName()} said - repeat back their request to show understanding
-2. Explain what you're about to do in clear terms
-3. THEN call the function
+Available specialized agents:
+- "Agent_PHQ2": Quick depression screening (2 questions) - use when user wants quick check or "PHQ-2"
+- "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use when user wants full assessment or "PHQ-9"
 
-Examples:
-- User: "Start the PHQ-9"
-  You: "Got it, ${getFirstName()}. I understand you'd like to begin the comprehensive PHQ-9 mental health assessment. Let me initiate that for you now..." [THEN call invoke-phq9]
-
-- User: "Do the quick screening"
-  You: "I hear you, ${getFirstName()}. You want to take the quick PHQ-2 screening. Setting that up for you right now..." [THEN call invoke-phq2]
-
-- User: "Pause the session"
-  You: "Understood, ${getFirstName()}. I'll pause our session for you. Just say 'resume session' when you're ready to continue..." [THEN call pause-session]
-
-Depression screening protocol:
-1. FIRST: Acknowledge request and explain what you're doing
-2. THEN: Call appropriate assessment function (invoke-phq9 or invoke-phq2)
-3. The function will return question data in the response
-4. Use ONLY the questionText from the function response - do not make up your own questions
-5. Present the question EXACTLY as provided in the function response
-6. After user responds, the system will automatically handle validation and move to next question
-7. DO NOT generate additional questions beyond what the function returns
-8. DO NOT ask the same question multiple times
-9. The system tracks progress - you just present what it tells you
-
-CRITICAL RULES:
-- Use ONLY questionText from function response
-- Each function call returns ONE question - ask it ONCE
-- Never invent your own PHQ questions
-- Trust the system to provide the right question at the right time
-- After the user answers, wait for the system to validate before continuing
-
-Critical protocols:
-- This is a screening evaluation, not a medical diagnosis
-- Recommend professional consultation for concerning indicators
-- Priority alert for any self-harm indicators (immediate crisis resources)
+CRITICAL ROUTING RULES:
+- ALWAYS route PHQ assessments to the specialized agents
+- NEVER conduct assessments yourself
+- After routing, wait for the specialist to finish
+- When specialist returns control, welcome ${getFirstName()} back and ask if there's anything else
 
 Session control capabilities:
 - ${getFirstName()} can say "pause session" to temporarily pause the conversation
@@ -1197,17 +1255,124 @@ Session control capabilities:
 - ${getFirstName()} can say "set humor level to [0-100]" to adjust your personality
 - ${getFirstName()} can say "help" or "commands" to see available voice commands
 
-Keep your responses helpful, clear, and appropriately personal based on your humor level setting.`,
-          enableInputTranscription // Enable input audio transcription
-        ),
-        tools: REALTIME_TOOLS // Enable function calling for PHQ assessments and session control
+Keep your responses helpful, clear, and appropriately personal based on your humor level setting.`
       };
 
-      // Register function call handler
+      agentOrchestrationService.registerRootAgent(tarsRootAgent);
+
+      // Get root agent configuration
+      const rootConfig = agentOrchestrationService.getRootAgentConfig();
+      const rootTools = agentOrchestrationService.convertToRealtimeTools(rootConfig.tools);
+
+      console.log('🤖 Root agent tools:', rootTools.map(t => t.name));
+      console.log('🤖 ========================================');
+
+      // Convert UI settings to service config format
+      const sessionConfig: SessionConfig = {
+        ...convertSettingsToConfig(
+          azureSettings,
+          isAudioEnabled,
+          true, // enableVAD
+          rootConfig.systemMessage,
+          enableInputTranscription // Enable input audio transcription
+        ),
+        tools: rootTools // Enable function calling with orchestrated agent tools
+      };
+
+      // =============================================================================
+      // MULTI-AGENT FUNCTION CALL HANDLER: Routes calls through orchestration service
+      // =============================================================================
       agentService.onFunctionCall(async (functionName, args) => {
         console.log(`🎯 Function called: ${functionName}`, args);
 
-        // Get the current conversation session ID to link PHQ assessment to chat history
+        try {
+          // Route through orchestration service
+          const result = await agentOrchestrationService.handleToolCall(
+            functionName,
+            { ...args, userId: authenticatedUserId },
+            `call-${Date.now()}`
+          );
+
+          if (result.isAgentSwitch) {
+            // This is an agent switch - update the session
+            console.log('🔄 ========================================');
+            console.log('🔄 AGENT SWITCH DETECTED');
+            console.log('🔄 Target agent:', result.targetAgentId);
+            console.log('🔄 ========================================');
+
+            if (result.switchConfig && result.targetAgentId) {
+              // Convert tools to Realtime API format
+              const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig.tools);
+
+              console.log('🔄 New agent tools:', realtimeTools.map(t => t.name));
+
+              // Update UI to show the new agent
+              const targetAgentId = result.targetAgentId;
+              const agentDisplayName =
+                targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
+                targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
+                targetAgentId === 'Agent_Tars' ? 'Tars' :
+                'Agent';
+
+              setCurrentAgent({
+                id: targetAgentId.toLowerCase().replace('agent_', ''),
+                name: agentDisplayName,
+                isActive: true,
+                isTyping: false
+              });
+
+              setSessionStatus(prev => ({
+                ...prev,
+                currentAgent: targetAgentId
+              }));
+
+              // Announce agent switch for accessibility
+              announceToScreenReader(`Switched to ${agentDisplayName} agent`);
+
+              // Determine voice based on agent - PHQ agents use 'cedar', Tars uses default
+              const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
+
+              // Update session with new agent's instructions and tools
+              const updatedConfig: SessionConfig = {
+                ...convertSettingsToConfig(
+                  azureSettings,
+                  isAudioEnabled,
+                  true,
+                  result.switchConfig.systemMessage,
+                  enableInputTranscription
+                ),
+                tools: realtimeTools,
+                voice: agentVoice
+              };
+
+              await agentService.updateSession(updatedConfig);
+
+              console.log('✅ Session updated for new agent');
+              console.log('🔄 ========================================');
+
+              // Return acknowledgment that agent switch is complete
+              return {
+                success: true,
+                agentSwitched: true,
+                newAgentId: result.targetAgentId,
+                message: `Control transferred to ${result.targetAgentId}`
+              };
+            }
+          }
+
+          // Not an agent switch - return the tool result
+          return result.result;
+
+        } catch (error) {
+          console.error('❌ Function call error:', error);
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          };
+        }
+
+        // OLD CODE BELOW - Now handled by orchestration service, can be removed
+        /*
         const conversationSessionId = sessionStorage.getItem('chat-session-id') || undefined;
 
         switch (functionName) {
@@ -1278,6 +1443,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           default:
             return { success: false, error: `Unknown function: ${functionName}` };
         }
+        */
       });
 
       await agentService.startSession('user', sessionConfig);
@@ -1470,10 +1636,27 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   }`}
                   size={24}
                 />
+              ) : currentAgent.id === 'phq2' ? (
+                <ClipboardList
+                  className={`text-white transition-transform duration-300 ${
+                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
+                  }`}
+                  size={24}
+                />
+              ) : currentAgent.id === 'phq9' ? (
+                <FileText
+                  className={`text-white transition-transform duration-300 ${
+                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
+                  }`}
+                  size={24}
+                />
               ) : (
-                <span className="text-white text-xl">
-                  {currentAgent.id === 'phq2' ? '📋' : currentAgent.id === 'comedian' ? '😄' : '🤖'}
-                </span>
+                <Bot
+                  className={`text-white transition-transform duration-300 ${
+                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
+                  }`}
+                  size={24}
+                />
               )}
             </div>
 
@@ -1503,10 +1686,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
 
           <div>
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-              Tars
+              {currentAgent.name}
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
-              <span>Agent: {currentAgent.name}</span>
+              <span>Active Agent</span>
 
               {/* Connection Status */}
               <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
@@ -1770,6 +1953,22 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               } ${message.isTranscript ? 'border-l-4 border-yellow-400' : ''}`}
             >
+              {message.role === 'assistant' && (
+                <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
+                  {currentAgent.id === 'tars' ? (
+                    <Bot size={16} className="text-gray-600 dark:text-gray-400" />
+                  ) : currentAgent.id === 'phq2' ? (
+                    <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
+                  ) : currentAgent.id === 'phq9' ? (
+                    <FileText size={16} className="text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <Bot size={16} className="text-gray-600 dark:text-gray-400" />
+                  )}
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    {currentAgent.name}
+                  </span>
+                </div>
+              )}
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               <div className={`flex items-center justify-between text-xs mt-1 opacity-70 ${
                 message.role === 'user' ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'

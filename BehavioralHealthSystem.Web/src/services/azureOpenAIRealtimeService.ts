@@ -14,13 +14,13 @@ export interface RealtimeMessage {
   audioUrl?: string;
   isTranscript?: boolean; // Marks messages that are transcripts vs full responses
   isPartial?: boolean; // For live streaming transcripts
-  
+
   // Utterance tracking - links messages to real-time speech events
   utteranceId?: string; // Links this message to a specific utterance
   speaker?: 'user' | 'agent'; // Explicit speaker identifier (redundant with role but clearer)
   speechDuration?: number; // How long the speech took in milliseconds
   wasInterrupted?: boolean; // If the speech was cut off mid-utterance
-  
+
   // PHQ Assessment metadata
   isPhqQuestion?: boolean;
   isPhqAnswer?: boolean;
@@ -96,8 +96,8 @@ export interface AzureOpenAIRealtimeSettings {
  * Convert UI settings to service config format
  */
 export function convertSettingsToConfig(
-  settings: AzureOpenAIRealtimeSettings, 
-  enableAudio: boolean = true, 
+  settings: AzureOpenAIRealtimeSettings,
+  enableAudio: boolean = true,
   enableVAD: boolean = true,
   instructions?: string,
   enableInputTranscription: boolean = true
@@ -250,26 +250,26 @@ export class AzureOpenAIRealtimeService {
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
   private audioElement: HTMLAudioElement | null = null;
-  
+
   private sessionId: string | null = null;
   private isConnected: boolean = false;
   private isSessionActive: boolean = false;
-  
+
   // Separated handlers for independent processing
   private userInputHandler: UserInputHandler;
   private agentResponseHandler: AgentResponseHandler;
-  
+
   // Note: Local VAD removed - relying on Azure server-side VAD
-  
+
   private endpoint: string;
   private apiKey: string;
   private deploymentName: string;
   private apiVersion: string;
   private webrtcRegion: string;
   private ephemeralKey: string = '';
-  
+
   private messageHistory: RealtimeMessage[] = [];
-  
+
   // Enhanced state tracking
   private currentTranscriptBuffer: string = '';
   private speechDetectionState: SpeechDetectionState = {
@@ -277,12 +277,12 @@ export class AzureOpenAIRealtimeService {
     isAISpeaking: false
   };
   private conversationState: ConversationState = { state: 'idle' };
-  
+
   // Utterance tracking - real-time speech event monitoring
   private activeUtterances: Map<string, Utterance> = new Map();
   private currentUserUtteranceId: string | null = null;
   private currentAgentUtteranceId: string | null = null;
-  
+
   // Reconnection state
   private reconnectionAttempts: number = 0;
   private maxReconnectionAttempts: number = 3;
@@ -290,7 +290,7 @@ export class AzureOpenAIRealtimeService {
   private reconnectionTimer: NodeJS.Timeout | null = null;
   private lastConfig: RealtimeSessionConfig | null = null;
   private isReconnecting: boolean = false;
-  
+
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
   private onVoiceActivityCallback: ((activity: VoiceActivity) => void) | null = null;
@@ -298,16 +298,16 @@ export class AzureOpenAIRealtimeService {
   private onErrorCallback: ((error: Error) => void) | null = null;
   // REMOVED: onTranscriptCallback - deprecated, use onMessage instead
   private onConnectionLostCallback: ((attempts: number, maxAttempts: number) => void) | null = null;
-  
+
   // Enhanced event callbacks
   private onLiveTranscriptCallback: ((transcript: LiveTranscript) => void) | null = null;
   private onSpeechDetectionCallback: ((state: SpeechDetectionState) => void) | null = null;
   private onConversationStateCallback: ((state: ConversationState) => void) | null = null;
   private onUtteranceCallback: ((utterance: Utterance) => void) | null = null;
-  
+
   // Function calling callbacks
   private onFunctionCallCallback: ((functionName: string, args: Record<string, unknown>) => Promise<unknown>) | null = null;
-  
+
   constructor() {
     // Load configuration from environment variables
     // Two-step authentication: sessions endpoint + WebRTC regional endpoint
@@ -323,7 +323,7 @@ export class AzureOpenAIRealtimeService {
     console.log('  API Version:', this.apiVersion);
     console.log('  WebRTC Region:', this.webrtcRegion);
     console.log('  Env Var Loaded:', import.meta.env.VITE_AZURE_OPENAI_WEBRTC_REGION ? 'YES ✅' : 'NO ❌ (using default)');
-    
+
     if (!this.endpoint || !this.apiKey) {
       console.warn('⚠️ Azure OpenAI Realtime credentials not configured');
     }
@@ -331,25 +331,25 @@ export class AzureOpenAIRealtimeService {
     // Initialize separated handlers
     this.userInputHandler = new UserInputHandler();
     this.agentResponseHandler = new AgentResponseHandler();
-    
+
     // Connect agent handler's mute callback to this service
     this.agentResponseHandler.onMuteMicrophone((mute: boolean) => {
       this.muteMicrophone(mute);
     });
-    
+
     // Forward agent handler messages/transcripts to main service callbacks
     this.agentResponseHandler.onMessage((message) => {
       if (this.onMessageCallback) {
         this.onMessageCallback(message);
       }
     });
-    
+
     this.agentResponseHandler.onLiveTranscript((transcript) => {
       if (this.onLiveTranscriptCallback) {
         this.onLiveTranscriptCallback(transcript);
       }
     });
-    
+
     this.agentResponseHandler.onSpeechDetection((state) => {
       // Merge agent state with user state
       this.speechDetectionState.isAISpeaking = state.isAISpeaking;
@@ -357,17 +357,17 @@ export class AzureOpenAIRealtimeService {
         this.onSpeechDetectionCallback(this.speechDetectionState);
       }
     });
-    
+
     console.log('✅ Independent user/agent handlers initialized');
   }
-  
+
   /**
    * Event listeners
    */
   onMessage(callback: (message: RealtimeMessage) => void): void {
     this.onMessageCallback = callback;
   }
-  
+
   /**
    * Voice activity monitoring - DEPRECATED
    * Local VAD removed. This method is kept for backward compatibility but does nothing.
@@ -378,15 +378,15 @@ export class AzureOpenAIRealtimeService {
     this.onVoiceActivityCallback = callback;
     console.warn('⚠️ onVoiceActivity is deprecated - local VAD removed, use Azure server-side VAD events');
   }
-  
+
   onStatusChange(callback: (status: SessionStatus) => void): void {
     this.onStatusChangeCallback = callback;
   }
-  
+
   onError(callback: (error: Error) => void): void {
     this.onErrorCallback = callback;
   }
-  
+
   /**
    * @deprecated onTranscript is deprecated - use onMessage callback instead
    * Messages now flow through onMessage with proper role attribution (user/assistant)
@@ -395,24 +395,24 @@ export class AzureOpenAIRealtimeService {
     console.warn('⚠️ onTranscript is deprecated - use onMessage callback instead for proper message handling');
     // Callback registration removed - no longer functional
   }
-  
+
   // Enhanced event listeners
   onLiveTranscript(callback: (transcript: LiveTranscript) => void): void {
     this.onLiveTranscriptCallback = callback;
   }
-  
+
   onSpeechDetection(callback: (state: SpeechDetectionState) => void): void {
     this.onSpeechDetectionCallback = callback;
   }
-  
+
   onConversationState(callback: (state: ConversationState) => void): void {
     this.onConversationStateCallback = callback;
   }
-  
+
   onConnectionLost(callback: (attempts: number, maxAttempts: number) => void): void {
     this.onConnectionLostCallback = callback;
   }
-  
+
   /**
    * Register callback for utterance tracking events
    * Called when utterances are created, updated, or completed
@@ -460,7 +460,7 @@ export class AzureOpenAIRealtimeService {
       // Create new utterance
       utteranceId = `${speaker}_${Date.now()}`;
       this[currentIdKey] = utteranceId;
-      
+
       const utterance: Utterance = {
         id: utteranceId,
         speaker,
@@ -469,28 +469,28 @@ export class AzureOpenAIRealtimeService {
         startTime: Date.now(),
         isInterrupted: false
       };
-      
+
       this.activeUtterances.set(utteranceId, utterance);
-      
+
       // Emit callback
       if (this.onUtteranceCallback) {
         this.onUtteranceCallback(utterance);
       }
-      
+
       console.log(`🎤 Speech started: ${speaker} (${utteranceId})`);
     } else if (utteranceId && this.activeUtterances.has(utteranceId)) {
       // Update existing utterance
       const utterance = this.activeUtterances.get(utteranceId)!;
       utterance.type = type;
       utterance.content = content;
-      
+
       if (type === 'speech-complete') {
         utterance.endTime = Date.now();
         utterance.duration = utterance.endTime - utterance.startTime;
         this[currentIdKey] = null; // Clear current ID
         console.log(`✅ Speech completed: ${speaker} (${utteranceId}) - ${utterance.duration}ms`);
       }
-      
+
       // Emit callback
       if (this.onUtteranceCallback) {
         this.onUtteranceCallback(utterance);
@@ -506,25 +506,25 @@ export class AzureOpenAIRealtimeService {
   private interruptUtterance(speaker: 'user' | 'agent'): void {
     const currentIdKey = speaker === 'user' ? 'currentUserUtteranceId' : 'currentAgentUtteranceId';
     const utteranceId = this[currentIdKey];
-    
+
     if (utteranceId && this.activeUtterances.has(utteranceId)) {
       const utterance = this.activeUtterances.get(utteranceId)!;
       utterance.type = 'speech-complete';
       utterance.isInterrupted = true;
       utterance.endTime = Date.now();
       utterance.duration = utterance.endTime - utterance.startTime;
-      
+
       this[currentIdKey] = null;
-      
+
       // Emit callback
       if (this.onUtteranceCallback) {
         this.onUtteranceCallback(utterance);
       }
-      
+
       console.log(`⚠️ Speech interrupted: ${speaker} (${utteranceId})`);
     }
   }
-  
+
   /**
    * Register callback for function calls from the AI
    * This callback will be invoked when the AI calls a registered tool/function
@@ -553,6 +553,14 @@ export class AzureOpenAIRealtimeService {
 
     console.log('📤 Sending function result:', resultEvent);
     this.dataChannel.send(JSON.stringify(resultEvent));
+
+    // Trigger the AI to generate a response based on the function result
+    const responseEvent = {
+      type: 'response.create'
+    };
+
+    console.log('📤 Triggering AI response after function result');
+    this.dataChannel.send(JSON.stringify(responseEvent));
   }
 
   /**
@@ -576,7 +584,7 @@ export class AzureOpenAIRealtimeService {
     console.log('📤 Sending function error:', errorEvent);
     this.dataChannel.send(JSON.stringify(errorEvent));
   }
-  
+
   /**
    * Initialize the service
    */
@@ -586,14 +594,14 @@ export class AzureOpenAIRealtimeService {
       if (!('RTCPeerConnection' in window)) {
         throw new Error('WebRTC is not supported in this browser');
       }
-      
+
       if (!('MediaStream' in window)) {
         throw new Error('MediaStream API is not supported in this browser');
       }
-      
+
       this.isConnected = true;
       this.emitStatusChange();
-      
+
       console.log('✅ Azure OpenAI Realtime service initialized');
     } catch (error) {
       console.error('❌ Failed to initialize service:', error);
@@ -601,7 +609,7 @@ export class AzureOpenAIRealtimeService {
       throw error;
     }
   }
-  
+
   /**
    * Start a new realtime session with WebRTC
    */
@@ -610,35 +618,35 @@ export class AzureOpenAIRealtimeService {
       if (!this.endpoint || !this.apiKey) {
         throw new Error('Azure OpenAI Realtime credentials not configured. Please set environment variables.');
       }
-      
+
       console.log('🚀 Starting Azure OpenAI Realtime session...');
-      
+
       // Save config for potential reconnection
       this.lastConfig = { ...config };
-      
+
       this.sessionId = `session-${userId}-${Date.now()}`;
-      
+
       // Step 1: Get ephemeral key from sessions API
       console.log('🔑 Getting ephemeral key from Azure OpenAI sessions API...');
       await this.getEphemeralKey(config);
-      
+
       // Get user media (microphone) with selected device
       await this.initializeAudioStream(config.enableAudio);
-      
+
       // Setup audio analysis for voice activity detection
       if (config.enableVAD && this.localStream) {
         this.setupVoiceActivityDetection();
       }
-      
+
       // Create RTCPeerConnection
       await this.createPeerConnection(config);
-      
+
       // Step 2: Establish WebRTC connection to Azure OpenAI with ephemeral key
       await this.connectToAzureOpenAI();
-      
+
       this.isSessionActive = true;
       this.emitStatusChange();
-      
+
       console.log('✅ Session started successfully:', this.sessionId);
     } catch (error) {
       console.error('❌ Failed to start session:', error);
@@ -647,7 +655,7 @@ export class AzureOpenAIRealtimeService {
       throw error;
     }
   }
-  
+
   /**
    * Initialize audio stream from microphone
    */
@@ -656,7 +664,7 @@ export class AzureOpenAIRealtimeService {
       console.log('Audio disabled, skipping microphone initialization');
       return;
     }
-    
+
     try {
       const constraints: MediaStreamConstraints = {
         audio: {
@@ -667,7 +675,7 @@ export class AzureOpenAIRealtimeService {
           sampleRate: { ideal: 24000 }, // Azure OpenAI recommended sample rate
           channelCount: { ideal: 1, max: 1 }, // Mono audio
           latency: { ideal: 0.01, max: 0.02 },
-          
+
           // Chrome/Edge WebRTC AEC3 specific constraints
           googEchoCancellation: true,
           googEchoCancellation2: true, // AEC2 (enhanced)
@@ -687,9 +695,9 @@ export class AzureOpenAIRealtimeService {
         } as MediaTrackConstraints,
         video: false
       };
-      
+
       console.log('🎙️ WebRTC AEC3 ENABLED: Requesting microphone with hardware echo cancellation...');
-      
+
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
       console.log('🎤 Microphone access granted');
     } catch (error) {
@@ -697,7 +705,7 @@ export class AzureOpenAIRealtimeService {
       throw new Error('Microphone access denied. Please grant microphone permissions.');
     }
   }
-  
+
   /**
    * Setup voice activity detection
    */
@@ -708,17 +716,17 @@ export class AzureOpenAIRealtimeService {
     // LOCAL VAD REMOVED - Now relying entirely on Azure OpenAI's server-side VAD
     // Azure's `input_audio_buffer.speech_started` and `speech_stopped` events
     // provide more accurate speech detection than local audio analysis
-    
+
     // Forward user transcript handler for backward compatibility
     this.userInputHandler.onLiveTranscript((transcript) => {
       if (this.onLiveTranscriptCallback) {
         this.onLiveTranscriptCallback(transcript);
       }
     });
-    
+
     console.log('✅ Using Azure OpenAI server-side VAD (local VAD removed)');
   }
-  
+
   /**
    * Legacy method - now delegated to UserInputHandler
    * @deprecated Use UserInputHandler directly
@@ -734,9 +742,9 @@ export class AzureOpenAIRealtimeService {
       ],
       iceCandidatePoolSize: 10
     };
-    
+
     this.peerConnection = new RTCPeerConnection(configuration);
-    
+
     // Add local audio track
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => {
@@ -746,26 +754,26 @@ export class AzureOpenAIRealtimeService {
         }
       });
     }
-    
+
     // Handle remote tracks (AI audio responses)
     this.peerConnection.ontrack = (event) => {
       console.log('📡 Received remote track');
       this.remoteStream = event.streams[0];
       this.playRemoteAudio();
     };
-    
+
     // Handle ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         console.log('🧊 ICE candidate:', event.candidate.candidate);
       }
     };
-    
+
     // Handle connection state changes
     this.peerConnection.onconnectionstatechange = () => {
       const state = this.peerConnection?.connectionState;
       console.log('🔌 Connection state:', state);
-      
+
       // Handle connection failures and disconnections
       if (state === 'failed' || state === 'disconnected') {
         console.warn('⚠️ Connection lost:', state);
@@ -775,33 +783,33 @@ export class AzureOpenAIRealtimeService {
         this.reconnectionAttempts = 0;
         this.isReconnecting = false;
       }
-      
+
       this.emitStatusChange();
     };
-    
+
     // Create data channel for realtime events (must be created BEFORE offer)
     // Using 'realtime-channel' name as per Azure OpenAI specification
     this.dataChannel = this.peerConnection.createDataChannel('realtime-channel', {
       ordered: true
     });
-    
+
     this.dataChannel.onmessage = (event) => {
       this.handleDataChannelMessage(event.data);
     };
-    
+
     this.dataChannel.onopen = () => {
       console.log('📬 Data channel is open');
       // Send session.update after data channel opens (as per working example)
       this.updateSession(_config);
     };
-    
+
     this.dataChannel.onclose = () => {
       console.log('📪 Data channel is closed');
     };
-    
+
     console.log('✅ RTCPeerConnection created');
   }
-  
+
   /**
    * Connect to Azure OpenAI Realtime API
    */
@@ -809,47 +817,47 @@ export class AzureOpenAIRealtimeService {
     if (!this.peerConnection) {
       throw new Error('Peer connection not initialized');
     }
-    
+
     try {
       // Create offer
       const offer = await this.peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
       });
-      
+
       await this.peerConnection.setLocalDescription(offer);
       console.log('📤 Created and set local offer');
-      
+
       // Send offer to Azure OpenAI and get answer
       const answer = await this.exchangeSDPWithAzure(offer);
-      
+
       await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
       console.log('📥 Set remote answer from Azure OpenAI');
-      
+
     } catch (error) {
       console.error('❌ Failed to connect to Azure OpenAI:', error);
       throw error;
     }
   }
-  
+
   /**
    * Get ephemeral key from Azure OpenAI sessions API (Step 1 of 2-step auth)
    * Matches HTML example: only sends model and voice
    */
   private async getEphemeralKey(config: RealtimeSessionConfig): Promise<void> {
     const sessionsUrl = `https://${this.endpoint}.openai.azure.com/openai/realtimeapi/sessions?api-version=${this.apiVersion}`;
-    
+
     // Match HTML example exactly: only model and voice
     // Other parameters (instructions, temperature, etc.) are sent via session.update after connection
     const payload = {
       model: this.deploymentName,
       voice: config.voice || 'alloy'
     };
-    
+
     try {
       console.log('📡 Sessions API URL:', sessionsUrl);
       console.log('📤 Request payload:', JSON.stringify(payload, null, 2));
-      
+
       const response = await fetch(sessionsUrl, {
         method: 'POST',
         headers: {
@@ -858,15 +866,15 @@ export class AzureOpenAIRealtimeService {
         },
         body: JSON.stringify(payload)
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Sessions API error: ${response.status} - ${errorText}`);
       }
-      
+
       const data = await response.json();
       this.ephemeralKey = data.client_secret.value;
-      
+
       console.log('✅ Ephemeral key obtained successfully');
       console.log('🆔 Session ID:', data.id);
     } catch (error) {
@@ -883,10 +891,10 @@ export class AzureOpenAIRealtimeService {
   ): Promise<RTCSessionDescriptionInit> {
     // Use regional WebRTC endpoint with deployment as query parameter
     const webrtcUrl = `https://${this.webrtcRegion}.realtimeapi-preview.ai.azure.com/v1/realtimertc?model=${this.deploymentName}`;
-    
+
     try {
       console.log('📡 WebRTC URL:', webrtcUrl);
-      
+
       const response = await fetch(webrtcUrl, {
         method: 'POST',
         headers: {
@@ -895,16 +903,16 @@ export class AzureOpenAIRealtimeService {
         },
         body: offer.sdp
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`WebRTC API error: ${response.status} - ${errorText}`);
       }
-      
+
       const sdpAnswer = await response.text();
-      
+
       console.log('✅ SDP answer received from Azure OpenAI');
-      
+
       return {
         type: 'answer' as RTCSdpType,
         sdp: sdpAnswer
@@ -914,17 +922,18 @@ export class AzureOpenAIRealtimeService {
       throw error;
     }
   }
-  
+
   /**
    * Send session.update event to configure the session
    * Called automatically when data channel opens
+   * Can also be called manually to switch agents or update configuration
    */
-  private updateSession(config: RealtimeSessionConfig): void {
+  public updateSession(config: RealtimeSessionConfig): void {
     if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
       console.warn('⚠️ Data channel not open, cannot send session.update');
       return;
     }
-    
+
     const sessionConfig: any = {
       instructions: config.instructions || 'You are a helpful behavioral health assistant responding in natural, engaging language.',
       voice: config.voice || 'alloy',
@@ -945,25 +954,25 @@ export class AzureOpenAIRealtimeService {
         silence_duration_ms: config.turnDetection.silenceDurationMs || 300
       };
     }
-    
+
     // Add input audio transcription if specified
     if (config.inputAudioTranscription) {
       sessionConfig.input_audio_transcription = {
         model: config.inputAudioTranscription.model || 'whisper-1'
       };
     }
-    
+
     // Add tools/functions if specified
     if (config.tools && config.tools.length > 0) {
       sessionConfig.tools = config.tools;
       console.log(`🔧 Registering ${config.tools.length} tools:`, config.tools.map(t => t.name).join(', '));
     }
-    
+
     const event = {
       type: 'session.update',
       session: sessionConfig
     };
-    
+
     try {
       this.dataChannel.send(JSON.stringify(event));
       console.log('📤 Sent client event:', JSON.stringify(event, null, 2));
@@ -971,22 +980,22 @@ export class AzureOpenAIRealtimeService {
       console.error('❌ Failed to send session.update:', error);
     }
   }
-  
+
   /**
    * Play remote audio from AI
    */
   private playRemoteAudio(): void {
     if (!this.remoteStream) return;
-    
+
     if (!this.audioElement) {
       this.audioElement = new Audio();
       this.audioElement.autoplay = true;
     }
-    
+
     this.audioElement.srcObject = this.remoteStream;
     console.log('🔊 Playing AI audio response');
   }
-  
+
   /**
    * Handle data channel messages from Azure OpenAI
    * Comprehensive event handling for all Azure OpenAI Realtime API events
@@ -995,7 +1004,7 @@ export class AzureOpenAIRealtimeService {
     try {
       const realtimeEvent = JSON.parse(data);
       console.log('📥 Received server event:', realtimeEvent.type, realtimeEvent);
-      
+
       // Handle different event types from Azure OpenAI Realtime API
       switch (realtimeEvent.type) {
         // Session management
@@ -1003,13 +1012,13 @@ export class AzureOpenAIRealtimeService {
           console.log('✅ Session created successfully');
           this.updateConversationState({ state: 'idle', message: 'Session created' });
           break;
-          
+
         case 'session.update':
           const instructions = realtimeEvent.session?.instructions;
           console.log('📋 Session updated. Instructions:', instructions);
           this.updateConversationState({ state: 'idle', message: 'Session configured' });
           break;
-          
+
         case 'session.error':
           console.error('❌ Session error:', realtimeEvent.error?.message);
           this.updateConversationState({ state: 'error', message: realtimeEvent.error?.message });
@@ -1017,7 +1026,7 @@ export class AzureOpenAIRealtimeService {
             this.onErrorCallback(new Error(realtimeEvent.error?.message || 'Session error'));
           }
           break;
-          
+
         case 'session.end':
           console.log('🛑 Session ended by server');
           this.updateConversationState({ state: 'idle', message: 'Session ended' });
@@ -1033,11 +1042,11 @@ export class AzureOpenAIRealtimeService {
           this.speechDetectionState.speechStartedAt = Date.now();
           this.updateConversationState({ state: 'listening', message: 'Listening...' });
           this.emitSpeechDetection();
-          
+
           // Track user utterance start
           this.trackUtterance('user', 'speech-start');
           break;
-          
+
         case 'input_audio_buffer.speech_stopped':
           console.log('� USER STOPPED SPEAKING');
           console.log('👤 ========================================');
@@ -1050,35 +1059,35 @@ export class AzureOpenAIRealtimeService {
         // Real-time AI audio transcripts (live captions) - DELEGATED TO AgentResponseHandler
         case 'response.audio_transcript.delta':
           this.agentResponseHandler.handleAudioTranscriptDelta(realtimeEvent);
-          
+
           // Update service-level state for backward compatibility
           if (realtimeEvent.delta) {
             this.currentTranscriptBuffer += realtimeEvent.delta;
             this.updateConversationState({ state: 'speaking', message: 'AI Speaking...' });
             this.speechDetectionState.isAISpeaking = true;
             this.emitSpeechDetection();
-            
+
             // Track agent utterance in progress
             this.trackUtterance('agent', 'speech-in-progress', this.currentTranscriptBuffer);
-            
+
             // REMOVED: onTranscriptCallback - deprecated, messages flow through onMessage
           }
           break;
-          
+
         case 'response.audio_transcript.done':
           // DELEGATED TO AgentResponseHandler
           this.agentResponseHandler.handleAudioTranscriptDone(realtimeEvent);
-          
+
           // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
             console.log('🤖 ========================================');
             console.log('🤖 AGENT SAID:');
             console.log('🤖 "' + realtimeEvent.transcript + '"');
             console.log('🤖 ========================================');
-            
+
             // Complete agent utterance and link to message
             const utteranceId = this.trackUtterance('agent', 'speech-complete', realtimeEvent.transcript);
-            
+
             const agentMessage: RealtimeMessage = {
               id: `ai-transcript-${Date.now()}`,
               role: 'assistant',
@@ -1090,11 +1099,11 @@ export class AzureOpenAIRealtimeService {
               speaker: 'agent',
               speechDuration: this.activeUtterances.get(utteranceId)?.duration
             };
-            
+
             this.messageHistory.push(agentMessage);
-            
+
             this.currentTranscriptBuffer = '';
-            
+
             // REMOVED: onTranscriptCallback - deprecated, messages flow through onMessage
           }
           break;
@@ -1102,17 +1111,17 @@ export class AzureOpenAIRealtimeService {
         // Input audio transcription (user speech as text) - DELEGATED TO UserInputHandler
         case 'conversation.item.input_audio_transcription.completed':
           this.userInputHandler.handleTranscriptEvent(realtimeEvent);
-          
+
           // Update service-level state for backward compatibility
           if (realtimeEvent.transcript) {
             console.log('👤 ========================================');
             console.log('👤 USER SAID:');
             console.log('👤 "' + realtimeEvent.transcript + '"');
             console.log('👤 ========================================');
-            
+
             // Complete user utterance and link to message
             const utteranceId = this.trackUtterance('user', 'speech-complete', realtimeEvent.transcript);
-            
+
             const userMessage: RealtimeMessage = {
               id: `user-transcript-${Date.now()}`,
               role: 'user',
@@ -1124,9 +1133,9 @@ export class AzureOpenAIRealtimeService {
               speaker: 'user',
               speechDuration: this.activeUtterances.get(utteranceId)?.duration
             };
-            
+
             this.messageHistory.push(userMessage);
-            
+
             if (this.onMessageCallback) {
               this.onMessageCallback(userMessage);
             }
@@ -1140,29 +1149,29 @@ export class AzureOpenAIRealtimeService {
           console.log('🤖 ========================================');
           this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
-          
+
           // Track agent utterance start
           this.trackUtterance('agent', 'speech-start');
           break;
-          
+
         case 'response.done':
           this.agentResponseHandler.handleResponseDone(realtimeEvent);
-          
+
           // Update service-level state for backward compatibility
           this.speechDetectionState.isAISpeaking = false;
           this.updateConversationState({ state: 'idle', message: 'Ready for input' });
           this.emitSpeechDetection();
           break;
-          
+
         case 'response.cancelled':
           this.agentResponseHandler.handleResponseCancelled(realtimeEvent);
-          
+
           // Update service-level state for backward compatibility
           this.speechDetectionState.isAISpeaking = false;
           this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
           this.emitSpeechDetection();
           this.currentTranscriptBuffer = '';
-          
+
           // Mark agent utterance as interrupted
           this.interruptUtterance('agent');
           break;
@@ -1192,7 +1201,7 @@ export class AzureOpenAIRealtimeService {
           // Function arguments streaming (accumulate if needed)
           console.log('🔧 Function call argument delta:', realtimeEvent);
           break;
-          
+
         case 'response.function_call_arguments.done':
           console.log('🔧 Function call arguments complete:', realtimeEvent);
           // Extract function name and arguments
@@ -1200,7 +1209,7 @@ export class AzureOpenAIRealtimeService {
             const functionName = realtimeEvent.name;
             const args = realtimeEvent.arguments ? JSON.parse(realtimeEvent.arguments) : {};
             console.log(`🎯 Executing function: ${functionName}`, args);
-            
+
             // Execute the function asynchronously
             this.onFunctionCallCallback(functionName, args)
               .then((result) => {
@@ -1217,7 +1226,7 @@ export class AzureOpenAIRealtimeService {
           break;
 
         // REMOVED: Legacy 'transcript' event handling - deprecated, use onMessage instead
-          
+
         case 'response':
           const realtimeMessage: RealtimeMessage = {
             id: `msg-${Date.now()}`,
@@ -1225,9 +1234,9 @@ export class AzureOpenAIRealtimeService {
             content: realtimeEvent.text || '',
             timestamp: new Date().toISOString()
           };
-          
+
           this.messageHistory.push(realtimeMessage);
-          
+
           if (this.onMessageCallback) {
             this.onMessageCallback(realtimeMessage);
           }
@@ -1243,7 +1252,7 @@ export class AzureOpenAIRealtimeService {
       this.updateConversationState({ state: 'error', message: 'Failed to parse server message' });
     }
   }
-  
+
   /**
    * Update conversation state and notify listeners
    */
@@ -1253,7 +1262,7 @@ export class AzureOpenAIRealtimeService {
       this.onConversationStateCallback(newState);
     }
   }
-  
+
   /**
    * Emit speech detection state to listeners
    */
@@ -1262,7 +1271,7 @@ export class AzureOpenAIRealtimeService {
       this.onSpeechDetectionCallback({ ...this.speechDetectionState });
     }
   }
-  
+
   /**
    * Send text message through data channel
    */
@@ -1270,15 +1279,15 @@ export class AzureOpenAIRealtimeService {
     if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
       throw new Error('Data channel is not open');
     }
-    
+
     const message = {
       type: 'message',
       text,
       timestamp: new Date().toISOString()
     };
-    
+
     this.dataChannel.send(JSON.stringify(message));
-    
+
     // Add to message history
     const userMessage: RealtimeMessage = {
       id: `msg-${Date.now()}`,
@@ -1286,14 +1295,14 @@ export class AzureOpenAIRealtimeService {
       content: text,
       timestamp: new Date().toISOString()
     };
-    
+
     this.messageHistory.push(userMessage);
-    
+
     if (this.onMessageCallback) {
       this.onMessageCallback(userMessage);
     }
   }
-  
+
   /**
    * Interrupt current AI response
    * Cancels ongoing response and clears output audio buffer
@@ -1302,36 +1311,36 @@ export class AzureOpenAIRealtimeService {
     if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
       throw new Error('Data channel is not open');
     }
-    
+
     try {
       // Send response.cancel event
       const cancelEvent = {
         type: 'response.cancel'
       };
-      
+
       this.dataChannel.send(JSON.stringify(cancelEvent));
       console.log('📤 Sent response.cancel event');
-      
+
       // For WebRTC, also clear output audio buffer
       const clearAudioEvent = {
         type: 'output_audio_buffer.clear'
       };
-      
+
       this.dataChannel.send(JSON.stringify(clearAudioEvent));
       console.log('📤 Sent output_audio_buffer.clear event');
-      
+
       // Update local state
       this.speechDetectionState.isAISpeaking = false;
       this.currentTranscriptBuffer = '';
       this.updateConversationState({ state: 'idle', message: 'Response interrupted' });
       this.emitSpeechDetection();
-      
+
     } catch (error) {
       console.error('❌ Failed to interrupt response:', error);
       throw error;
     }
   }
-  
+
   /**
    * Change microphone device
    */
@@ -1341,7 +1350,7 @@ export class AzureOpenAIRealtimeService {
       if (this.localStream) {
         this.localStream.getTracks().forEach(track => track.stop());
       }
-      
+
       // Get new stream with selected device (with WebRTC AEC3)
       const constraints: MediaStreamConstraints = {
         audio: {
@@ -1353,7 +1362,7 @@ export class AzureOpenAIRealtimeService {
           sampleRate: { ideal: 24000 },
           channelCount: { ideal: 1, max: 1 },
           latency: { ideal: 0.01, max: 0.02 },
-          
+
           // Chrome/Edge WebRTC AEC3 specific
           googEchoCancellation: true,
           googEchoCancellation2: true,
@@ -1372,9 +1381,9 @@ export class AzureOpenAIRealtimeService {
           googArrayGeometry: true,
         } as MediaTrackConstraints
       };
-      
+
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
-      
+
       // Update peer connection tracks
       if (this.peerConnection) {
         const sender = this.peerConnection.getSenders().find(s => s.track?.kind === 'audio');
@@ -1384,7 +1393,7 @@ export class AzureOpenAIRealtimeService {
           console.log('🎤 Microphone changed successfully');
         }
       }
-      
+
       // Voice activity detection (Azure server-side only now)
       await this.setupVoiceActivityDetection();
     } catch (error) {
@@ -1392,7 +1401,7 @@ export class AzureOpenAIRealtimeService {
       throw error;
     }
   }
-  
+
   /**
    * Pause session (mute microphone)
    */
@@ -1405,7 +1414,7 @@ export class AzureOpenAIRealtimeService {
       this.emitStatusChange();
     }
   }
-  
+
   /**
    * Resume session (unmute microphone)
    */
@@ -1418,7 +1427,7 @@ export class AzureOpenAIRealtimeService {
       this.emitStatusChange();
     }
   }
-  
+
   /**
    * End session and cleanup
    */
@@ -1430,7 +1439,7 @@ export class AzureOpenAIRealtimeService {
     this.emitStatusChange();
     console.log('✅ Session ended');
   }
-  
+
   /**
    * Cleanup resources
    */
@@ -1438,56 +1447,56 @@ export class AzureOpenAIRealtimeService {
     // Cleanup independent handlers
     this.userInputHandler.cleanup();
     this.agentResponseHandler.cleanup();
-    
+
     // Stop local stream
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
     }
-    
+
     // Close data channel
     if (this.dataChannel) {
       this.dataChannel.close();
       this.dataChannel = null;
     }
-    
+
     // Close peer connection
     if (this.peerConnection) {
       this.peerConnection.close();
       this.peerConnection = null;
     }
-    
+
     // Stop remote audio
     if (this.audioElement) {
       this.audioElement.pause();
       this.audioElement.srcObject = null;
       this.audioElement = null;
     }
-    
+
     // Clear reconnection timer
     if (this.reconnectionTimer) {
       clearTimeout(this.reconnectionTimer);
       this.reconnectionTimer = null;
     }
-    
+
     this.remoteStream = null;
-    
+
     console.log('🧹 All resources cleaned up (including handlers)');
   }
-  
+
   /**
    * Get session status
    */
   getStatus(): SessionStatus {
     let connectionQuality: 'excellent' | 'good' | 'fair' | 'poor' = 'poor';
-    
+
     if (this.peerConnection) {
       const state = this.peerConnection.connectionState;
       if (state === 'connected') connectionQuality = 'excellent';
       else if (state === 'connecting') connectionQuality = 'good';
       else if (state === 'new') connectionQuality = 'fair';
     }
-    
+
     return {
       isConnected: this.isConnected,
       isSessionActive: this.isSessionActive,
@@ -1495,21 +1504,21 @@ export class AzureOpenAIRealtimeService {
       connectionQuality
     };
   }
-  
+
   /**
    * Get message history
    */
   getMessageHistory(): RealtimeMessage[] {
     return [...this.messageHistory];
   }
-  
+
   /**
    * Clear message history
    */
   clearHistory(): void {
     this.messageHistory = [];
   }
-  
+
   /**
    * Emit status change event
    */
@@ -1518,7 +1527,7 @@ export class AzureOpenAIRealtimeService {
       this.onStatusChangeCallback(this.getStatus());
     }
   }
-  
+
   /**
    * Handle errors
    */
@@ -1527,7 +1536,7 @@ export class AzureOpenAIRealtimeService {
       this.onErrorCallback(error);
     }
   }
-  
+
   /**
    * Handle connection lost - attempt automatic reconnection
    */
@@ -1537,7 +1546,7 @@ export class AzureOpenAIRealtimeService {
       console.log('🔄 Reconnection already in progress...');
       return;
     }
-    
+
     // Check if we've exceeded max attempts
     if (this.reconnectionAttempts >= this.maxReconnectionAttempts) {
       console.error('❌ Max reconnection attempts reached. Please refresh the page.');
@@ -1546,45 +1555,45 @@ export class AzureOpenAIRealtimeService {
       }
       return;
     }
-    
+
     this.isReconnecting = true;
     this.reconnectionAttempts++;
-    
+
     console.log(`🔄 Attempting to reconnect (${this.reconnectionAttempts}/${this.maxReconnectionAttempts})...`);
-    
+
     // Notify UI about connection loss
     if (this.onConnectionLostCallback) {
       this.onConnectionLostCallback(this.reconnectionAttempts, this.maxReconnectionAttempts);
     }
-    
+
     // Cleanup current connection
     await this.cleanup();
-    
+
     // Wait before reconnecting (exponential backoff)
     const delay = this.reconnectionDelay * Math.pow(2, this.reconnectionAttempts - 1);
     console.log(`⏳ Waiting ${delay}ms before reconnection...`);
-    
+
     this.reconnectionTimer = setTimeout(async () => {
       try {
         if (!this.lastConfig || !this.sessionId) {
           throw new Error('Cannot reconnect: missing session configuration');
         }
-        
+
         console.log('🔄 Reconnecting...');
-        
+
         // Extract userId from sessionId (format: session-{userId}-{timestamp})
         const userId = this.sessionId.split('-')[1] || 'user';
-        
+
         // Restart session with saved config
         await this.startSession(userId, this.lastConfig);
-        
+
         console.log('✅ Reconnection successful');
         this.isReconnecting = false;
-        
+
       } catch (error) {
         console.error('❌ Reconnection failed:', error);
         this.isReconnecting = false;
-        
+
         // Try again if we haven't exceeded max attempts
         if (this.reconnectionAttempts < this.maxReconnectionAttempts) {
           await this.handleConnectionLost();
@@ -1592,7 +1601,7 @@ export class AzureOpenAIRealtimeService {
       }
     }, delay);
   }
-  
+
   /**
    * Mute or unmute the user's microphone
    * Used for preventing echo during agent speech
@@ -1606,14 +1615,14 @@ export class AzureOpenAIRealtimeService {
       console.log(mute ? '🔇 Microphone muted (agent speaking)' : '🔊 Microphone unmuted');
     }
   }
-  
+
   /**
    * Get the current media stream (for external mic control)
    */
   getMediaStream(): MediaStream | null {
     return this.localStream;
   }
-  
+
   /**
    * Check if microphone is currently muted
    */
@@ -1622,14 +1631,14 @@ export class AzureOpenAIRealtimeService {
     const audioTracks = this.localStream.getAudioTracks();
     return audioTracks.length === 0 || !audioTracks[0].enabled;
   }
-  
+
   /**
    * Destroy service instance
    */
   async destroy(): Promise<void> {
     await this.cleanup();
     this.isConnected = false;
-    
+
     // Clear all callbacks
     this.onMessageCallback = null;
     this.onVoiceActivityCallback = null;
@@ -1639,7 +1648,7 @@ export class AzureOpenAIRealtimeService {
     this.onLiveTranscriptCallback = null;
     this.onSpeechDetectionCallback = null;
     this.onConversationStateCallback = null;
-    
+
     console.log('🗑️ Service destroyed');
   }
 }

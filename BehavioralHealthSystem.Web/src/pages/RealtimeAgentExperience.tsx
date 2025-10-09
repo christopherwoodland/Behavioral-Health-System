@@ -572,11 +572,22 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
     agentService.onMessage((message: RealtimeMessage) => {
+      console.log('🎭 ========================================');
+      console.log('🎭 UI RECEIVED MESSAGE CALLBACK');
+      console.log('🎭 Role:', message.role);
+      console.log('🎭 Content:', message.content?.substring(0, 100));
+      console.log('🎭 Message ID:', message.id);
+      console.log('🎭 ========================================');
+      
       // NO LEXICAL/WORD-BASED ECHO PREVENTION
       // Relying 100% on WebRTC AEC3 + Mic Muting Strategy
       // Mic muting is now handled automatically in azureOpenAIRealtimeService.ts:
       //   - Mutes on 'response.created' (before agent speaks)
       //   - Unmutes on 'response.done' (after 2.5s delay)
+      
+      // IMPORTANT: User messages come through this callback for processing (voice commands, etc)
+      // but should NOT be added to the message display since they're already added
+      // via the transcript event in the service. Only add assistant messages to chat bubbles.
       
       // Check for humor level voice commands in user messages
       if (message.role === 'user' && message.content) {
@@ -747,6 +758,8 @@ Just speak naturally - I understand variations of these commands!`,
         }
       }
       
+      // Add ALL messages to the chat display (both user and assistant)
+      console.log(`✅ Adding ${message.role} message to chat display`);
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
       

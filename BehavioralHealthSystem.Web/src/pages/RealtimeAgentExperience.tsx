@@ -976,29 +976,8 @@ Just speak naturally - I understand variations of these commands!`,
       }
     });
 
-    agentService.onTranscript((transcript, isFinal) => {
-      if (isFinal) {
-        // Add user's transcribed message to UI
-        const userMessage: RealtimeMessage = {
-          id: `user-transcript-${Date.now()}`,
-          role: 'user',
-          content: transcript,
-          timestamp: new Date().toISOString(),
-          isTranscript: true,
-          isPartial: false
-        };
-        setMessages(prev => [...prev, userMessage]);
-        
-        // Save user message to transcript
-        if (authenticatedUserId) {
-          chatTranscriptService.addUserMessage(
-            transcript,
-            'voice-input',
-            { isTranscript: true, inputMethod: 'voice' }
-          );
-        }
-      }
-    });
+    // NOTE: onTranscript callback removed - messages now handled via onMessage callback
+    // This prevents duplicate messages since onMessage receives both user and assistant messages
 
     agentService.onError((error) => {
       console.error('Azure OpenAI Realtime service error:', error);

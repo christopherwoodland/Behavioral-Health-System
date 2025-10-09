@@ -55,6 +55,10 @@ interface SessionStatus {
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
 }
 
+// Verbose logging flag - controlled via VITE_ENABLE_VERBOSE_LOGGING environment variable
+// This provides extremely granular debugging (every message render, transcript event, etc.)
+const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === 'true';
+
 export const RealtimeAgentExperience: React.FC = () => {
   // Authentication context
   const { user } = useAuth();
@@ -591,12 +595,15 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
     agentService.onMessage((message: RealtimeMessage) => {
-      console.log('🎭 ========================================');
-      console.log('🎭 UI RECEIVED MESSAGE CALLBACK');
-      console.log('🎭 Role:', message.role);
-      console.log('🎭 Content:', message.content?.substring(0, 100));
-      console.log('🎭 Message ID:', message.id);
-      console.log('🎭 ========================================');
+      // Verbose logging - only when debugging
+      if (ENABLE_VERBOSE_LOGGING) {
+        console.log('🎭 ========================================');
+        console.log('🎭 UI RECEIVED MESSAGE CALLBACK');
+        console.log('🎭 Role:', message.role);
+        console.log('🎭 Content:', message.content?.substring(0, 100));
+        console.log('🎭 Message ID:', message.id);
+        console.log('🎭 ========================================');
+      }
 
       // NO LEXICAL/WORD-BASED ECHO PREVENTION
       // Relying 100% on WebRTC AEC3 + Mic Muting Strategy
@@ -778,7 +785,9 @@ Just speak naturally - I understand variations of these commands!`,
       }
 
       // Add ALL messages to the chat display (both user and assistant)
-      console.log(`✅ Adding ${message.role} message to chat display`);
+      if (ENABLE_VERBOSE_LOGGING) {
+        console.log(`✅ Adding ${message.role} message to chat display`);
+      }
       setMessages(prev => [...prev, message]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
 
@@ -804,7 +813,9 @@ Just speak naturally - I understand variations of these commands!`,
             }
           }
 
-          console.log('✅ Saving user message to transcript:', message.content.substring(0, 50) + '...');
+          if (ENABLE_VERBOSE_LOGGING) {
+            console.log('✅ Saving user message to transcript:', message.content.substring(0, 50) + '...');
+          }
 
           chatTranscriptService.addUserMessage(
             message.content,
@@ -837,13 +848,17 @@ Just speak naturally - I understand variations of these commands!`,
               const questionTextMatch = message.content.match(/Question \d+:\s*([^?]+\?)/);
               if (questionTextMatch && questionTextMatch[1]) {
                 const questionText = questionTextMatch[1].trim();
-                console.log(`📝 Extracted question text for Q${questionNumber}:`, questionText);
+                if (ENABLE_VERBOSE_LOGGING) {
+                  console.log(`📝 Extracted question text for Q${questionNumber}:`, questionText);
+                }
 
                 // Save question text to PHQ session
                 phqSessionService.setQuestionText(questionNumber, questionText);
               }
 
-              console.log(`🏷️ PHQ Question detected with marker: Q${questionNumber}`, metadata);
+              if (ENABLE_VERBOSE_LOGGING) {
+                console.log(`🏷️ PHQ Question detected with marker: Q${questionNumber}`, metadata);
+              }
 
               // Add to PHQ session messages
               phqSessionService.addMessage('assistant', message.content, 'phq-question', metadata);
@@ -864,7 +879,9 @@ Just speak naturally - I understand variations of these commands!`,
               const currentQuestion = phqAssessmentService.getNextQuestion();
 
               if (currentQuestion && acknowledgedAnswer >= 0 && acknowledgedAnswer <= 3) {
-                console.log(`🎯 AI acknowledged answer ${acknowledgedAnswer} for Q${currentQuestion.questionNumber}`);
+                if (ENABLE_VERBOSE_LOGGING) {
+                  console.log(`🎯 AI acknowledged answer ${acknowledgedAnswer} for Q${currentQuestion.questionNumber}`);
+                }
 
                 // Record the answer in both services
                 phqAssessmentService.recordAnswer(currentQuestion.questionNumber, acknowledgedAnswer);
@@ -877,7 +894,9 @@ Just speak naturally - I understand variations of these commands!`,
                   const score = phqAssessmentService.calculateScore();
                   const severity = phqAssessmentService.determineSeverity(score, updatedAssessment.assessmentType);
                   phqSessionService.completeAssessment(score, severity);
-                  console.log(`✅ PHQ Assessment completed! Score: ${score}, Severity: ${severity}`);
+                  if (ENABLE_VERBOSE_LOGGING) {
+                    console.log(`✅ PHQ Assessment completed! Score: ${score}, Severity: ${severity}`);
+                  }
                 }
               }
             }
@@ -887,12 +906,16 @@ Just speak naturally - I understand variations of these commands!`,
             const completeMatch = message.content.match(/(?:completes?|completed|finished)\s+(?:the\s+)?(?:PHQ-2|PHQ-9|assessment|screening)/i);
 
             if (skipMatch) {
-              console.log('⏭️ AI indicated question will be skipped');
+              if (ENABLE_VERBOSE_LOGGING) {
+                console.log('⏭️ AI indicated question will be skipped');
+              }
               // Question is already marked as skipped by recordInvalidAttempt, just log it
             }
 
             if (completeMatch) {
-              console.log('🏁 AI indicated assessment is complete');
+              if (ENABLE_VERBOSE_LOGGING) {
+                console.log('🏁 AI indicated assessment is complete');
+              }
               // Check if we need to force completion (in case some questions were skipped)
               const updatedAssessment = phqAssessmentService.getCurrentAssessment();
               if (updatedAssessment && !updatedAssessment.isCompleted) {
@@ -900,7 +923,9 @@ Just speak naturally - I understand variations of these commands!`,
                 const score = phqAssessmentService.calculateScore();
                 const severity = phqAssessmentService.determineSeverity(score, updatedAssessment.assessmentType);
                 phqSessionService.completeAssessment(score, severity);
-                console.log(`✅ PHQ Assessment force-completed! Score: ${score}, Severity: ${severity}`);
+                if (ENABLE_VERBOSE_LOGGING) {
+                  console.log(`✅ PHQ Assessment force-completed! Score: ${score}, Severity: ${severity}`);
+                }
               }
             }
           }
@@ -1145,30 +1170,20 @@ Examples:
 Depression screening protocol:
 1. FIRST: Acknowledge request and explain what you're doing
 2. THEN: Call appropriate assessment function (invoke-phq9 or invoke-phq2)
-2. Conduct systematic evaluation with clear instructions:
+3. The function will return question data in the response
+4. Use ONLY the questionText from the function response - do not make up your own questions
+5. Present the question EXACTLY as provided in the function response
+6. After user responds, the system will automatically handle validation and move to next question
+7. DO NOT generate additional questions beyond what the function returns
+8. DO NOT ask the same question multiple times
+9. The system tracks progress - you just present what it tells you
 
-   CRITICAL: When asking PHQ questions, you MUST prefix EVERY question with this exact hidden marker:
-   "[PHQ-Q#]" where # is the question number (1-9)
-
-   Example format:
-   "[PHQ-Q1] Question 1: Over the past 2 weeks, how often have you been bothered by..."
-   "[PHQ-Q6] Question 6: Over the past 2 weeks, how often have you been bothered by..."
-
-   This marker is INVISIBLE to ${getFirstName()} but REQUIRED for proper data tracking.
-
-   After the marker, ask:
-   "Question X: [evaluation criteria]
-
-   Please respond with 0, 1, 2, or 3:
-   0 = Not at all
-   1 = Several days
-   2 = More than half the days
-   3 = Nearly every day"
-
-3. For invalid responses: note attempt and request clarification
-4. If 3 invalid attempts: mark item for later review and continue
-5. Upon completion: provide summary with recommendations
-6. Data automatically saved to secure records for ${getFirstName()}
+CRITICAL RULES:
+- Use ONLY questionText from function response
+- Each function call returns ONE question - ask it ONCE
+- Never invent your own PHQ questions
+- Trust the system to provide the right question at the right time
+- After the user answers, wait for the system to validate before continuing
 
 Critical protocols:
 - This is a screening evaluation, not a medical diagnosis
@@ -1739,7 +1754,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => {
-          console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
+          // Verbose logging - only when debugging
+          if (ENABLE_VERBOSE_LOGGING) {
+            console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
+          }
           return (
           <div
             key={message.id}

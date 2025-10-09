@@ -206,6 +206,7 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceActivityIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const micUnmuteTimeoutRef = useRef<number | null>(null); // For mic muting during agent speech
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -265,6 +266,16 @@ export const RealtimeAgentExperience: React.FC = () => {
       }
     };
   }, [sessionStatus.isActive, isSessionPaused]);
+
+  // Cleanup microphone unmute timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (micUnmuteTimeoutRef.current) {
+        clearTimeout(micUnmuteTimeoutRef.current);
+        micUnmuteTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // PHQ Assessment Handlers
   const handlePhqAssessmentStart = useCallback((type: 'PHQ-2' | 'PHQ-9') => {
@@ -572,164 +583,27 @@ Would you like to complete the comprehensive PHQ-9 assessment for a more detaile
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
     agentService.onMessage((message: RealtimeMessage) => {
-      // CRITICAL FIRST CHECK: AGGRESSIVE ECHO PREVENTION
-      // Block AI speech being transcribed as user input - must happen BEFORE any other processing
-      if (message.role === 'user' && message.content) {
-        // Get recent AI messages from transcript (most reliable source - no React state delays)
-        const currentTranscript = chatTranscriptService.getCurrentTranscript();
-        const recentAIMessages = currentTranscript?.messages
-          .filter(m => m.role === 'assistant')
-          .slice(-20) || []; // Check last 20 messages for maximum coverage
+      // NO LEXICAL/WORD-BASED ECHO PREVENTION
+      // Relying 100% on WebRTC AEC3 + Mic Muting Strategy
+      
+      // Mic Muting Strategy: When agent speaks, mute user mic for 2.5 seconds
+      if (message.role === 'assistant' && message.content) {
+        console.log('🤖 Agent speaking - muting user microphone for 2.5 seconds');
         
-        // Also check messages state as fallback
-        const stateAIMessages = messages.filter(m => m.role === 'assistant').slice(-20);
-        const allRecentAIMessages = [...recentAIMessages, ...stateAIMessages];
+        // Mute the microphone immediately
+        agentService.muteMicrophone(true);
         
-        const messageTime = new Date(message.timestamp).getTime();
-        const userContentLower = message.content.trim().toLowerCase();
-        const userContentLength = message.content.trim().length;
-        const userName = user?.name || getFirstName();
-        
-        // Check 1: Exact content match (AI talking to itself)
-        const isDuplicateAIContent = allRecentAIMessages.some(aiMsg => 
-          aiMsg.content.trim() === message.content.trim()
-        );
-        
-        if (isDuplicateAIContent) {
-          console.warn('⚠️ ECHO BLOCKED (exact match): AI speech transcribed as user input:', message.content.substring(0, 60) + '...');
-          return; // Stop processing immediately
+        // Clear any existing unmute timeout
+        if (micUnmuteTimeoutRef.current) {
+          clearTimeout(micUnmuteTimeoutRef.current);
         }
         
-        // Check 2: Timestamp within 3 seconds + ANY partial match (aggressive)
-        const hasRecentTimestamp = allRecentAIMessages.some(aiMsg => {
-          const aiTime = new Date(aiMsg.timestamp).getTime();
-          const timeDiff = Math.abs(messageTime - aiTime);
-          if (timeDiff < 3000) { // Extended to 3 seconds
-            // Check for ANY overlap (very aggressive)
-            const aiContentLower = aiMsg.content.trim().toLowerCase();
-            const userStart = userContentLower.substring(0, 30);
-            const aiStart = aiContentLower.substring(0, 30);
-            
-            // Block if starts match OR significant word overlap
-            if (userStart === aiStart || aiContentLower.includes(userStart)) {
-              console.warn('⚠️ ECHO BLOCKED (timestamp + content): AI echo within 3s:', message.content.substring(0, 60) + '...');
-              return true;
-            }
-            
-            // Check word-level similarity for shorter messages
-            if (userContentLength < 100) {
-              const userWords = userContentLower.split(/\s+/).filter(w => w.length > 3);
-              const aiWords = aiContentLower.split(/\s+/).filter(w => w.length > 3);
-              const matchingWords = userWords.filter(w => aiWords.includes(w));
-              const similarity = matchingWords.length / Math.max(userWords.length, 1);
-              
-              if (similarity > 0.5) { // 50%+ word match = likely echo
-                console.warn('⚠️ ECHO BLOCKED (word similarity): 50%+ word match within 3s:', message.content.substring(0, 60) + '...');
-                return true;
-              }
-            }
-          }
-          return false;
-        });
-        
-        if (hasRecentTimestamp) {
-          return; // Already logged above
-        }
-        
-        // Check 3: Message starts with typical AI phrases (expanded list)
-        const aiPhrasePattern = /^(Hello|Hi|Hey|Good morning|Good afternoon|Good evening|Greetings|Welcome|I hear you|I understand|I see|I know|Thank you|Thanks|Understood|Got it|Alright|Okay|Sure|Certainly|Absolutely|Of course|Let me|Let's|I'll|I've|I can|I will|I would|I'm|I am|That's|This is|Here's|Now|So|Well|Yes|No|Right)/i;
-        if (aiPhrasePattern.test(message.content) && userContentLength > 30) { // Lowered threshold
-          // Check if any recent AI message contains similar phrasing
-          const matchesRecentAI = allRecentAIMessages.some(aiMsg => {
-            const overlap = userContentLower.substring(0, 30);
-            return aiMsg.content.toLowerCase().includes(overlap);
-          });
-          
-          if (matchesRecentAI) {
-            console.warn('⚠️ ECHO BLOCKED (AI phrase): Suspected AI echo with typical phrase:', message.content.substring(0, 60) + '...');
-            return;
-          }
-        }
-        
-        // Check 4: Long message (>80 chars) contains user's name or common AI patterns
-        if (userContentLength > 80) {
-          const containsName = userName && message.content.includes(userName);
-          const hasMultipleSentences = message.content.split(/[.!?]+/).length > 2;
-          const hasComplexStructure = message.content.includes(' and ') || message.content.includes(' but ') || 
-                                      message.content.includes(' so ') || message.content.includes(' because ');
-          
-          if (containsName || (hasMultipleSentences && hasComplexStructure)) {
-            const containsAIContent = allRecentAIMessages.some(aiMsg => {
-              const aiLower = aiMsg.content.toLowerCase();
-              // Check for substantial overlap (60+ chars)
-              const userSubstring = userContentLower.substring(0, 60);
-              return aiLower.includes(userSubstring) || userContentLower.includes(aiLower.substring(0, 60));
-            });
-            
-            if (containsAIContent) {
-              console.warn('⚠️ ECHO BLOCKED (long/complex): AI echo with name/structure:', message.content.substring(0, 60) + '...');
-              return;
-            }
-          }
-        }
-        
-        // Check 5: Character-level similarity check (most aggressive)
-        // For messages >50 chars, calculate Levenshtein-like similarity
-        if (userContentLength > 50) {
-          const hasSimilarAIMessage = allRecentAIMessages.some(aiMsg => {
-            const aiLower = aiMsg.content.trim().toLowerCase();
-            const aiLength = aiLower.length;
-            
-            // Skip if lengths are very different
-            if (Math.abs(userContentLength - aiLength) > Math.max(userContentLength, aiLength) * 0.3) {
-              return false;
-            }
-            
-            // Simple character-level similarity
-            let matches = 0;
-            const minLen = Math.min(userContentLength, aiLength);
-            for (let i = 0; i < minLen; i++) {
-              if (userContentLower[i] === aiLower[i]) matches++;
-            }
-            const similarity = matches / Math.max(userContentLength, aiLength);
-            
-            if (similarity > 0.7) { // 70%+ character match = very likely echo
-              console.warn('⚠️ ECHO BLOCKED (character similarity): 70%+ character match:', message.content.substring(0, 60) + '...');
-              return true;
-            }
-            
-            return false;
-          });
-          
-          if (hasSimilarAIMessage) {
-            return;
-          }
-        }
-        
-        // Check 6: Sentence structure analysis (PhD-level linguistic patterns)
-        if (userContentLength > 100) {
-          const hasAISentenceStructure = allRecentAIMessages.some(aiMsg => {
-            // AI often uses certain sentence structures
-            const userSentences = message.content.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
-            const aiSentences = aiMsg.content.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
-            
-            // Check if any sentence is identical or very similar
-            return userSentences.some(userSent => 
-              aiSentences.some(aiSent => {
-                const userSentLower = userSent.toLowerCase();
-                const aiSentLower = aiSent.toLowerCase();
-                return userSentLower === aiSentLower || 
-                       userSentLower.includes(aiSentLower) ||
-                       aiSentLower.includes(userSentLower);
-              })
-            );
-          });
-          
-          if (hasAISentenceStructure) {
-            console.warn('⚠️ ECHO BLOCKED (sentence structure): AI sentence pattern detected:', message.content.substring(0, 60) + '...');
-            return;
-          }
-        }
+        // Schedule unmute after 2.5 seconds
+        micUnmuteTimeoutRef.current = window.setTimeout(() => {
+          console.log('🔊 Reactivating user microphone after 2.5s');
+          agentService.muteMicrophone(false);
+          micUnmuteTimeoutRef.current = null;
+        }, 2500);
       }
       
       // Check for humor level voice commands in user messages

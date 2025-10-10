@@ -1146,10 +1146,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               // Announce agent switch for accessibility
               announceToScreenReader(`Switched to ${agentDisplayName} agent`);
 
-              // Determine voice based on agent - PHQ agents use 'cedar', Tars uses default
+              // Determine voice based on agent - PHQ agents use 'echo', Tars uses default
               const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
 
-              // Update session with new agent's instructions and tools
+              // Build updated session config
               const updatedConfig: SessionConfig = {
                 ...convertSettingsToConfig(
                   azureSettings,
@@ -1158,9 +1158,17 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   result.switchConfig.systemMessage,
                   enableInputTranscription
                 ),
-                tools: realtimeTools,
-                voice: agentVoice
+                tools: realtimeTools
               };
+
+              // Only include voice parameter if we're not in the middle of an active response
+              // This prevents "Cannot update a conversation's voice if assistant audio is present" error
+              if (agentService.canUpdateVoice()) {
+                updatedConfig.voice = agentVoice;
+                console.log(`🎤 Updating session with voice: ${agentVoice}`);
+              } else {
+                console.log('⚠️ Skipping voice update - assistant audio is active');
+              }
 
               await agentService.updateSession(updatedConfig);
 

@@ -269,7 +269,7 @@ Features:
 - **🎙️ Real-Time Voice Interaction** - Natural conversations with GPT-4o using Azure OpenAI Realtime API
 - **🔊 WebRTC Audio Streaming** - Low-latency bidirectional audio with WebRTC data channels
 - **🎤 Server-Side VAD** - Azure-powered voice activity detection for natural turn-taking
-- **🎭 Multi-Agent Personalities** - Tars (coordinator), PHQ-2 Agent, PHQ-9 Agent with distinct voices
+- **🎭 Multi-Agent Personalities** - ➕ Matron (biometric intake), 🤖 Tars (coordinator), 📋 PHQ-2 Agent, 📊 PHQ-9 Agent with distinct voices
 - **♿ Accessibility Features** - Full keyboard navigation and screen reader support
 
 ### **📡 Real-Time Communication**
@@ -311,6 +311,61 @@ Features:
 - **🔁 Smart Re-run Functionality** - Re-analyze sessions with optimized audio processing
 - **📝 Session History** - Access previous sessions with enhanced detail views
 - **⚡ Audio Conversion Optimization** - Skip redundant audio processing for re-runs
+
+### **➕ Matron Agent - Biometric Data Collection**
+
+The **➕ Matron agent** is a specialized AI personality designed to collect initial user biometric and preference data for personalized experiences. Matron acts as a warm, professional intake coordinator.
+
+**Key Features:**
+
+- **🎯 Smart Intake** - Automatically triggered by Tars orchestration if no biometric data exists
+- **📏 Unit Conversion** - Accepts imperial or metric input, stores all data in metric
+- **🔒 Privacy-Focused** - Only nickname is required; all other data is optional
+- **🤝 Culturally Sensitive** - Respectful of all identities, backgrounds, and preferences
+- **💾 Persistent Storage** - Data stored in blob storage at `bio/users/{userId}/biometric.json`
+
+**Data Collected:**
+
+- **Required:** Nickname (prompted up to 2 times)
+- **Optional:** Weight (kg), Height (cm), Gender, Pronouns, Last Residence
+- **Personalization:** Hobbies, Likes, Dislikes, Additional Info
+
+**Workflow Integration:**
+
+1. User initiates session with Tars
+2. Tars checks for existing biometric data
+3. If no data exists → Tars calls Matron agent
+4. Matron collects data conversationally
+5. Data saved to blob storage in metric units
+6. Control returns to Tars with personalization context
+7. Future sessions skip Matron (data already exists)
+
+**API Endpoints:**
+
+- `GET /api/biometric/{userId}/exists` - Check if data exists
+- `GET /api/biometric/{userId}` - Retrieve biometric data
+- `POST /api/biometric` - Save biometric data
+- `DELETE /api/biometric/{userId}` - Delete biometric data
+
+**Example Data Structure:**
+
+```json
+{
+  "userId": "12345",
+  "nickname": "Chris",
+  "weightKg": 81.6,
+  "heightCm": 180.3,
+  "gender": "Male",
+  "pronoun": "He/Him",
+  "lastResidence": "Severn, Maryland, United States",
+  "hobbies": ["cycling", "coding"],
+  "likes": ["coffee", "tech"],
+  "dislikes": ["spam"],
+  "additionalInfo": "Prefers casual tone",
+  "timestamp": "2025-10-09T21:50:00Z",
+  "source": "Matron"
+}
+```
 
 ## ⚙️ Local Settings Configuration
 

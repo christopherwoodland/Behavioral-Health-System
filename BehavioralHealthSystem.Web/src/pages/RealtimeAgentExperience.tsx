@@ -1454,7 +1454,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
   // Vocalist recording handlers
   const handleVocalistRecordingComplete = async (audioBlob: Blob, duration: number) => {
     console.log('🎤 Recording completed:', duration, 'seconds');
-    
+
     try {
       // Upload audio file to blob storage
       const formData = new FormData();
@@ -1480,7 +1480,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
 
       // Notify the agent about successful recording
       announceToScreenReader('Recording uploaded successfully');
-      
+
     } catch (error) {
       console.error('🎤 Error handling recording:', error);
       announceToScreenReader('Failed to process recording');

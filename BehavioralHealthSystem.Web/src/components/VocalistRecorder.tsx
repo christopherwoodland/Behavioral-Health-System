@@ -26,7 +26,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(35);
   const [error, setError] = useState<string | null>(null);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const countdownIntervalRef = useRef<number | null>(null);
@@ -53,19 +53,19 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       audioChunksRef.current = [];
 
       // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           channelCount: 1, // Mono
           sampleRate: 44100, // CD quality
           echoCancellation: true,
           noiseSuppression: true
-        } 
+        }
       });
 
       // Create MediaRecorder with WAV-compatible settings
       // Note: Most browsers record in webm/opus, we'll convert to WAV on completion
-      const mimeType = MediaRecorder.isTypeSupported('audio/wav') 
-        ? 'audio/wav' 
+      const mimeType = MediaRecorder.isTypeSupported('audio/wav')
+        ? 'audio/wav'
         : MediaRecorder.isTypeSupported('audio/webm')
         ? 'audio/webm'
         : 'audio/ogg';
@@ -87,8 +87,8 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       // Handle recording stop
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
-        const duration = recordingStartTimeRef.current 
-          ? (Date.now() - recordingStartTimeRef.current) / 1000 
+        const duration = recordingStartTimeRef.current
+          ? (Date.now() - recordingStartTimeRef.current) / 1000
           : 35;
 
         // Stop all tracks
@@ -148,10 +148,10 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       // For now, we'll pass through the blob
       // In production, implement actual WAV conversion here
       // using AudioContext and encoding to WAV format
-      
+
       // Create a WAV blob (simplified - in production use proper conversion)
       const wavBlob = new Blob([audioBlob], { type: 'audio/wav' });
-      
+
       onRecordingComplete(wavBlob, duration);
     } catch (err) {
       console.error('Error converting to WAV:', err);

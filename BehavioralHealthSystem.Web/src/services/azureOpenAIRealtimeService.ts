@@ -270,13 +270,16 @@ export class AzureOpenAIRealtimeService {
 
   private messageHistory: RealtimeMessage[] = [];
 
+  // Response state tracking to prevent overlapping responses
+  private isResponseInProgress: boolean = false;
+  private pendingResponseQueue: Array<() => void> = [];
+
   // Enhanced state tracking
   private currentTranscriptBuffer: string = '';
   private speechDetectionState: SpeechDetectionState = {
     isUserSpeaking: false,
     isAISpeaking: false
   };
-  private conversationState: ConversationState = { state: 'idle' };
 
   // Utterance tracking - real-time speech event monitoring
   private activeUtterances: Map<string, Utterance> = new Map();
@@ -294,7 +297,6 @@ export class AzureOpenAIRealtimeService {
 
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
-  private onVoiceActivityCallback: ((activity: VoiceActivity) => void) | null = null;
   private onStatusChangeCallback: ((status: SessionStatus) => void) | null = null;
   private onErrorCallback: ((error: Error) => void) | null = null;
   // REMOVED: onTranscriptCallback - deprecated, use onMessage instead
@@ -374,12 +376,6 @@ export class AzureOpenAIRealtimeService {
    * Local VAD removed. This method is kept for backward compatibility but does nothing.
    * Use Azure's server-side VAD events instead (input_audio_buffer.speech_started/stopped)
    */
-  onVoiceActivity(callback: (activity: VoiceActivity) => void): void {
-    // Callback registered but not used since local VAD is removed
-    this.onVoiceActivityCallback = callback;
-    console.warn('⚠️ onVoiceActivity is deprecated - local VAD removed, use Azure server-side VAD events');
-  }
-
   onStatusChange(callback: (status: SessionStatus) => void): void {
     this.onStatusChangeCallback = callback;
   }
@@ -556,12 +552,57 @@ export class AzureOpenAIRealtimeService {
     this.dataChannel.send(JSON.stringify(resultEvent));
 
     // Trigger the AI to generate a response based on the function result
-    const responseEvent = {
+    // Use safe method to queue if response already in progress
+    this.safeCreateResponse();
+  }
+
+  /**
+   * Safely create a response, queuing if one is already in progress
+   */
+  private safeCreateResponse(options?: { modalities?: string[], instructions?: string }): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Cannot create response: data channel not open');
+      return;
+    }
+
+    // If a response is already in progress, queue this request
+    if (this.isResponseInProgress) {
+      console.log('⏳ Response already in progress, queuing new response request');
+      this.pendingResponseQueue.push(() => this.safeCreateResponse(options));
+      return;
+    }
+
+    // Send response.create event
+    const responseEvent: any = {
       type: 'response.create'
     };
 
-    console.log('📤 Triggering AI response after function result');
+    if (options) {
+      responseEvent.response = {};
+      if (options.modalities) {
+        responseEvent.response.modalities = options.modalities;
+      }
+      if (options.instructions) {
+        responseEvent.response.instructions = options.instructions;
+      }
+    }
+
+    console.log('📤 Creating AI response:', responseEvent);
     this.dataChannel.send(JSON.stringify(responseEvent));
+  }
+
+  /**
+   * Process the next queued response if any
+   */
+  private processNextQueuedResponse(): void {
+    if (this.pendingResponseQueue.length > 0) {
+      console.log(`🔄 Processing next queued response (${this.pendingResponseQueue.length} in queue)`);
+      const nextResponse = this.pendingResponseQueue.shift();
+      if (nextResponse) {
+        // Small delay to ensure previous response is fully cleared
+        setTimeout(() => nextResponse(), 100);
+      }
+    }
   }
 
   /**
@@ -1183,6 +1224,7 @@ export class AzureOpenAIRealtimeService {
           console.log('🤖 ========================================');
           console.log('🤖 AGENT STARTED RESPONDING');
           console.log('🤖 ========================================');
+          this.isResponseInProgress = true; // Mark response as active
           this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
 
@@ -1195,12 +1237,17 @@ export class AzureOpenAIRealtimeService {
 
           // Update service-level state for backward compatibility
           this.speechDetectionState.isAISpeaking = false;
+          this.isResponseInProgress = false; // Clear response flag
           this.updateConversationState({ state: 'idle', message: 'Ready for input' });
           this.emitSpeechDetection();
+
+          // Process any queued responses
+          this.processNextQueuedResponse();
           break;
 
         case 'response.cancelled':
           this.agentResponseHandler.handleResponseCancelled(realtimeEvent);
+          this.isResponseInProgress = false; // Clear response flag on cancellation
 
           // Update service-level state for backward compatibility
           this.speechDetectionState.isAISpeaking = false;
@@ -1293,7 +1340,6 @@ export class AzureOpenAIRealtimeService {
    * Update conversation state and notify listeners
    */
   private updateConversationState(newState: ConversationState): void {
-    this.conversationState = newState;
     if (this.onConversationStateCallback) {
       this.onConversationStateCallback(newState);
     }
@@ -1389,16 +1435,11 @@ export class AzureOpenAIRealtimeService {
       this.dataChannel.send(JSON.stringify(greetingEvent));
       console.log('📤 Sent assistant message to conversation');
 
-      // Trigger AI to speak it
-      const responseEvent = {
-        type: 'response.create',
-        response: {
-          modalities: ['text', 'audio'],
-          instructions: `Speak this exact message naturally and warmly: "${text}"`
-        }
-      };
-
-      this.dataChannel.send(JSON.stringify(responseEvent));
+      // Trigger AI to speak it using safe method
+      this.safeCreateResponse({
+        modalities: ['text', 'audio'],
+        instructions: `Speak this exact message naturally and warmly: "${text}"`
+      });
       console.log('🎤 Triggered AI to speak the message');
 
     } catch (error) {
@@ -1551,6 +1592,10 @@ export class AzureOpenAIRealtimeService {
     // Reset connection flags
     this.isConnecting = false;
     this.isSessionActive = false;
+
+    // Clear response state
+    this.isResponseInProgress = false;
+    this.pendingResponseQueue = [];
 
     // Cleanup independent handlers
     this.userInputHandler.cleanup();
@@ -1749,7 +1794,6 @@ export class AzureOpenAIRealtimeService {
 
     // Clear all callbacks
     this.onMessageCallback = null;
-    this.onVoiceActivityCallback = null;
     this.onStatusChangeCallback = null;
     this.onErrorCallback = null;
     // REMOVED: onTranscriptCallback - deprecated

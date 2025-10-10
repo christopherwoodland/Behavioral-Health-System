@@ -1,11 +1,21 @@
 namespace BehavioralHealthSystem.Functions;
 
+/// <summary>
+/// Azure Functions for managing session data persistence in Azure Blob Storage.
+/// Provides CRUD operations for session management including save, retrieve, list, and delete functionality.
+/// </summary>
 public class SessionStorageFunctions
 {
     private readonly ILogger<SessionStorageFunctions> _logger;
     private readonly ISessionStorageService _sessionStorageService;
     private readonly JsonSerializerOptions _jsonOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SessionStorageFunctions"/> class.
+    /// </summary>
+    /// <param name="logger">Logger for diagnostics and monitoring.</param>
+    /// <param name="sessionStorageService">Service for session data persistence operations.</param>
+    /// <exception cref="ArgumentNullException">Thrown when logger or sessionStorageService is null.</exception>
     public SessionStorageFunctions(
         ILogger<SessionStorageFunctions> logger,
         ISessionStorageService sessionStorageService)
@@ -15,6 +25,27 @@ public class SessionStorageFunctions
         _jsonOptions = JsonSerializerOptionsFactory.PrettyPrint;
     }
 
+    /// <summary>
+    /// Saves session data to Azure Blob Storage.
+    /// Creates or updates a session record with the provided data.
+    /// </summary>
+    /// <param name="req">HTTP request containing SessionData JSON in the body.</param>
+    /// <returns>
+    /// HTTP 200 (OK) with success message and session ID if save successful.
+    /// HTTP 400 (Bad Request) if request body is invalid or required fields are missing.
+    /// HTTP 500 (Internal Server Error) if save operation fails.
+    /// </returns>
+    /// <remarks>
+    /// Required fields in request body: SessionId, UserId.
+    /// Example request body:
+    /// <code>
+    /// {
+    ///   "sessionId": "session-123",
+    ///   "userId": "user-456",
+    ///   "timestamp": "2025-10-09T10:30:00Z"
+    /// }
+    /// </code>
+    /// </remarks>
     [Function("SaveSessionData")]
     public async Task<HttpResponseData> SaveSessionData(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions")] HttpRequestData req)
@@ -27,9 +58,9 @@ public class SessionStorageFunctions
             if (string.IsNullOrEmpty(requestBody))
             {
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Request body is required" 
+                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = "Request body is required"
                 }, _jsonOptions));
                 return badRequestResponse;
             }
@@ -38,20 +69,20 @@ public class SessionStorageFunctions
             if (sessionData == null || string.IsNullOrEmpty(sessionData.SessionId) || string.IsNullOrEmpty(sessionData.UserId))
             {
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Valid session data with SessionId and UserId is required" 
+                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = "Valid session data with SessionId and UserId is required"
                 }, _jsonOptions));
                 return badRequestResponse;
             }
 
             var success = await _sessionStorageService.SaveSessionDataAsync(sessionData);
-            
+
             if (success)
             {
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = true, 
+                await response.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = true,
                     message = "Session data saved successfully",
                     sessionId = sessionData.SessionId
                 }, _jsonOptions));
@@ -60,9 +91,9 @@ public class SessionStorageFunctions
             else
             {
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Failed to save session data" 
+                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = "Failed to save session data"
                 }, _jsonOptions));
                 return errorResponse;
             }
@@ -70,12 +101,12 @@ public class SessionStorageFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error saving session data", nameof(SaveSessionData));
-            
+
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                success = false, 
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = false,
                 message = "Error saving session data",
-                error = ex.Message 
+                error = ex.Message
             }, _jsonOptions));
             return errorResponse;
         }
@@ -91,7 +122,7 @@ public class SessionStorageFunctions
             _logger.LogInformation("[{FunctionName}] Getting session data for session: {SessionId}", nameof(GetSessionData), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
-            
+
             if (sessionData != null)
             {
                 var response = req.CreateResponse(HttpStatusCode.OK);
@@ -101,9 +132,9 @@ public class SessionStorageFunctions
             else
             {
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = $"Session not found: {sessionId}" 
+                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = $"Session not found: {sessionId}"
                 }, _jsonOptions));
                 return notFoundResponse;
             }
@@ -111,12 +142,12 @@ public class SessionStorageFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error getting session data for session: {SessionId}", nameof(GetSessionData), sessionId);
-            
+
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                success = false, 
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = false,
                 message = "Error getting session data",
-                error = ex.Message 
+                error = ex.Message
             }, _jsonOptions));
             return errorResponse;
         }
@@ -132,7 +163,7 @@ public class SessionStorageFunctions
             _logger.LogInformation("[{FunctionName}] Getting sessions for user: {UserId}", nameof(GetUserSessions), userId);
 
             var sessions = await _sessionStorageService.GetUserSessionsAsync(userId);
-            
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteStringAsync(JsonSerializer.Serialize(new {
                 success = true,
@@ -144,12 +175,12 @@ public class SessionStorageFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error getting sessions for user: {UserId}", nameof(GetUserSessions), userId);
-            
+
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                success = false, 
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = false,
                 message = "Error getting user sessions",
-                error = ex.Message 
+                error = ex.Message
             }, _jsonOptions));
             return errorResponse;
         }
@@ -164,7 +195,7 @@ public class SessionStorageFunctions
             _logger.LogInformation("[{FunctionName}] Getting all sessions for system-wide analytics", nameof(GetAllSessions));
 
             var allSessions = await _sessionStorageService.GetAllSessionsAsync();
-            
+
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteStringAsync(JsonSerializer.Serialize(new {
                 success = true,
@@ -176,12 +207,12 @@ public class SessionStorageFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error getting all sessions", nameof(GetAllSessions));
-            
+
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                success = false, 
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = false,
                 message = "Error getting all sessions",
-                error = ex.Message 
+                error = ex.Message
             }, _jsonOptions));
             return errorResponse;
         }
@@ -200,9 +231,9 @@ public class SessionStorageFunctions
             if (string.IsNullOrEmpty(requestBody))
             {
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Request body is required" 
+                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = "Request body is required"
                 }, _jsonOptions));
                 return badRequestResponse;
             }
@@ -211,30 +242,30 @@ public class SessionStorageFunctions
             if (sessionData == null || sessionData.SessionId != sessionId)
             {
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Session data SessionId must match route parameter" 
+                await badRequestResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = "Session data SessionId must match route parameter"
                 }, _jsonOptions));
                 return badRequestResponse;
             }
 
             var success = await _sessionStorageService.UpdateSessionDataAsync(sessionData);
-            
+
             if (success)
             {
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = true, 
-                    message = "Session data updated successfully" 
+                await response.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = true,
+                    message = "Session data updated successfully"
                 }, _jsonOptions));
                 return response;
             }
             else
             {
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = "Failed to update session data" 
+                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = "Failed to update session data"
                 }, _jsonOptions));
                 return errorResponse;
             }
@@ -242,12 +273,12 @@ public class SessionStorageFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error updating session data for session: {SessionId}", nameof(UpdateSessionData), sessionId);
-            
+
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                success = false, 
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = false,
                 message = "Error updating session data",
-                error = ex.Message 
+                error = ex.Message
             }, _jsonOptions));
             return errorResponse;
         }
@@ -263,22 +294,22 @@ public class SessionStorageFunctions
             _logger.LogInformation("[{FunctionName}] Deleting session data for session: {SessionId}", nameof(DeleteSessionData), sessionId);
 
             var success = await _sessionStorageService.DeleteSessionDataAsync(sessionId);
-            
+
             if (success)
             {
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = true, 
-                    message = "Session data deleted successfully" 
+                await response.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = true,
+                    message = "Session data deleted successfully"
                 }, _jsonOptions));
                 return response;
             }
             else
             {
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                    success = false, 
-                    message = $"Session not found: {sessionId}" 
+                await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                    success = false,
+                    message = $"Session not found: {sessionId}"
                 }, _jsonOptions));
                 return notFoundResponse;
             }
@@ -286,12 +317,12 @@ public class SessionStorageFunctions
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{FunctionName}] Error deleting session data for session: {SessionId}", nameof(DeleteSessionData), sessionId);
-            
+
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { 
-                success = false, 
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                success = false,
                 message = "Error deleting session data",
-                error = ex.Message 
+                error = ex.Message
             }, _jsonOptions));
             return errorResponse;
         }

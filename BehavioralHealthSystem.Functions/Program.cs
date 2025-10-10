@@ -107,6 +107,7 @@ var host = new HostBuilder()
         services.AddScoped<ISessionStorageService, SessionStorageService>();
         services.AddScoped<IFileGroupStorageService, FileGroupStorageService>();
         services.AddScoped<IKintsugiApiHealthCheck, KintsugiApiHealthCheck>();
+        services.AddScoped<IBiometricDataService, BiometricDataService>();
         services.AddValidatorsFromAssemblyContaining<UserMetadataValidator>();
         services.AddHealthChecks().AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
         services.AddSignalR();

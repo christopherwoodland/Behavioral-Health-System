@@ -32,7 +32,7 @@ class BiometricDataService {
    */
   initializeSession(userId: string): void {
     console.log('➕ Initializing biometric data session for user:', userId);
-    
+
     this.currentData = {
       userId,
       timestamp: new Date().toISOString(),
@@ -51,7 +51,7 @@ class BiometricDataService {
     }
 
     console.log(`➕ Updating biometric field: ${field} =`, value);
-    
+
     // Update the field
     (this.currentData as any)[field] = value;
     this.currentData.lastUpdated = new Date().toISOString();
@@ -70,7 +70,7 @@ class BiometricDataService {
     }
 
     console.log('➕ Updating multiple biometric fields:', Object.keys(updates));
-    
+
     Object.assign(this.currentData, updates);
     this.currentData.lastUpdated = new Date().toISOString();
 
@@ -202,7 +202,7 @@ class BiometricDataService {
    */
   clearSession(): void {
     console.log('➕ Clearing biometric data session');
-    
+
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
@@ -231,7 +231,7 @@ class BiometricDataService {
 
       const data = await response.json();
       console.log('✅ Loaded existing biometric data:', data);
-      
+
       return data;
 
     } catch (error) {

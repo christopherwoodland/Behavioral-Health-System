@@ -288,8 +288,8 @@ export class AzureOpenAIRealtimeService {
 
   // Reconnection state
   private reconnectionAttempts: number = 0;
-  private maxReconnectionAttempts: number = 3;
-  private reconnectionDelay: number = 2000; // Start with 2 seconds
+  private maxReconnectionAttempts: number = parseInt(import.meta.env.VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS || '3', 10);
+  private reconnectionDelay: number = parseInt(import.meta.env.VITE_REALTIME_RECONNECTION_DELAY_MS || '2000', 10); // Start with configurable delay (uses exponential backoff)
   private reconnectionTimer: NodeJS.Timeout | null = null;
   private lastConfig: RealtimeSessionConfig | null = null;
   private isReconnecting: boolean = false;
@@ -1397,7 +1397,7 @@ export class AzureOpenAIRealtimeService {
    * Wait for data channel to be ready
    * Polls the data channel status with timeout
    */
-  private async waitForDataChannelReady(timeoutMs: number = 5000): Promise<void> {
+  private async waitForDataChannelReady(timeoutMs: number = parseInt(import.meta.env.VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS || '5000', 10)): Promise<void> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {

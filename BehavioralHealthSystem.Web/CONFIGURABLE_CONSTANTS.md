@@ -52,6 +52,25 @@ const MAX_COLLECTION_ATTEMPTS = parseInt(import.meta.env.VITE_MATRON_MAX_COLLECT
 
 ---
 
+#### `VITE_AGENT_HANDOFF_DELAY_MS`
+**File:** `src/pages/RealtimeAgentExperience.tsx`  
+**Purpose:** Delay between agent handoff announcement and actual switch  
+**Type:** Integer (milliseconds)  
+**Default:** `1500` (1.5 seconds)  
+**Recommended Values:**
+- Development: `1500ms` - Natural pause
+- Production: `1500-2000ms` - Allow announcement to be heard
+- Fast transitions: `1000ms` - Quicker handoff
+- Careful explanation: `2000-3000ms` - More time to process
+
+```typescript
+const HANDOFF_DELAY_MS = parseInt(import.meta.env.VITE_AGENT_HANDOFF_DELAY_MS || '1500', 10);
+```
+
+**Impact:** When Tars announces handoff to any other agent (Matron, PHQ-2, PHQ-9, etc.), this delay ensures the user hears the announcement before the agent switch occurs. Applies to all handoffs originating from Tars. Lower = faster transitions but may feel abrupt. Higher = smoother UX but slightly slower.
+
+---
+
 ### 2. API Request Configuration
 
 #### `VITE_API_TIMEOUT_MS`
@@ -200,6 +219,9 @@ VITE_BIOMETRIC_SAVE_DELAY_MS=2000
 # Maximum retry attempts for Matron biometric data collection
 VITE_MATRON_MAX_COLLECTION_ATTEMPTS=2
 
+# Agent handoff announcement delay (milliseconds)
+VITE_AGENT_HANDOFF_DELAY_MS=1500
+
 # ------------------------------------------------------------------------------
 # API REQUEST CONFIGURATION
 # ------------------------------------------------------------------------------
@@ -236,6 +258,7 @@ VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS=5000
 ```bash
 VITE_BIOMETRIC_SAVE_DELAY_MS=2000           # Quick saves
 VITE_MATRON_MAX_COLLECTION_ATTEMPTS=2       # Fast failure
+VITE_AGENT_HANDOFF_DELAY_MS=1500            # Natural pause
 VITE_API_TIMEOUT_MS=30000                   # Generous timeout
 VITE_API_MAX_RETRIES=3                      # Standard retries
 VITE_API_RETRY_DELAY_MS=1000                # Quick retry
@@ -251,6 +274,7 @@ VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS=5000  # Standard
 ```bash
 VITE_BIOMETRIC_SAVE_DELAY_MS=2000           # Balance UX/API
 VITE_MATRON_MAX_COLLECTION_ATTEMPTS=2       # Don't be too pushy
+VITE_AGENT_HANDOFF_DELAY_MS=1500            # Natural pause
 VITE_API_TIMEOUT_MS=30000                   # Standard web timeout
 VITE_API_MAX_RETRIES=3                      # Resilient
 VITE_API_RETRY_DELAY_MS=1000                # Standard backoff
@@ -266,6 +290,7 @@ VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS=5000  # Standard
 ```bash
 VITE_BIOMETRIC_SAVE_DELAY_MS=3000           # Reduce API calls
 VITE_MATRON_MAX_COLLECTION_ATTEMPTS=3       # More attempts
+VITE_AGENT_HANDOFF_DELAY_MS=2000            # More time to process
 VITE_API_TIMEOUT_MS=60000                   # 1 minute timeout
 VITE_API_MAX_RETRIES=5                      # More retries
 VITE_API_RETRY_DELAY_MS=2000                # Longer backoff
@@ -281,6 +306,7 @@ VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS=10000 # More patience
 ```bash
 VITE_BIOMETRIC_SAVE_DELAY_MS=1000           # Fast saves for demo
 VITE_MATRON_MAX_COLLECTION_ATTEMPTS=1       # Fail fast
+VITE_AGENT_HANDOFF_DELAY_MS=1000            # Quicker handoff
 VITE_API_TIMEOUT_MS=15000                   # Quick timeout
 VITE_API_MAX_RETRIES=1                      # Minimal retry
 VITE_API_RETRY_DELAY_MS=500                 # Quick retry

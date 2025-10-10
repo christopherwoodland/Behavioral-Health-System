@@ -21,6 +21,16 @@ export default defineConfig({
       }
     }
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Use modern Sass API instead of legacy API
+        api: 'modern-compiler',
+        // Silence deprecation warnings if needed
+        silenceDeprecations: ['legacy-js-api'],
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),

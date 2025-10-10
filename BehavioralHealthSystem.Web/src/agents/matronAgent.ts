@@ -87,7 +87,7 @@ const updateBiometricFieldTool: AgentTool = {
     try {
       // Convert value to appropriate type
       let processedValue: any = params.value;
-      
+
       if (params.field === 'weightKg' || params.field === 'heightCm') {
         processedValue = parseFloat(params.value);
         if (isNaN(processedValue)) {
@@ -166,7 +166,7 @@ const addToArrayFieldTool: AgentTool = {
 
 // Track retry attempts for data collection
 let collectionAttempts = 0;
-const MAX_COLLECTION_ATTEMPTS = 2;
+const MAX_COLLECTION_ATTEMPTS = parseInt(import.meta.env.VITE_MATRON_MAX_COLLECTION_ATTEMPTS || '2', 10);
 
 /**
  * Tool: Save Biometric Data

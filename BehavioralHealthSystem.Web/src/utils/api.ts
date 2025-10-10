@@ -26,9 +26,9 @@ export interface FetchConfig extends RequestInit {
 
 // Default fetch configuration
 const DEFAULT_CONFIG: FetchConfig = {
-  timeout: 30000, // 30 seconds
-  retries: 3,
-  retryDelay: 1000, // 1 second
+  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT_MS || '30000', 10),
+  retries: parseInt(import.meta.env.VITE_API_MAX_RETRIES || '3', 10),
+  retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY_MS || '1000', 10),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -81,7 +81,7 @@ export const apiCall = async <T>(
 ): Promise<ApiResponse<T>> => {
   try {
     const response = await fetchWithConfig(url, config);
-    
+
     // Handle non-2xx responses
     if (!response.ok) {
       const errorText = await response.text();
@@ -95,7 +95,7 @@ export const apiCall = async <T>(
     // Handle empty responses
     const contentType = response.headers.get('content-type');
     let data: T;
-    
+
     if (contentType && contentType.includes('application/json')) {
       data = await response.json();
     } else {
@@ -167,7 +167,7 @@ export const uploadFile = async (
   try {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     // Add additional form data
     Object.entries(additionalData).forEach(([key, value]) => {
       formData.append(key, typeof value === 'string' ? value : JSON.stringify(value));
@@ -180,7 +180,7 @@ export const uploadFile = async (
       delete headers['Content-Type'];
       uploadConfig.headers = headers;
     }
-    
+
     return apiCall(url, {
       ...uploadConfig,
       method: 'POST',
@@ -209,7 +209,7 @@ export const apiBatch = async <T>(
     for (const { url, config } of requests) {
       const result = await apiCall<T>(url, config);
       results.push(result);
-      
+
       // Stop on first error (optional behavior)
       if (!result.success) {
         break;
@@ -255,8 +255,8 @@ export const serializeQuery = (params: Record<string, any>): string => {
 
 // Error handling utilities
 export const isNetworkError = (error: ApiError): boolean => {
-  return error.message.includes('fetch') || 
-         error.message.includes('network') || 
+  return error.message.includes('fetch') ||
+         error.message.includes('network') ||
          error.message.includes('timeout');
 };
 

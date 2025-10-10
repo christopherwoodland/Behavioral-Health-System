@@ -40,3 +40,4 @@ global using BehavioralHealthSystem.Validators;
 // New async job service namespaces
 global using BehavioralHealthSystem.Helpers.Models;
 global using BehavioralHealthSystem.Helpers.Services;
+global using BehavioralHealthSystem.Helpers.Services.Interfaces;

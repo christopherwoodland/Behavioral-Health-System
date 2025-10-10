@@ -1,5 +1,9 @@
 namespace BehavioralHealthSystem.Functions;
 
+/// <summary>
+/// Azure Functions for mental health risk assessment using Kintsugi Health API.
+/// Provides endpoints for generating and retrieving voice-based depression risk assessments.
+/// </summary>
 public class RiskAssessmentFunctions
 {
     private readonly ILogger<RiskAssessmentFunctions> _logger;
@@ -7,6 +11,13 @@ public class RiskAssessmentFunctions
     private readonly ISessionStorageService _sessionStorageService;
     private readonly JsonSerializerOptions _jsonOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RiskAssessmentFunctions"/> class.
+    /// </summary>
+    /// <param name="logger">Logger for diagnostics and monitoring.</param>
+    /// <param name="riskAssessmentService">Service for generating risk assessments via Kintsugi API.</param>
+    /// <param name="sessionStorageService">Service for session data persistence.</param>
+    /// <exception cref="ArgumentNullException">Thrown when any parameter is null.</exception>
     public RiskAssessmentFunctions(
         ILogger<RiskAssessmentFunctions> logger,
         IRiskAssessmentService riskAssessmentService,
@@ -22,6 +33,21 @@ public class RiskAssessmentFunctions
         };
     }
 
+    /// <summary>
+    /// Generates a mental health risk assessment for a conversation session.
+    /// Analyzes voice data from the session using Kintsugi Health API to assess depression risk.
+    /// </summary>
+    /// <param name="req">HTTP request data.</param>
+    /// <param name="sessionId">The unique session identifier from the route.</param>
+    /// <returns>
+    /// HTTP 200 (OK) with risk assessment data if successful.
+    /// HTTP 404 (Not Found) if session doesn't exist.
+    /// HTTP 500 (Internal Server Error) if assessment generation fails.
+    /// </returns>
+    /// <remarks>
+    /// Updates the session data with the generated risk assessment.
+    /// Example response includes depression score, severity level, and clinical recommendations.
+    /// </remarks>
     [Function("GenerateRiskAssessment")]
     public async Task<HttpResponseData> GenerateRiskAssessment(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/{sessionId}/risk-assessment")] HttpRequestData req,

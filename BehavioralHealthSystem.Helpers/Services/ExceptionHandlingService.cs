@@ -6,7 +6,7 @@ namespace BehavioralHealthSystem.Services;
 /// Centralized exception management service providing consistent error handling,
 /// logging, and exception transformation across the entire application
 /// </summary>
-public class ExceptionHandlingService
+public class ExceptionHandlingService : IExceptionHandlingService
 {
     private readonly ILogger<ExceptionHandlingService> _logger;
 
@@ -24,9 +24,9 @@ public class ExceptionHandlingService
         Dictionary<string, object>? context = null,
         bool suppressExceptions = false)
     {
-        var contextInfo = context != null ? 
+        var contextInfo = context != null ?
             string.Join(", ", context.Select(kvp => $"{kvp.Key}={kvp.Value}")) : "";
-        
+
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["Operation"] = operationName,
@@ -36,19 +36,19 @@ public class ExceptionHandlingService
         try
         {
             _logger.LogInformation("[{Operation}] Starting operation {Context}", operationName, contextInfo);
-            
+
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             var result = await operation();
             stopwatch.Stop();
-            
-            _logger.LogInformation("[{Operation}] Operation completed successfully in {ElapsedMs}ms {Context}", 
+
+            _logger.LogInformation("[{Operation}] Operation completed successfully in {ElapsedMs}ms {Context}",
                 operationName, stopwatch.ElapsedMilliseconds, contextInfo);
-            
+
             return result;
         }
         catch (Exception ex) when (suppressExceptions)
         {
-            _logger.LogError(ex, "[{Operation}] Operation failed but exception suppressed {Context}", 
+            _logger.LogError(ex, "[{Operation}] Operation failed but exception suppressed {Context}",
                 operationName, contextInfo);
             return default(T)!;
         }
@@ -68,9 +68,9 @@ public class ExceptionHandlingService
         Dictionary<string, object>? context = null,
         bool suppressExceptions = false)
     {
-        var contextInfo = context != null ? 
+        var contextInfo = context != null ?
             string.Join(", ", context.Select(kvp => $"{kvp.Key}={kvp.Value}")) : "";
-        
+
         using var logScope = _logger.BeginScope(new Dictionary<string, object>
         {
             ["Operation"] = operationName,
@@ -80,17 +80,17 @@ public class ExceptionHandlingService
         try
         {
             _logger.LogInformation("[{Operation}] Starting operation {Context}", operationName, contextInfo);
-            
+
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             await operation();
             stopwatch.Stop();
-            
-            _logger.LogInformation("[{Operation}] Operation completed successfully in {ElapsedMs}ms {Context}", 
+
+            _logger.LogInformation("[{Operation}] Operation completed successfully in {ElapsedMs}ms {Context}",
                 operationName, stopwatch.ElapsedMilliseconds, contextInfo);
         }
         catch (Exception ex) when (suppressExceptions)
         {
-            _logger.LogError(ex, "[{Operation}] Operation failed but exception suppressed {Context}", 
+            _logger.LogError(ex, "[{Operation}] Operation failed but exception suppressed {Context}",
                 operationName, contextInfo);
         }
         catch (Exception ex)
@@ -162,23 +162,23 @@ public class ExceptionHandlingService
         switch (severity)
         {
             case ExceptionSeverity.Critical:
-                _logger.LogCritical(ex, "[{Operation}] Critical error in {Category}: {ErrorMessage}", 
+                _logger.LogCritical(ex, "[{Operation}] Critical error in {Category}: {ErrorMessage}",
                     operation, category, ex.Message);
                 break;
             case ExceptionSeverity.High:
-                _logger.LogError(ex, "[{Operation}] High severity error in {Category}: {ErrorMessage}", 
+                _logger.LogError(ex, "[{Operation}] High severity error in {Category}: {ErrorMessage}",
                     operation, category, ex.Message);
                 break;
             case ExceptionSeverity.Medium:
-                _logger.LogWarning(ex, "[{Operation}] Medium severity error in {Category}: {ErrorMessage}", 
+                _logger.LogWarning(ex, "[{Operation}] Medium severity error in {Category}: {ErrorMessage}",
                     operation, category, ex.Message);
                 break;
             case ExceptionSeverity.Low:
-                _logger.LogInformation(ex, "[{Operation}] Low severity error in {Category}: {ErrorMessage}", 
+                _logger.LogInformation(ex, "[{Operation}] Low severity error in {Category}: {ErrorMessage}",
                     operation, category, ex.Message);
                 break;
             default:
-                _logger.LogError(ex, "[{Operation}] Unclassified error in {Category}: {ErrorMessage}", 
+                _logger.LogError(ex, "[{Operation}] Unclassified error in {Category}: {ErrorMessage}",
                     operation, category, ex.Message);
                 break;
         }
@@ -204,7 +204,7 @@ public class ExceptionHandlingService
     public TimeSpan GetRetryDelay(Exception ex, int attemptNumber)
     {
         var baseDelay = TimeSpan.FromMilliseconds(ApplicationConstants.Defaults.RetryDelayMilliseconds);
-        
+
         // Exponential backoff with jitter
         var delay = TimeSpan.FromMilliseconds(
             baseDelay.TotalMilliseconds * Math.Pow(2, attemptNumber - 1)
@@ -225,7 +225,7 @@ public class ExceptionHandlingService
     public Exception WrapException(Exception innerException, string message, Dictionary<string, object>? context = null)
     {
         var wrapper = new InvalidOperationException(message, innerException);
-        
+
         if (context != null)
         {
             foreach (var item in context)
@@ -331,7 +331,7 @@ public class ExceptionHandlingService
         if (httpEx.Data["StatusCode"] is not System.Net.HttpStatusCode statusCode)
             return false;
 
-        return statusCode is 
+        return statusCode is
             System.Net.HttpStatusCode.RequestTimeout or
             System.Net.HttpStatusCode.TooManyRequests or
             System.Net.HttpStatusCode.InternalServerError or

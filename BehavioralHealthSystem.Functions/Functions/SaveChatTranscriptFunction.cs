@@ -1,10 +1,4 @@
-using System.Text.Json;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using System.Text;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -16,14 +10,45 @@ public class SaveChatTranscriptFunction
     private readonly ILogger<SaveChatTranscriptFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
 
+    /// <summary>
+    /// Initializes a new instance of the SaveChatTranscriptFunction
+    /// </summary>
+    /// <param name="logger">Logger for diagnostic information</param>
+    /// <param name="blobServiceClient">Azure Blob Storage client for persisting transcripts</param>
+    /// <exception cref="ArgumentNullException">Thrown when logger or blobServiceClient is null</exception>
     public SaveChatTranscriptFunction(
         ILogger<SaveChatTranscriptFunction> logger,
         BlobServiceClient blobServiceClient)
     {
-        _logger = logger;
-        _blobServiceClient = blobServiceClient;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
     }
 
+    /// <summary>
+    /// Saves or updates a chat transcript to blob storage, merging with existing data if present
+    /// </summary>
+    /// <param name="req">HTTP request containing transcript data</param>
+    /// <returns>HTTP response with save status and metadata</returns>
+    /// <remarks>
+    /// Expected request body format:
+    /// <code>
+    /// {
+    ///   "transcriptData": {
+    ///     "userId": "user123",
+    ///     "sessionId": "session456",
+    ///     "messages": [
+    ///       {
+    ///         "id": "msg1",
+    ///         "role": "user",
+    ///         "content": "Hello",
+    ///         "timestamp": "2024-01-01T12:00:00Z"
+    ///       }
+    ///     ]
+    ///   }
+    /// }
+    /// </code>
+    /// Returns HTTP 200 on success, HTTP 400 for invalid data, HTTP 500 on error
+    /// </remarks>
     [Function("SaveChatTranscript")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
@@ -34,15 +59,15 @@ public class SaveChatTranscriptFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
+
             _logger.LogDebug("Request body received: {RequestBody}", requestBody);
-            
+
             var deserializeOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
-            
+
             var requestData = JsonSerializer.Deserialize<SaveChatTranscriptRequest>(requestBody, deserializeOptions);
 
             if (requestData?.TranscriptData == null)
@@ -66,7 +91,7 @@ public class SaveChatTranscriptFunction
             // Generate blob name with session ID and user ID
             // Structure: users/{userId}/conversations/{sessionId}.json
             var containerName = requestData.ContainerName ?? "chat-transcripts";
-            var fileName = requestData.FileName ?? 
+            var fileName = requestData.FileName ??
                 $"users/{requestData.TranscriptData.UserId}/conversations/{requestData.TranscriptData.SessionId}.json";
 
             // Get or create container
@@ -75,7 +100,7 @@ public class SaveChatTranscriptFunction
 
             // Get blob client
             var blobClient = containerClient.GetBlobClient(fileName);
-            
+
             // Try to get existing transcript
             ChatTranscriptData existingTranscript = null!;
             try
@@ -143,7 +168,7 @@ public class SaveChatTranscriptFunction
 
             await blobClient.UploadAsync(content, uploadOptions);
 
-            _logger.LogInformation("Successfully saved chat transcript for user {UserId}, session {SessionId}, {MessageCount} messages", 
+            _logger.LogInformation("Successfully saved chat transcript for user {UserId}, session {SessionId}, {MessageCount} messages",
                 finalTranscript.UserId, finalTranscript.SessionId, finalTranscript.Messages.Count);
 
             // Return success response
@@ -162,7 +187,7 @@ public class SaveChatTranscriptFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving chat transcript");
-            
+
             var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync("An error occurred while saving the chat transcript");
             return errorResponse;
@@ -184,7 +209,7 @@ public class SaveChatTranscriptFunction
         for (int i = 0; i < transcript.Messages.Count; i++)
         {
             var message = transcript.Messages[i];
-            
+
             if (string.IsNullOrWhiteSpace(message.Id))
                 return (false, $"Message {i}: ID is required");
 
@@ -220,7 +245,7 @@ public class SaveChatTranscriptFunction
 
         // Merge messages - add any new messages that don't already exist
         var existingMessageIds = new HashSet<string>(existing.Messages.Select(m => m.Id));
-        
+
         foreach (var newMessage in newData.Messages)
         {
             if (!existingMessageIds.Contains(newMessage.Id))
@@ -232,7 +257,7 @@ public class SaveChatTranscriptFunction
         // Update metadata but preserve original creation info
         existing.LastUpdated = DateTime.UtcNow.ToString("O");
         existing.IsActive = newData.IsActive;
-        
+
         // Preserve userId and sessionId from existing if new data has empty values
         if (string.IsNullOrWhiteSpace(newData.UserId) && !string.IsNullOrWhiteSpace(existing.UserId))
         {
@@ -242,7 +267,7 @@ public class SaveChatTranscriptFunction
         {
             existing.UserId = newData.UserId;
         }
-        
+
         if (string.IsNullOrWhiteSpace(newData.SessionId) && !string.IsNullOrWhiteSpace(existing.SessionId))
         {
             // Keep existing sessionId
@@ -251,7 +276,7 @@ public class SaveChatTranscriptFunction
         {
             existing.SessionId = newData.SessionId;
         }
-        
+
         // Update session end time if session is no longer active
         if (!newData.IsActive && string.IsNullOrEmpty(existing.SessionEndedAt))
         {

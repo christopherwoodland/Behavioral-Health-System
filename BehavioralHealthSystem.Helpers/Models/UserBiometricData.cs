@@ -38,6 +38,13 @@ public class UserBiometricData
     public double? HeightCm { get; set; }
 
     /// <summary>
+    /// Gets or sets the user's age in years.
+    /// This is an optional field collected during biometric data collection.
+    /// </summary>
+    /// <value>The user's age in years, or null if not provided.</value>
+    public int? Age { get; set; }
+
+    /// <summary>
     /// Gets or sets the user's gender identity.
     /// </summary>
     /// <value>The user's self-identified gender, or null if not provided.</value>

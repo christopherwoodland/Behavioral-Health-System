@@ -136,10 +136,10 @@ public class UserBiometricData
     /// <summary>
     /// Gets the blob storage path for this user's biometric data file.
     /// </summary>
-    /// <returns>The blob path in format "bio/users/{userId}/biometric.json".</returns>
+    /// <returns>The blob path in format "users/{userId}/biometric.json".</returns>
     public string GetBlobPath()
     {
-        return $"bio/users/{UserId}/biometric.json";
+        return $"users/{UserId}/biometric.json";
     }
 
     /// <summary>

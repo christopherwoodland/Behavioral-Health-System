@@ -902,7 +902,7 @@ Just speak naturally - I understand variations of these commands!`,
               console.log(`➕ Checking biometric data for user: ${userId}`);
 
               try {
-                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/biometric/${userId}/exists`;
+                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}/exists`;
                 const response = await fetch(apiUrl);
 
                 if (!response.ok) {
@@ -942,7 +942,7 @@ Just speak naturally - I understand variations of these commands!`,
               console.log(`➕ Retrieving biometric data for user: ${userId}`);
 
               try {
-                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/biometric/${userId}`;
+                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}`;
                 const response = await fetch(apiUrl);
 
                 if (!response.ok) {

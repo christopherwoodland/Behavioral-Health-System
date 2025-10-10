@@ -1059,6 +1059,14 @@ export class AzureOpenAIRealtimeService {
   }
 
   /**
+   * Check if voice can be updated safely
+   * Returns false if a response is currently in progress (assistant is speaking)
+   */
+  public canUpdateVoice(): boolean {
+    return !this.isResponseInProgress;
+  }
+
+  /**
    * Play remote audio from AI
    */
   private playRemoteAudio(): void {

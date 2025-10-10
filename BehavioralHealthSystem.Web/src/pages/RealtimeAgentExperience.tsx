@@ -13,7 +13,8 @@ import {
   CheckCircle,
   Bot,
   ClipboardList,
-  FileText
+  FileText,
+  Plus
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
@@ -63,6 +64,46 @@ interface SessionStatus {
 // Verbose logging flag - controlled via VITE_ENABLE_VERBOSE_LOGGING environment variable
 // This provides extremely granular debugging (every message render, transcript event, etc.)
 const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === 'true';
+
+/**
+ * Get agent-specific color classes for visual differentiation
+ * @param agentId - The agent identifier (tars, matron, phq2, phq9)
+ * @returns Tailwind CSS classes for background and text colors
+ */
+const getAgentColor = (agentId?: string): { bg: string; text: string; border: string } => {
+  switch (agentId) {
+    case 'tars':
+      return {
+        bg: 'bg-blue-50 dark:bg-blue-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-blue-500'
+      };
+    case 'matron':
+      return {
+        bg: 'bg-green-50 dark:bg-green-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-green-500'
+      };
+    case 'phq2':
+      return {
+        bg: 'bg-purple-50 dark:bg-purple-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-purple-500'
+      };
+    case 'phq9':
+      return {
+        bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-indigo-600'
+      };
+    default:
+      return {
+        bg: 'bg-gray-100 dark:bg-gray-800',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: ''
+      };
+  }
+};
 
 export const RealtimeAgentExperience: React.FC = () => {
   // Authentication context
@@ -184,6 +225,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     const humorMessage: ConversationMessage = {
       id: `humor-${Date.now()}`,
       role: 'assistant',
+      agentId: currentAgent.id,
       content: `Humor level adjusted to ${clampedLevel}%. ${
         clampedLevel >= 80 ? `Got it, ${messageName}! I'm feeling pretty relaxed and friendly now.` :
         clampedLevel >= 60 ? `Understood, ${firstName}. I'll be professional but warm and supportive.` :
@@ -330,6 +372,7 @@ export const RealtimeAgentExperience: React.FC = () => {
           const confirmMessage: ConversationMessage = {
             id: `session-close-${Date.now()}`,
             role: 'assistant',
+            agentId: currentAgent.id,
             content: `Thank you for our conversation today, ${getFirstName()}. Your session is ending now. Take care and remember - support is always available when you need it.`,
             timestamp: new Date().toISOString()
           };
@@ -362,6 +405,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const pauseMessage: ConversationMessage = {
               id: `session-pause-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `Session paused, ${getFirstName()}. I'll be here waiting when you're ready. Just say "resume session" to continue our conversation.`,
               timestamp: new Date().toISOString()
             };
@@ -382,6 +426,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const alreadyPausedMessage: ConversationMessage = {
               id: `session-already-paused-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `The session is already paused, ${getFirstName()}. Say "resume session" to continue.`,
               timestamp: new Date().toISOString()
             };
@@ -397,6 +442,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const resumeMessage: ConversationMessage = {
               id: `session-resume-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `Welcome back, ${getFirstName()}! Session resumed. How can I help you today?`,
               timestamp: new Date().toISOString()
             };
@@ -417,6 +463,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const notPausedMessage: ConversationMessage = {
               id: `session-not-paused-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `The session is already active, ${getFirstName()}. How can I help you?`,
               timestamp: new Date().toISOString()
             };
@@ -429,6 +476,7 @@ export const RealtimeAgentExperience: React.FC = () => {
           const helpMessage: ConversationMessage = {
             id: `help-${Date.now()}`,
             role: 'assistant',
+            agentId: currentAgent.id,
             content: `Here are the voice commands you can use, ${getFirstName()}:
 
 🎭 **Humor Settings:**
@@ -1007,8 +1055,9 @@ STEP 3a - IF biometric data EXISTS:
    - Ask how you can help them today
 
 STEP 3b - IF biometric data DOES NOT EXIST:
-   - Say: "I don't have your information yet. Let me connect you with Matron, our friendly intake coordinator, who will help us get to know you better."
-   - Call 'Agent_Matron' to collect biometric data
+   - Say: "I don't have your information yet. Let me connect you with Matron, our friendly intake coordinator, who will help us get to know you better. I'll hand you over to Matron now..."
+   - Wait a moment to let your announcement be heard
+   - Then call 'Agent_Matron' to collect biometric data
    - After Matron completes, call 'get-biometric-data' to load the newly saved preferences
    - Welcome them back: "Welcome back, [nickname]! Thanks for sharing that with Matron."
    - Ask how you can help them today
@@ -1117,63 +1166,85 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             console.log('🔄 ========================================');
 
             if (result.switchConfig && result.targetAgentId) {
-              // Convert tools to Realtime API format
-              const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig.tools);
+              // Helper function to perform the actual agent switch
+              const performAgentSwitch = async () => {
+                // Convert tools to Realtime API format
+                const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig!.tools);
 
-              console.log('🔄 New agent tools:', realtimeTools.map(t => t.name));
+                console.log('🔄 New agent tools:', realtimeTools.map(t => t.name));
 
-              // Update UI to show the new agent
-              const targetAgentId = result.targetAgentId;
-              const agentDisplayName =
-                targetAgentId === 'Agent_Matron' ? 'Matron' :
-                targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
-                targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
-                targetAgentId === 'Agent_Tars' ? 'Tars' :
-                'Agent';
+                // Update UI to show the new agent
+                const targetAgentId = result.targetAgentId!;
+                const agentDisplayName =
+                  targetAgentId === 'Agent_Matron' ? 'Matron' :
+                  targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
+                  targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
+                  targetAgentId === 'Agent_Tars' ? 'Tars' :
+                  'Agent';
 
-              setCurrentAgent({
-                id: targetAgentId.toLowerCase().replace('agent_', ''),
-                name: agentDisplayName,
-                isActive: true,
-                isTyping: false
-              });
+                setCurrentAgent({
+                  id: targetAgentId.toLowerCase().replace('agent_', ''),
+                  name: agentDisplayName,
+                  isActive: true,
+                  isTyping: false
+                });
 
-              setSessionStatus(prev => ({
-                ...prev,
-                currentAgent: targetAgentId
-              }));
+                setSessionStatus(prev => ({
+                  ...prev,
+                  currentAgent: targetAgentId
+                }));
 
-              // Announce agent switch for accessibility
-              announceToScreenReader(`Switched to ${agentDisplayName} agent`);
+                // Announce agent switch for accessibility
+                announceToScreenReader(`Switched to ${agentDisplayName} agent`);
 
-              // Determine voice based on agent - PHQ agents use 'echo', Tars uses default
-              const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
+                // Determine voice based on agent - PHQ agents use 'echo', Tars uses default
+                const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
 
-              // Build updated session config
-              const updatedConfig: SessionConfig = {
-                ...convertSettingsToConfig(
-                  azureSettings,
-                  isAudioEnabled,
-                  true,
-                  result.switchConfig.systemMessage,
-                  enableInputTranscription
-                ),
-                tools: realtimeTools
+                // Build updated session config
+                const updatedConfig: SessionConfig = {
+                  ...convertSettingsToConfig(
+                    azureSettings,
+                    isAudioEnabled,
+                    true,
+                    result.switchConfig!.systemMessage,
+                    enableInputTranscription
+                  ),
+                  tools: realtimeTools
+                };
+
+                // Only include voice parameter if we're not in the middle of an active response
+                // This prevents "Cannot update a conversation's voice if assistant audio is present" error
+                if (agentService.canUpdateVoice()) {
+                  updatedConfig.voice = agentVoice;
+                  console.log(`🎤 Updating session with voice: ${agentVoice}`);
+                } else {
+                  console.log('⚠️ Skipping voice update - assistant audio is active');
+                }
+
+                await agentService.updateSession(updatedConfig);
+
+                console.log('✅ Session updated for new agent');
+                console.log('🔄 ========================================');
               };
 
-              // Only include voice parameter if we're not in the middle of an active response
-              // This prevents "Cannot update a conversation's voice if assistant audio is present" error
-              if (agentService.canUpdateVoice()) {
-                updatedConfig.voice = agentVoice;
-                console.log(`🎤 Updating session with voice: ${agentVoice}`);
+              // Add delay when switching from Tars to any other agent
+              // This allows Tars's handoff announcement to be heard before the switch
+              const HANDOFF_DELAY_MS = parseInt(import.meta.env.VITE_AGENT_HANDOFF_DELAY_MS || '1500', 10);
+
+              if (currentAgent.id === 'tars' && result.targetAgentId !== 'Agent_Tars') {
+                const targetAgentName =
+                  result.targetAgentId === 'Agent_Matron' ? 'Matron' :
+                  result.targetAgentId === 'Agent_PHQ2' ? 'PHQ-2' :
+                  result.targetAgentId === 'Agent_PHQ9' ? 'PHQ-9' :
+                  'agent';
+                console.log(`⏱️ Delaying ${targetAgentName} handoff by ${HANDOFF_DELAY_MS}ms to allow announcement...`);
+                setTimeout(() => {
+                  performAgentSwitch();
+                }, HANDOFF_DELAY_MS);
               } else {
-                console.log('⚠️ Skipping voice update - assistant audio is active');
+                // Switch immediately for other agent transitions (e.g., returning to Tars)
+                await performAgentSwitch();
               }
-
-              await agentService.updateSession(updatedConfig);
-
-              console.log('✅ Session updated for new agent');
-              console.log('🔄 ========================================');
 
               // Return acknowledgment that agent switch is complete
               return {
@@ -1762,6 +1833,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           if (ENABLE_VERBOSE_LOGGING) {
             console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
           }
+          const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
           return (
           <div
             key={message.id}
@@ -1771,22 +1843,31 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               className={`max-w-[80%] p-3 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              } ${message.isTranscript ? 'border-l-4 border-yellow-400' : ''}`}
+                  : agentColors ? `${agentColors.bg} ${agentColors.text} ${agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+              } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
             >
               {message.role === 'assistant' && (
                 <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
-                  {currentAgent.id === 'tars' ? (
+                  {message.agentId === 'tars' || currentAgent.id === 'tars' ? (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : currentAgent.id === 'phq2' ? (
+                  ) : message.agentId === 'matron' || currentAgent.id === 'matron' ? (
+                    <Plus size={16} className="text-gray-600 dark:text-gray-400" />
+                  ) : message.agentId === 'phq2' || currentAgent.id === 'phq2' ? (
                     <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : currentAgent.id === 'phq9' ? (
+                  ) : message.agentId === 'phq9' || currentAgent.id === 'phq9' ? (
                     <FileText size={16} className="text-gray-600 dark:text-gray-400" />
                   ) : (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />
                   )}
                   <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                    {currentAgent.name}
+                    {message.agentId ?
+                      message.agentId === 'tars' ? 'Tars' :
+                      message.agentId === 'matron' ? 'Matron' :
+                      message.agentId === 'phq2' ? 'PHQ-2' :
+                      message.agentId === 'phq9' ? 'PHQ-9' :
+                      currentAgent.name
+                      : currentAgent.name
+                    }
                   </span>
                 </div>
               )}

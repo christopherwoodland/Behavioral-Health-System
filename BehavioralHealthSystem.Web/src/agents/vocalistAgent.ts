@@ -101,7 +101,7 @@ const completeRecordingTool: AgentTool = {
     // Validate duration (allow small tolerance of +/- 1 second)
     if (duration < 34 || duration > 36) {
       const shouldRetry = recordingAttempts < MAX_RECORDING_ATTEMPTS;
-      
+
       if (!shouldRetry) {
         console.log('🎤 Maximum recording attempts reached. Returning to Tars.');
         recordingAttempts = 0; // Reset for next user
@@ -291,11 +291,11 @@ RECORDING WORKFLOW:
        → Call 'submit-vocalist-analysis' with userId and audioFileUrl
        → Say: "All done! I've submitted your recording. Let me hand you back to Tars."
        → Call 'Agent_Tars' to return control
-     
+
      * IF success === false AND shouldRetry === true:
        → Say: "The recording was [too short/too long/wrong format]. You have [X] attempts remaining. Let's try again. Ready?"
        → Restart from step 4 (call 'start-vocalist-recording')
-     
+
      * IF success === false AND shouldReturnToTars === true:
        → Say: "We've reached the maximum attempts for this recording session. Don't worry, we can try again later. Let me hand you back to Tars."
        → Call 'Agent_Tars' to return control

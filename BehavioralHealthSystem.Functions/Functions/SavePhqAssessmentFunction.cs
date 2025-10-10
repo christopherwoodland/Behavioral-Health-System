@@ -1,8 +1,3 @@
-using System.Text.Json;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
 namespace BehavioralHealthSystem.Functions.Functions;
@@ -33,14 +28,14 @@ public class SavePhqAssessmentFunction
 
             // Read request body
             var requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            
+
             // Configure JSON deserialization to be case-insensitive
             var deserializeOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
             };
-            
+
             var requestData = JsonSerializer.Deserialize<SaveAssessmentRequest>(requestBody, deserializeOptions);
 
             if (requestData?.AssessmentData == null)
@@ -96,7 +91,7 @@ public class SavePhqAssessmentFunction
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
             // Generate filename if not provided with simplified user folder hierarchy
-            var fileName = request.FileName ?? 
+            var fileName = request.FileName ??
                 $"users/{request.AssessmentData.UserId}/{request.AssessmentData.AssessmentType.ToLower().Replace("-", "")}-{request.AssessmentData.AssessmentId}.json";
 
             // Ensure filename ends with .json

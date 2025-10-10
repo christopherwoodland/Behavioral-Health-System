@@ -1,14 +1,14 @@
 # Behavioral Health System - Complete Mental Health Platform
 
-A **production-ready** full-stack behavioral health assessment platform featuring Azure Functions backend, React frontend, and AI-powered agent handoff system. Integrates with Kintsugi Health API for advanced mental health analysis, following Microsoft's best practices for enterprise-grade development.
+A **production-ready** full-stack behavioral health assessment platform featuring Azure Functions backend, React frontend, and Azure OpenAI Realtime API for natural voice conversations. Integrates with Kintsugi Health API for advanced mental health analysis, following Microsoft's best practices for enterprise-grade development.
 
 ## 🚀 Key Features
 
 ### **🏗️ Enterprise Architecture**
 
 - ✅ **Full-Stack Solution** - React frontend with Azure Functions backend
-- ✅ **Real-Time Communication** - SignalR integration for bidirectional communication
-- ✅ **AI Agent Handoff System** - Multi-agent coordination for behavioral health assessments
+- ✅ **Real-Time Communication** - Azure OpenAI Realtime API with WebRTC for voice interaction
+- ✅ **AI-Powered Voice Agents** - GPT-4o Realtime API for natural voice conversations
 - ✅ **Direct HTTP Function Endpoints** - Simple, reliable HTTP functions for session management
 - ✅ **Dependency Injection & Configuration** - Proper service registration with typed configurations
 - ✅ **Interface-Based Design** - SOLID principles with testable architecture
@@ -90,19 +90,11 @@ BehavioralHealthSystem/
 │   ├── vite.config.ts                          # Vite build configuration
 │   ├── tailwind.config.js                      # Tailwind CSS configuration
 │   └── tsconfig.json                           # TypeScript configuration
-├── 📁 BehavioralHealthSystem.Agents/           # AI Agent system
-│   ├── 📁 Agents/                               # Individual agent implementations
-│   │   ├── CoordinatorAgent.cs                  # Main coordination agent
-│   │   ├── Phq2Agent.cs                         # PHQ-2 depression screening agent
-│   │   └── ComedianAgent.cs                     # Humor interaction agent
-│   ├── 📁 Chat/                                 # Group chat orchestration
-│   │   └── BehavioralHealthGroupChat.cs         # Multi-agent chat coordination
-│   ├── 📁 Handoff/                              # Agent handoff system
-│   │   ├── Interfaces/                          # Handoff interfaces
-│   │   ├── HandoffSession.cs                    # Session handoff management
-│   │   └── HandoffCoordinator.cs                # Handoff orchestration
-│   ├── 📁 Models/                               # Agent-specific models
-│   └── 📁 Services/                             # Agent services
+├── 📁 BehavioralHealthSystem.Console/          # CLI tools for DSM-5 import
+│   ├── 📁 Services/                             # Console services
+│   ├── 📁 Models/                               # Console-specific models
+│   ├── Program.cs                              # Entry point
+│   └── GlobalUsings.cs                          # Global using directives
 ├── 📁 BehavioralHealthSystem.Helpers/          # Shared library project
 │   ├── 📁 Configuration/                        # Typed configuration and retry policies
 │   │   ├── KintsugiApiOptions.cs
@@ -260,39 +252,44 @@ For the best development experience, install:
 
 The application implements a modern full-stack architecture with the following key components:
 
-### **🎭 AI Agent Experience**
+### **🎭 AI Voice Agent Experience**
 
 ```typescript
-// Multi-agent behavioral health system with coordinated handoffs
-const agents = {
-  coordinator: "Main orchestration and crisis detection",
-  phq2: "PHQ-2 rapid depression screening",
-  phq9: "PHQ-9 comprehensive depression assessment", 
-  comedian: "Humor-based interaction and mood lifting"
+// Azure OpenAI Realtime API for natural voice conversations
+const realtimeConfig = {
+  model: "gpt-4o-realtime-preview",
+  voice: "alloy",
+  turnDetection: "server_vad", // Server-side voice activity detection
+  modalities: ["text", "audio"]
 };
 ```
 
 Features:
 
-- **🤖 Intelligent Agent Handoffs** - Seamless transitions between specialized agents
-- **🎙️ Advanced Speech Processing** - Web Speech API with voice activity detection
-- **🎭 Animated Bot Visualization** - Engaging visual feedback during interactions
+- **🎙️ Real-Time Voice Interaction** - Natural conversations with GPT-4o using Azure OpenAI Realtime API
+- **🔊 WebRTC Audio Streaming** - Low-latency bidirectional audio with WebRTC data channels
+- **🎤 Server-Side VAD** - Azure-powered voice activity detection for natural turn-taking
+- **🎭 Multi-Agent Personalities** - Tars (coordinator), PHQ-2 Agent, PHQ-9 Agent with distinct voices
 - **♿ Accessibility Features** - Full keyboard navigation and screen reader support
 
 ### **📡 Real-Time Communication**
 
-```csharp
-// SignalR integration for bidirectional communication
-services.AddSignalR();
-services.AddSingleton<IHubContext<ChatHub>>();
+```typescript
+// Azure OpenAI Realtime API with WebRTC
+const rtClient = new RTClient(new URL(azureOpenAIEndpoint), { key: apiKey });
+await rtClient.configure({
+  model: "gpt-4o-realtime-preview",
+  voice: "alloy",
+  turn_detection: { type: "server_vad" }
+});
 ```
 
 Features:
 
-- **⚡ Live Session Updates** - Real-time session status and progress tracking
-- **🔄 Bidirectional Communication** - Frontend ↔ Backend real-time messaging
-- **📊 Live Analytics** - Real-time dashboard updates and monitoring
-- **🎯 Connection Management** - Robust connection handling and reconnection logic
+- **⚡ WebRTC Data Channels** - Low-latency bidirectional audio streaming
+- **🎙️ Azure OpenAI Realtime API** - Direct connection to GPT-4o for voice interactions
+- **📊 Live Session Monitoring** - Real-time session status and progress tracking
+- **🎯 Automatic Reconnection** - Robust connection handling with exponential backoff
 
 ### **🎨 Enhanced UI/UX Features**
 
@@ -476,12 +473,6 @@ Add these settings to your Azure Function App configuration:
 
 ## 📡 API Endpoints
 
-### **🎭 Agent Experience**
-
-- **POST** `/api/agent/chat` - Interactive chat with AI agents
-- **GET** `/api/agent/info` - Get available agents and their capabilities
-- **POST** `/api/agent/handoff` - Trigger agent handoff during conversation
-
 ### **🔄 Main Workflow**
 
 - **POST** `/api/sessions/initiate` - Create new session with user metadata and audio data
@@ -503,13 +494,6 @@ Add these settings to your Azure Function App configuration:
 
 - **GET** `/api/predictions/{userId}` - Get all predictions for a user
 - **GET** `/api/predictions/sessions/{sessionId}` - Get specific prediction by session ID
-
-### **📡 SignalR Hub**
-
-- **SignalR Hub** `/chatHub` - Real-time bidirectional communication
-  - `JoinGroup(userId)` - Join user-specific communication group
-  - `SendMessage(userId, message)` - Send real-time message to user
-  - `SessionUpdate(sessionId, status)` - Broadcast session status updates
 
 ### **Health Check Response**
 
@@ -1432,34 +1416,39 @@ Deploy just the UI:
 .\scripts\deploy-ui.ps1 -DeploymentTarget "app-service" -ResourceName "cwuibhieastus001" -ResourceGroupName "bhi"
 ```
 
-### Agent Project Example
+### Azure OpenAI Realtime API Example
 
-The solution includes a multi-agent behavioral health system with coordinated agents:
+The solution uses Azure OpenAI Realtime API for natural voice conversations:
 
-#### CoordinatorAgent Usage Example
+#### WebRTC Voice Connection
 
-```csharp
-// Initialize the group chat system
-var groupChat = new BehavioralHealthGroupChat(kernel, logger, loggerFactory);
-await groupChat.InitializeAsync();
+```typescript
+// Initialize Azure OpenAI Realtime client
+const rtClient = new RTClient(
+  new URL(import.meta.env.VITE_AZURE_OPENAI_ENDPOINT),
+  { key: import.meta.env.VITE_AZURE_OPENAI_API_KEY }
+);
 
-// Process user messages through intelligent routing
-var response = await groupChat.ProcessMessageAsync("user-123", "I want to start a PHQ-2 assessment");
+// Configure with voice settings
+await rtClient.configure({
+  model: "gpt-4o-realtime-preview",
+  voice: "alloy", // or "echo" for different personalities
+  turn_detection: { type: "server_vad" },
+  modalities: ["text", "audio"]
+});
 
-// Example responses:
-// "Starting PHQ-2 rapid screening assessment for user: user-123..."
-// "Starting PHQ-9 comprehensive assessment for user: user-123..."
+// Send user audio and receive AI responses in real-time
 ```
 
-#### Direct Agent Invocation
+#### Multi-Agent Personalities
 
-```csharp
-// Directly invoke specific agents
-var phq2Response = groupChat.InvokeAgentDirectly("PHQ2Agent", "user-123", "start assessment");
-var phq9Response = groupChat.InvokeAgentDirectly("PHQ9Agent", "user-123", "begin assessment");
-
-// Get agent information
-var agentInfo = groupChat.GetAgentInfo();
+```typescript
+// Configure different agents with distinct voices and prompts
+const agents = {
+  tars: { voice: "alloy", systemPrompt: "You are Tars, a coordinator agent..." },
+  phq2: { voice: "echo", systemPrompt: "You conduct PHQ-2 screenings..." },
+  phq9: { voice: "echo", systemPrompt: "You conduct PHQ-9 assessments..." }
+};
 ```
 
 ### Global Usings Pattern Example
@@ -1701,18 +1690,19 @@ The transcription uses Azure Speech Services Fast Transcription API v3.1:
   - `BehavioralHealthSystem.Tests/GenderEthnicityValidationTests.cs`
 - **Testing**: All validation tests passing (6/6) with updated rules
 
-### **🎭 AI Agent Experience (Latest)**
+### **🎭 AI Voice Agent Experience (Latest)**
 
-- ✅ **Multi-Agent System** - Coordinated AI agents for behavioral health assessments
-- ✅ **Intelligent Handoffs** - Seamless transitions between specialized agents
-- ✅ **Advanced Speech Processing** - Web Speech API with voice activity detection
-- ✅ **Interactive Chat Interface** - Real-time conversation with animated bot visualization
+- ✅ **Azure OpenAI Realtime API** - GPT-4o-realtime-preview with natural voice conversations
+- ✅ **Multi-Agent Personalities** - Distinct voices and prompts for coordinator, PHQ-2, and PHQ-9 agents
+- ✅ **WebRTC Audio Streaming** - Low-latency bidirectional audio with server-side VAD
+- ✅ **Interactive Voice Interface** - Real-time conversation with animated visualization
 
 ### **📡 Real-Time Features**
 
-- ✅ **SignalR Integration** - Bidirectional real-time communication
+- ✅ **WebRTC Audio Streaming** - Low-latency bidirectional audio with Azure OpenAI Realtime API
+- ✅ **Server-Side VAD** - Automatic turn detection for natural conversations
 - ✅ **Live Session Updates** - Real-time session status and progress tracking
-- ✅ **Connection Management** - Robust connection handling and reconnection logic
+- ✅ **Connection Management** - Robust WebRTC connection handling and reconnection logic
 
 ### **🎨 Enhanced Frontend**
 
@@ -2134,20 +2124,23 @@ Open browser console (F12) and filter for `ExtendedRiskAssessment`.
    - Check for null/undefined in nested objects
    - Review serialization settings in backend
 
-#### SignalR Connection Issues
+#### WebRTC Connection Issues
 
 **Check Connection Status:**
 ```typescript
 // In browser console
-window.signalRConnection?.state
-// Should return: "Connected", "Connecting", "Disconnected", "Reconnecting"
+window.rtClient?.isConnected()
+// Check data channel state
+window.dataChannel?.readyState
+// Should return: "connecting", "open", "closing", "closed"
 ```
 
 **Connection Troubleshooting:**
-- Verify Functions host is running on correct port
-- Check CORS settings allow SignalR connections
-- Review browser console for connection errors
-- Test with `chrome://inspect/#devices` for detailed logs
+- Verify Azure OpenAI Realtime API endpoint is correct
+- Check API key has required permissions for Realtime API
+- Review browser console for WebRTC negotiation errors
+- Test with `chrome://webrtc-internals` for detailed connection logs
+- Ensure microphone permissions granted
 
 ### **Backend Debugging**
 

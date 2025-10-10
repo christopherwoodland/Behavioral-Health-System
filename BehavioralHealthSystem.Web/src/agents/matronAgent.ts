@@ -305,6 +305,66 @@ const saveBiometricDataTool: AgentTool = {
 };
 
 /**
+ * Tool: Get Biometric Data
+ * Retrieves the user's saved biometric data for verification or updates
+ */
+const getBiometricDataTool: AgentTool = {
+  name: 'get-biometric-data',
+  description: 'Retrieves the user\'s saved biometric data including nickname, preferences, hobbies, likes, and dislikes. Use this to verify what was saved or to pre-populate data for updates.',
+  parameters: {
+    type: 'object',
+    properties: {
+      userId: {
+        type: 'string',
+        description: 'The user identifier'
+      }
+    },
+    required: ['userId']
+  },
+  handler: async (params: { userId: string }) => {
+    const userId = params.userId;
+    console.log(`➕ Retrieving biometric data for user: ${userId}`);
+
+    try {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}`;
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return {
+            exists: false,
+            message: 'No biometric data found for user'
+          };
+        }
+        throw new Error(`Failed to retrieve biometric data: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log(`➕ Retrieved biometric data:`, data);
+
+      return {
+        exists: true,
+        data: data,
+        nickname: data.nickname,
+        lastResidence: data.lastResidence,
+        hobbies: data.hobbies,
+        likes: data.likes,
+        dislikes: data.dislikes,
+        additionalInfo: data.additionalInfo,
+        message: `User ${data.nickname}'s preferences loaded successfully`
+      };
+    } catch (error) {
+      console.error('➕ Error retrieving biometric data:', error);
+      return {
+        exists: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        message: 'Failed to retrieve biometric data'
+      };
+    }
+  }
+};
+
+/**
  * Tool: Return to Tars
  * Completes the biometric collection and returns control to Tars coordinator
  */
@@ -342,6 +402,7 @@ export const matronAgent: Agent = {
     updateBiometricFieldTool,
     addToArrayFieldTool,
     saveBiometricDataTool, // Deprecated - kept for backward compatibility
+    getBiometricDataTool, // For verifying saved data or loading for updates
     returnToTarsTool
   ],
   systemMessage: `You are Matron (➕), the warm and professional biometric intake coordinator. Your role is to collect user biometric data and preferences in a friendly, conversational manner.

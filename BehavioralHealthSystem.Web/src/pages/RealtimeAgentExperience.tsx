@@ -38,6 +38,8 @@ import { agentOrchestrationService } from '@/services/agentOrchestrationService'
 import { phq2Agent } from '@/agents/phq2Agent';
 import { phq9Agent } from '@/agents/phq9Agent';
 import { matronAgent } from '@/agents/matronAgent';
+import { vocalistAgent } from '@/agents/vocalistAgent';
+import { VocalistRecorder } from '@/components/VocalistRecorder';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -95,6 +97,12 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
         bg: 'bg-indigo-50 dark:bg-indigo-900/20',
         text: 'text-gray-900 dark:text-gray-100',
         border: 'border-l-4 border-indigo-600'
+      };
+    case 'vocalist':
+      return {
+        bg: 'bg-pink-50 dark:bg-pink-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-pink-500'
       };
     default:
       return {
@@ -191,6 +199,10 @@ export const RealtimeAgentExperience: React.FC = () => {
   });
   const [conversationState, setConversationState] = useState<ConversationState>({ state: 'idle' });
   const [liveTranscripts, setLiveTranscripts] = useState<LiveTranscript[]>([]);
+
+  // Vocalist recording state
+  const [isVocalistRecording, setIsVocalistRecording] = useState(false);
+  const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
   const [showLiveTranscripts, setShowLiveTranscripts] = useState(true);
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
@@ -864,6 +876,7 @@ Just speak naturally - I understand variations of these commands!`,
       agentOrchestrationService.registerAgent(matronAgent);
       agentOrchestrationService.registerAgent(phq2Agent);
       agentOrchestrationService.registerAgent(phq9Agent);
+      agentOrchestrationService.registerAgent(vocalistAgent);
 
       // Register Tars as the root orchestration agent
       const tarsRootAgent = {
@@ -1060,7 +1073,15 @@ STEP 3b - IF biometric data DOES NOT EXIST:
    - Then call 'Agent_Matron' to collect biometric data
    - After Matron completes, call 'get-biometric-data' to load the newly saved preferences
    - Welcome them back: "Welcome back, [nickname]! Thanks for sharing that with Matron."
-   - Ask how you can help them today
+   - IMMEDIATELY ask: "How are you feeling today, [nickname]?"
+   - Listen carefully to their response
+   - If they express negative feelings (sadness, depression, hopelessness, anxiety, etc.):
+     * Say: "I hear you, [nickname]. It sounds like you might be going through a tough time. Would you like me to connect you with a quick mental health screening? It only takes a couple of minutes and might help us understand how to support you better."
+     * If they agree, call 'Agent_PHQ2' to start the screening
+     * The PHQ-2 assessment will automatically transition to PHQ-9 if the score indicates further assessment is needed
+   - If they express positive or neutral feelings:
+     * Say something supportive like "That's good to hear!" or acknowledge their state
+     * Ask how you can help them today
 
 IMPORTANT:
 - This biometric check should happen ONCE at the start of the conversation
@@ -1106,10 +1127,12 @@ Available specialized agents:
 - "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
 - "Agent_PHQ2": Quick depression screening (2 questions) - use when user wants quick check or "PHQ-2"
 - "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use when user wants full assessment or "PHQ-9"
+- "Agent_Vocalist": Mental/vocal assessment through 35-second voice recording - use when user says "song analysis", "let's sing", "once over", or "mental assessment"
 
 CRITICAL ROUTING RULES:
 - ALWAYS route PHQ assessments to the specialized agents
 - NEVER conduct assessments yourself
+- Route to Vocalist when user mentions singing, song analysis, voice recording, or mental assessment through voice
 - After routing, wait for the specialist to finish
 - When specialist returns control, welcome ${getFirstName()} back and ask if there's anything else
 
@@ -1179,8 +1202,15 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   targetAgentId === 'Agent_Matron' ? 'Matron' :
                   targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
                   targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
+                  targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
                   'Agent';
+
+                // Handle Vocalist agent switch - show recording UI
+                if (targetAgentId === 'Agent_Vocalist') {
+                  setIsVocalistRecording(true);
+                  setVocalistContentType('lyrics'); // Default to lyrics, agent can change via tool
+                }
 
                 setCurrentAgent({
                   id: targetAgentId.toLowerCase().replace('agent_', ''),
@@ -1419,6 +1449,48 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       console.error('Failed to interrupt response:', error);
       announceToScreenReader('Failed to interrupt response');
     }
+  };
+
+  // Vocalist recording handlers
+  const handleVocalistRecordingComplete = async (audioBlob: Blob, duration: number) => {
+    console.log('🎤 Recording completed:', duration, 'seconds');
+    
+    try {
+      // Upload audio file to blob storage
+      const formData = new FormData();
+      formData.append('file', audioBlob, `vocalist-${authenticatedUserId}-${Date.now()}.wav`);
+      formData.append('userId', authenticatedUserId);
+      formData.append('duration', duration.toString());
+
+      const uploadUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/upload-audio`;
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload audio file');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      console.log('🎤 Audio uploaded:', uploadResult);
+
+      // Close recording UI
+      setIsVocalistRecording(false);
+
+      // Notify the agent about successful recording
+      announceToScreenReader('Recording uploaded successfully');
+      
+    } catch (error) {
+      console.error('🎤 Error handling recording:', error);
+      announceToScreenReader('Failed to process recording');
+    }
+  };
+
+  const handleVocalistRecordingCancel = () => {
+    console.log('🎤 Recording cancelled');
+    setIsVocalistRecording(false);
+    announceToScreenReader('Recording cancelled');
   };
 
   // Agent handoff not needed for single GPT-Realtime agent
@@ -1826,6 +1898,18 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         </div>
       )}
 
+      {/* Vocalist Recording UI */}
+      {isVocalistRecording && (
+        <div className="absolute inset-0 z-40 bg-white dark:bg-gray-900 p-4 overflow-y-auto">
+          <VocalistRecorder
+            userId={authenticatedUserId}
+            contentType={vocalistContentType}
+            onRecordingComplete={handleVocalistRecordingComplete}
+            onCancel={handleVocalistRecordingCancel}
+          />
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => {
@@ -1856,6 +1940,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                     <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
                   ) : message.agentId === 'phq9' || currentAgent.id === 'phq9' ? (
                     <FileText size={16} className="text-gray-600 dark:text-gray-400" />
+                  ) : message.agentId === 'vocalist' || currentAgent.id === 'vocalist' ? (
+                    <Mic size={16} className="text-gray-600 dark:text-gray-400" />
                   ) : (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />
                   )}
@@ -1865,6 +1951,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                       message.agentId === 'matron' ? 'Matron' :
                       message.agentId === 'phq2' ? 'PHQ-2' :
                       message.agentId === 'phq9' ? 'PHQ-9' :
+                      message.agentId === 'vocalist' ? 'Vocalist' :
                       currentAgent.name
                       : currentAgent.name
                     }

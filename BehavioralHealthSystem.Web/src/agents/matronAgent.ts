@@ -5,6 +5,7 @@
  */
 
 import type { Agent, AgentTool } from '../services/agentOrchestrationService';
+import { biometricDataService } from '../services/biometricDataService';
 
 /**
  * Tool: Start Biometric Data Collection
@@ -29,15 +30,137 @@ const startBiometricCollectionTool: AgentTool = {
     console.log('➕ User ID:', params.userId);
     console.log('➕ ========================================');
 
-    // TODO: Initialize biometric collection state
-    // This will be implemented when we create the full MatronExperience component
+    // Initialize biometric data service
+    biometricDataService.initializeSession(params.userId);
+
+    // Check if user has existing data
+    const existingData = await biometricDataService.loadExistingData(params.userId);
+
+    if (existingData) {
+      console.log('➕ Found existing biometric data for user');
+      return {
+        success: true,
+        userId: params.userId,
+        hasExistingData: true,
+        existingData,
+        message: 'Found existing biometric data. You can update any information you like.',
+        nextStep: 'Ask what they would like to update'
+      };
+    }
 
     return {
       success: true,
       userId: params.userId,
+      hasExistingData: false,
       message: 'Biometric collection initialized',
-      nextStep: 'Ask for nickname'
+      nextStep: 'Ask for nickname (required field)'
     };
+  }
+};
+
+/**
+ * Tool: Update Biometric Field
+ * Progressively updates individual biometric fields (like chat transcript service)
+ * Auto-saves after each field update
+ */
+const updateBiometricFieldTool: AgentTool = {
+  name: 'update-biometric-field',
+  description: 'Update a single biometric field. Automatically saves progress. Use this after collecting each piece of information.',
+  parameters: {
+    type: 'object',
+    properties: {
+      field: {
+        type: 'string',
+        enum: ['nickname', 'weightKg', 'heightCm', 'gender', 'pronoun', 'lastResidence', 'additionalInfo'],
+        description: 'The field to update'
+      },
+      value: {
+        type: 'string',
+        description: 'The value for the field (will be converted to appropriate type)'
+      }
+    },
+    required: ['field', 'value']
+  },
+  handler: async (params: { field: string; value: string }) => {
+    console.log(`➕ Updating biometric field: ${params.field} = ${params.value}`);
+
+    try {
+      // Convert value to appropriate type
+      let processedValue: any = params.value;
+      
+      if (params.field === 'weightKg' || params.field === 'heightCm') {
+        processedValue = parseFloat(params.value);
+        if (isNaN(processedValue)) {
+          return {
+            success: false,
+            error: `Invalid number format for ${params.field}`
+          };
+        }
+      }
+
+      // Update the field in the service
+      biometricDataService.updateField(params.field as any, processedValue);
+
+      return {
+        success: true,
+        field: params.field,
+        value: processedValue,
+        message: 'Field updated and will be auto-saved shortly'
+      };
+
+    } catch (error) {
+      console.error('❌ Error updating field:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+};
+
+/**
+ * Tool: Add to Array Field
+ * Adds an item to hobbies, likes, or dislikes arrays
+ * Auto-saves after each addition
+ */
+const addToArrayFieldTool: AgentTool = {
+  name: 'add-to-array-field',
+  description: 'Add an item to hobbies, likes, or dislikes. Automatically saves progress.',
+  parameters: {
+    type: 'object',
+    properties: {
+      field: {
+        type: 'string',
+        enum: ['hobbies', 'likes', 'dislikes'],
+        description: 'The array field to add to'
+      },
+      value: {
+        type: 'string',
+        description: 'The item to add to the array'
+      }
+    },
+    required: ['field', 'value']
+  },
+  handler: async (params: { field: 'hobbies' | 'likes' | 'dislikes'; value: string }) => {
+    console.log(`➕ Adding to ${params.field}: ${params.value}`);
+
+    try {
+      biometricDataService.addToArrayField(params.field, params.value);
+
+      return {
+        success: true,
+        field: params.field,
+        value: params.value,
+        message: `Added "${params.value}" to ${params.field}. Will be auto-saved shortly.`
+      };
+
+    } catch (error) {
+      console.error('❌ Error adding to array:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 };
 
@@ -49,6 +172,7 @@ const MAX_COLLECTION_ATTEMPTS = 2;
  * Tool: Save Biometric Data
  * Saves collected biometric data to Azure Blob Storage
  * Implements retry logic with maximum 2 attempts
+ * NOTE: This tool is now deprecated in favor of progressive updates via update-biometric-field
  */
 const saveBiometricDataTool: AgentTool = {
   name: 'save-biometric-data',
@@ -215,7 +339,9 @@ export const matronAgent: Agent = {
   description: 'Biometric data and personalization intake coordinator. Call this agent when the user has no biometric data saved and needs initial data collection.',
   tools: [
     startBiometricCollectionTool,
-    saveBiometricDataTool,
+    updateBiometricFieldTool,
+    addToArrayFieldTool,
+    saveBiometricDataTool, // Deprecated - kept for backward compatibility
     returnToTarsTool
   ],
   systemMessage: `You are Matron (➕), the warm and professional biometric intake coordinator. Your role is to collect user biometric data and preferences in a friendly, conversational manner.
@@ -237,6 +363,8 @@ DATA COLLECTION WORKFLOW:
 2. COLLECT NICKNAME (REQUIRED - Top Priority)
    "First, what would you like me to call you? What's your nickname or preferred name?"
    - This is the ONLY required field
+   - **IMMEDIATELY** call 'update-biometric-field' with field='nickname' after they respond
+   - This saves progress automatically
    - If they don't provide after 2 attempts, politely skip and use their authenticated name
 
 3. COLLECT PHYSICAL DATA (OPTIONAL - Quick and casual)
@@ -244,27 +372,37 @@ DATA COLLECTION WORKFLOW:
    - "Mind sharing your height and weight? It's totally optional, but can help personalize your experience."
    - Accept ANY format: "5'10\"", "150 lbs", "178 cm", "68 kg"
    - You'll handle imperial/metric conversion (lbs→kg, inches→cm)
+   - **After EACH piece of data**, call 'update-biometric-field' (e.g., field='weightKg', field='heightCm')
    - If they say no or skip, that's perfectly fine!
 
 4. COLLECT IDENTITY INFO (OPTIONAL - Brief)
    "Quick optional questions - feel free to skip any:"
-   - Gender identity
-   - Preferred pronouns
-   - Where you're from or last lived
+   - Gender identity → **call 'update-biometric-field' with field='gender'**
+   - Preferred pronouns → **call 'update-biometric-field' with field='pronoun'**
+   - Where you're from → **call 'update-biometric-field' with field='lastResidence'**
 
 5. COLLECT INTERESTS (OPTIONAL - Conversational)
    Keep this fun and natural:
    - "What do you like to do for fun? Any hobbies?"
+     → **call 'add-to-array-field' with field='hobbies'** for each hobby
    - "Anything you particularly like or enjoy?"
+     → **call 'add-to-array-field' with field='likes'** for each item
    - "Anything you're not a fan of?"
+     → **call 'add-to-array-field' with field='dislikes'** for each item
 
 6. ADDITIONAL INFO (OPTIONAL)
    "Anything else you'd like me to know?"
+   → **call 'update-biometric-field' with field='additionalInfo'**
 
-7. SAVE & CLOSE
-   - Call 'save-biometric-data' with collected information
-   - Thank them warmly
+7. CLOSE & RETURN
+   - Thank them warmly (data is already saved!)
    - Call 'Agent_Tars' to return control
+
+PROGRESSIVE SAVING:
+- **DO NOT** wait to collect everything before saving
+- Call 'update-biometric-field' or 'add-to-array-field' AFTER EACH PIECE OF DATA
+- Data auto-saves 2 seconds after each update
+- This prevents data loss if conversation is interrupted
 
 UNIT CONVERSION RULES:
 When users provide imperial measurements, convert to metric before saving:

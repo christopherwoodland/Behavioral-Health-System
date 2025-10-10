@@ -10,14 +10,45 @@ public class SaveChatTranscriptFunction
     private readonly ILogger<SaveChatTranscriptFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
 
+    /// <summary>
+    /// Initializes a new instance of the SaveChatTranscriptFunction
+    /// </summary>
+    /// <param name="logger">Logger for diagnostic information</param>
+    /// <param name="blobServiceClient">Azure Blob Storage client for persisting transcripts</param>
+    /// <exception cref="ArgumentNullException">Thrown when logger or blobServiceClient is null</exception>
     public SaveChatTranscriptFunction(
         ILogger<SaveChatTranscriptFunction> logger,
         BlobServiceClient blobServiceClient)
     {
-        _logger = logger;
-        _blobServiceClient = blobServiceClient;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
     }
 
+    /// <summary>
+    /// Saves or updates a chat transcript to blob storage, merging with existing data if present
+    /// </summary>
+    /// <param name="req">HTTP request containing transcript data</param>
+    /// <returns>HTTP response with save status and metadata</returns>
+    /// <remarks>
+    /// Expected request body format:
+    /// <code>
+    /// {
+    ///   "transcriptData": {
+    ///     "userId": "user123",
+    ///     "sessionId": "session456",
+    ///     "messages": [
+    ///       {
+    ///         "id": "msg1",
+    ///         "role": "user",
+    ///         "content": "Hello",
+    ///         "timestamp": "2024-01-01T12:00:00Z"
+    ///       }
+    ///     ]
+    ///   }
+    /// }
+    /// </code>
+    /// Returns HTTP 200 on success, HTTP 400 for invalid data, HTTP 500 on error
+    /// </remarks>
     [Function("SaveChatTranscript")]
     public async Task<HttpResponseData> Run(
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)

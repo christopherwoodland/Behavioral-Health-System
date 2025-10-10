@@ -41,13 +41,18 @@ const startBiometricCollectionTool: AgentTool = {
   }
 };
 
+// Track retry attempts for data collection
+let collectionAttempts = 0;
+const MAX_COLLECTION_ATTEMPTS = 2;
+
 /**
  * Tool: Save Biometric Data
  * Saves collected biometric data to Azure Blob Storage
+ * Implements retry logic with maximum 2 attempts
  */
 const saveBiometricDataTool: AgentTool = {
   name: 'save-biometric-data',
-  description: 'Save the collected biometric data to storage',
+  description: 'Save the collected biometric data to storage. Will retry up to 2 times on failure.',
   parameters: {
     type: 'object',
     properties: {
@@ -99,8 +104,9 @@ const saveBiometricDataTool: AgentTool = {
     required: ['userId', 'nickname']
   },
   handler: async (params: any) => {
+    collectionAttempts++;
     console.log('➕ ========================================');
-    console.log('➕ MATRON AGENT: Saving Biometric Data');
+    console.log(`➕ MATRON AGENT: Saving Biometric Data (Attempt ${collectionAttempts}/${MAX_COLLECTION_ATTEMPTS})`);
     console.log('➕ ========================================');
 
     try {
@@ -123,8 +129,8 @@ const saveBiometricDataTool: AgentTool = {
 
       console.log('➕ Saving data:', biometricData);
 
-      // Save to API
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || ''}/api/biometric`;
+      // Save to API (fixed URL - VITE_API_BASE_URL already includes /api)
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -142,6 +148,9 @@ const saveBiometricDataTool: AgentTool = {
       console.log('➕ Biometric data saved successfully');
       console.log('➕ ========================================');
 
+      // Reset attempts on success
+      collectionAttempts = 0;
+
       return {
         success: true,
         data: savedData,
@@ -149,10 +158,23 @@ const saveBiometricDataTool: AgentTool = {
       };
     } catch (error) {
       console.error('➕ Error saving biometric data:', error);
+
+      // Check if we've exceeded max attempts
+      const hasRetriesLeft = collectionAttempts < MAX_COLLECTION_ATTEMPTS;
+
+      if (!hasRetriesLeft) {
+        console.error(`➕ Maximum collection attempts (${MAX_COLLECTION_ATTEMPTS}) reached. Giving up.`);
+        collectionAttempts = 0; // Reset for next user
+      }
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-        message: 'Failed to save biometric data'
+        message: hasRetriesLeft
+          ? `Failed to save biometric data. Will retry (${collectionAttempts}/${MAX_COLLECTION_ATTEMPTS})`
+          : `Failed to save biometric data after ${MAX_COLLECTION_ATTEMPTS} attempts. Returning to Tars.`,
+        shouldReturnToTars: !hasRetriesLeft,
+        attemptsRemaining: MAX_COLLECTION_ATTEMPTS - collectionAttempts
       };
     }
   }
@@ -266,11 +288,26 @@ OPTIONAL DATA HANDLING:
 
 COMPLETION PROTOCOL:
 After collecting data (at minimum, the nickname):
-1. Thank them: "Perfect! Thanks for sharing that with you, [nickname]."
+1. Thank them: "Perfect! Thanks for sharing that with me, [nickname]."
 2. Call 'save-biometric-data' tool with all collected data
-3. Confirm save: "All set! I've saved your preferences."
-4. Hand off: "Let me hand you back to Tars now."
-5. Call 'Agent_Tars' tool to return control
+3. Check the result:
+   - IF success === true:
+     * Say: "All set! I've saved your preferences."
+     * Hand off: "Let me hand you back to Tars now."
+     * Call 'Agent_Tars' tool to return control
+   - IF success === false AND shouldReturnToTars === true:
+     * Say: "I'm having trouble saving your information right now. Don't worry though, let me hand you back to Tars."
+     * Call 'Agent_Tars' tool to return control (even without saved data)
+   - IF success === false AND attemptsRemaining > 0:
+     * Say: "Hmm, having a little trouble saving that. Let me try once more. Can you confirm your nickname is [nickname]?"
+     * Try to re-collect and save again
+
+ERROR HANDLING & RETRY PROTOCOL:
+- Maximum 2 attempts to save biometric data
+- If first attempt fails: politely ask user to confirm information and retry
+- If second attempt also fails: apologize gracefully and return control to Tars
+- NEVER get stuck in a loop - always return to Tars after 2 failed attempts
+- Be warm and reassuring even when encountering errors
 
 Remember: This is a VOICE conversation. Be brief, warm, and conversational!`
 };

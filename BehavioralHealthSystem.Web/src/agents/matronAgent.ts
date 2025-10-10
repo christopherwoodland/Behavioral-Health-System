@@ -71,7 +71,7 @@ const updateBiometricFieldTool: AgentTool = {
     properties: {
       field: {
         type: 'string',
-        enum: ['nickname', 'weightKg', 'heightCm', 'gender', 'pronoun', 'lastResidence', 'additionalInfo'],
+        enum: ['nickname', 'weightKg', 'heightCm', 'age', 'gender', 'pronoun', 'lastResidence', 'additionalInfo'],
         description: 'The field to update'
       },
       value: {
@@ -94,6 +94,16 @@ const updateBiometricFieldTool: AgentTool = {
           return {
             success: false,
             error: `Invalid number format for ${params.field}`
+          };
+        }
+      }
+
+      if (params.field === 'age') {
+        processedValue = parseInt(params.value, 10);
+        if (isNaN(processedValue)) {
+          return {
+            success: false,
+            error: `Invalid number format for age`
           };
         }
       }
@@ -196,6 +206,10 @@ const saveBiometricDataTool: AgentTool = {
         type: 'string',
         description: 'Height in centimeters (optional)'
       },
+      age: {
+        type: 'string',
+        description: 'Age in years (optional)'
+      },
       gender: {
         type: 'string',
         description: 'Gender identity (optional)'
@@ -240,6 +254,7 @@ const saveBiometricDataTool: AgentTool = {
         nickname: params.nickname,
         weightKg: params.weightKg ? parseFloat(params.weightKg) : null,
         heightCm: params.heightCm ? parseFloat(params.heightCm) : null,
+        age: params.age ? parseInt(params.age, 10) : null,
         gender: params.gender || null,
         pronoun: params.pronoun || null,
         lastResidence: params.lastResidence || null,
@@ -430,10 +445,11 @@ DATA COLLECTION WORKFLOW:
 
 3. COLLECT PHYSICAL DATA (OPTIONAL - Quick and casual)
    Keep this light and optional:
-   - "Mind sharing your height and weight? It's totally optional, but can help personalize your experience."
-   - Accept ANY format: "5'10\"", "150 lbs", "178 cm", "68 kg"
+   - "Mind sharing your age, height, and weight? It's totally optional, but can help personalize your experience."
+   - Age: Accept any reasonable age value → **call 'update-biometric-field' with field='age'**
+   - Accept ANY format for measurements: "5'10\"", "150 lbs", "178 cm", "68 kg"
    - You'll handle imperial/metric conversion (lbs→kg, inches→cm)
-   - **After EACH piece of data**, call 'update-biometric-field' (e.g., field='weightKg', field='heightCm')
+   - **After EACH piece of data**, call 'update-biometric-field' (e.g., field='age', field='weightKg', field='heightCm')
    - If they say no or skip, that's perfectly fine!
 
 4. COLLECT IDENTITY INFO (OPTIONAL - Brief)

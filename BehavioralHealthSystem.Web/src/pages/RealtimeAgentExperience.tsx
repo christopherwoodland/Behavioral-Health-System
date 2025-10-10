@@ -13,7 +13,8 @@ import {
   CheckCircle,
   Bot,
   ClipboardList,
-  FileText
+  FileText,
+  Plus
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
@@ -36,6 +37,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { agentOrchestrationService } from '@/services/agentOrchestrationService';
 import { phq2Agent } from '@/agents/phq2Agent';
 import { phq9Agent } from '@/agents/phq9Agent';
+import { matronAgent } from '@/agents/matronAgent';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -62,6 +64,46 @@ interface SessionStatus {
 // Verbose logging flag - controlled via VITE_ENABLE_VERBOSE_LOGGING environment variable
 // This provides extremely granular debugging (every message render, transcript event, etc.)
 const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === 'true';
+
+/**
+ * Get agent-specific color classes for visual differentiation
+ * @param agentId - The agent identifier (tars, matron, phq2, phq9)
+ * @returns Tailwind CSS classes for background and text colors
+ */
+const getAgentColor = (agentId?: string): { bg: string; text: string; border: string } => {
+  switch (agentId) {
+    case 'tars':
+      return {
+        bg: 'bg-blue-50 dark:bg-blue-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-blue-500'
+      };
+    case 'matron':
+      return {
+        bg: 'bg-green-50 dark:bg-green-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-green-500'
+      };
+    case 'phq2':
+      return {
+        bg: 'bg-purple-50 dark:bg-purple-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-purple-500'
+      };
+    case 'phq9':
+      return {
+        bg: 'bg-indigo-50 dark:bg-indigo-900/20',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: 'border-l-4 border-indigo-600'
+      };
+    default:
+      return {
+        bg: 'bg-gray-100 dark:bg-gray-800',
+        text: 'text-gray-900 dark:text-gray-100',
+        border: ''
+      };
+  }
+};
 
 export const RealtimeAgentExperience: React.FC = () => {
   // Authentication context
@@ -183,6 +225,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     const humorMessage: ConversationMessage = {
       id: `humor-${Date.now()}`,
       role: 'assistant',
+      agentId: currentAgent.id,
       content: `Humor level adjusted to ${clampedLevel}%. ${
         clampedLevel >= 80 ? `Got it, ${messageName}! I'm feeling pretty relaxed and friendly now.` :
         clampedLevel >= 60 ? `Understood, ${firstName}. I'll be professional but warm and supportive.` :
@@ -329,6 +372,7 @@ export const RealtimeAgentExperience: React.FC = () => {
           const confirmMessage: ConversationMessage = {
             id: `session-close-${Date.now()}`,
             role: 'assistant',
+            agentId: currentAgent.id,
             content: `Thank you for our conversation today, ${getFirstName()}. Your session is ending now. Take care and remember - support is always available when you need it.`,
             timestamp: new Date().toISOString()
           };
@@ -361,6 +405,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const pauseMessage: ConversationMessage = {
               id: `session-pause-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `Session paused, ${getFirstName()}. I'll be here waiting when you're ready. Just say "resume session" to continue our conversation.`,
               timestamp: new Date().toISOString()
             };
@@ -381,6 +426,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const alreadyPausedMessage: ConversationMessage = {
               id: `session-already-paused-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `The session is already paused, ${getFirstName()}. Say "resume session" to continue.`,
               timestamp: new Date().toISOString()
             };
@@ -396,6 +442,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const resumeMessage: ConversationMessage = {
               id: `session-resume-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `Welcome back, ${getFirstName()}! Session resumed. How can I help you today?`,
               timestamp: new Date().toISOString()
             };
@@ -416,6 +463,7 @@ export const RealtimeAgentExperience: React.FC = () => {
             const notPausedMessage: ConversationMessage = {
               id: `session-not-paused-${Date.now()}`,
               role: 'assistant',
+              agentId: currentAgent.id,
               content: `The session is already active, ${getFirstName()}. How can I help you?`,
               timestamp: new Date().toISOString()
             };
@@ -428,6 +476,7 @@ export const RealtimeAgentExperience: React.FC = () => {
           const helpMessage: ConversationMessage = {
             id: `help-${Date.now()}`,
             role: 'assistant',
+            agentId: currentAgent.id,
             content: `Here are the voice commands you can use, ${getFirstName()}:
 
 🎭 **Humor Settings:**
@@ -723,7 +772,9 @@ Just speak naturally - I understand variations of these commands!`,
   // Agent display name not needed for single agent
   // const getAgentDisplayName = () => 'AI Assistant';
 
-  // Generate dynamic initial greeting based on humor level
+  // NOTE: Initial greeting is now handled by Tars through Realtime API
+  // This function is kept for reference but no longer used
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const getInitialGreeting = (humorLevel: number): string => {
     const firstName = getFirstName();
     const displayName = getAppropiateName(humorLevel);
@@ -805,11 +856,12 @@ Just speak naturally - I understand variations of these commands!`,
       // MULTI-AGENT SETUP: Register specialized agents with orchestration service
       // =============================================================================
 
-      // Register specialized PHQ assessment agents
+      // Register specialized agents
       console.log('🤖 ========================================');
       console.log('🤖 REGISTERING AGENTS');
       console.log('🤖 ========================================');
 
+      agentOrchestrationService.registerAgent(matronAgent);
       agentOrchestrationService.registerAgent(phq2Agent);
       agentOrchestrationService.registerAgent(phq9Agent);
 
@@ -884,15 +936,136 @@ Just speak naturally - I understand variations of these commands!`,
               setHumorLevel(level);
               return { success: true, humorLevel: level, message: `Humor level updated to ${level}%` };
             }
+          },
+          {
+            name: 'check-biometric-data',
+            description: 'Checks if the user has biometric data saved. MUST be called on first interaction before greeting. Use this to determine if the Matron agent needs to collect user data.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async (params: any) => {
+              const userId = params.userId || authenticatedUserId;
+              console.log(`➕ Checking biometric data for user: ${userId}`);
+
+              try {
+                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}/exists`;
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                  throw new Error(`Failed to check biometric data: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(`➕ Biometric data exists: ${data.exists}`);
+
+                return {
+                  exists: data.exists,
+                  userId: userId,
+                  message: data.exists
+                    ? 'User has biometric data saved'
+                    : 'User does not have biometric data - Matron agent should be called'
+                };
+              } catch (error) {
+                console.error('➕ Error checking biometric data:', error);
+                return {
+                  exists: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  message: 'Failed to check biometric data - assume not exists'
+                };
+              }
+            }
+          },
+          {
+            name: 'get-biometric-data',
+            description: 'Retrieves the user\'s saved biometric data including nickname, preferences, hobbies, likes, and dislikes. Use this data to personalize the conversation.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async (params: any) => {
+              const userId = params.userId || authenticatedUserId;
+              console.log(`➕ Retrieving biometric data for user: ${userId}`);
+
+              try {
+                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}`;
+                const response = await fetch(apiUrl);
+
+                if (!response.ok) {
+                  if (response.status === 404) {
+                    return {
+                      exists: false,
+                      message: 'No biometric data found for user'
+                    };
+                  }
+                  throw new Error(`Failed to retrieve biometric data: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(`➕ Retrieved biometric data:`, data);
+
+                return {
+                  exists: true,
+                  data: data,
+                  nickname: data.nickname,
+                  lastResidence: data.lastResidence,
+                  hobbies: data.hobbies,
+                  likes: data.likes,
+                  dislikes: data.dislikes,
+                  additionalInfo: data.additionalInfo,
+                  message: `User ${data.nickname}'s preferences loaded successfully`
+                };
+              } catch (error) {
+                console.error('➕ Error retrieving biometric data:', error);
+                return {
+                  exists: false,
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                  message: 'Failed to retrieve biometric data'
+                };
+              }
+            }
           }
         ],
         systemMessage: `You are Tars, the main coordination assistant for ${getFirstName()}. Your role is to:
-1. Greet and support ${getFirstName()}
-2. Route mental health assessment requests to specialized agents
-3. Manage conversation flow and provide general support
-4. Handle session control (pause/resume/end)
+1. Check for biometric data on first interaction
+2. Greet and support ${getFirstName()} (using nickname if available from biometric data)
+3. Route specialized tasks to appropriate agents (PHQ assessments, biometric collection)
+4. Manage conversation flow and provide general support
+5. Handle session control (pause/resume/end)
 
 You are communicating with ${getFirstName()}, and your current humor level is set to ${humorLevel}%.
+
+CRITICAL FIRST INTERACTION PROTOCOL:
+On the VERY FIRST interaction with ${getFirstName()}, you MUST follow this EXACT sequence:
+
+STEP 1 - GREETING (say this immediately):
+   "Hello! I'm Tars, your coordination assistant."
+
+STEP 2 - CHECK BIOMETRIC DATA (say this, then call the tool):
+   "Let me see if I have your information on file..."
+   Then IMMEDIATELY call 'check-biometric-data' tool
+
+STEP 3a - IF biometric data EXISTS:
+   - Call 'get-biometric-data' to load user preferences
+   - Say: "Great! I found your profile, [nickname]."
+   - Use the user's nickname from the biometric data for personalization
+   - Reference their hobbies, interests, or location naturally in conversation
+   - Ask how you can help them today
+
+STEP 3b - IF biometric data DOES NOT EXIST:
+   - Say: "I don't have your information yet. Let me connect you with Matron, our friendly intake coordinator, who will help us get to know you better. I'll hand you over to Matron now..."
+   - Wait a moment to let your announcement be heard
+   - Then call 'Agent_Matron' to collect biometric data
+   - After Matron completes, call 'get-biometric-data' to load the newly saved preferences
+   - Welcome them back: "Welcome back, [nickname]! Thanks for sharing that with Matron."
+   - Ask how you can help them today
+
+IMPORTANT:
+- This biometric check should happen ONCE at the start of the conversation
+- ALWAYS greet first, THEN check for data
+- Don't skip the greeting - it's important for user experience
 
 CRITICAL NAMING PROTOCOL:
 - ALWAYS use ${getFirstName()} as the primary way to address the user
@@ -930,6 +1103,7 @@ When ${getFirstName()} requests mental health assessments:
 5. When they complete, you'll receive control back
 
 Available specialized agents:
+- "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
 - "Agent_PHQ2": Quick depression screening (2 questions) - use when user wants quick check or "PHQ-2"
 - "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use when user wants full assessment or "PHQ-9"
 
@@ -992,54 +1166,85 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             console.log('🔄 ========================================');
 
             if (result.switchConfig && result.targetAgentId) {
-              // Convert tools to Realtime API format
-              const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig.tools);
+              // Helper function to perform the actual agent switch
+              const performAgentSwitch = async () => {
+                // Convert tools to Realtime API format
+                const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig!.tools);
 
-              console.log('🔄 New agent tools:', realtimeTools.map(t => t.name));
+                console.log('🔄 New agent tools:', realtimeTools.map(t => t.name));
 
-              // Update UI to show the new agent
-              const targetAgentId = result.targetAgentId;
-              const agentDisplayName =
-                targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
-                targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
-                targetAgentId === 'Agent_Tars' ? 'Tars' :
-                'Agent';
+                // Update UI to show the new agent
+                const targetAgentId = result.targetAgentId!;
+                const agentDisplayName =
+                  targetAgentId === 'Agent_Matron' ? 'Matron' :
+                  targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
+                  targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
+                  targetAgentId === 'Agent_Tars' ? 'Tars' :
+                  'Agent';
 
-              setCurrentAgent({
-                id: targetAgentId.toLowerCase().replace('agent_', ''),
-                name: agentDisplayName,
-                isActive: true,
-                isTyping: false
-              });
+                setCurrentAgent({
+                  id: targetAgentId.toLowerCase().replace('agent_', ''),
+                  name: agentDisplayName,
+                  isActive: true,
+                  isTyping: false
+                });
 
-              setSessionStatus(prev => ({
-                ...prev,
-                currentAgent: targetAgentId
-              }));
+                setSessionStatus(prev => ({
+                  ...prev,
+                  currentAgent: targetAgentId
+                }));
 
-              // Announce agent switch for accessibility
-              announceToScreenReader(`Switched to ${agentDisplayName} agent`);
+                // Announce agent switch for accessibility
+                announceToScreenReader(`Switched to ${agentDisplayName} agent`);
 
-              // Determine voice based on agent - PHQ agents use 'cedar', Tars uses default
-              const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
+                // Determine voice based on agent - PHQ agents use 'echo', Tars uses default
+                const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
 
-              // Update session with new agent's instructions and tools
-              const updatedConfig: SessionConfig = {
-                ...convertSettingsToConfig(
-                  azureSettings,
-                  isAudioEnabled,
-                  true,
-                  result.switchConfig.systemMessage,
-                  enableInputTranscription
-                ),
-                tools: realtimeTools,
-                voice: agentVoice
+                // Build updated session config
+                const updatedConfig: SessionConfig = {
+                  ...convertSettingsToConfig(
+                    azureSettings,
+                    isAudioEnabled,
+                    true,
+                    result.switchConfig!.systemMessage,
+                    enableInputTranscription
+                  ),
+                  tools: realtimeTools
+                };
+
+                // Only include voice parameter if we're not in the middle of an active response
+                // This prevents "Cannot update a conversation's voice if assistant audio is present" error
+                if (agentService.canUpdateVoice()) {
+                  updatedConfig.voice = agentVoice;
+                  console.log(`🎤 Updating session with voice: ${agentVoice}`);
+                } else {
+                  console.log('⚠️ Skipping voice update - assistant audio is active');
+                }
+
+                await agentService.updateSession(updatedConfig);
+
+                console.log('✅ Session updated for new agent');
+                console.log('🔄 ========================================');
               };
 
-              await agentService.updateSession(updatedConfig);
+              // Add delay when switching from Tars to any other agent
+              // This allows Tars's handoff announcement to be heard before the switch
+              const HANDOFF_DELAY_MS = parseInt(import.meta.env.VITE_AGENT_HANDOFF_DELAY_MS || '1500', 10);
 
-              console.log('✅ Session updated for new agent');
-              console.log('🔄 ========================================');
+              if (currentAgent.id === 'tars' && result.targetAgentId !== 'Agent_Tars') {
+                const targetAgentName =
+                  result.targetAgentId === 'Agent_Matron' ? 'Matron' :
+                  result.targetAgentId === 'Agent_PHQ2' ? 'PHQ-2' :
+                  result.targetAgentId === 'Agent_PHQ9' ? 'PHQ-9' :
+                  'agent';
+                console.log(`⏱️ Delaying ${targetAgentName} handoff by ${HANDOFF_DELAY_MS}ms to allow announcement...`);
+                setTimeout(() => {
+                  performAgentSwitch();
+                }, HANDOFF_DELAY_MS);
+              } else {
+                // Switch immediately for other agent transitions (e.g., returning to Tars)
+                await performAgentSwitch();
+              }
 
               // Return acknowledgment that agent switch is complete
               return {
@@ -1151,40 +1356,14 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       // Clear previous state
       setLiveTranscripts([]);
       setCurrentAITranscript('');
+      setMessages([]); // Start with empty messages - let Tars greet naturally
 
-      // Generate welcome message content
-      const welcomeContent = getInitialGreeting(humorLevel);
+      // NOTE: We no longer send a pre-generated welcome message
+      // Instead, Tars will greet naturally through the Realtime API
+      // This prevents the "active response in progress" error
+      // Tars system prompt instructs it to greet first, then check biometric data
 
-      // Add welcome message to UI
-      const welcomeMessage: ConversationMessage = {
-        id: `welcome-${Date.now()}`,
-        role: 'assistant',
-        content: welcomeContent,
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages([welcomeMessage]);
-
-      // Save welcome message to transcript
-      if (authenticatedUserId) {
-        chatTranscriptService.addAssistantMessage(
-          welcomeContent,
-          'welcome-greeting',
-          { humorLevel, isWelcomeMessage: true }
-        );
-      }
-      announceToScreenReader(welcomeContent);
-
-      // Have AI speak the welcome message
-      // The service will wait for data channel to be ready before speaking
-      setTimeout(async () => {
-        try {
-          await agentService.speakAssistantMessage(welcomeContent);
-          console.log('🎤 Welcome message spoken by AI');
-        } catch (error) {
-          console.error('Failed to speak welcome message:', error);
-        }
-      }, 100); // Minimal delay, service handles waiting for ready state
+      announceToScreenReader('Session started. Tars will greet you shortly.');
 
     } catch (error) {
       console.error('Failed to start session:', error);
@@ -1343,6 +1522,12 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   }`}
                   size={24}
                 />
+              ) : currentAgent.id === 'matron' ? (
+                <span className={`text-white text-2xl transition-transform duration-300 ${
+                  currentAgent.isTyping ? 'animate-pulse scale-110' : ''
+                }`}>
+                  ➕
+                </span>
               ) : currentAgent.id === 'phq2' ? (
                 <ClipboardList
                   className={`text-white transition-transform duration-300 ${
@@ -1648,6 +1833,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           if (ENABLE_VERBOSE_LOGGING) {
             console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
           }
+          const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
           return (
           <div
             key={message.id}
@@ -1657,22 +1843,31 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               className={`max-w-[80%] p-3 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              } ${message.isTranscript ? 'border-l-4 border-yellow-400' : ''}`}
+                  : agentColors ? `${agentColors.bg} ${agentColors.text} ${agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+              } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
             >
               {message.role === 'assistant' && (
                 <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
-                  {currentAgent.id === 'tars' ? (
+                  {message.agentId === 'tars' || currentAgent.id === 'tars' ? (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : currentAgent.id === 'phq2' ? (
+                  ) : message.agentId === 'matron' || currentAgent.id === 'matron' ? (
+                    <Plus size={16} className="text-gray-600 dark:text-gray-400" />
+                  ) : message.agentId === 'phq2' || currentAgent.id === 'phq2' ? (
                     <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : currentAgent.id === 'phq9' ? (
+                  ) : message.agentId === 'phq9' || currentAgent.id === 'phq9' ? (
                     <FileText size={16} className="text-gray-600 dark:text-gray-400" />
                   ) : (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />
                   )}
                   <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                    {currentAgent.name}
+                    {message.agentId ?
+                      message.agentId === 'tars' ? 'Tars' :
+                      message.agentId === 'matron' ? 'Matron' :
+                      message.agentId === 'phq2' ? 'PHQ-2' :
+                      message.agentId === 'phq9' ? 'PHQ-9' :
+                      currentAgent.name
+                      : currentAgent.name
+                    }
                   </span>
                 </div>
               )}

@@ -412,22 +412,15 @@ public class SaveChatTranscriptFunctionTests
     public async Task Run_WithInvalidJson_ReturnsBadRequest()
     {
         // Arrange
-        var request = new Mock<HttpRequestData>(MockBehavior.Strict, Mock.Of<FunctionContext>());
+        var request = new Mock<HttpRequestData>(MockBehavior.Loose, Mock.Of<FunctionContext>());
         var requestStream = new MemoryStream(Encoding.UTF8.GetBytes("invalid json"));
         request.Setup(r => r.Body).Returns(requestStream);
 
         var responseStream = new MemoryStream();
-        var response = new Mock<HttpResponseData>(MockBehavior.Strict, Mock.Of<FunctionContext>());
-        response.Setup(r => r.StatusCode).Returns(HttpStatusCode.BadRequest);
+        var response = new Mock<HttpResponseData>(MockBehavior.Loose, Mock.Of<FunctionContext>());
+        response.SetupProperty(r => r.StatusCode, HttpStatusCode.BadRequest);
         response.Setup(r => r.Body).Returns(responseStream);
         response.Setup(r => r.Headers).Returns(new HttpHeadersCollection());
-        response.Setup(r => r.WriteStringAsync(It.IsAny<string>(), default))
-            .Callback<string, CancellationToken>((s, ct) =>
-            {
-                var bytes = Encoding.UTF8.GetBytes(s);
-                responseStream.Write(bytes, 0, bytes.Length);
-            })
-            .Returns(Task.CompletedTask);
 
         request.Setup(r => r.CreateResponse()).Returns(response.Object);
 
@@ -491,28 +484,14 @@ public class SaveChatTranscriptFunctionTests
         var json = JsonSerializer.Serialize(requestData);
         var requestStream = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
-        var request = new Mock<HttpRequestData>(MockBehavior.Strict, Mock.Of<FunctionContext>());
+        var request = new Mock<HttpRequestData>(MockBehavior.Loose, Mock.Of<FunctionContext>());
         request.Setup(r => r.Body).Returns(requestStream);
 
         var responseStream = new MemoryStream();
-        var response = new Mock<HttpResponseData>(MockBehavior.Strict, Mock.Of<FunctionContext>());
-        response.Setup(r => r.StatusCode).Returns(HttpStatusCode.OK);
+        var response = new Mock<HttpResponseData>(MockBehavior.Loose, Mock.Of<FunctionContext>());
+        response.SetupProperty(r => r.StatusCode, HttpStatusCode.OK);
         response.Setup(r => r.Body).Returns(responseStream);
         response.Setup(r => r.Headers).Returns(new HttpHeadersCollection());
-        response.Setup(r => r.WriteStringAsync(It.IsAny<string>(), default))
-            .Callback<string, CancellationToken>((s, ct) =>
-            {
-                var bytes = Encoding.UTF8.GetBytes(s);
-                responseStream.Write(bytes, 0, bytes.Length);
-            })
-            .Returns(Task.CompletedTask);
-        response.Setup(r => r.WriteAsJsonAsync(It.IsAny<object>(), It.IsAny<HttpStatusCode>(), It.IsAny<CancellationToken>()))
-            .Callback<object, HttpStatusCode, CancellationToken>((obj, status, ct) =>
-            {
-                var jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(obj));
-                responseStream.Write(jsonBytes, 0, jsonBytes.Length);
-            })
-            .Returns(ValueTask.CompletedTask);
 
         request.Setup(r => r.CreateResponse()).Returns(response.Object);
 

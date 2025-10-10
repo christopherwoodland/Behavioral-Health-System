@@ -133,10 +133,9 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
 
           {/* User menu and theme toggle */}
           <div className="flex items-center space-x-2">
-            {/* User indicator - always visible */}
-            <div className="relative" data-user-menu>
-              {isAuthEnabled && isAuthenticated && user ? (
-                // Authenticated user - fully functional
+            {/* User indicator - only show when authenticated */}
+            {isAuthEnabled && isAuthenticated && user && (
+              <div className="relative" data-user-menu>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   onKeyDown={handleEnterSpace(() => setShowUserMenu(!showUserMenu))}
@@ -164,35 +163,9 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-              ) : (
-                // Disabled user indicator - grey and unclickable
-                <div
-                  className="
-                    flex items-center space-x-2 p-2 rounded-md text-gray-400 cursor-not-allowed opacity-50
-                    dark:text-gray-500 transition-colors touch-target
-                  "
-                  aria-label="User authentication disabled"
-                  title={!isAuthEnabled ? "Authentication is disabled" : "Not signed in"}
-                >
-                  <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    ?
-                  </div>
-                  <span className="hidden sm:block text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {!isAuthEnabled ? "Auth Disabled" : "Not Signed In"}
-                  </span>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              )}
 
-              {/* User dropdown menu - only show for authenticated users */}
-              {isAuthEnabled && isAuthenticated && user && showUserMenu && (
+                {/* User dropdown menu */}
+                {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
                   <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center space-x-3">
@@ -222,7 +195,7 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
                         setShowUserMenu(false);
                       }}
                       className="
-                        w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 
+                        w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300
                         hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors
                       "
                     >
@@ -230,8 +203,9 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <button
               onClick={toggleTheme}

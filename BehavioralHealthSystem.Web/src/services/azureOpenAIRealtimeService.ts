@@ -15,6 +15,9 @@ export interface RealtimeMessage {
   isTranscript?: boolean; // Marks messages that are transcripts vs full responses
   isPartial?: boolean; // For live streaming transcripts
 
+  // Agent tracking - which agent sent this message
+  agentId?: string; // 'tars', 'matron', 'phq2', 'phq9'
+
   // Utterance tracking - links messages to real-time speech events
   utteranceId?: string; // Links this message to a specific utterance
   speaker?: 'user' | 'agent'; // Explicit speaker identifier (redundant with role but clearer)

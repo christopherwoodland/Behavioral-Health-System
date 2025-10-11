@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  RefreshCw, 
-  Download, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock, 
+import {
+  ArrowLeft,
+  RefreshCw,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  Clock,
   XCircle,
   Eye,
   EyeOff,
@@ -62,10 +62,13 @@ const SessionDetail: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-  
+
+  // Feature flags
+  const isAIRiskAssessmentEnabled = import.meta.env.VITE_ENABLE_AI_RISK_ASSESSMENT === 'true';
+
   // DSM-5 condition selection state
   const [selectedDSM5Conditions, setSelectedDSM5Conditions] = useState<string[]>([]);
-  
+
   // Collapsible section states
   const [isTranscriptionExpanded, setIsTranscriptionExpanded] = useState(true);
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
@@ -92,7 +95,7 @@ const SessionDetail: React.FC = () => {
       timestamp: Date.now()
     };
     setToasts(prev => [...prev, newToast]);
-    
+
     // Auto-remove toast after 8 seconds for errors, 5 seconds for others
     const duration = type === 'error' ? 8000 : 5000;
     setTimeout(() => {
@@ -125,17 +128,17 @@ const SessionDetail: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const sessionData = await apiService.getSessionData(sessionId);
       setSession(sessionData);
-      
+
       // Load group data if session belongs to a group
       if (sessionData.groupId) {
         loadGroupData(sessionData.groupId);
       } else {
         setFileGroup(null);
       }
-      
+
       announceToScreenReader(`Session ${sessionId} loaded successfully`);
     } catch (err) {
       const appError = err as AppError;
@@ -171,7 +174,7 @@ const SessionDetail: React.FC = () => {
   // Audio controls
   const toggleAudioPlayback = useCallback(() => {
     if (!audioRef.current) return;
-    
+
     if (audioPlaying) {
       audioRef.current.pause();
       setAudioPlaying(false);
@@ -192,7 +195,7 @@ const SessionDetail: React.FC = () => {
     const dataStr = JSON.stringify(session, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `session-${session.sessionId}-${new Date().toISOString().split('T')[0]}.json`;
@@ -200,7 +203,7 @@ const SessionDetail: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     announceToScreenReader('Session data download started');
   }, [session, announceToScreenReader]);
 
@@ -211,10 +214,10 @@ const SessionDetail: React.FC = () => {
     try {
       // Use the audioUrl directly from session data
       const downloadUrl = session.audioUrl;
-      
+
       // Open the download URL in a new tab
       window.open(downloadUrl, '_blank');
-      
+
       announceToScreenReader(`Downloading audio file: ${session.audioFileName || 'audio file'}`);
     } catch (error) {
       console.error('Failed to download audio file:', error);
@@ -225,12 +228,12 @@ const SessionDetail: React.FC = () => {
   // Re-run session analysis
   const handleRerunSession = useCallback(() => {
     if (!session) return;
-    
+
     const confirmed = window.confirm('Are you sure you want to re-run the analysis for this session? You will be redirected to the upload page with the session data pre-filled.');
     if (!confirmed) return;
 
     announceToScreenReader('Redirecting to upload page for re-run...');
-    
+
     // Navigate to upload page with session data
     navigate('/upload', {
       state: {
@@ -247,7 +250,7 @@ const SessionDetail: React.FC = () => {
     // For any unknown status that contains "error" or "fail", treat as error
     const normalizedStatus = status.toLowerCase();
     let config = statusConfig[status as keyof typeof statusConfig];
-    
+
     if (!config) {
       if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
         config = statusConfig.error;
@@ -256,9 +259,9 @@ const SessionDetail: React.FC = () => {
         config = statusConfig.initiated;
       }
     }
-    
+
     const Icon = config.icon;
-    
+
     return (
       <div className="flex items-center space-x-2">
         <span
@@ -354,7 +357,7 @@ const SessionDetail: React.FC = () => {
             <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
             Back to Sessions
           </button>
-          
+
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Session Details
@@ -364,7 +367,7 @@ const SessionDetail: React.FC = () => {
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button type="button"
             onClick={toggleRawJson}
@@ -374,7 +377,7 @@ const SessionDetail: React.FC = () => {
             {showRawJson ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
             {showRawJson ? 'Hide JSON' : 'Show JSON'}
           </button>
-          
+
           <button type="button"
             onClick={refreshSession}
             disabled={isRefreshing}
@@ -384,7 +387,7 @@ const SessionDetail: React.FC = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </button>
-          
+
           <button type="button"
             onClick={handleRerunSession}
             className="btn btn--secondary"
@@ -393,7 +396,7 @@ const SessionDetail: React.FC = () => {
             <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
             Re-run
           </button>
-          
+
           <button type="button"
             onClick={downloadSessionData}
             className="btn btn--primary"
@@ -428,7 +431,7 @@ const SessionDetail: React.FC = () => {
             <Info className="w-5 h-5 mr-2" aria-hidden="true" />
             Basic Information
           </h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -436,7 +439,7 @@ const SessionDetail: React.FC = () => {
               </label>
               <StatusBadge status={session.status} />
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -452,7 +455,7 @@ const SessionDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <Clock className="w-4 h-4 inline mr-1" aria-hidden="true" />
@@ -468,7 +471,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 <User className="w-4 h-4 inline mr-1" aria-hidden="true" />
@@ -478,7 +481,7 @@ const SessionDetail: React.FC = () => {
                 {session.userId}
               </div>
             </div>
-            
+
             {session.metadata_user_id && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -490,14 +493,14 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.groupId && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   <Activity className="w-4 h-4 inline mr-1" aria-hidden="true" />
                   File Group
                 </label>
-                
+
                 {/* Group Name (if available) */}
                 {fileGroup ? (
                   <div className="space-y-2">
@@ -543,7 +546,7 @@ const SessionDetail: React.FC = () => {
                     </Link>
                   </div>
                 )}
-                
+
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   This session belongs to a file group. Click above to see all related sessions.
                 </p>
@@ -558,7 +561,7 @@ const SessionDetail: React.FC = () => {
             <FileAudio className="w-5 h-5 mr-2" aria-hidden="true" />
             Audio Information
           </h2>
-          
+
           <div className="space-y-4">
             {session.audioFileName && session.audioUrl && (
               <div>
@@ -574,7 +577,7 @@ const SessionDetail: React.FC = () => {
                 </button>
               </div>
             )}
-            
+
             {session.audioFileName && !session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -585,7 +588,7 @@ const SessionDetail: React.FC = () => {
                 </span>
               </div>
             )}
-            
+
             {session.audioUrl && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -659,7 +662,7 @@ const SessionDetail: React.FC = () => {
             <User className="w-5 h-5 mr-2" aria-hidden="true" />
             Patient Information
           </h2>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {session.userMetadata.age && (
               <div>
@@ -671,7 +674,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.gender && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -682,7 +685,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.weight && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -693,7 +696,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.race && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -704,7 +707,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.ethnicity && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -715,7 +718,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.zipcode && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -726,7 +729,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.language !== undefined && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -737,7 +740,7 @@ const SessionDetail: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             {session.userMetadata.sessionNotes && (
               <div className="md:col-span-2 lg:col-span-3">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -773,7 +776,7 @@ const SessionDetail: React.FC = () => {
           </button>
           {isAnalysisExpanded && (
             <div id="analysis-content" className="p-6 border-t border-gray-200 dark:border-gray-700">
-          
+
           <div className="space-y-6">
             {/* Mental Health Scores */}
             {(session.analysisResults || session.prediction) && (
@@ -782,7 +785,7 @@ const SessionDetail: React.FC = () => {
                   <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
                   Mental Health Scores
                 </h3>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Depression Score */}
                   {((session.prediction as any)?.predicted_score_depression || session.prediction?.predictedScoreDepression || session.analysisResults?.depressionScore) && (
@@ -795,17 +798,17 @@ const SessionDetail: React.FC = () => {
                       </div>
                       <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                         {/* Prioritize descriptive string values over numeric values */}
-                        {(session.prediction as any)?.predicted_score_depression ? 
-                           formatScoreCategory((session.prediction as any).predicted_score_depression) : 
-                         session.prediction?.predictedScoreDepression ? 
-                           formatScoreCategory(session.prediction.predictedScoreDepression) : 
-                         session.analysisResults?.depressionScore ? 
-                           session.analysisResults.depressionScore.toFixed(2) : 
+                        {(session.prediction as any)?.predicted_score_depression ?
+                           formatScoreCategory((session.prediction as any).predicted_score_depression) :
+                         session.prediction?.predictedScoreDepression ?
+                           formatScoreCategory(session.prediction.predictedScoreDepression) :
+                         session.analysisResults?.depressionScore ?
+                           session.analysisResults.depressionScore.toFixed(2) :
                            'N/A'}
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Anxiety Score */}
                   {((session.prediction as any)?.predicted_score_anxiety || session.prediction?.predictedScoreAnxiety || session.analysisResults?.anxietyScore) && (
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
@@ -817,17 +820,17 @@ const SessionDetail: React.FC = () => {
                       </div>
                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                         {/* Prioritize descriptive string values over numeric values */}
-                        {(session.prediction as any)?.predicted_score_anxiety ? 
-                           formatScoreCategory((session.prediction as any).predicted_score_anxiety) : 
-                         session.prediction?.predictedScoreAnxiety ? 
-                           formatScoreCategory(session.prediction.predictedScoreAnxiety) : 
-                         session.analysisResults?.anxietyScore ? 
-                           session.analysisResults.anxietyScore.toFixed(2) : 
+                        {(session.prediction as any)?.predicted_score_anxiety ?
+                           formatScoreCategory((session.prediction as any).predicted_score_anxiety) :
+                         session.prediction?.predictedScoreAnxiety ?
+                           formatScoreCategory(session.prediction.predictedScoreAnxiety) :
+                         session.analysisResults?.anxietyScore ?
+                           session.analysisResults.anxietyScore.toFixed(2) :
                            'N/A'}
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Note: Risk Level and Confidence scores have been removed per user request */}
                   {/* Note: Overall Score (predicted_score) is deprecated and no longer displayed */}
                 </div>
@@ -878,7 +881,8 @@ const SessionDetail: React.FC = () => {
         </div>
       )}
 
-      {/* AI Risk Assessment */}
+      {/* AI Risk Assessment (Quick) - Conditionally rendered based on feature flag */}
+      {isAIRiskAssessmentEnabled && (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setIsRiskAssessmentExpanded(!isRiskAssessmentExpanded)}
@@ -898,7 +902,7 @@ const SessionDetail: React.FC = () => {
         </button>
         {isRiskAssessmentExpanded && (
           <div id="risk-assessment-content" className="border-t border-gray-200 dark:border-gray-700">
-                  <RiskAssessmentComponent 
+                  <RiskAssessmentComponent
               sessionId={session.sessionId}
               existingAssessment={session.riskAssessment || null}
               onAssessmentUpdated={(assessment) => {
@@ -920,8 +924,10 @@ const SessionDetail: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
-      {/* Extended AI Risk Assessment */}
+      {/* Extended AI Risk Assessment - Conditionally rendered based on feature flag */}
+      {isAIRiskAssessmentEnabled && (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setIsExtendedRiskExpanded(!isExtendedRiskExpanded)}
@@ -948,7 +954,7 @@ const SessionDetail: React.FC = () => {
                   Select Mental Health Conditions for Assessment
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Choose specific DSM-5 conditions to include in the extended risk assessment. If no conditions are selected, 
+                  Choose specific DSM-5 conditions to include in the extended risk assessment. If no conditions are selected,
                   the assessment will default to schizophrenia evaluation only.
                 </p>
                 <div className="relative">
@@ -959,7 +965,7 @@ const SessionDetail: React.FC = () => {
                   />
                 </div>
               </div>
-              
+
               {/* Extended Risk Assessment Component */}
               <ExtendedRiskAssessmentButton
                 sessionId={session.sessionId}
@@ -984,6 +990,7 @@ const SessionDetail: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Toast Notifications */}
       {toasts.length > 0 && (

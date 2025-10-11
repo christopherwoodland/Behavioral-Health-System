@@ -1272,10 +1272,23 @@ export class AzureOpenAIRealtimeService {
 
         // Error handling
         case 'error':
-          console.error('❌ Realtime API error:', realtimeEvent.error?.message);
-          this.updateConversationState({ state: 'error', message: realtimeEvent.error?.message || 'Unknown error' });
-          if (this.onErrorCallback) {
-            this.onErrorCallback(new Error(realtimeEvent.error?.message || 'Realtime API error'));
+          const errorMessage = realtimeEvent.error?.message || 'Unknown error';
+
+          // Handle known non-critical errors more gracefully
+          if (errorMessage.includes('Cannot update a conversation\'s voice if assistant audio is present')) {
+            console.warn('⚠️ Voice update skipped - assistant is speaking:', errorMessage);
+            // Don't treat this as a critical error, just log it
+            this.updateConversationState({ state: 'speaking', message: 'Voice update deferred' });
+          } else if (errorMessage.includes('Cancellation failed: no active response found')) {
+            console.warn('⚠️ Cancellation attempted on already-completed response:', errorMessage);
+            // This happens when we try to interrupt a response that just finished - it's harmless
+            // Don't treat as error, conversation is already in correct state
+          } else {
+            console.error('❌ Realtime API error:', errorMessage);
+            this.updateConversationState({ state: 'error', message: errorMessage });
+            if (this.onErrorCallback) {
+              this.onErrorCallback(new Error(errorMessage));
+            }
           }
           break;
 
@@ -1455,6 +1468,73 @@ export class AzureOpenAIRealtimeService {
 
     } catch (error) {
       console.error('Failed to speak assistant message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send initial greeting after data channel is ready
+   * Waits for data channel to open, then sends a system message to trigger AI greeting
+   */
+  async sendInitialGreeting(instructions: string): Promise<void> {
+    // Wait for data channel to be open
+    const waitForDataChannel = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        if (this.dataChannel?.readyState === 'open') {
+          resolve();
+          return;
+        }
+
+        const timeout = setTimeout(() => {
+          reject(new Error('Timeout waiting for data channel to open'));
+        }, 10000); // 10 second timeout
+
+        const checkInterval = setInterval(() => {
+          if (this.dataChannel?.readyState === 'open') {
+            clearTimeout(timeout);
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100); // Check every 100ms
+      });
+    };
+
+    try {
+      // Wait for data channel to be ready
+      await waitForDataChannel();
+      console.log('✅ Data channel is ready for initial greeting');
+
+      // Send system message to trigger greeting
+      const systemMessageEvent = {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'system',
+          content: [
+            {
+              type: 'input_text',
+              text: instructions
+            }
+          ]
+        }
+      };
+
+      this.dataChannel!.send(JSON.stringify(systemMessageEvent));
+      console.log('📤 Sent system message for initial greeting');
+
+      // Trigger response from AI
+      const responseEvent = {
+        type: 'response.create',
+        response: {
+          modalities: ['text', 'audio']
+        }
+      };
+
+      this.dataChannel!.send(JSON.stringify(responseEvent));
+      console.log('🎤 Triggered AI response for greeting');
+
+    } catch (error) {
+      console.error('Failed to send initial greeting:', error);
       throw error;
     }
   }

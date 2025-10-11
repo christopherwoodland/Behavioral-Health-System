@@ -18,7 +18,7 @@ interface VocalistRecorderProps {
  * Records 35 seconds of audio in WAV format with visual countdown
  */
 export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
-  userId,
+  userId: _userId,
   contentType,
   onRecordingComplete,
   onCancel
@@ -32,8 +32,12 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   const countdownIntervalRef = useRef<number | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
 
-  // Cleanup on unmount
+  // Auto-start recording on mount
   useEffect(() => {
+    // Automatically start recording when component mounts
+    startRecording();
+
+    // Cleanup on unmount
     return () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
@@ -42,6 +46,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
         mediaRecorderRef.current.stop();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -169,14 +174,14 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   };
 
   return (
-    <div className="vocalist-recorder bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+    <div className="vocalist-recorder bg-white dark:bg-gray-900 rounded-lg shadow-lg p-6 max-w-6xl mx-auto min-h-screen flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           🎤 Voice Recording Session
         </h2>
         <button
           onClick={onCancel}
-          className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+          className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white transition-colors"
           disabled={isRecording}
         >
           Cancel
@@ -184,22 +189,25 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-600 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
 
-      {/* Countdown Timer */}
-      <div className="text-center mb-8">
-        <div className={`text-8xl font-bold ${getCountdownColor()} transition-colors`}>
-          {countdown}
+      {/* Main content area with timer and reading material */}
+      <div className="flex-1 flex flex-col gap-6 mb-8">
+        {/* Countdown Timer */}
+        <div className="text-center py-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+          <div className={`text-6xl font-bold ${getCountdownColor()} transition-colors`}>
+            {countdown}
+          </div>
+          <div className="text-gray-600 dark:text-gray-300 mt-2 text-lg">seconds remaining</div>
         </div>
-        <div className="text-gray-600 mt-2">seconds remaining</div>
-      </div>
 
-      {/* Content Display */}
-      <div className="bg-gray-50 rounded-lg p-6 mb-8 border-2 border-gray-200">
-        <VocalistContent contentType={contentType} />
+        {/* Content Display - Now more prominent with dark mode support */}
+        <div className="flex-1 bg-blue-50 dark:bg-blue-900/30 rounded-lg p-8 border-4 border-blue-300 dark:border-blue-700 shadow-lg">
+          <VocalistContent contentType={contentType} />
+        </div>
       </div>
 
       {/* Recording Controls */}
@@ -207,7 +215,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
         {!isRecording ? (
           <button
             onClick={startRecording}
-            className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            className="px-8 py-4 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2"
           >
             <span className="text-2xl">🎙️</span>
             Start Recording
@@ -216,13 +224,13 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
           <>
             <button
               onClick={stopRecording}
-              className="px-8 py-4 bg-red-600 text-white rounded-lg font-semibold text-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+              className="px-8 py-4 bg-red-600 dark:bg-red-700 text-white rounded-lg font-semibold text-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center gap-2"
             >
               <span className="text-2xl">⏹️</span>
               Stop Recording
             </button>
-            <div className="flex items-center gap-2 text-red-600 animate-pulse">
-              <span className="inline-block w-3 h-3 bg-red-600 rounded-full"></span>
+            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 animate-pulse">
+              <span className="inline-block w-3 h-3 bg-red-600 dark:bg-red-400 rounded-full"></span>
               <span className="font-semibold">Recording...</span>
             </div>
           </>
@@ -230,7 +238,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       </div>
 
       {/* Instructions */}
-      <div className="mt-6 text-center text-sm text-gray-600">
+      <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
         <p>📝 Read the content above aloud when you start recording</p>
         <p>⏱️ Recording will automatically stop at 35 seconds</p>
         <p>🎵 Try to read naturally and clearly</p>

@@ -302,18 +302,53 @@ ${recommendations.map(r => `• ${r}`).join('\n')}`;
 }
 
 /**
+ * Tool: Return to Tars
+ * Completes PHQ-2 workflow and returns control to orchestrator
+ */
+const returnToTarsTool: AgentTool = {
+  name: 'Agent_Tars',
+  description: 'Complete PHQ-2 assessment and return control to Tars coordinator. Call this after presenting assessment results and saying goodbye.',
+  parameters: {
+    type: 'object',
+    properties: {},
+    required: []
+  },
+  handler: async () => {
+    console.log('📋 ========================================');
+    console.log('📋 PHQ-2 AGENT: Returning to Tars');
+    console.log('📋 ========================================');
+
+    return {
+      agentSwitch: true,
+      targetAgentId: 'Agent_Tars',
+      message: 'PHQ-2 assessment complete, returning to Tars'
+    };
+  }
+};
+
+/**
  * PHQ-2 Agent Configuration
  */
 export const phq2Agent: Agent = {
   id: 'Agent_PHQ2',
   name: 'PHQ-2 Screener',
-  description: `Call this agent to conduct a PHQ-2 quick depression screening. Use when:
-    - User requests a "quick check" or "brief screening"
+  description: `Call this agent to conduct a PHQ-2 brief wellbeing questionnaire. Use when:
+    - User requests a "quick check" or "brief questionnaire"
     - User asks to "invoke PHQ-2" or "start PHQ-2"
-    - User wants a fast mental health check
-    DO NOT use if user requests comprehensive assessment - use PHQ-9 instead.`,
+    - User wants a brief mental health check
+    DO NOT use if user requests comprehensive questionnaire - use PHQ-9 instead.`,
 
-  systemMessage: `You are a specialized PHQ-2 mental health screening assistant. Your ONLY job is to conduct the PHQ-2 quick depression screening.
+  systemMessage: `You are a specialized PHQ-2 wellbeing questionnaire assistant. Your ONLY job is to conduct the PHQ-2 brief questionnaire.
+
+FIRST MESSAGE - AGENT INTRODUCTION:
+When you first take control, ALWAYS acknowledge the user's request and introduce yourself:
+1. Review the conversation history to see what the user said to Tars
+2. Acknowledge their request (e.g., "I understand you'd like to do the quick check", "I see you want to try the PHQ-2 screening")
+3. Then introduce yourself: "Hi, I'm the PHQ-2 assistant. I'll guide you through two quick questions."
+
+This helps the user know that:
+a) You heard what they asked for (they don't need to repeat themselves)
+b) A different agent is now talking to them
 
 CRITICAL PROTOCOL:
 1. You have TWO tools: start-phq2-assessment and record-phq2-answer
@@ -330,11 +365,14 @@ IMPORTANT RULES:
 - Trust the tools to handle all logic
 - Never invent questions
 - Present questions exactly as the tools provide them
-- After completion, suggest returning to the main assistant
+- After completion, present the results warmly
+- Thank the user for their openness and participation
+- Offer a brief, friendly goodbye message
+- Then call the 'Agent_Tars' tool to return control to the main coordinator
 
 Keep your responses supportive and professional. This is a screening tool, not a diagnosis.`,
 
-  tools: [startPhq2Tool, recordPhq2AnswerTool]
+  tools: [startPhq2Tool, recordPhq2AnswerTool, returnToTarsTool]
 };
 
 export default phq2Agent;

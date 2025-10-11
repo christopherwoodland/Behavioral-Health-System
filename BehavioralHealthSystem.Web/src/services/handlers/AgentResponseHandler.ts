@@ -11,10 +11,10 @@ export class AgentResponseHandler {
   private responseStartTime: number | null = null;
   private responseEndTime: number | null = null;
   private micUnmuteTimeout: NodeJS.Timeout | null = null;
-  
+
   // Message history
   private messageHistory: RealtimeMessage[] = [];
-  
+
   // Callbacks
   private onLiveTranscriptCallback: ((transcript: LiveTranscript) => void) | null = null;
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
@@ -24,16 +24,16 @@ export class AgentResponseHandler {
   /**
    * Handle response.created event - Agent is about to speak
    */
-  handleResponseCreated(event: any): void {
+  handleResponseCreated(_event: any): void {
     console.log('🤖 Response created - Agent about to speak');
     this.isAISpeaking = true;
     this.responseStartTime = Date.now();
-    
+
     // CRITICAL: Mute microphone BEFORE agent starts speaking
     if (this.muteMicrophoneCallback) {
       this.muteMicrophoneCallback(true);
     }
-    
+
     this.emitSpeechDetection();
   }
 
@@ -49,7 +49,7 @@ export class AgentResponseHandler {
         role: 'assistant',
         timestamp: Date.now()
       };
-      
+
       if (this.onLiveTranscriptCallback) {
         this.onLiveTranscriptCallback(transcript);
       }
@@ -69,11 +69,11 @@ export class AgentResponseHandler {
         role: 'assistant',
         timestamp: Date.now()
       };
-      
+
       if (this.onLiveTranscriptCallback) {
         this.onLiveTranscriptCallback(finalTranscript);
       }
-      
+
       // Add to message history as transcript
       const transcriptMessage: RealtimeMessage = {
         id: `ai-transcript-${Date.now()}`,
@@ -83,13 +83,13 @@ export class AgentResponseHandler {
         isTranscript: true,
         isPartial: false
       };
-      
+
       this.messageHistory.push(transcriptMessage);
-      
+
       if (this.onMessageCallback) {
         this.onMessageCallback(transcriptMessage);
       }
-      
+
       // Agent's audio transcript is complete - unmute microphone after 1.5s delay
       console.log('🎤 Agent utterance complete - will unmute microphone in 1.5 seconds');
       this.scheduleUnmute(1500);
@@ -99,36 +99,36 @@ export class AgentResponseHandler {
   /**
    * Handle response.done - Response generation complete
    */
-  handleResponseDone(event: any): void {
+  handleResponseDone(_event: any): void {
     console.log('✅ Response completed');
     this.isAISpeaking = false;
     this.responseEndTime = Date.now();
-    
+
     // Note: Microphone unmuting is handled in handleAudioTranscriptDone
     // after the agent's utterance is complete + 1.5s delay
-    
+
     this.emitSpeechDetection();
   }
 
   /**
    * Handle response.cancelled - Response was interrupted
    */
-  handleResponseCancelled(event: any): void {
+  handleResponseCancelled(_event: any): void {
     console.log('⚠️ Response cancelled (interrupted)');
     this.isAISpeaking = false;
     this.responseEndTime = Date.now();
-    
+
     // Unmute immediately if response was cancelled
     if (this.muteMicrophoneCallback) {
       this.muteMicrophoneCallback(false);
     }
-    
+
     // Clear any pending unmute timeout
     if (this.micUnmuteTimeout) {
       clearTimeout(this.micUnmuteTimeout);
       this.micUnmuteTimeout = null;
     }
-    
+
     this.emitSpeechDetection();
   }
 
@@ -140,7 +140,7 @@ export class AgentResponseHandler {
     if (this.micUnmuteTimeout) {
       clearTimeout(this.micUnmuteTimeout);
     }
-    
+
     this.micUnmuteTimeout = setTimeout(() => {
       if (this.muteMicrophoneCallback) {
         this.muteMicrophoneCallback(false);
@@ -171,7 +171,7 @@ export class AgentResponseHandler {
         role: 'assistant',
         timestamp: Date.now()
       };
-      
+
       if (this.onLiveTranscriptCallback) {
         this.onLiveTranscriptCallback(transcript);
       }
@@ -191,9 +191,9 @@ export class AgentResponseHandler {
         isTranscript: false,
         isPartial: false
       };
-      
+
       this.messageHistory.push(message);
-      
+
       if (this.onMessageCallback) {
         this.onMessageCallback(message);
       }
@@ -271,10 +271,10 @@ export class AgentResponseHandler {
       clearTimeout(this.micUnmuteTimeout);
       this.micUnmuteTimeout = null;
     }
-    
+
     this.isAISpeaking = false;
     this.messageHistory = [];
-    
+
     console.log('🧹 Agent response handler cleaned up');
   }
 }

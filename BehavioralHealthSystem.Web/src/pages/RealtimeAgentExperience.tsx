@@ -72,43 +72,52 @@ const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === '
  * @param agentId - The agent identifier (tars, matron, phq2, phq9)
  * @returns Tailwind CSS classes for background and text colors
  */
-const getAgentColor = (agentId?: string): { bg: string; text: string; border: string } => {
-  switch (agentId) {
+const getAgentColor = (agentId?: string): { bg: string; text: string; border: string; outline: string } => {
+  // Normalize agent ID to lowercase for comparison
+  const normalizedId = agentId?.toLowerCase().replace('agent_', '');
+
+  switch (normalizedId) {
     case 'tars':
       return {
         bg: 'bg-blue-50 dark:bg-blue-900/20',
         text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-blue-500'
+        border: 'border-l-4 border-blue-500',
+        outline: 'border-2 border-blue-500 dark:border-blue-400'
       };
     case 'matron':
       return {
         bg: 'bg-green-50 dark:bg-green-900/20',
         text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-green-500'
+        border: 'border-l-4 border-green-500',
+        outline: 'border-2 border-green-500 dark:border-green-400'
       };
     case 'phq2':
       return {
         bg: 'bg-purple-50 dark:bg-purple-900/20',
         text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-purple-500'
+        border: 'border-l-4 border-purple-500',
+        outline: 'border-2 border-purple-500 dark:border-purple-400'
       };
     case 'phq9':
       return {
         bg: 'bg-indigo-50 dark:bg-indigo-900/20',
         text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-indigo-600'
+        border: 'border-l-4 border-indigo-600',
+        outline: 'border-2 border-indigo-600 dark:border-indigo-400'
       };
     case 'vocalist':
       return {
         bg: 'bg-pink-50 dark:bg-pink-900/20',
         text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-pink-500'
+        border: 'border-l-4 border-pink-500',
+        outline: 'border-2 border-pink-500 dark:border-pink-400'
       };
     default:
       return {
         bg: 'bg-gray-100 dark:bg-gray-800',
         text: 'text-gray-900 dark:text-gray-100',
-        border: ''
+        border: '',
+        outline: ''
       };
   }
 };
@@ -189,7 +198,7 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [voiceActivityLevel, setVoiceActivityLevel] = useState(0);
+  const [voiceActivityLevel] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
 
   // Enhanced features state
@@ -785,70 +794,7 @@ Just speak naturally - I understand variations of these commands!`,
   // const getAgentDisplayName = () => 'AI Assistant';
 
   // NOTE: Initial greeting is now handled by Tars through Realtime API
-  // This function is kept for reference but no longer used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getInitialGreeting = (humorLevel: number): string => {
-    const firstName = getFirstName();
-    const displayName = getAppropiateName(humorLevel);
-
-    const greetings = {
-      high: [
-        `Hey there, ${displayName}! I'm Tars, and I'm here to help you out. What can we work on today?`,
-        `Hi ${displayName}! Tars here, ready to chat and help with whatever you need. How's it going?`,
-        `Hello ${displayName}! I'm Tars, your friendly AI assistant. What's on your mind today?`,
-        `Hey ${displayName}! Tars at your service - feeling pretty upbeat today. What can I help you with?`,
-        `Hi there, ${displayName}! I'm Tars, and I'm in a great mood to help. What brings you here today?`,
-        `Hello ${displayName}! Tars here, and I'm excited to chat with you. What would you like to talk about?`
-      ],
-      medium: [
-        `Hello ${firstName}, I'm Tars. I'm here to help and support you. What can I assist with today?`,
-        `Hi ${firstName}, this is Tars. I'm ready to help with whatever you need. How are you doing?`,
-        `Good day ${firstName}, I'm Tars, your AI assistant. How can I be of service today?`,
-        `Hello ${firstName}, Tars here. I'm here to help and chat. What's going on today?`,
-        `Hi ${firstName}, I'm Tars. I'm ready to support you with anything you need. What's up?`
-      ],
-      professional: [
-        `Hello ${firstName}, I'm Tars, your AI assistant. I'm here to provide support and assistance. How may I help you today?`,
-        `Good day ${firstName}, this is Tars. I'm available to help with your needs. What can I assist you with?`,
-        `Hello ${firstName}, I'm Tars. I'm ready to provide professional support. How can I be of service?`,
-        `Hi ${firstName}, Tars here. I'm here to help you with whatever you need today. What brings you here?`,
-        `Hello ${firstName}, I'm Tars, your AI assistant. I'm ready to help. What would you like to discuss?`
-      ],
-      formal: [
-        `Good day ${firstName}, I am Tars, your AI assistant. I am ready to provide assistance. How may I help you today?`,
-        `Hello ${firstName}, this is Tars. I am available to provide support and guidance. What do you need assistance with?`,
-        `Greetings ${firstName}, I am Tars. I am here to offer professional assistance. How can I be of service?`,
-        `Hello ${firstName}, I am Tars, your AI assistant. I am prepared to help with your needs. What can I do for you?`,
-        `Good day ${firstName}, this is Tars. I am ready to provide structured support. How may I assist you today?`
-      ],
-      military: [
-        `Good day ${firstName}, I am Tars, your AI assistant. I am ready to provide precise assistance. How may I serve you today?`,
-        `Hello ${firstName}, this is Tars. I am available for structured support and guidance. What do you require?`,
-        `Greetings ${firstName}, I am Tars. I am prepared to offer efficient assistance. How can I help you today?`,
-        `Hello ${firstName}, I am Tars, your AI assistant. I am ready for service. What assistance do you need?`,
-        `Good day ${firstName}, this is Tars. I am operational and ready to provide support. How may I be of service?`
-      ]
-    };
-
-    let selectedGreetings: string[];
-
-    if (humorLevel >= 80) {
-      selectedGreetings = greetings.high;
-    } else if (humorLevel >= 60) {
-      selectedGreetings = greetings.medium;
-    } else if (humorLevel >= 40) {
-      selectedGreetings = greetings.professional;
-    } else if (humorLevel >= 20) {
-      selectedGreetings = greetings.formal;
-    } else {
-      selectedGreetings = greetings.military;
-    }
-
-    // Randomly select one greeting from the appropriate category
-    const randomGreeting = selectedGreetings[Math.floor(Math.random() * selectedGreetings.length)];
-
-    return randomGreeting;
-  };
+  // Greeting generation logic removed as it's no longer needed
 
 
   const startSession = async () => {
@@ -874,8 +820,23 @@ Just speak naturally - I understand variations of these commands!`,
       console.log('🤖 ========================================');
 
       agentOrchestrationService.registerAgent(matronAgent);
-      agentOrchestrationService.registerAgent(phq2Agent);
-      agentOrchestrationService.registerAgent(phq9Agent);
+
+      // Conditionally register PHQ-2 agent based on feature flag
+      if (import.meta.env.VITE_ENABLE_PHQ2_AGENT === 'true') {
+        console.log('✅ PHQ-2 agent enabled');
+        agentOrchestrationService.registerAgent(phq2Agent);
+      } else {
+        console.log('❌ PHQ-2 agent disabled');
+      }
+
+      // Conditionally register PHQ-9 agent based on feature flag
+      if (import.meta.env.VITE_ENABLE_PHQ9_AGENT === 'true') {
+        console.log('✅ PHQ-9 agent enabled');
+        agentOrchestrationService.registerAgent(phq9Agent);
+      } else {
+        console.log('❌ PHQ-9 agent disabled');
+      }
+
       agentOrchestrationService.registerAgent(vocalistAgent);
 
       // Register Tars as the root orchestration agent
@@ -1206,12 +1167,25 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
                   'Agent';
 
-                // Handle Vocalist agent switch - show recording UI
+                // For Vocalist agent, interrupt any ongoing response BEFORE showing UI
                 if (targetAgentId === 'Agent_Vocalist') {
-                  setIsVocalistRecording(true);
-                  setVocalistContentType('lyrics'); // Default to lyrics, agent can change via tool
+                  console.log('🎤 Vocalist switch - checking for active response');
+                  // Only interrupt if there's actually a response in progress
+                  if (!agentService.canUpdateVoice()) {
+                    console.log('🎤 Active response detected - interrupting');
+                    try {
+                      await agentService.interruptResponse();
+                      // Wait for interruption to complete
+                      await new Promise(resolve => setTimeout(resolve, 200));
+                    } catch (error) {
+                      console.warn('⚠️ Could not interrupt response:', error);
+                    }
+                  } else {
+                    console.log('🎤 No active response - proceeding with switch');
+                  }
                 }
 
+                // Update UI to show the new agent
                 setCurrentAgent({
                   id: targetAgentId.toLowerCase().replace('agent_', ''),
                   name: agentDisplayName,
@@ -1227,7 +1201,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 // Announce agent switch for accessibility
                 announceToScreenReader(`Switched to ${agentDisplayName} agent`);
 
-                // Determine voice based on agent - PHQ agents use 'echo', Tars uses default
+                // Note: For Vocalist agent, the recording UI will be shown when the agent
+                // calls the 'start-vocalist-recording' tool (after explaining the exercise)
+                // This allows the agent to introduce themselves and explain before showing the UI
+
+                // Determine voice based on agent - PHQ agents use 'echo', Tars and Vocalist use default
                 const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
 
                 // Build updated session config
@@ -1242,16 +1220,20 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   tools: realtimeTools
                 };
 
-                // Only include voice parameter if we're not in the middle of an active response
-                // This prevents "Cannot update a conversation's voice if assistant audio is present" error
-                if (agentService.canUpdateVoice()) {
+                // Only update voice if safe to do so
+                // Skip voice update for Vocalist (recording UI takes over) or if assistant is speaking
+                const shouldUpdateVoice = targetAgentId !== 'Agent_Vocalist' && agentService.canUpdateVoice();
+
+                if (shouldUpdateVoice) {
                   updatedConfig.voice = agentVoice;
                   console.log(`🎤 Updating session with voice: ${agentVoice}`);
+                } else if (targetAgentId === 'Agent_Vocalist') {
+                  console.log('🎤 Vocalist agent - skipping voice update (recording UI takes over)');
                 } else {
                   console.log('⚠️ Skipping voice update - assistant audio is active');
                 }
 
-                await agentService.updateSession(updatedConfig);
+                agentService.updateSession(updatedConfig);
 
                 console.log('✅ Session updated for new agent');
                 console.log('🔄 ========================================');
@@ -1284,6 +1266,18 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 message: `Control transferred to ${result.targetAgentId}`
               };
             }
+          }
+
+          // Handle Vocalist recording tool
+          if (functionName === 'start-vocalist-recording' && result.result?.success) {
+            console.log('🎤 ========================================');
+            console.log('🎤 START RECORDING TOOL CALLED');
+            console.log('🎤 Content Type:', result.result.contentType);
+            console.log('🎤 ========================================');
+
+            // NOW show the recording UI (triggered by the agent's tool call)
+            setIsVocalistRecording(true);
+            setVocalistContentType(result.result.contentType || 'lyrics');
           }
 
           // Not an agent switch - return the tool result
@@ -1388,10 +1382,13 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       setCurrentAITranscript('');
       setMessages([]); // Start with empty messages - let Tars greet naturally
 
-      // NOTE: We no longer send a pre-generated welcome message
-      // Instead, Tars will greet naturally through the Realtime API
-      // This prevents the "active response in progress" error
-      // Tars system prompt instructs it to greet first, then check biometric data
+      // Trigger Tars to speak first after data channel is ready
+      // This tells Tars to greet the user and check for biometric data
+      agentService.sendInitialGreeting(
+        'Session started. Please greet the user warmly and then check if they have biometric data saved.'
+      ).catch((error: Error) => {
+        console.error('Failed to send initial greeting prompt:', error);
+      });
 
       announceToScreenReader('Session started. Tars will greet you shortly.');
 
@@ -1918,6 +1915,9 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
           }
           const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
+          // Check if this message is from the currently active agent
+          const isActiveAgent = message.role === 'assistant' && message.agentId &&
+            message.agentId.toLowerCase() === currentAgent.id.toLowerCase();
           return (
           <div
             key={message.id}
@@ -1927,7 +1927,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               className={`max-w-[80%] p-3 rounded-lg ${
                 message.role === 'user'
                   ? 'bg-primary-600 text-white'
-                  : agentColors ? `${agentColors.bg} ${agentColors.text} ${agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                  : agentColors ? `${agentColors.bg} ${agentColors.text} ${isActiveAgent ? agentColors.outline : agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
               } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
             >
               {message.role === 'assistant' && (

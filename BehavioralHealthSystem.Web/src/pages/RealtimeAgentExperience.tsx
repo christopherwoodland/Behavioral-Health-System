@@ -75,6 +75,7 @@ const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === '
 const getAgentColor = (agentId?: string): { bg: string; text: string; border: string; outline: string } => {
   // Normalize agent ID to lowercase for comparison
   const normalizedId = agentId?.toLowerCase().replace('agent_', '');
+  console.log('🎨 getAgentColor called:', { agentId, normalizedId });
 
   switch (normalizedId) {
     case 'tars':
@@ -212,7 +213,7 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Vocalist recording state
   const [isVocalistRecording, setIsVocalistRecording] = useState(false);
   const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
-  const [showLiveTranscripts, setShowLiveTranscripts] = useState(true);
+  const [showLiveTranscripts, setShowLiveTranscripts] = useState(false);
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
 
@@ -1410,17 +1411,39 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       }
 
       await agentService.endSession();
+
+      // Clear all messages
       setMessages([]);
-      setSessionStatus(prev => ({
-        ...prev,
+
+      // Reset session status completely
+      setSessionStatus({
         isActive: false,
         sessionId: undefined,
         messageCount: 0,
-        // Keep connectionStatus as 'connected' since the service is still initialized and ready
+        currentAgent: 'coordinator',
+        hasAudioSupport: false,
         connectionStatus: 'connected'
-      }));
-      setCurrentAgent(prev => ({ ...prev, isActive: false, isTyping: false }));
-      announceToScreenReader('Session ended and conversation cleared');
+      });
+
+      // Reset to Tars agent (root agent)
+      setCurrentAgent({
+        id: 'tars',
+        name: 'Tars',
+        isActive: false,
+        isTyping: false
+      });
+
+      // Clear any vocalist state
+      setIsVocalistRecording(false);
+      setVocalistContentType('lyrics');
+
+      // Clear current AI transcript
+      setCurrentAITranscript('');
+
+      // Reset session paused state
+      setIsSessionPaused(false);
+
+      announceToScreenReader('Session ended. All state cleared. Ready to start fresh with Tars.');
     } catch (error) {
       console.error('Failed to end session:', error);
     }
@@ -1918,6 +1941,18 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           // Check if this message is from the currently active agent
           const isActiveAgent = message.role === 'assistant' && message.agentId &&
             message.agentId.toLowerCase() === currentAgent.id.toLowerCase();
+
+          // Debug logging for colors
+          if (message.role === 'assistant' && agentColors) {
+            console.log('🎨 Agent color debug:', {
+              messageAgentId: message.agentId,
+              currentAgentId: currentAgent.id,
+              isActiveAgent,
+              colors: agentColors,
+              appliedBorder: isActiveAgent ? agentColors.outline : agentColors.border
+            });
+          }
+
           return (
           <div
             key={message.id}

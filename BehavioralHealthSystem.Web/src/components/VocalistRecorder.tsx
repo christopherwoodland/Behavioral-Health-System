@@ -26,11 +26,16 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(35);
   const [error, setError] = useState<string | null>(null);
+  const [recordingComplete, setRecordingComplete] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordedDuration, setRecordedDuration] = useState<number>(0);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const countdownIntervalRef = useRef<number | null>(null);
   const recordingStartTimeRef = useRef<number | null>(null);
+  const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
 
   // Auto-start recording on mount
   useEffect(() => {
@@ -44,6 +49,10 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
+      }
+      if (audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -157,10 +166,49 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       // Create a WAV blob (simplified - in production use proper conversion)
       const wavBlob = new Blob([audioBlob], { type: 'audio/wav' });
 
-      onRecordingComplete(wavBlob, duration);
+      // Store the audio for playback and analysis
+      setAudioBlob(wavBlob);
+      setRecordedDuration(duration);
+      setRecordingComplete(true);
+
+      // Create audio URL for playback
+      const audioUrl = URL.createObjectURL(wavBlob);
+      audioPlayerRef.current = new Audio(audioUrl);
+      audioPlayerRef.current.onended = () => setIsPlaying(false);
+
+      // Don't automatically call onRecordingComplete - wait for user to click "Start Analysis"
     } catch (err) {
       console.error('Error converting to WAV:', err);
       setError('Failed to process audio recording.');
+    }
+  };
+
+  /**
+   * Play recorded audio
+   */
+  const playRecording = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  /**
+   * Pause playback
+   */
+  const pausePlayback = () => {
+    if (audioPlayerRef.current) {
+      audioPlayerRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  /**
+   * Start analysis - sends recording to parent component
+   */
+  const startAnalysis = () => {
+    if (audioBlob) {
+      onRecordingComplete(audioBlob, recordedDuration);
     }
   };
 
@@ -212,7 +260,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
 
       {/* Recording Controls */}
       <div className="flex justify-center gap-4">
-        {!isRecording ? (
+        {!isRecording && !recordingComplete ? (
           <button
             onClick={startRecording}
             className="px-8 py-4 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2"
@@ -220,7 +268,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
             <span className="text-2xl">🎙️</span>
             Start Recording
           </button>
-        ) : (
+        ) : isRecording ? (
           <>
             <button
               onClick={stopRecording}
@@ -234,14 +282,42 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
               <span className="font-semibold">Recording...</span>
             </div>
           </>
+        ) : (
+          /* Recording Complete - Show Playback and Analysis buttons */
+          <>
+            <button
+              onClick={isPlaying ? pausePlayback : playRecording}
+              className="px-8 py-4 bg-green-600 dark:bg-green-700 text-white rounded-lg font-semibold text-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors flex items-center gap-2"
+            >
+              <span className="text-2xl">{isPlaying ? '⏸️' : '▶️'}</span>
+              {isPlaying ? 'Pause' : 'Play Recording'}
+            </button>
+            <button
+              onClick={startAnalysis}
+              className="px-8 py-4 bg-blue-600 dark:bg-blue-700 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center gap-2 shadow-lg"
+            >
+              <span className="text-2xl">🔬</span>
+              Start Analysis
+            </button>
+          </>
         )}
       </div>
 
       {/* Instructions */}
       <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
-        <p>📝 Read the content above aloud when you start recording</p>
-        <p>⏱️ Recording will automatically stop at 35 seconds</p>
-        <p>🎵 Try to read naturally and clearly</p>
+        {!recordingComplete ? (
+          <>
+            <p>📝 Read the content above aloud when you start recording</p>
+            <p>⏱️ Recording will automatically stop at 35 seconds</p>
+            <p>🎵 Try to read naturally and clearly</p>
+          </>
+        ) : (
+          <>
+            <p className="text-green-600 dark:text-green-400 font-semibold text-lg mb-2">✅ Recording Complete! ({recordedDuration.toFixed(1)}s)</p>
+            <p>🎧 You can play back your recording to review it</p>
+            <p>🔬 Click "Start Analysis" when you're ready to submit</p>
+          </>
+        )}
       </div>
     </div>
   );

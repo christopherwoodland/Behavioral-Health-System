@@ -1098,6 +1098,8 @@ export class AzureOpenAIRealtimeService {
         // Session management
         case 'session.created':
           console.log('✅ Session created successfully');
+          // Reset response flag to ensure clean state
+          this.isResponseInProgress = false;
           this.updateConversationState({ state: 'idle', message: 'Session created' });
           break;
 
@@ -1283,6 +1285,11 @@ export class AzureOpenAIRealtimeService {
             console.warn('⚠️ Cancellation attempted on already-completed response:', errorMessage);
             // This happens when we try to interrupt a response that just finished - it's harmless
             // Don't treat as error, conversation is already in correct state
+          } else if (errorMessage.includes('Conversation already has an active response in progress')) {
+            console.warn('⚠️ Response creation skipped - response already in progress:', errorMessage);
+            // This is handled by the queue system, so just log it as a warning
+            // The response will be queued and processed when the current one completes
+            this.updateConversationState({ state: 'speaking', message: 'Response queued' });
           } else {
             console.error('❌ Realtime API error:', errorMessage);
             this.updateConversationState({ state: 'error', message: errorMessage });
@@ -1504,6 +1511,10 @@ export class AzureOpenAIRealtimeService {
       await waitForDataChannel();
       console.log('✅ Data channel is ready for initial greeting');
 
+      // Wait to ensure session setup is complete (configurable via env)
+      const sessionDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_SESSION_DELAY_MS || '1500', 10);
+      await new Promise(resolve => setTimeout(resolve, sessionDelay));
+
       // Send system message to trigger greeting
       const systemMessageEvent = {
         type: 'conversation.item.create',
@@ -1522,16 +1533,15 @@ export class AzureOpenAIRealtimeService {
       this.dataChannel!.send(JSON.stringify(systemMessageEvent));
       console.log('📤 Sent system message for initial greeting');
 
-      // Trigger response from AI
-      const responseEvent = {
-        type: 'response.create',
-        response: {
-          modalities: ['text', 'audio']
-        }
-      };
+      // Wait before triggering response (configurable via env)
+      const responseDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_RESPONSE_DELAY_MS || '300', 10);
+      await new Promise(resolve => setTimeout(resolve, responseDelay));
 
-      this.dataChannel!.send(JSON.stringify(responseEvent));
-      console.log('🎤 Triggered AI response for greeting');
+      // Use safeCreateResponse to properly handle response state
+      console.log('🎤 Triggering AI response for greeting via safeCreateResponse');
+      this.safeCreateResponse({
+        modalities: ['text', 'audio']
+      });
 
     } catch (error) {
       console.error('Failed to send initial greeting:', error);

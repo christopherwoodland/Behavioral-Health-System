@@ -1,24 +1,54 @@
 {
   "IsEncrypted": false,
+  // ============================================================================
+  // EXAMPLE LOCAL SETTINGS - FOR REFERENCE ONLY
+  // ============================================================================
+  // This shows what a complete local.settings.json might look like
+  // with placeholder values. DO NOT use directly in development.
+  // Copy local.settings.json.template instead and fill in your keys.
+  // ============================================================================
+
   "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
-    "KINTSUGI_API_KEY": "your-kintsugi-api-key-here",
-    "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",
-    "AZURE_OPENAI_ENDPOINT": "https://your-openai-resource.openai.azure.com/",
-    "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key",
-    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o",
-    "AZURE_OPENAI_ENABLED": "true",
-    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "https://your-gpt5-resource.openai.azure.com/",
-    "EXTENDED_ASSESSMENT_OPENAI_API_KEY": "your-gpt5-api-key",
-    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5-turbo",
-    "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",
-    "EXTENDED_ASSESSMENT_USE_FALLBACK": "true"
+    // Storage Configuration
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",  // Use local emulator for dev
+
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",  // .NET isolated runtime
+
+    // ========================================================================
+    // KINTSUGI HEALTH API CONFIGURATION
+    // ========================================================================
+    // Contact Kintsugi Health for API credentials
+    "KINTSUGI_API_KEY": "your-kintsugi-api-key-here",  // Required: Your Kintsugi API key
+    "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",  // Kintsugi API endpoint
+
+    // ========================================================================
+    // AZURE OPENAI - PRIMARY GPT-4 (For general conversational AI)
+    // ========================================================================
+    // Standard Azure OpenAI resource for general-purpose AI tasks
+    "AZURE_OPENAI_ENDPOINT": "https://your-openai-resource.openai.azure.com/",  // Your Azure OpenAI endpoint
+    "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key",  // Your API key
+    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o",  // Deployment name (model identifier)
+    "AZURE_OPENAI_ENABLED": "true",  // Enable/disable GPT-4
+
+    // ========================================================================
+    // AZURE OPENAI - EXTENDED ASSESSMENT (For advanced DSM-5 analysis)
+    // ========================================================================
+    // Advanced AI resource for comprehensive disorder assessment
+    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "https://your-gpt5-resource.openai.azure.com/",  // Separate endpoint for advanced analysis
+    "EXTENDED_ASSESSMENT_OPENAI_API_KEY": "your-gpt5-api-key",  // Separate API key if using different resource
+    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5-turbo",  // Advanced model deployment
+    "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",  // Disabled by default - enable when ready
+    "EXTENDED_ASSESSMENT_USE_FALLBACK": "true"  // Fall back to GPT-4 if GPT-5 unavailable
   },
+
   "ConnectionStrings": {},
+
+  // ============================================================================
+  // HOST CONFIGURATION
+  // ============================================================================
   "Host": {
-    "LocalHttpPort": 7071,
-    "CORS": "*",
-    "CORSCredentials": false
+    "LocalHttpPort": 7071,  // Port for local Azure Functions host
+    "CORS": "*",  // Allow all origins for local dev (restrict in production)
+    "CORSCredentials": false  // Don't allow credentials with CORS
   }
 }

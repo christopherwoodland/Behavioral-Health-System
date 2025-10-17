@@ -21,7 +21,7 @@ export const VocalistContent: React.FC<VocalistContentProps> = ({ contentType, c
       <div className={`vocalist-content lyrics-content text-gray-900 dark:text-gray-100 ${className}`}>
         <h3 className="text-xl font-bold mb-4 text-center text-gray-900 dark:text-white">Reading Passage</h3>
         <div className="space-y-4 text-lg leading-relaxed">
-          <p className="font-semibold text-gray-800 dark:text-gray-200">Please read the following passage aloud - approximately 35 seconds</p>
+          <p className="font-semibold text-gray-800 dark:text-gray-200">Please read the following passage aloud - approximately 40 seconds</p>
 
           <div className="mt-4 space-y-3">
             <p>The morning sun rises over distant mountains,</p>
@@ -42,7 +42,7 @@ export const VocalistContent: React.FC<VocalistContentProps> = ({ contentType, c
     );
   }
 
-  // Story content - Extended to approximately 700 words for 35 seconds of reading
+  // Story content - Extended to approximately 800 words for 40 seconds of reading
   return (
     <div className={`vocalist-content story-content text-gray-900 dark:text-gray-100 ${className}`}>
       <h3 className="text-xl font-bold mb-4 text-center text-gray-900 dark:text-white">Short Story Excerpt</h3>

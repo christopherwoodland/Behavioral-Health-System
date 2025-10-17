@@ -15,7 +15,7 @@ interface VocalistRecorderProps {
 
 /**
  * VocalistRecorder Component
- * Records 35 seconds of audio in WAV format with visual countdown
+ * Records 40 seconds of audio in WAV format with visual countdown
  */
 export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   userId: _userId,
@@ -24,7 +24,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   onCancel
 }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [countdown, setCountdown] = useState(35);
+  const [countdown, setCountdown] = useState(40);
   const [error, setError] = useState<string | null>(null);
   const [recordingComplete, setRecordingComplete] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -66,27 +66,30 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       setError(null);
       audioChunksRef.current = [];
 
-      // Request microphone access
+      // Request microphone access with high-quality settings for voice analysis
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          channelCount: 1, // Mono
-          sampleRate: 44100, // CD quality
-          echoCancellation: true,
-          noiseSuppression: true
+          channelCount: 1, // Mono is fine for voice
+          sampleRate: 44100, // CD quality - 44.1kHz standard
+          echoCancellation: false, // Disable for analysis - we want natural voice
+          noiseSuppression: false, // Disable for analysis - preserve voice characteristics
+          autoGainControl: false // Disable AGC - preserve natural volume variations
         }
       });
 
-      // Create MediaRecorder with WAV-compatible settings
-      // Note: Most browsers record in webm/opus, we'll convert to WAV on completion
-      const mimeType = MediaRecorder.isTypeSupported('audio/wav')
-        ? 'audio/wav'
+      // Create MediaRecorder with high-quality settings
+      // Prefer webm with opus codec for best quality, then fall back
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm')
         ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/wav')
+        ? 'audio/wav'
         : 'audio/ogg';
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: 256000 // 256kbps for better quality (doubled from 128kbps)
       });
 
       mediaRecorderRef.current = mediaRecorder;
@@ -103,7 +106,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
         const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const duration = recordingStartTimeRef.current
           ? (Date.now() - recordingStartTimeRef.current) / 1000
-          : 35;
+          : 40;
 
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -116,7 +119,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
       mediaRecorder.start(100); // Collect data every 100ms
       recordingStartTimeRef.current = Date.now();
       setIsRecording(true);
-      setCountdown(35);
+      setCountdown(40);
 
       // Start countdown timer
       countdownIntervalRef.current = window.setInterval(() => {
@@ -137,7 +140,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
   };
 
   /**
-   * Stop recording manually or automatically at 35 seconds
+   * Stop recording manually or automatically at 40 seconds
    */
   const stopRecording = () => {
     if (countdownIntervalRef.current) {
@@ -308,7 +311,7 @@ export const VocalistRecorder: React.FC<VocalistRecorderProps> = ({
         {!recordingComplete ? (
           <>
             <p>📝 Read the content above aloud when you start recording</p>
-            <p>⏱️ Recording will automatically stop at 35 seconds</p>
+            <p>⏱️ Recording will automatically stop at 40 seconds</p>
             <p>🎵 Try to read naturally and clearly</p>
           </>
         ) : (

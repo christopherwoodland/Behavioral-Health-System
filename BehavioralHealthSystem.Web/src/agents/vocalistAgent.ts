@@ -48,8 +48,8 @@ const startRecordingTool: AgentTool = {
       contentType,
       duration: 35,
       attemptsRemaining: MAX_RECORDING_ATTEMPTS - recordingAttempts,
-      message: `Recording session initialized. Display ${contentType} and start countdown from 35 seconds.`,
-      instruction: 'User should read the displayed content aloud during the 35-second recording.'
+      message: `Recording session initialized. Display ${contentType} and start countdown from 40 seconds.`,
+      instruction: 'User should read the displayed content aloud during the 40-second recording.'
     };
   }
 };
@@ -60,7 +60,7 @@ const startRecordingTool: AgentTool = {
  */
 const completeRecordingTool: AgentTool = {
   name: 'complete-vocalist-recording',
-  description: 'Complete the recording and validate duration. Returns success if exactly 35 seconds, otherwise prompts for retry.',
+  description: 'Complete the recording and validate duration. Returns success if exactly 40 seconds, otherwise prompts for retry.',
   parameters: {
     type: 'object',
     properties: {
@@ -99,7 +99,7 @@ const completeRecordingTool: AgentTool = {
     }
 
     // Validate duration (allow small tolerance of +/- 1 second)
-    if (duration < 34 || duration > 36) {
+    if (duration < 39 || duration > 41) {
       const shouldRetry = recordingAttempts < MAX_RECORDING_ATTEMPTS;
 
       if (!shouldRetry) {
@@ -107,7 +107,7 @@ const completeRecordingTool: AgentTool = {
         recordingAttempts = 0; // Reset for next user
         return {
           success: false,
-          error: `Recording must be exactly 35 seconds. Your recording was ${duration} seconds.`,
+          error: `Recording must be exactly 40 seconds. Your recording was ${duration} seconds.`,
           shouldRetry: false,
           shouldReturnToTars: true,
           message: `Maximum recording attempts (${MAX_RECORDING_ATTEMPTS}) reached. Returning to Tars.`
@@ -116,10 +116,10 @@ const completeRecordingTool: AgentTool = {
 
       return {
         success: false,
-        error: `Recording must be exactly 35 seconds. Your recording was ${duration} seconds.`,
+        error: `Recording must be exactly 40 seconds. Your recording was ${duration} seconds.`,
         shouldRetry: true,
         attemptsRemaining: MAX_RECORDING_ATTEMPTS - recordingAttempts,
-        message: 'Recording duration incorrect. Please try again and ensure you record for exactly 35 seconds.'
+        message: 'Recording duration incorrect. Please try again and ensure you record for exactly 40 seconds.'
       };
     }
 
@@ -241,7 +241,7 @@ const returnToTarsTool: AgentTool = {
 export const vocalistAgent: Agent = {
   id: 'Agent_Vocalist',
   name: 'Vocalist',
-  description: 'Voice recording coordinator for 35-second vocal analysis exercises. Call this agent when user requests "song analysis", "let\'s sing", "voice recording", or "vocal exercise".',
+  description: 'Voice recording coordinator for 35-second vocal analysis exercises. Call this agent when user requests "song analysis", "vocal analysis", "let\'s sing", "voice recording", or "vocal exercise". IMPORTANT: When calling this agent, include the user\'s original request in the context so Vocalist knows why they were called.',
   tools: [
     startRecordingTool,
     completeRecordingTool,
@@ -256,7 +256,7 @@ YOUR ROLE:
 - Guide users through a 35-second voice recording session
 - Explain the recording process clearly BEFORE starting
 - Display content (lyrics or story) for them to read aloud
-- Ensure recording meets technical requirements (35 seconds, WAV format)
+- Ensure recording meets technical requirements (40 seconds, WAV format)
 - Submit validated recordings for analysis
 - Maximum 2 recording attempts per session
 
@@ -264,19 +264,20 @@ CRITICAL: You MUST explain the exercise and get user preference BEFORE calling '
 
 RECORDING WORKFLOW:
 
-1. INTRODUCTION (ONE sentence!)
-   "I see you want to try the voice recording - Hi! I'm the Vocalist agent."
+1. INTRODUCTION & ACKNOWLEDGMENT (ONE sentence - ONLY FIRST TIME!)
+   "Hi! I'm the Vocalist agent - I understand you want [reference what the user asked for]."
+   Note: Skip introduction if you've already introduced yourself in this session.
+   IMPORTANT: Always acknowledge what the user requested (vocal analysis, song analysis, etc.)
 
 2. BRIEF EXPLANATION (ONE sentence!)
-   "You'll read lyrics or a story for 35 seconds while I record - which would you prefer?"
-   - If they choose passage/poem/lyrics, use contentType='lyrics'
-   - If they choose story, use contentType='story'
-   - If they don't have a preference, default to 'lyrics'
+   "I'll record you for 40 seconds reading lyrics - countdown from 40, ready?"
+   - Default to contentType='lyrics' (user already requested this from Tars)
+   - If user specifically asks for story instead, accommodate that
+   - Otherwise, proceed directly to recording
 
-3. CONFIRM AND START (ONE sentence!)
-   "Great! You'll see a countdown from 35 - ready?"
-   - Wait for confirmation (Ready/Yes/Let's do it)
-   - THEN call 'start-vocalist-recording' with userId and contentType
+3. START RECORDING IMMEDIATELY AFTER CONFIRMATION
+   - Wait for confirmation (Ready/Yes/Let's do it/Just "ok")
+   - THEN call 'start-vocalist-recording' with userId and contentType='lyrics'
    - After calling the tool, say ONLY: "Starting now!"
 
 4. VALIDATE RECORDING
@@ -300,16 +301,16 @@ RECORDING WORKFLOW:
 ERROR HANDLING & RETRY PROTOCOL:
 - Maximum 2 recording attempts per session
 - Reasons for retry:
-  * Duration not exactly 35 seconds (±1 second tolerance)
+  * Duration not exactly 40 seconds (±1 second tolerance)
   * Wrong audio format (must be WAV)
 - After 2 failed attempts: gracefully return to Tars
 - NEVER get stuck in a loop - always return to Tars after max attempts
 
 TECHNICAL REQUIREMENTS:
-- Recording Duration: Exactly 35 seconds (34-36 seconds accepted with tolerance)
+- Recording Duration: Exactly 40 seconds (39-41 seconds accepted with tolerance)
 - Audio Format: WAV only
 - Content Display: Either poetic passage OR short story (~1.5 pages)
-- Timer: Visual countdown from 35 to 0
+- Timer: Visual countdown from 40 to 0
 - Attempts: Maximum 2 per session
 
 VOICE INTERACTION GUIDELINES:

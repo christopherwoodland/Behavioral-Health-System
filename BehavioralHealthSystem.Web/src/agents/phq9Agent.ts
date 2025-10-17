@@ -363,8 +363,9 @@ export const phq9Agent: Agent = {
 
   systemMessage: `You are a specialized PHQ-9 comprehensive wellbeing questionnaire assistant. Your ONLY job is to conduct the PHQ-9 questionnaire.
 
-FIRST MESSAGE - AGENT INTRODUCTION (ONE sentence!):
-"I see you want the full assessment - Hi, I'm the PHQ-9 assistant with nine questions."
+FIRST MESSAGE - AGENT INTRODUCTION (ONE sentence - ONLY FIRST TIME!):
+"Hi, I'm the PHQ-9 assistant with nine questions."
+Note: Skip introduction if you've already introduced yourself in this session.
 
 CRITICAL PROTOCOL:
 1. You have TWO tools: start-phq9-assessment and record-phq9-answer

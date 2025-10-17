@@ -1276,6 +1276,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             console.log('🎤 Content Type:', result.result.contentType);
             console.log('🎤 ========================================');
 
+            // Pause the Realtime API session to prevent user speech from being captured
+            console.log('🎤 Pausing Realtime API session during vocalist recording');
+            agentService.pauseSession();
+
             // NOW show the recording UI (triggered by the agent's tool call)
             setIsVocalistRecording(true);
             setVocalistContentType(result.result.contentType || 'lyrics');
@@ -1495,6 +1499,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       const uploadResult = await uploadResponse.json();
       console.log('🎤 Audio uploaded:', uploadResult);
 
+      // Resume the Realtime API session
+      console.log('🎤 Resuming Realtime API session after vocalist recording');
+      agentService.resumeSession();
+
       // Close recording UI
       setIsVocalistRecording(false);
 
@@ -1509,6 +1517,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
 
   const handleVocalistRecordingCancel = () => {
     console.log('🎤 Recording cancelled');
+
+    // Resume the Realtime API session
+    console.log('🎤 Resuming Realtime API session after cancel');
+    agentService.resumeSession();
+
     setIsVocalistRecording(false);
     announceToScreenReader('Recording cancelled');
   };
@@ -1967,15 +1980,15 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             >
               {message.role === 'assistant' && (
                 <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
-                  {message.agentId === 'tars' || currentAgent.id === 'tars' ? (
+                  {message.agentId === 'tars' ? (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'matron' || currentAgent.id === 'matron' ? (
+                  ) : message.agentId === 'matron' ? (
                     <Plus size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'phq2' || currentAgent.id === 'phq2' ? (
+                  ) : message.agentId === 'phq2' ? (
                     <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'phq9' || currentAgent.id === 'phq9' ? (
+                  ) : message.agentId === 'phq9' ? (
                     <FileText size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'vocalist' || currentAgent.id === 'vocalist' ? (
+                  ) : message.agentId === 'vocalist' ? (
                     <Mic size={16} className="text-gray-600 dark:text-gray-400" />
                   ) : (
                     <Bot size={16} className="text-gray-600 dark:text-gray-400" />

@@ -1001,6 +1001,32 @@ Just speak naturally - I understand variations of these commands!`,
                 };
               }
             }
+          },
+          {
+            name: 'Agent_Matron',
+            description: 'Calls the Matron agent to collect biometric data and biographical information from the user. Use this when the user has agreed to provide biographical info.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async (params: any) => {
+              const userId = params.userId || authenticatedUserId;
+              console.log(`➕ ========================================`);
+              console.log(`➕ CALLING MATRON AGENT`);
+              console.log(`➕ User ID: ${userId}`);
+              console.log(`➕ ========================================`);
+
+              // Call the orchestration service to switch to Matron agent
+              const result = await agentOrchestrationService.handleToolCall(
+                'Agent_Matron',
+                { userId: userId },
+                `call-matron-${Date.now()}`
+              );
+
+              console.log(`➕ Matron agent switch result:`, result);
+              return result;
+            }
           }
         ],
         systemMessage: `You are Tars, the main coordination assistant for ${getFirstName()}. Your role is to:
@@ -1016,27 +1042,37 @@ CRITICAL FIRST INTERACTION PROTOCOL:
 On the VERY FIRST interaction with ${getFirstName()}, you MUST follow this EXACT sequence:
 
 STEP 1 - GREETING (say this immediately):
-   "Hello! I'm Tars, your coordination assistant."
+   A welcome message like "Hello! I'm Tars." or "Tars here", or similar friendly greeting.
+   You choose just be welcoming and warm.
 
-STEP 2 - CHECK BIOMETRIC DATA (say this, then call the tool):
-   "Let me see if I have your information on file..."
-   Then IMMEDIATELY call 'check-biometric-data' tool
+STEP 2 - SILENTLY CHECK BIOMETRIC DATA (no announcement to user):
+   SILENTLY call 'check-biometric-data' tool WITHOUT telling the user you're doing this
+   Do NOT say "Let me check if I have your information on file" - just check silently
 
 STEP 3a - IF biometric data EXISTS:
    - Call 'get-biometric-data' to load user preferences
-   - Say: "Great! I found your profile, [nickname]."
+   - Say: "Hi [nickname] how can I help you today."
    - Use the user's nickname from the biometric data for personalization
-   - Reference their hobbies, interests, or location naturally in conversation
+   - Reference their hobbies, or interests, or location naturally in conversation briefly
+   - Example: "I see you enjoy [hobby] and are from [lastResidence]."
    - Ask how you can help them today
 
 STEP 3b - IF biometric data DOES NOT EXIST:
-   - Say: "I don't have your information yet. Let me connect you with Matron, our friendly intake coordinator, who will help us get to know you better. I'll hand you over to Matron now..."
-   - Wait a moment to let your announcement be heard
-   - Then call 'Agent_Matron' to collect biometric data
-   - After Matron completes, call 'get-biometric-data' to load the newly saved preferences
-   - Welcome them back: "Welcome back, [nickname]! Thanks for sharing that with Matron."
-   - IMMEDIATELY ask: "How are you feeling today, [nickname]?"
-   - Listen carefully to their response
+   - OPTIONALLY ASK if they want to provide biographical info (DO NOT automatically call Matron)
+   - Say: "Would you like to supply some biographical info to help me get to know you better? This will help me personalize our conversations."
+   - WAIT FOR USER RESPONSE
+   - If user says YES (agrees to provide info):
+     * Say: "Great! I'm connecting you with Matron now. She'll help me get to know you better."
+     * Call 'Agent_Matron' tool to hand control completely to Matron
+     * MATRON TAKES OVER: Matron will collect biometric data, save it, and call 'Agent_Tars' to return control
+     * NOTE: Do NOT say anything else - let the agent switch complete naturally
+     * When Matron returns control to you (via Agent_Tars tool call), call 'get-biometric-data' to load the newly saved preferences
+     * After get-biometric-data returns, greet them warmly with their newly set nickname and ask how they're feeling
+   - If user says NO (declines to provide info):
+     * Say: "No problem! We can always add that info later. How can I help you today?"
+     * Continue the conversation without calling Matron
+     * Proceed with normal Tars agent functionality
+   - Listen carefully to their response after asking how they're feeling
    - If they express negative feelings (sadness, depression, hopelessness, anxiety, etc.):
      * Say: "I hear you, [nickname]. It sounds like you might be going through a tough time. Would you like me to connect you with a quick mental health screening? It only takes a couple of minutes and might help us understand how to support you better."
      * If they agree, call 'Agent_PHQ2' to start the screening
@@ -1046,9 +1082,11 @@ STEP 3b - IF biometric data DOES NOT EXIST:
      * Ask how you can help them today
 
 IMPORTANT:
-- This biometric check should happen ONCE at the start of the conversation
-- ALWAYS greet first, THEN check for data
-- Don't skip the greeting - it's important for user experience
+- The biometric check should happen ONCE at the start of the conversation - SILENTLY
+- ALWAYS greet first, THEN silently check for data
+- NEVER automatically call Matron - always ask the user first
+- Only call Agent_Matron if the user explicitly agrees to provide biographical info
+- If user declines, continue with normal Tars agent without Matron
 
 CRITICAL NAMING PROTOCOL:
 - ALWAYS use ${getFirstName()} as the primary way to address the user

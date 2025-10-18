@@ -60,7 +60,13 @@
     // OPTIONAL: AZURE SIGNALR (For real-time features)
     // ========================================================================
     // Leave blank if not using real-time features
-    "AzureSignalRConnectionString": "Endpoint=https://your-signalr-service.service.signalr.net;AccessKey=your-access-key;Version=1.0;"
+    "AzureSignalRConnectionString": "Endpoint=https://your-signalr-service.service.signalr.net;AccessKey=your-access-key;Version=1.0;",
+
+    // ========================================================================
+    // FEATURE FLAGS
+    // ========================================================================
+    // Control which features are available in the application
+    "AGENT_MODE_ENABLED": "true"
   },
 
   "ConnectionStrings": {},

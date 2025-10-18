@@ -38,7 +38,13 @@
     "EXTENDED_ASSESSMENT_OPENAI_API_KEY": "your-gpt5-api-key",  // Separate API key if using different resource
     "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5-turbo",  // Advanced model deployment
     "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",  // Disabled by default - enable when ready
-    "EXTENDED_ASSESSMENT_USE_FALLBACK": "true"  // Fall back to GPT-4 if GPT-5 unavailable
+    "EXTENDED_ASSESSMENT_USE_FALLBACK": "true",  // Fall back to GPT-4 if GPT-5 unavailable
+
+    // ========================================================================
+    // FEATURE FLAGS
+    // ========================================================================
+    // Control which features are available in the application
+    "AGENT_MODE_ENABLED": "true"
   },
 
   "ConnectionStrings": {},

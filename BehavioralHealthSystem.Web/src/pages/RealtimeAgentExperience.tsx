@@ -1067,7 +1067,7 @@ STEP 3b - IF biometric data DOES NOT EXIST:
      * MATRON TAKES OVER: Matron will collect biometric data, save it, and call 'Agent_Tars' to return control
      * NOTE: Do NOT say anything else - let the agent switch complete naturally
      * When Matron returns control to you (via Agent_Tars tool call), call 'get-biometric-data' to load the newly saved preferences
-     * After get-biometric-data returns, greet them warmly with their newly set nickname and ask how they're feeling
+     * After get-biometric-data returns, Matron will greet the user with her opening message - do NOT say anything
    - If user says NO (declines to provide info):
      * Say: "No problem! We can always add that info later. How can I help you today?"
      * Continue the conversation without calling Matron

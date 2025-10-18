@@ -36,6 +36,7 @@ global using BehavioralHealthSystem.Configuration;
 global using BehavioralHealthSystem.Services;
 global using BehavioralHealthSystem.Services.Interfaces;
 global using BehavioralHealthSystem.Validators;
+global using BehavioralHealthSystem.Functions.Services;
 
 // New async job service namespaces
 global using BehavioralHealthSystem.Helpers.Models;

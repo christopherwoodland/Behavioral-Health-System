@@ -205,6 +205,31 @@ Settings for async job processing and retries.
 
 ---
 
+### Feature Flags
+
+Settings to enable or disable application features at runtime.
+
+| Setting | Description | Default | Values |
+|---------|-------------|---------|--------|
+| `AGENT_MODE_ENABLED` | Enable/disable the Agent Experience feature on dashboard | `true` | `true` or `false` |
+
+**Use Case**: Feature flags allow you to control which features are available to users without redeploying the application.
+
+**How It Works**:
+1. When a user loads the dashboard, the frontend queries the `/api/feature-flags` endpoint
+2. If `AGENT_MODE_ENABLED` is `true`, the Agent Experience button is clickable
+3. If `AGENT_MODE_ENABLED` is `false`, the button is greyed out with a "DISABLED" overlay
+4. Frontend caches results for 5 minutes to reduce API calls
+
+**Examples**:
+- Set to `false` during feature development or testing
+- Set to `false` during maintenance windows
+- Set to `false` to gradually roll out features to users
+
+**Frontend Implementation**: The dashboard uses the `useFeatureFlag` hook to check the `AGENT_MODE_ENABLED` flag. If the flag fetch fails, it defaults to `true` (feature enabled).
+
+---
+
 ## Host Configuration
 
 ```json

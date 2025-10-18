@@ -93,6 +93,7 @@ var host = new HostBuilder()
         services.AddScoped<GenericErrorHandlingService>();
         services.AddScoped<ExceptionHandlingService>();
         services.AddScoped<BehavioralHealthSystem.Functions.Services.FunctionErrorHandlingService>();
+        services.AddScoped<FeatureFlagsService>();
         LoggingConfiguration.ConfigureStructuredLogging(services, context.HostingEnvironment.IsDevelopment());
         services.AddSingleton<BlobServiceClient>(serviceProvider =>
         {

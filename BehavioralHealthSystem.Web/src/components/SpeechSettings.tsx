@@ -141,7 +141,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
   const handleConfigChange = (key: keyof AzureOpenAIRealtimeSettings, value: any) => {
     // Sanitize the incoming value
     let sanitizedValue = value;
-    
+
     if (key === 'temperature') {
       sanitizedValue = Math.max(0.6, Math.min(2.0, parseFloat(value) || 0.7));
     } else if (key === 'turnDetectionThreshold') {
@@ -153,7 +153,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
     } else if (key === 'maxResponse') {
       sanitizedValue = Math.max(100, Math.min(4096, parseInt(value) || 1638));
     }
-    
+
     const newConfig = { ...localConfig, [key]: sanitizedValue };
     setLocalConfig(newConfig);
     onConfigUpdate({ [key]: sanitizedValue });
@@ -168,10 +168,10 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="speech-settings-title" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="speech-settings-title" role="dialog" aria-modal="true">
       <div className="flex items-center justify-center min-h-full p-4">
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose}></div>
-        
+
         <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">

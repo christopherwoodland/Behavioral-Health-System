@@ -237,7 +237,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
       }
 
       // Smooth frequency interpolation - slower decay for longer animation
-      frequencyRef.current += (targetFrequencyRef.current - frequencyRef.current) * 0.02;
+      frequencyRef.current += (targetFrequencyRef.current - frequencyRef.current) * 0.005;
 
       // Update uniforms
       uniforms.u_time.value = clockRef.current.getElapsedTime();

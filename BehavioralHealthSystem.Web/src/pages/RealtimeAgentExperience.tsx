@@ -29,7 +29,7 @@ import {
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
-import { FloatingOrb, ClosedCaptions } from '@/components/FloatingOrb';
+import { AudioVisualizerBlob, ClosedCaptions } from '@/components/FloatingOrb';
 import phqAssessmentService from '@/services/phqAssessmentService';
 import chatTranscriptService from '@/services/chatTranscriptService';
 import { phqSessionService } from '@/services/phqSessionService';
@@ -2008,9 +2008,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       {viewMode === 'orb' ? (
         // 3D Orb View
         <div className="flex-1 overflow-hidden relative">
-          <FloatingOrb
+          <AudioVisualizerBlob
             isAgentSpeaking={speechDetection.isAISpeaking}
-            isUserSpeaking={speechDetection.isUserSpeaking}
             agentId={currentAgent.id}
           />
           <ClosedCaptions

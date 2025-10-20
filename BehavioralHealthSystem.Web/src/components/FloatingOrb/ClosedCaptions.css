@@ -1,16 +1,16 @@
 .closed-captions-container {
-  position: fixed;
-  top: 50%;
+  position: absolute;
+  bottom: auto;
+  top: 60%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 600px;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 900px;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   z-index: 200;
   pointer-events: none;
-  margin-top: 12rem;
 }
 
 .caption-item {
@@ -29,11 +29,11 @@
 }
 
 .caption-item.caption-agent {
-  border-left: 3px solid #4a90e2;
+  border-left: 3px solid #4ae24a;
 }
 
 .caption-item.caption-agent.speaker-tars {
-  border-left-color: #4a90e2;
+  border-left-color: #4ae24a;
 }
 
 .caption-item.caption-agent.speaker-matron {
@@ -67,7 +67,7 @@
 }
 
 .caption-item.caption-agent.speaker-tars .caption-speaker {
-  color: #4a90e2;
+  color: #4ae24a;
 }
 
 .caption-item.caption-agent.speaker-matron .caption-speaker {
@@ -127,9 +127,8 @@
 
 @media (max-width: 768px) {
   .closed-captions-container {
-    top: 50%;
-    transform: translate(-50%, -50%);
-    margin-top: 10rem;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
     max-width: 90%;
   }
 
@@ -144,9 +143,8 @@
 
 @media (max-width: 480px) {
   .closed-captions-container {
-    top: 50%;
-    transform: translate(-50%, -50%);
-    margin-top: 8rem;
+    bottom: 1rem;
+    transform: translateX(-50%);
     gap: 0.5rem;
     max-width: 95%;
   }
@@ -168,7 +166,7 @@
 
 /* CSS Variables for agent colors */
 :root {
-  --agent-tars: #4a90e2;
+  --agent-tars: #4ae24a;
   --agent-matron: #e24a90;
   --agent-phq2: #4ae2e2;
   --agent-phq9: #a24ae2;

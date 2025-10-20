@@ -1,252 +1,219 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import './FloatingOrb.css';
 
 interface FloatingOrbProps {
   isAgentSpeaking: boolean;
-  isUserSpeaking: boolean;
   agentId: string;
 }
 
-/**
- * FloatingOrb Component - Now a 2D Sine Wave Visualization
- * Renders an animated sine wave viewed from the side (X plane)
- * Wave amplitude and frequency increase when agent speaks
- */
 export const FloatingOrb: React.FC<FloatingOrbProps> = ({
   isAgentSpeaking,
-  isUserSpeaking,
   agentId
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
-  const cameraRef = useRef<THREE.OrthographicCamera | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
-  const waveLineRef = useRef<THREE.Line | null>(null);
+  const ballRef = useRef<THREE.Mesh | null>(null);
   const animationIdRef = useRef<number | null>(null);
   const timeRef = useRef(0);
+  const originalVerticesRef = useRef<THREE.BufferAttribute | null>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
+  const isAgentSpeakingRef = useRef(isAgentSpeaking);
 
-  // Get agent-specific color
-  const getAgentColor = (id: string): THREE.Color => {
+  const getAgentColor = (id: string): number => {
     switch (id) {
-      case 'tars':
-        return new THREE.Color(0x4a90e2); // Blue
-      case 'matron':
-        return new THREE.Color(0xe24a90); // Pink/Magenta
-      case 'phq2':
-        return new THREE.Color(0x4ae2e2); // Cyan
-      case 'phq9':
-        return new THREE.Color(0xa24ae2); // Purple
-      case 'vocalist':
-        return new THREE.Color(0xe2a24a); // Orange
-      default:
-        return new THREE.Color(0x4a90e2); // Default blue
+      case 'tars': return 0x4a90e2;
+      case 'matron': return 0xe24a90;
+      case 'phq2': return 0x4ae2e2;
+      case 'phq9': return 0xa24ae2;
+      case 'vocalist': return 0xe2a24a;
+      default: return 0x4a90e2;
     }
   };
 
-  // Initialize Three.js scene with 2D sine wave
+  // Keep ref in sync with prop
+  useEffect(() => {
+    isAgentSpeakingRef.current = isAgentSpeaking;
+    console.log('🎬 FloatingOrb prop updated: isAgentSpeaking =', isAgentSpeaking);
+  }, [isAgentSpeaking]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // Scene setup
     const scene = new THREE.Scene();
     sceneRef.current = scene;
 
-    // Camera setup - orthographic for 2D view
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
-    const camera = new THREE.OrthographicCamera(
-      -width / 200,
-      width / 200,
-      height / 200,
-      -height / 200,
-      0.1,
-      1000
-    );
-    camera.position.z = 1;
+    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+    camera.position.set(0, 0, 30);
+    camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
 
-    // Renderer setup
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
       powerPreference: 'high-performance'
     });
     renderer.setSize(width, height);
-    renderer.setClearColor(0x000000, 0); // Transparent background
+    renderer.setClearColor(0x000000, 0);
     renderer.setPixelRatio(window.devicePixelRatio);
     containerRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Create sine wave curve
-    const resolution = 512; // High resolution for smooth curve
-    const waveLength = 4; // Wave wavelength
-    const amplitude = 1; // Base amplitude
+    const group = new THREE.Group();
+    scene.add(group);
+    groupRef.current = group;
 
-    const baseColor = getAgentColor(agentId);
-
-    // Function to generate AM-modulated sine wave points (radio frequency effect)
-    const generateWavePoints = (
-      amp: number,
-      freq: number,
-      phase: number,
-      modulationDepth: number,
-      modulationPhase: number
-    ) => {
-      const pts: THREE.Vector3[] = [];
-      // Carrier frequency (high frequency wave)
-      const carrierFreq = freq;
-      // Modulation frequency (slower, creates the "speech" effect)
-      const modulationFreq = 2.5;
-
-      for (let i = 0; i <= resolution; i++) {
-        const x = (i / resolution) * waveLength - waveLength / 2;
-
-        // AM: Amplitude Modulation formula
-        // y = [A + D*sin(ωm*t)] * sin(ωc*t + φ)
-        // Where:
-        // A = base amplitude
-        // D = modulation depth (0 to 1)
-        // ωm = modulation frequency (slow)
-        // ωc = carrier frequency (fast)
-        // φ = phase
-
-        // Calculate modulation envelope (slower oscillation)
-        const modulation = 1 + modulationDepth * Math.sin(x * modulationFreq + modulationPhase);
-
-        // Calculate carrier wave (fast oscillation)
-        const carrier = Math.sin(x * carrierFreq + phase);
-
-        // Apply AM modulation
-        const y = modulation * carrier * amp;
-
-        pts.push(new THREE.Vector3(x, y, 0));
-      }
-      return pts;
-    };
-
-    // Initial wave points
-    let currentWavePoints = generateWavePoints(
-      amplitude,
-      Math.PI * 2,
-      0,
-      0.3,
-      0
-    );
-
-    // Create line geometry with initial points
-    const geometry = new THREE.BufferGeometry().setFromPoints(currentWavePoints);
-    const material = new THREE.LineBasicMaterial({
-      color: baseColor,
-      linewidth: 3,
-      fog: false
+    const ballGeometry = new THREE.IcosahedronGeometry(7, 6);
+    const ballColor = getAgentColor(agentId);
+    const ballMaterial = new THREE.MeshLambertMaterial({
+      color: ballColor,
+      wireframe: true,
+      emissive: ballColor,
+      emissiveIntensity: 0.3
     });
 
-    const waveLine = new THREE.Line(geometry, material);
-    scene.add(waveLine);
-    waveLineRef.current = waveLine;
+    const ball = new THREE.Mesh(ballGeometry, ballMaterial);
+    ball.position.set(0, 0, 0);
+    group.add(ball);
+    ballRef.current = ball;
 
-    // Store shader-like uniforms for wave calculation
-    const waveParams = {
-      amplitude: amplitude,
-      frequency: Math.PI * 2,
-      phase: 0,
-      modulationDepth: 0.3, // How much the modulation affects amplitude (0-1)
-      modulationPhase: 0,
-      targetAmplitude: amplitude,
-      targetFrequency: Math.PI * 2,
-      targetModulationDepth: 0.3,
-      speedIntensity: 1.0,
-      targetSpeedIntensity: 1.0
-    };
+    const positionAttribute = ballGeometry.getAttribute('position');
+    if (positionAttribute) {
+      originalVerticesRef.current = positionAttribute.clone();
+    }
 
-    // Handle window resize
+    const ambientLight = new THREE.AmbientLight(0xaaaaaa, 0.8);
+    scene.add(ambientLight);
+
+    const spotLight = new THREE.SpotLight(0xffffff, 0.9);
+    spotLight.position.set(-10, 40, 20);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
+
     const handleResize = () => {
       if (!containerRef.current) return;
       const newWidth = containerRef.current.clientWidth;
       const newHeight = containerRef.current.clientHeight;
-      camera.left = -newWidth / 200;
-      camera.right = newWidth / 200;
-      camera.top = newHeight / 200;
-      camera.bottom = -newHeight / 200;
+      camera.aspect = newWidth / newHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(newWidth, newHeight);
     };
 
     window.addEventListener('resize', handleResize);
 
-    // Animation loop
+    const animState = {
+      targetAmplitude: 0,
+      currentAmplitude: 0,
+      lastSpeakingTime: 0,
+      holdDuration: 5000, // Hold animation for 5 seconds after last speaking event
+      randomSeed: Math.random() * 1000 // Different seed per component instance
+    };
+
     const animate = () => {
       animationIdRef.current = requestAnimationFrame(animate);
-      timeRef.current += 0.016; // ~60fps
+      timeRef.current += 0.016;
 
-      if (waveLineRef.current) {
-        // Update target amplitude and frequency based on speaking state
-        if (isAgentSpeaking) {
-          waveParams.targetAmplitude = amplitude * 2.0; // Stronger modulation carrier
-          waveParams.targetFrequency = Math.PI * 2 * 1.5; // Moderate carrier frequency
-          waveParams.targetModulationDepth = 0.85; // Deep modulation when speaking (AM effect)
-          waveParams.targetSpeedIntensity = 2.0;
-        } else if (isUserSpeaking) {
-          waveParams.targetAmplitude = amplitude * 1.3;
-          waveParams.targetFrequency = Math.PI * 2 * 1.2;
-          waveParams.targetModulationDepth = 0.5;
-          waveParams.targetSpeedIntensity = 1.3;
+      // Use ref to get current speaking state (not captured in closure)
+      const isSpeaking = isAgentSpeakingRef.current;
+
+      // Debug: Log when state changes
+      if (isSpeaking && animState.currentAmplitude === 0) {
+        console.log('🎤 ANIMATION TRIGGERED: Agent started speaking');
+      }
+
+      if (isSpeaking) {
+        animState.targetAmplitude = 20; // Increased for more dramatic deformation
+        animState.lastSpeakingTime = Date.now(); // Update last speaking time whenever agent is actively speaking
+      } else {
+        // Check if we should still be animating (within hold duration)
+        const timeSinceLastSpeak = Date.now() - animState.lastSpeakingTime;
+
+        if (timeSinceLastSpeak < animState.holdDuration) {
+          // Keep animating even though isAISpeaking is false
+          animState.targetAmplitude = 12;
         } else {
-          waveParams.targetAmplitude = amplitude;
-          waveParams.targetFrequency = Math.PI * 2;
-          waveParams.targetModulationDepth = 0.2; // Subtle modulation when idle
-          waveParams.targetSpeedIntensity = 1.0;
+          // Beyond hold duration, start decay
+          animState.targetAmplitude = 0;
+        }
+      }
+
+      // Always smooth interpolation for natural ramp - faster response
+      animState.currentAmplitude +=
+        (animState.targetAmplitude - animState.currentAmplitude) * 0.25;
+
+      // Log amplitude every 30 frames (about once per second at 60fps)
+      if (timeRef.current % 30 < 0.016 && !isSpeaking && animState.currentAmplitude > 0.1) {
+        const timeSinceLastSpeak = Date.now() - animState.lastSpeakingTime;
+        console.log(`📊 AMPLITUDE: ${animState.currentAmplitude.toFixed(2)}, Time since last speak: ${timeSinceLastSpeak}ms, Target: ${animState.targetAmplitude}`);
+      }
+
+      if (ballRef.current && originalVerticesRef.current) {
+        const posAttr = ballRef.current.geometry.getAttribute(
+          'position'
+        ) as THREE.BufferAttribute;
+        const origAttr = originalVerticesRef.current;
+
+        for (let i = 0; i < posAttr.count; i++) {
+          const x = origAttr.getX(i);
+          const y = origAttr.getY(i);
+          const z = origAttr.getZ(i);
+
+          const length = Math.sqrt(x * x + y * y + z * z);
+
+          const time = timeRef.current;
+
+          // Simulate bass and treble with frequency-like modulation
+          // Bass: slower, dominant frequencies
+          const bass = Math.sin(time * 1.2 + animState.randomSeed) * 0.4 +
+                       Math.sin(time * 0.8 - animState.randomSeed) * 0.3;
+
+          // Treble: faster, higher frequencies
+          const treble = Math.sin(time * 4.5 + i * 0.2) * 0.3 +
+                         Math.cos(time * 7.2 - i * 0.1) * 0.2 +
+                         Math.sin(time * 11.8 + i * 0.3) * 0.15;
+
+          // Rich noise layer inspired by Simplex noise pattern
+          const noise =
+            Math.sin(time * 2 + i * 0.1) * 0.6 +
+            Math.cos(time * 3.5 + i * 0.2) * 0.4 +
+            Math.sin(time * 5.2 - i * 0.15) * 0.3 +
+            Math.cos(time * 8.1 + i * 0.05) * 0.2 +
+            Math.sin(time * 13.3 - i * 0.25) * 0.15;
+
+          // Combine bass and treble with amplitude
+          const totalDeformation = (bass * 0.5 + treble * 0.5 + noise * 0.3) * animState.currentAmplitude;
+          const deformation = animState.currentAmplitude * (0.5 + 0.5 * totalDeformation);
+
+          const newX = (x / length) * (length + deformation);
+          const newY = (y / length) * (length + deformation);
+          const newZ = (z / length) * (length + deformation);
+
+          posAttr.setXYZ(i, newX, newY, newZ);
         }
 
-        // Smooth interpolation to target values
-        waveParams.amplitude += (waveParams.targetAmplitude - waveParams.amplitude) * 0.08;
-        waveParams.frequency += (waveParams.targetFrequency - waveParams.frequency) * 0.08;
-        waveParams.modulationDepth +=
-          (waveParams.targetModulationDepth - waveParams.modulationDepth) * 0.1;
-        waveParams.speedIntensity +=
-          (waveParams.targetSpeedIntensity - waveParams.speedIntensity) * 0.08;
+        posAttr.needsUpdate = true;
+        ballRef.current.geometry.computeVertexNormals();
 
-        // Update phase based on speed intensity
-        waveParams.phase += 0.05 * waveParams.speedIntensity;
-
-        // Update modulation phase (creates the "breathing" effect)
-        waveParams.modulationPhase += 0.02 * waveParams.speedIntensity;
-
-        // Generate new wave points with current parameters
-        const newPoints = generateWavePoints(
-          waveParams.amplitude,
-          waveParams.frequency,
-          waveParams.phase,
-          waveParams.modulationDepth,
-          waveParams.modulationPhase
-        );
-
-        // Update geometry with new points
-        const positionAttribute = waveLineRef.current.geometry.getAttribute('position');
-        if (positionAttribute instanceof THREE.BufferAttribute) {
-          for (let i = 0; i < newPoints.length; i++) {
-            positionAttribute.setXYZ(i, newPoints[i].x, newPoints[i].y, newPoints[i].z);
+        if (ballRef.current.material instanceof THREE.MeshLambertMaterial) {
+          if (isSpeaking) {
+            const brightColor = new THREE.Color(ballColor);
+            brightColor.multiplyScalar(1.5);
+            ballRef.current.material.color = brightColor;
+            ballRef.current.material.emissiveIntensity = 0.6;
+          } else {
+            ballRef.current.material.color.setHex(ballColor);
+            ballRef.current.material.emissiveIntensity = 0.3;
           }
-          positionAttribute.needsUpdate = true;
         }
+      }
 
-        // Update line color based on agent
-        if (waveLineRef.current.material instanceof THREE.LineBasicMaterial) {
-          waveLineRef.current.material.color = getAgentColor(agentId);
-
-          // Brighten color when speaking
-          if (isAgentSpeaking) {
-            const brightFactor = 1.5;
-            const color = getAgentColor(agentId);
-            waveLineRef.current.material.color.r = Math.min(1, color.r * brightFactor);
-            waveLineRef.current.material.color.g = Math.min(1, color.g * brightFactor);
-            waveLineRef.current.material.color.b = Math.min(1, color.b * brightFactor);
-          }
-
-          // Increase line width based on speaking
-          waveLineRef.current.material.linewidth = 3 + waveParams.speedIntensity * 2;
-        }
+      if (groupRef.current) {
+        groupRef.current.rotation.x += 0.0005;
+        groupRef.current.rotation.y += 0.001;
       }
 
       renderer.render(scene, camera);
@@ -254,7 +221,6 @@ export const FloatingOrb: React.FC<FloatingOrbProps> = ({
 
     animate();
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
       if (animationIdRef.current) {
@@ -264,10 +230,10 @@ export const FloatingOrb: React.FC<FloatingOrbProps> = ({
         containerRef.current.removeChild(renderer.domElement);
       }
       renderer.dispose();
-      geometry.dispose();
-      material.dispose();
+      ballGeometry.dispose();
+      ballMaterial.dispose();
     };
-  }, [agentId]);
+  }, [agentId, isAgentSpeaking]);
 
   return (
     <div className="floating-orb-container" ref={containerRef} data-agent={agentId} />

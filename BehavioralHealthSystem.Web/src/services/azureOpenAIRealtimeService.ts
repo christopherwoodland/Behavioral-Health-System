@@ -1241,6 +1241,11 @@ export class AzureOpenAIRealtimeService {
           this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
 
+          // IMPORTANT: Set isAISpeaking to true IMMEDIATELY when response starts
+          // Don't wait for the first audio_transcript.delta
+          this.speechDetectionState.isAISpeaking = true;
+          this.emitSpeechDetection();
+
           // Track agent utterance start
           this.trackUtterance('agent', 'speech-start');
           break;
@@ -1249,10 +1254,11 @@ export class AzureOpenAIRealtimeService {
           this.agentResponseHandler.handleResponseDone(realtimeEvent);
 
           // Update service-level state for backward compatibility
-          this.speechDetectionState.isAISpeaking = false;
+          // NOTE: Don't set isAISpeaking = false here - wait for output_audio_buffer.stopped
+          // because audio might still be playing in the output buffer
           this.isResponseInProgress = false; // Clear response flag
           this.updateConversationState({ state: 'idle', message: 'Ready for input' });
-          this.emitSpeechDetection();
+          // Don't emit speech detection here - let output_audio_buffer.stopped do it
 
           // Process any queued responses
           this.processNextQueuedResponse();
@@ -1306,7 +1312,10 @@ export class AzureOpenAIRealtimeService {
 
         // Audio buffer events
         case 'output_audio_buffer.stopped':
-          console.log('🔇 Audio output buffer stopped');
+          console.log('🔇 Audio output buffer stopped - Setting isAISpeaking to false NOW');
+          // Set isAISpeaking to false when audio actually stops playing (not when response generation completes)
+          this.speechDetectionState.isAISpeaking = false;
+          this.emitSpeechDetection();
           // This is a normal event when audio playback completes
           break;
 

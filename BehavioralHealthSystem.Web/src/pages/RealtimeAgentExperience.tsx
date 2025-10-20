@@ -29,6 +29,7 @@ import {
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
+import { FloatingOrb, ClosedCaptions } from '@/components/FloatingOrb';
 import phqAssessmentService from '@/services/phqAssessmentService';
 import chatTranscriptService from '@/services/chatTranscriptService';
 import { phqSessionService } from '@/services/phqSessionService';
@@ -179,6 +180,10 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [viewMode, setViewMode] = useState<'orb' | 'traditional'>(() => {
+    const saved = localStorage.getItem('agent-view-mode');
+    return (saved as 'orb' | 'traditional') || 'orb';
+  });
 
   // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
@@ -1781,6 +1786,24 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             </button>
           )}
 
+          {/* View Mode Toggle - Orb vs Traditional */}
+          <button
+            onClick={() => {
+              const newMode = viewMode === 'orb' ? 'traditional' : 'orb';
+              setViewMode(newMode);
+              localStorage.setItem('agent-view-mode', newMode);
+            }}
+            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              viewMode === 'orb'
+                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+            aria-label={`Switch to ${viewMode === 'orb' ? 'traditional' : 'orb'} view`}
+            title={`View: ${viewMode === 'orb' ? 'Orb (3D)' : 'Traditional (List)'}`}
+          >
+            {viewMode === 'orb' ? '3D' : '📋'}
+          </button>
+
           {/* Agent Panel Toggle */}
           <button
             onClick={() => setShowAgentPanel(!showAgentPanel)}
@@ -1981,50 +2004,73 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => {
-          // Verbose logging - only when debugging
-          if (ENABLE_VERBOSE_LOGGING) {
-            console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
-          }
-          const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
-          // Check if this message is from the currently active agent
-          const isActiveAgent = message.role === 'assistant' && message.agentId &&
-            message.agentId.toLowerCase() === currentAgent.id.toLowerCase();
+      {/* Content Area - Toggle between Orb View and Traditional Message View */}
+      {viewMode === 'orb' ? (
+        // 3D Orb View
+        <div className="flex-1 overflow-hidden relative">
+          <FloatingOrb
+            isAgentSpeaking={speechDetection.isAISpeaking}
+            isUserSpeaking={speechDetection.isUserSpeaking}
+            agentId={currentAgent.id}
+          />
+          <ClosedCaptions
+            captions={messages
+              .filter(msg => msg.role === 'assistant' || msg.role === 'user')
+              .map((message, idx) => ({
+                id: message.id || `msg-${idx}`,
+                text: message.content,
+                speaker: message.role === 'user' ? 'user' : 'agent' as const,
+                agentId: message.agentId || currentAgent.id,
+                timestamp: new Date(message.timestamp).getTime()
+              }))}
+            maxCaptions={3}
+          />
+        </div>
+      ) : (
+        // Traditional Message List View
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => {
+            // Verbose logging - only when debugging
+            if (ENABLE_VERBOSE_LOGGING) {
+              console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
+            }
+            const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
+            // Check if this message is from the currently active agent
+            const isActiveAgent = message.role === 'assistant' && message.agentId &&
+              message.agentId.toLowerCase() === currentAgent.id.toLowerCase();
 
-          // Debug logging for colors
-          if (message.role === 'assistant' && agentColors) {
-            console.log('🎨 Agent color debug:', {
-              messageAgentId: message.agentId,
-              currentAgentId: currentAgent.id,
-              isActiveAgent,
-              colors: agentColors,
-              appliedBorder: isActiveAgent ? agentColors.outline : agentColors.border
-            });
-          }
+            // Debug logging for colors
+            if (message.role === 'assistant' && agentColors) {
+              console.log('🎨 Agent color debug:', {
+                messageAgentId: message.agentId,
+                currentAgentId: currentAgent.id,
+                isActiveAgent,
+                colors: agentColors,
+                appliedBorder: isActiveAgent ? agentColors.outline : agentColors.border
+              });
+            }
 
-          return (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+            return (
             <div
-              className={`max-w-[80%] p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : agentColors ? `${agentColors.bg} ${agentColors.text} ${isActiveAgent ? agentColors.outline : agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              {message.role === 'assistant' && (
-                <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
-                  {message.agentId === 'tars' ? (
-                    <Bot size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'matron' ? (
-                    <Plus size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'phq2' ? (
-                    <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'phq9' ? (
+              <div
+                className={`max-w-[80%] p-3 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-primary-600 text-white'
+                    : agentColors ? `${agentColors.bg} ${agentColors.text} ${isActiveAgent ? agentColors.outline : agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
+              >
+                {message.role === 'assistant' && (
+                  <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
+                    {message.agentId === 'tars' ? (
+                      <Bot size={16} className="text-gray-600 dark:text-gray-400" />
+                    ) : message.agentId === 'matron' ? (
+                      <Plus size={16} className="text-gray-600 dark:text-gray-400" />
+                    ) : message.agentId === 'phq2' ? (
+                      <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
+                    ) : message.agentId === 'phq9' ? (
                     <FileText size={16} className="text-gray-600 dark:text-gray-400" />
                   ) : message.agentId === 'vocalist' ? (
                     <Mic size={16} className="text-gray-600 dark:text-gray-400" />
@@ -2074,9 +2120,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         )}
 
         <div ref={messagesEndRef} />
-      </div>
+        </div>
+      )}
 
-      {/* Voice-Only Input Area */}
+      {/* Voice-Only Input Area - Hidden in Orb Mode */}
+      {viewMode === 'traditional' && (
       <div className="p-6 border-t border-gray-200 dark:border-gray-700">
         {/* Voice Activity Indicator - Centered */}
         {sessionStatus.isActive && !isSessionPaused && (
@@ -2197,6 +2245,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
         </div>
       </div>
+      )}
 
       {/* Settings Modal */}
       <SpeechSettings

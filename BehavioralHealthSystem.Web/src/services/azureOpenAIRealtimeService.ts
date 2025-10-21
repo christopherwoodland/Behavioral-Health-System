@@ -1098,6 +1098,8 @@ export class AzureOpenAIRealtimeService {
         // Session management
         case 'session.created':
           console.log('✅ Session created successfully');
+          // Reset response flag to ensure clean state
+          this.isResponseInProgress = false;
           this.updateConversationState({ state: 'idle', message: 'Session created' });
           break;
 
@@ -1239,6 +1241,11 @@ export class AzureOpenAIRealtimeService {
           this.agentResponseHandler.handleResponseCreated(realtimeEvent);
           this.updateConversationState({ state: 'processing', message: 'Generating response...' });
 
+          // IMPORTANT: Set isAISpeaking to true IMMEDIATELY when response starts
+          // Don't wait for the first audio_transcript.delta
+          this.speechDetectionState.isAISpeaking = true;
+          this.emitSpeechDetection();
+
           // Track agent utterance start
           this.trackUtterance('agent', 'speech-start');
           break;
@@ -1247,10 +1254,11 @@ export class AzureOpenAIRealtimeService {
           this.agentResponseHandler.handleResponseDone(realtimeEvent);
 
           // Update service-level state for backward compatibility
-          this.speechDetectionState.isAISpeaking = false;
+          // NOTE: Don't set isAISpeaking = false here - wait for output_audio_buffer.stopped
+          // because audio might still be playing in the output buffer
           this.isResponseInProgress = false; // Clear response flag
           this.updateConversationState({ state: 'idle', message: 'Ready for input' });
-          this.emitSpeechDetection();
+          // Don't emit speech detection here - let output_audio_buffer.stopped do it
 
           // Process any queued responses
           this.processNextQueuedResponse();
@@ -1272,10 +1280,28 @@ export class AzureOpenAIRealtimeService {
 
         // Error handling
         case 'error':
-          console.error('❌ Realtime API error:', realtimeEvent.error?.message);
-          this.updateConversationState({ state: 'error', message: realtimeEvent.error?.message || 'Unknown error' });
-          if (this.onErrorCallback) {
-            this.onErrorCallback(new Error(realtimeEvent.error?.message || 'Realtime API error'));
+          const errorMessage = realtimeEvent.error?.message || 'Unknown error';
+
+          // Handle known non-critical errors more gracefully
+          if (errorMessage.includes('Cannot update a conversation\'s voice if assistant audio is present')) {
+            console.warn('⚠️ Voice update skipped - assistant is speaking:', errorMessage);
+            // Don't treat this as a critical error, just log it
+            this.updateConversationState({ state: 'speaking', message: 'Voice update deferred' });
+          } else if (errorMessage.includes('Cancellation failed: no active response found')) {
+            console.warn('⚠️ Cancellation attempted on already-completed response:', errorMessage);
+            // This happens when we try to interrupt a response that just finished - it's harmless
+            // Don't treat as error, conversation is already in correct state
+          } else if (errorMessage.includes('Conversation already has an active response in progress')) {
+            console.warn('⚠️ Response creation skipped - response already in progress:', errorMessage);
+            // This is handled by the queue system, so just log it as a warning
+            // The response will be queued and processed when the current one completes
+            this.updateConversationState({ state: 'speaking', message: 'Response queued' });
+          } else {
+            console.error('❌ Realtime API error:', errorMessage);
+            this.updateConversationState({ state: 'error', message: errorMessage });
+            if (this.onErrorCallback) {
+              this.onErrorCallback(new Error(errorMessage));
+            }
           }
           break;
 
@@ -1286,7 +1312,10 @@ export class AzureOpenAIRealtimeService {
 
         // Audio buffer events
         case 'output_audio_buffer.stopped':
-          console.log('🔇 Audio output buffer stopped');
+          console.log('🔇 Audio output buffer stopped - Setting isAISpeaking to false NOW');
+          // Set isAISpeaking to false when audio actually stops playing (not when response generation completes)
+          this.speechDetectionState.isAISpeaking = false;
+          this.emitSpeechDetection();
           // This is a normal event when audio playback completes
           break;
 
@@ -1455,6 +1484,76 @@ export class AzureOpenAIRealtimeService {
 
     } catch (error) {
       console.error('Failed to speak assistant message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send initial greeting after data channel is ready
+   * Waits for data channel to open, then sends a system message to trigger AI greeting
+   */
+  async sendInitialGreeting(instructions: string): Promise<void> {
+    // Wait for data channel to be open
+    const waitForDataChannel = (): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        if (this.dataChannel?.readyState === 'open') {
+          resolve();
+          return;
+        }
+
+        const timeout = setTimeout(() => {
+          reject(new Error('Timeout waiting for data channel to open'));
+        }, 10000); // 10 second timeout
+
+        const checkInterval = setInterval(() => {
+          if (this.dataChannel?.readyState === 'open') {
+            clearTimeout(timeout);
+            clearInterval(checkInterval);
+            resolve();
+          }
+        }, 100); // Check every 100ms
+      });
+    };
+
+    try {
+      // Wait for data channel to be ready
+      await waitForDataChannel();
+      console.log('✅ Data channel is ready for initial greeting');
+
+      // Wait to ensure session setup is complete (configurable via env)
+      const sessionDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_SESSION_DELAY_MS || '1500', 10);
+      await new Promise(resolve => setTimeout(resolve, sessionDelay));
+
+      // Send system message to trigger greeting
+      const systemMessageEvent = {
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'system',
+          content: [
+            {
+              type: 'input_text',
+              text: instructions
+            }
+          ]
+        }
+      };
+
+      this.dataChannel!.send(JSON.stringify(systemMessageEvent));
+      console.log('📤 Sent system message for initial greeting');
+
+      // Wait before triggering response (configurable via env)
+      const responseDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_RESPONSE_DELAY_MS || '300', 10);
+      await new Promise(resolve => setTimeout(resolve, responseDelay));
+
+      // Use safeCreateResponse to properly handle response state
+      console.log('🎤 Triggering AI response for greeting via safeCreateResponse');
+      this.safeCreateResponse({
+        modalities: ['text', 'audio']
+      });
+
+    } catch (error) {
+      console.error('Failed to send initial greeting:', error);
       throw error;
     }
   }
@@ -1776,7 +1875,9 @@ export class AzureOpenAIRealtimeService {
       audioTracks.forEach(track => {
         track.enabled = !mute;
       });
-      console.log(mute ? '🔇 Microphone muted (agent speaking)' : '🔊 Microphone unmuted');
+      console.log(mute ? '🔇 Microphone muted' : '🔊 Microphone unmuted', `(${audioTracks.length} tracks)`);
+    } else {
+      console.warn('⚠️ Cannot mute microphone - localStream not initialized yet');
     }
   }
 
@@ -1794,6 +1895,23 @@ export class AzureOpenAIRealtimeService {
     if (!this.localStream) return true;
     const audioTracks = this.localStream.getAudioTracks();
     return audioTracks.length === 0 || !audioTracks[0].enabled;
+  }
+
+  /**
+   * Set audio output (speaker) muted/unmuted state
+   */
+  setAudioOutputMuted(muted: boolean): void {
+    if (this.audioElement) {
+      this.audioElement.muted = muted;
+      console.log(muted ? '🔇 Audio output muted (speakers)' : '🔊 Audio output unmuted (speakers)');
+    }
+  }
+
+  /**
+   * Check if audio output is muted
+   */
+  isAudioOutputMuted(): boolean {
+    return this.audioElement?.muted ?? false;
   }
 
   /**

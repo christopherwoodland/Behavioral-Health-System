@@ -44,6 +44,14 @@ public class UserBiometricDataValidator : AbstractValidator<UserBiometricData>
             .WithMessage("Height must be less than or equal to 300 cm")
             .When(x => x.HeightCm.HasValue);
 
+        // Age validation (optional, but must be reasonable if provided)
+        RuleFor(x => x.Age)
+            .GreaterThan(0)
+            .WithMessage("Age must be greater than 0")
+            .LessThanOrEqualTo(150)
+            .WithMessage("Age must be less than or equal to 150")
+            .When(x => x.Age.HasValue);
+
         // Gender validation (optional, max length if provided)
         RuleFor(x => x.Gender)
             .MaximumLength(50)

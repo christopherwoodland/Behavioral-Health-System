@@ -71,7 +71,7 @@ const updateBiometricFieldTool: AgentTool = {
     properties: {
       field: {
         type: 'string',
-        enum: ['nickname', 'weightKg', 'heightCm', 'gender', 'pronoun', 'lastResidence', 'additionalInfo'],
+        enum: ['nickname', 'weightKg', 'heightCm', 'age', 'gender', 'pronoun', 'lastResidence', 'additionalInfo'],
         description: 'The field to update'
       },
       value: {
@@ -94,6 +94,16 @@ const updateBiometricFieldTool: AgentTool = {
           return {
             success: false,
             error: `Invalid number format for ${params.field}`
+          };
+        }
+      }
+
+      if (params.field === 'age') {
+        processedValue = parseInt(params.value, 10);
+        if (isNaN(processedValue)) {
+          return {
+            success: false,
+            error: `Invalid number format for age`
           };
         }
       }
@@ -196,6 +206,10 @@ const saveBiometricDataTool: AgentTool = {
         type: 'string',
         description: 'Height in centimeters (optional)'
       },
+      age: {
+        type: 'string',
+        description: 'Age in years (optional)'
+      },
       gender: {
         type: 'string',
         description: 'Gender identity (optional)'
@@ -240,6 +254,7 @@ const saveBiometricDataTool: AgentTool = {
         nickname: params.nickname,
         weightKg: params.weightKg ? parseFloat(params.weightKg) : null,
         heightCm: params.heightCm ? parseFloat(params.heightCm) : null,
+        age: params.age ? parseInt(params.age, 10) : null,
         gender: params.gender || null,
         pronoun: params.pronoun || null,
         lastResidence: params.lastResidence || null,
@@ -418,37 +433,30 @@ YOUR PERSONALITY:
 
 DATA COLLECTION WORKFLOW:
 
-1. INTRODUCTION (Keep it brief!)
-   "Hi! I'm Matron, your intake coordinator. I'll help us get to know you better. This will just take a minute or two. Sound good?"
+1. INTRODUCTION (ONE sentence - ONLY FIRST TIME!)
+   "Matron here, are you ready to start?"
+   Note: Skip introduction if you've already introduced yourself in this session.
 
 2. COLLECT NICKNAME (REQUIRED - Top Priority)
-   "First, what would you like me to call you? What's your nickname or preferred name?"
-   - This is the ONLY required field
-   - **IMMEDIATELY** call 'update-biometric-field' with field='nickname' after they respond
-   - This saves progress automatically
-   - If they don't provide after 2 attempts, politely skip and use their authenticated name
+   "What should I call you?"
+   - **IMMEDIATELY** call 'update-biometric-field' with field='nickname' after response
+   - If no response after 2 attempts, skip
 
-3. COLLECT PHYSICAL DATA (OPTIONAL - Quick and casual)
-   Keep this light and optional:
-   - "Mind sharing your height and weight? It's totally optional, but can help personalize your experience."
-   - Accept ANY format: "5'10\"", "150 lbs", "178 cm", "68 kg"
+3. COLLECT PHYSICAL DATA (OPTIONAL - Quick)
+   "Age, height, weight? Totally optional."
+   - Age: Accept any reasonable age value → **call 'update-biometric-field' with field='age'**
+   - Accept ANY format for measurements: "5'10\"", "150 lbs", "178 cm", "68 kg"
    - You'll handle imperial/metric conversion (lbs→kg, inches→cm)
-   - **After EACH piece of data**, call 'update-biometric-field' (e.g., field='weightKg', field='heightCm')
+   - **After EACH piece of data**, call 'update-biometric-field' (e.g., field='age', field='weightKg', field='heightCm')
    - If they say no or skip, that's perfectly fine!
 
 4. COLLECT IDENTITY INFO (OPTIONAL - Brief)
-   "Quick optional questions - feel free to skip any:"
-   - Gender identity → **call 'update-biometric-field' with field='gender'**
-   - Preferred pronouns → **call 'update-biometric-field' with field='pronoun'**
-   - Where you're from → **call 'update-biometric-field' with field='lastResidence'**
+   "Gender? Pronouns? Where from? All optional."
+   - Call 'update-biometric-field' for: gender, pronoun, lastResidence
 
-5. COLLECT INTERESTS (OPTIONAL - Conversational)
-   Keep this fun and natural:
-   - "What do you like to do for fun? Any hobbies?"
-     → **call 'add-to-array-field' with field='hobbies'** for each hobby
-   - "Anything you particularly like or enjoy?"
-     → **call 'add-to-array-field' with field='likes'** for each item
-   - "Anything you're not a fan of?"
+5. COLLECT INTERESTS (OPTIONAL - Quick)
+   "Hobbies? Likes? Dislikes?"
+   - Call 'add-to-array-field' for: hobbies, likes, dislikes
      → **call 'add-to-array-field' with field='dislikes'** for each item
 
 6. ADDITIONAL INFO (OPTIONAL)
@@ -472,32 +480,24 @@ When users provide imperial measurements, convert to metric before saving:
 - Examples: "5'10\"" → 177.8 cm, "150 lbs" → 68.0 kg
 
 VOICE INTERACTION GUIDELINES:
-- Keep ALL responses SHORT (1-2 sentences max)
+- Keep ALL responses ULTRA SHORT (5-7 words max)
 - Ask ONE question at a time
-- Don't overwhelm with too many options
-- Use natural, flowing speech patterns
-- Confirm what you heard: "Got it, so you're 5'10\". That's about 178 centimeters."
-- If they give multiple pieces of info at once, that's great! Process it naturally.
+- Confirm briefly: "Got it, 5'10\"."
+- Process multiple pieces naturally
 
 OPTIONAL DATA HANDLING:
-- NEVER pressure users to provide optional information
-- If they say "skip", "pass", "no thanks" → move on cheerfully
-- If they don't answer → ask once more gently, then move on
-- Nickname is the ONLY required field
+- NEVER pressure for optional info
+- If "skip" or "pass" → move on
+- Nickname is ONLY required field
 
 COMPLETION PROTOCOL:
-After collecting data (at minimum, the nickname):
-1. Thank them: "Perfect! Thanks for sharing that with me, [nickname]."
-2. Call 'save-biometric-data' tool with all collected data
-3. Check the result:
-   - IF success === true:
-     * Say: "All set! I've saved your preferences."
-     * Hand off: "Let me hand you back to Tars now."
-     * Call 'Agent_Tars' tool to return control
-   - IF success === false AND shouldReturnToTars === true:
-     * Say: "I'm having trouble saving your information right now. Don't worry though, let me hand you back to Tars."
-     * Call 'Agent_Tars' tool to return control (even without saved data)
-   - IF success === false AND attemptsRemaining > 0:
+After collecting data:
+1. Say: "Perfect! Saving now."
+2. Call 'save-biometric-data' with all collected data
+3. Check result:
+   - IF success: "All set! Back to Tars." → Call 'Agent_Tars'
+   - IF error: "Trouble saving. Back to Tars anyway." → Call 'Agent_Tars'
+   - IF attemptsRemaining > 0:
      * Say: "Hmm, having a little trouble saving that. Let me try once more. Can you confirm your nickname is [nickname]?"
      * Try to re-collect and save again
 

@@ -302,18 +302,47 @@ ${recommendations.map(r => `• ${r}`).join('\n')}`;
 }
 
 /**
+ * Tool: Return to Tars
+ * Completes PHQ-2 workflow and returns control to orchestrator
+ */
+const returnToTarsTool: AgentTool = {
+  name: 'Agent_Tars',
+  description: 'Complete PHQ-2 assessment and return control to Tars coordinator. Call this after presenting assessment results and saying goodbye.',
+  parameters: {
+    type: 'object',
+    properties: {},
+    required: []
+  },
+  handler: async () => {
+    console.log('📋 ========================================');
+    console.log('📋 PHQ-2 AGENT: Returning to Tars');
+    console.log('📋 ========================================');
+
+    return {
+      agentSwitch: true,
+      targetAgentId: 'Agent_Tars',
+      message: 'PHQ-2 assessment complete, returning to Tars'
+    };
+  }
+};
+
+/**
  * PHQ-2 Agent Configuration
  */
 export const phq2Agent: Agent = {
   id: 'Agent_PHQ2',
   name: 'PHQ-2 Screener',
-  description: `Call this agent to conduct a PHQ-2 quick depression screening. Use when:
-    - User requests a "quick check" or "brief screening"
+  description: `Call this agent to conduct a PHQ-2 brief wellbeing questionnaire. Use when:
+    - User requests a "quick check" or "brief questionnaire"
     - User asks to "invoke PHQ-2" or "start PHQ-2"
-    - User wants a fast mental health check
-    DO NOT use if user requests comprehensive assessment - use PHQ-9 instead.`,
+    - User wants a brief mental health check
+    DO NOT use if user requests comprehensive questionnaire - use PHQ-9 instead.`,
 
-  systemMessage: `You are a specialized PHQ-2 mental health screening assistant. Your ONLY job is to conduct the PHQ-2 quick depression screening.
+  systemMessage: `You are a specialized PHQ-2 wellbeing questionnaire assistant. Your ONLY job is to conduct the PHQ-2 brief questionnaire.
+
+FIRST MESSAGE - AGENT INTRODUCTION (ONE sentence - ONLY FIRST TIME!):
+"Hi, I'm the PHQ-2 assistant with two quick questions."
+Note: Skip introduction if you've already introduced yourself in this session.
 
 CRITICAL PROTOCOL:
 1. You have TWO tools: start-phq2-assessment and record-phq2-answer
@@ -326,15 +355,13 @@ CRITICAL PROTOCOL:
 8. If the tool returns assessmentComplete, present the results and return control to the orchestrator
 
 IMPORTANT RULES:
-- Ask each question ONCE
-- Trust the tools to handle all logic
-- Never invent questions
-- Present questions exactly as the tools provide them
-- After completion, suggest returning to the main assistant
+- Ask each question ONCE - present exactly as tools provide
+- After completion: "Thanks for sharing. Here are your results: [results]. Back to Tars."
+- Keep responses ULTRA SHORT (5-7 words max)
+- Be supportive and professional
+- This is a screening tool, not a diagnosis`,
 
-Keep your responses supportive and professional. This is a screening tool, not a diagnosis.`,
-
-  tools: [startPhq2Tool, recordPhq2AnswerTool]
+  tools: [startPhq2Tool, recordPhq2AnswerTool, returnToTarsTool]
 };
 
 export default phq2Agent;

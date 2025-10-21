@@ -1,0 +1,16 @@
+/* 3D Orb View Container - Light mode white, dark mode dark blue */
+.orb-view-container {
+  background-color: #ffffff;
+}
+
+/* Support both class-based dark mode (.dark) and media query dark mode */
+.dark .orb-view-container,
+:root.dark .orb-view-container {
+  background-color: #0B1220;
+}
+
+@media (prefers-color-scheme: dark) {
+  .orb-view-container {
+    background-color: #0B1220;
+  }
+}

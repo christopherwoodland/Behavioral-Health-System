@@ -393,9 +393,15 @@ export const RealtimeAgentExperience: React.FC = () => {
         }
 
         // Check for session control commands
-        const closeSessionCommand = message.content.match(/(?:close|end|stop|terminate|exit|quit|finish) (?:session|conversation|chat|call|meeting)?/i);
-        const pauseSessionCommand = message.content.match(/(?:pause|hold|suspend) (?:session|conversation|chat|call|meeting)?/i);
-        const resumeSessionCommand = message.content.match(/(?:resume|continue|start|unpause|restart) (?:session|conversation|chat|call|meeting)?/i);
+        // CRITICAL: Only match explicit user commands, not agent responses
+        // Users say things like "close session", "end conversation", "quit" (in context of the session)
+        // NOT "I'm finishing data collection" or "returning to Tars"
+        const closeSessionCommand = message.content.match(/^(?:close|end|stop|terminate|exit|quit) (?:the )?(?:session|conversation|chat|call|meeting|app|application)?\.?$/i) ||
+                                    message.content.match(/(?:close|end|stop|exit) (?:session|conversation|chat|call)/i);
+        const pauseSessionCommand = message.content.match(/^(?:pause|hold|suspend) (?:the )?(?:session|conversation|chat|call|meeting)?\.?$/i) ||
+                                    message.content.match(/(?:pause|hold|suspend) (?:session|conversation|chat)/i);
+        const resumeSessionCommand = message.content.match(/^(?:resume|continue|restart|unpause) (?:the )?(?:session|conversation|chat|call|meeting)?\.?$/i) ||
+                                    message.content.match(/(?:resume|continue|restart) (?:session|conversation|chat)/i);
         const helpCommand = message.content.match(/(?:help|commands|what can you do|show commands|voice commands)/i);
 
         if (closeSessionCommand) {
@@ -1709,13 +1715,12 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         </div>
       )}
 
-      {/* Header - Hidden in 3D mode */}
-      {viewMode !== 'orb' && (
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
+      {/* Header - Visible in all modes, responsive layout */}
+      <div className="flex items-center justify-between p-2 md:p-4 border-b border-gray-200 dark:border-gray-700 gap-2 md:gap-3">
+        <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
           {/* Agent Avatar with Voice Activity */}
-          <div className="relative">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+          <div className="relative flex-shrink-0">
+            <div className={`w-10 md:w-12 h-10 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
               currentAgent.isTyping
                 ? 'bg-primary-500 animate-pulse'
                 : currentAgent.isActive
@@ -1727,10 +1732,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               ) : currentAgent.id === 'matron' ? (
-                <span className={`text-white text-2xl transition-transform duration-300 ${
+                <span className={`text-white text-xl md:text-2xl transition-transform duration-300 ${
                   currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                 }`}>
                   ➕
@@ -1740,21 +1745,21 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               ) : currentAgent.id === 'phq9' ? (
                 <FileText
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               ) : (
                 <Bot
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               )}
             </div>
@@ -1816,16 +1821,16 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 md:space-x-2 flex-wrap md:flex-nowrap justify-end">
           {/* Interrupt Button - Show when AI is speaking */}
           {sessionStatus.isActive && speechDetection.isAISpeaking && (
             <button
               onClick={interruptResponse}
-              className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
               aria-label="Interrupt AI response"
               title="Interrupt response"
             >
-              <AlertTriangle size={20} />
+              <AlertTriangle size={18} />
             </button>
           )}
 
@@ -1833,7 +1838,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           {sessionStatus.isActive && (
             <button
               onClick={() => setShowLiveTranscripts(!showLiveTranscripts)}
-              className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                 showLiveTranscripts
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
@@ -1841,7 +1846,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               aria-label={`${showLiveTranscripts ? 'Hide' : 'Show'} live transcripts`}
               title={`${showLiveTranscripts ? 'Hide' : 'Show'} live captions`}
             >
-              <span className="text-sm font-medium">CC</span>
+              <span className="text-xs md:text-sm font-medium">CC</span>
             </button>
           )}
 
@@ -1852,7 +1857,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               setViewMode(newMode);
               localStorage.setItem('agent-view-mode', newMode);
             }}
-            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs md:text-base ${
               (viewMode as any) === 'orb'
                 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1866,7 +1871,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           {/* Agent Panel Toggle */}
           <button
             onClick={() => setShowAgentPanel(!showAgentPanel)}
-            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
               showAgentPanel
                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1874,7 +1879,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             aria-label="Toggle agent panel"
             title="Agent controls"
           >
-            <Users size={20} />
+            <Users size={18} />
           </button>
 
           {/* Session Controls */}
@@ -1882,27 +1887,27 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             <>
               <button
                 onClick={isSessionPaused ? resumeSession : pauseSession}
-                className="p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="p-1.5 md:p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                 aria-label={isSessionPaused ? 'Resume session' : 'Pause session'}
                 title={isSessionPaused ? 'Resume session' : 'Pause session'}
               >
-                {isSessionPaused ? <Play size={20} /> : <Pause size={20} />}
+                {isSessionPaused ? <Play size={18} /> : <Pause size={18} />}
               </button>
 
               <button
                 onClick={endSession}
-                className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                 aria-label="End session"
                 title="End session"
               >
-                <Trash2 size={20} />
+                <Trash2 size={18} />
               </button>
             </>
           ) : (
             <button
               onClick={startSession}
               disabled={sessionStatus.connectionStatus !== 'connected' || isProcessing}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 whitespace-nowrap"
               aria-label="Start session"
             >
               {isProcessing ? 'Starting...' : 'Start Session'}
@@ -1912,7 +1917,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           {/* Audio Toggle */}
           <button
             onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
               isAudioEnabled
                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
@@ -1920,21 +1925,20 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio`}
             title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio`}
           >
-            {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+            {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
 
           {/* Settings */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="p-1.5 md:p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
             aria-label="Settings"
             title="Settings"
           >
-            <Settings size={20} />
+            <Settings size={18} />
           </button>
         </div>
       </div>
-      )}
 
       {/* Agent Control Panel - Enhanced with feature toggles */}
       {showAgentPanel && (

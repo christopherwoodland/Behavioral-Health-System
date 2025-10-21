@@ -1,0 +1,60 @@
+.floating-orb-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 100;
+  background: transparent;
+  border: none;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+canvas {
+  display: block;
+  background: transparent;
+}
+
+/* Responsive agent circle size */
+@media (max-width: 1920px) {
+  canvas {
+    width: 10%;
+    height: 10%;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+@media (max-width: 1366px) {
+  canvas {
+    width: 11%;
+    height: 11%;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+@media (max-width: 1024px) {
+  canvas {
+    width: 12%;
+    height: 12%;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+@media (max-width: 768px) {
+  canvas {
+    width: 14%;
+    height: 14%;
+    aspect-ratio: 1 / 1;
+  }
+}
+
+@media (max-width: 480px) {
+  canvas {
+    width: 18%;
+    height: 18%;
+    aspect-ratio: 1 / 1;
+  }
+}

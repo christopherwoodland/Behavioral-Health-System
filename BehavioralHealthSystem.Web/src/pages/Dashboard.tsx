@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Upload, History, Bot, TrendingUp } from 'lucide-react';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
+import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { useAnnouncements } from '@/hooks/accessibility';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserId } from '@/utils';
@@ -9,6 +10,7 @@ import { getUserId } from '@/utils';
 export const Dashboard: React.FC = () => {
   const { announce } = useAnnouncements();
   const { canAccessControlPanel, user } = useAuth();
+  const { isEnabled: isAgentModeEnabled } = useFeatureFlag('AGENT_MODE_ENABLED', true);
 
   // Get authenticated user ID for API calls (matches blob storage folder structure)
   const getAuthenticatedUserId = (): string => {
@@ -31,7 +33,7 @@ export const Dashboard: React.FC = () => {
       href: '/agent-experience',
       icon: Bot,
       color: 'warning',
-      disabled: false
+      disabled: !isAgentModeEnabled
     },
     {
       title: 'Upload & Analyze',
@@ -103,7 +105,7 @@ export const Dashboard: React.FC = () => {
                 <div
                   key={action.href}
                   className={`${getActionClasses(action.color, true)} relative`}
-                  aria-label={`${action.title}: Coming Soon`}
+                  aria-label={`${action.title}: Disabled`}
                 >
                   <div className="text-center">
                     <div className="mb-2 flex justify-center" role="img" aria-hidden="true">
@@ -116,11 +118,11 @@ export const Dashboard: React.FC = () => {
                       {action.description}
                     </p>
                   </div>
-                  {/* Coming Soon Overlay */}
+                  {/* Disabled Overlay */}
                   <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
                     <div className="text-center">
-                      <div className="text-white font-bold text-sm mb-1">🚧</div>
-                      <div className="text-white font-semibold text-xs">COMING SOON</div>
+                      <div className="text-white font-bold text-sm mb-1">�</div>
+                      <div className="text-white font-semibold text-xs">DISABLED</div>
                     </div>
                   </div>
                 </div>

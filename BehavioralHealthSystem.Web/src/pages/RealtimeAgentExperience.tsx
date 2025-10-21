@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic,
+  MicOff,
   Trash2,
   Volume2,
   VolumeX,
@@ -14,7 +15,9 @@ import {
   Bot,
   ClipboardList,
   FileText,
-  Plus
+  Plus,
+  Menu,
+  X
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
@@ -29,6 +32,7 @@ import {
 } from '@/services/azureOpenAIRealtimeService';
 import VoiceActivityVisualizer from '@/components/VoiceActivityVisualizer';
 import SpeechSettings from '@/components/SpeechSettings';
+import { AudioVisualizerBlob, ClosedCaptions } from '@/components/FloatingOrb';
 import phqAssessmentService from '@/services/phqAssessmentService';
 import chatTranscriptService from '@/services/chatTranscriptService';
 import { phqSessionService } from '@/services/phqSessionService';
@@ -38,6 +42,9 @@ import { agentOrchestrationService } from '@/services/agentOrchestrationService'
 import { phq2Agent } from '@/agents/phq2Agent';
 import { phq9Agent } from '@/agents/phq9Agent';
 import { matronAgent } from '@/agents/matronAgent';
+import { vocalistAgent } from '@/agents/vocalistAgent';
+import { VocalistRecorder } from '@/components/VocalistRecorder';
+import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -70,37 +77,53 @@ const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === '
  * @param agentId - The agent identifier (tars, matron, phq2, phq9)
  * @returns Tailwind CSS classes for background and text colors
  */
-const getAgentColor = (agentId?: string): { bg: string; text: string; border: string } => {
-  switch (agentId) {
+const getAgentColor = (agentId?: string): { bg: string; text: string; border: string; outline: string } => {
+  // Normalize agent ID to lowercase for comparison
+  const normalizedId = agentId?.toLowerCase().replace('agent_', '');
+  console.log('🎨 getAgentColor called:', { agentId, normalizedId });
+
+  switch (normalizedId) {
     case 'tars':
       return {
-        bg: 'bg-blue-50 dark:bg-blue-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-blue-500'
+        bg: 'bg-blue-100 dark:bg-blue-800',
+        text: 'text-blue-900 dark:text-blue-100',
+        border: 'border-l-4 border-blue-500',
+        outline: 'border-2 border-blue-500 dark:border-blue-400'
       };
     case 'matron':
       return {
-        bg: 'bg-green-50 dark:bg-green-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-green-500'
+        bg: 'bg-green-100 dark:bg-green-800',
+        text: 'text-green-900 dark:text-green-100',
+        border: 'border-l-4 border-green-500',
+        outline: 'border-2 border-green-500 dark:border-green-400'
       };
     case 'phq2':
       return {
-        bg: 'bg-purple-50 dark:bg-purple-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-purple-500'
+        bg: 'bg-purple-100 dark:bg-purple-800',
+        text: 'text-purple-900 dark:text-purple-100',
+        border: 'border-l-4 border-purple-500',
+        outline: 'border-2 border-purple-500 dark:border-purple-400'
       };
     case 'phq9':
       return {
-        bg: 'bg-indigo-50 dark:bg-indigo-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
-        border: 'border-l-4 border-indigo-600'
+        bg: 'bg-indigo-100 dark:bg-indigo-800',
+        text: 'text-indigo-900 dark:text-indigo-100',
+        border: 'border-l-4 border-indigo-600',
+        outline: 'border-2 border-indigo-600 dark:border-indigo-400'
+      };
+    case 'vocalist':
+      return {
+        bg: 'bg-pink-100 dark:bg-pink-800',
+        text: 'text-pink-900 dark:text-pink-100',
+        border: 'border-l-4 border-pink-500',
+        outline: 'border-2 border-pink-500 dark:border-pink-400'
       };
     default:
       return {
         bg: 'bg-gray-100 dark:bg-gray-800',
         text: 'text-gray-900 dark:text-gray-100',
-        border: ''
+        border: '',
+        outline: ''
       };
   }
 };
@@ -161,9 +184,26 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [viewMode, setViewMode] = useState<'orb' | 'traditional'>(() => {
+    const saved = localStorage.getItem('agent-view-mode');
+    return (saved as 'orb' | 'traditional') || 'orb';
+  });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(() => {
+    const saved = localStorage.getItem('agent-show-captions');
+    return saved === null ? true : saved === 'true';
+  });
 
   // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
+    id: 'tars',
+    name: 'Tars',
+    isActive: false,
+    isTyping: false
+  });
+
+  // Ref to track current agent in callbacks (so setupEventListeners can access latest agent)
+  const currentAgentRef = useRef<AgentStatus>({
     id: 'tars',
     name: 'Tars',
     isActive: false,
@@ -181,7 +221,8 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [voiceActivityLevel, setVoiceActivityLevel] = useState(0);
+  const [isMicInputEnabled, setIsMicInputEnabled] = useState(true);
+  const [voiceActivityLevel] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
 
   // Enhanced features state
@@ -191,7 +232,10 @@ export const RealtimeAgentExperience: React.FC = () => {
   });
   const [conversationState, setConversationState] = useState<ConversationState>({ state: 'idle' });
   const [liveTranscripts, setLiveTranscripts] = useState<LiveTranscript[]>([]);
-  const [showLiveTranscripts, setShowLiveTranscripts] = useState(true);
+
+  // Vocalist recording state
+  const [isVocalistRecording, setIsVocalistRecording] = useState(false);
+  const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
 
@@ -326,6 +370,11 @@ export const RealtimeAgentExperience: React.FC = () => {
     };
   }, [sessionStatus.isActive, isSessionPaused]);
 
+  // Sync currentAgent to ref so callbacks always have access to latest agent
+  useEffect(() => {
+    currentAgentRef.current = currentAgent;
+  }, [currentAgent]);
+
   // PHQ Assessment Handlers - DEPRECATED: Now handled by PHQ agents
   const setupEventListeners = useCallback(() => {
     // Azure OpenAI Realtime service callbacks
@@ -362,9 +411,15 @@ export const RealtimeAgentExperience: React.FC = () => {
         }
 
         // Check for session control commands
-        const closeSessionCommand = message.content.match(/(?:close|end|stop|terminate|exit|quit|finish) (?:session|conversation|chat|call|meeting)?/i);
-        const pauseSessionCommand = message.content.match(/(?:pause|hold|suspend) (?:session|conversation|chat|call|meeting)?/i);
-        const resumeSessionCommand = message.content.match(/(?:resume|continue|start|unpause|restart) (?:session|conversation|chat|call|meeting)?/i);
+        // CRITICAL: Only match explicit user commands, not agent responses
+        // Users say things like "close session", "end conversation", "quit" (in context of the session)
+        // NOT "I'm finishing data collection" or "returning to Tars"
+        const closeSessionCommand = message.content.match(/^(?:close|end|stop|terminate|exit|quit) (?:the )?(?:session|conversation|chat|call|meeting|app|application)?\.?$/i) ||
+                                    message.content.match(/(?:close|end|stop|exit) (?:session|conversation|chat|call)/i);
+        const pauseSessionCommand = message.content.match(/^(?:pause|hold|suspend) (?:the )?(?:session|conversation|chat|call|meeting)?\.?$/i) ||
+                                    message.content.match(/(?:pause|hold|suspend) (?:session|conversation|chat)/i);
+        const resumeSessionCommand = message.content.match(/^(?:resume|continue|restart|unpause) (?:the )?(?:session|conversation|chat|call|meeting)?\.?$/i) ||
+                                    message.content.match(/(?:resume|continue|restart) (?:session|conversation|chat)/i);
         const helpCommand = message.content.match(/(?:help|commands|what can you do|show commands|voice commands)/i);
 
         if (closeSessionCommand) {
@@ -529,7 +584,15 @@ Just speak naturally - I understand variations of these commands!`,
       if (ENABLE_VERBOSE_LOGGING) {
         console.log(`✅ Adding ${message.role} message to chat display`);
       }
-      setMessages(prev => [...prev, message]);
+
+      // CRITICAL: Ensure message has agentId set to current agent
+      // This prevents messages from showing wrong agent color when agent switches
+      const messageWithAgent: RealtimeMessage = {
+        ...message,
+        agentId: message.agentId || currentAgentRef.current.id
+      };
+
+      setMessages(prev => [...prev, messageWithAgent]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
 
       // Save message to chat transcript
@@ -725,8 +788,18 @@ Just speak naturally - I understand variations of these commands!`,
       if (transcript.role === 'assistant') {
         setCurrentAITranscript(transcript.text);
         if (!transcript.isPartial) {
-          // Clear when transcript is complete
-          setTimeout(() => setCurrentAITranscript(''), 2000);
+          // Keep transcript visible for 8 seconds to handle agent speaking at variable speeds
+          // Only clear if agent is no longer speaking, otherwise let it display
+          setTimeout(() => {
+            setCurrentAITranscript(prevText => {
+              // Only clear if this was the same transcript (hasn't been updated)
+              // This ensures we keep showing new utterances as they arrive
+              if (prevText === transcript.text) {
+                return '';
+              }
+              return prevText;
+            });
+          }, 8000);
         }
       }
     });
@@ -769,74 +842,21 @@ Just speak naturally - I understand variations of these commands!`,
 
   }, []);
 
+  // Handle audio output muting/unmuting
+  useEffect(() => {
+    agentService.setAudioOutputMuted(!isAudioEnabled);
+  }, [isAudioEnabled]);
+
+  // Handle mic input muting/unmuting
+  useEffect(() => {
+    agentService.muteMicrophone(!isMicInputEnabled);
+  }, [isMicInputEnabled]);
+
   // Agent display name not needed for single agent
   // const getAgentDisplayName = () => 'AI Assistant';
 
   // NOTE: Initial greeting is now handled by Tars through Realtime API
-  // This function is kept for reference but no longer used
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const getInitialGreeting = (humorLevel: number): string => {
-    const firstName = getFirstName();
-    const displayName = getAppropiateName(humorLevel);
-
-    const greetings = {
-      high: [
-        `Hey there, ${displayName}! I'm Tars, and I'm here to help you out. What can we work on today?`,
-        `Hi ${displayName}! Tars here, ready to chat and help with whatever you need. How's it going?`,
-        `Hello ${displayName}! I'm Tars, your friendly AI assistant. What's on your mind today?`,
-        `Hey ${displayName}! Tars at your service - feeling pretty upbeat today. What can I help you with?`,
-        `Hi there, ${displayName}! I'm Tars, and I'm in a great mood to help. What brings you here today?`,
-        `Hello ${displayName}! Tars here, and I'm excited to chat with you. What would you like to talk about?`
-      ],
-      medium: [
-        `Hello ${firstName}, I'm Tars. I'm here to help and support you. What can I assist with today?`,
-        `Hi ${firstName}, this is Tars. I'm ready to help with whatever you need. How are you doing?`,
-        `Good day ${firstName}, I'm Tars, your AI assistant. How can I be of service today?`,
-        `Hello ${firstName}, Tars here. I'm here to help and chat. What's going on today?`,
-        `Hi ${firstName}, I'm Tars. I'm ready to support you with anything you need. What's up?`
-      ],
-      professional: [
-        `Hello ${firstName}, I'm Tars, your AI assistant. I'm here to provide support and assistance. How may I help you today?`,
-        `Good day ${firstName}, this is Tars. I'm available to help with your needs. What can I assist you with?`,
-        `Hello ${firstName}, I'm Tars. I'm ready to provide professional support. How can I be of service?`,
-        `Hi ${firstName}, Tars here. I'm here to help you with whatever you need today. What brings you here?`,
-        `Hello ${firstName}, I'm Tars, your AI assistant. I'm ready to help. What would you like to discuss?`
-      ],
-      formal: [
-        `Good day ${firstName}, I am Tars, your AI assistant. I am ready to provide assistance. How may I help you today?`,
-        `Hello ${firstName}, this is Tars. I am available to provide support and guidance. What do you need assistance with?`,
-        `Greetings ${firstName}, I am Tars. I am here to offer professional assistance. How can I be of service?`,
-        `Hello ${firstName}, I am Tars, your AI assistant. I am prepared to help with your needs. What can I do for you?`,
-        `Good day ${firstName}, this is Tars. I am ready to provide structured support. How may I assist you today?`
-      ],
-      military: [
-        `Good day ${firstName}, I am Tars, your AI assistant. I am ready to provide precise assistance. How may I serve you today?`,
-        `Hello ${firstName}, this is Tars. I am available for structured support and guidance. What do you require?`,
-        `Greetings ${firstName}, I am Tars. I am prepared to offer efficient assistance. How can I help you today?`,
-        `Hello ${firstName}, I am Tars, your AI assistant. I am ready for service. What assistance do you need?`,
-        `Good day ${firstName}, this is Tars. I am operational and ready to provide support. How may I be of service?`
-      ]
-    };
-
-    let selectedGreetings: string[];
-
-    if (humorLevel >= 80) {
-      selectedGreetings = greetings.high;
-    } else if (humorLevel >= 60) {
-      selectedGreetings = greetings.medium;
-    } else if (humorLevel >= 40) {
-      selectedGreetings = greetings.professional;
-    } else if (humorLevel >= 20) {
-      selectedGreetings = greetings.formal;
-    } else {
-      selectedGreetings = greetings.military;
-    }
-
-    // Randomly select one greeting from the appropriate category
-    const randomGreeting = selectedGreetings[Math.floor(Math.random() * selectedGreetings.length)];
-
-    return randomGreeting;
-  };
+  // Greeting generation logic removed as it's no longer needed
 
 
   const startSession = async () => {
@@ -862,8 +882,24 @@ Just speak naturally - I understand variations of these commands!`,
       console.log('🤖 ========================================');
 
       agentOrchestrationService.registerAgent(matronAgent);
-      agentOrchestrationService.registerAgent(phq2Agent);
-      agentOrchestrationService.registerAgent(phq9Agent);
+
+      // Conditionally register PHQ-2 agent based on feature flag
+      if (import.meta.env.VITE_ENABLE_PHQ2_AGENT === 'true') {
+        console.log('✅ PHQ-2 agent enabled');
+        agentOrchestrationService.registerAgent(phq2Agent);
+      } else {
+        console.log('❌ PHQ-2 agent disabled');
+      }
+
+      // Conditionally register PHQ-9 agent based on feature flag
+      if (import.meta.env.VITE_ENABLE_PHQ9_AGENT === 'true') {
+        console.log('✅ PHQ-9 agent enabled');
+        agentOrchestrationService.registerAgent(phq9Agent);
+      } else {
+        console.log('❌ PHQ-9 agent disabled');
+      }
+
+      agentOrchestrationService.registerAgent(vocalistAgent);
 
       // Register Tars as the root orchestration agent
       const tarsRootAgent = {
@@ -1026,6 +1062,32 @@ Just speak naturally - I understand variations of these commands!`,
                 };
               }
             }
+          },
+          {
+            name: 'Agent_Matron',
+            description: 'Calls the Matron agent to collect biometric data and biographical information from the user. Use this when the user has agreed to provide biographical info.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async (params: any) => {
+              const userId = params.userId || authenticatedUserId;
+              console.log(`➕ ========================================`);
+              console.log(`➕ CALLING MATRON AGENT`);
+              console.log(`➕ User ID: ${userId}`);
+              console.log(`➕ ========================================`);
+
+              // Call the orchestration service to switch to Matron agent
+              const result = await agentOrchestrationService.handleToolCall(
+                'Agent_Matron',
+                { userId: userId },
+                `call-matron-${Date.now()}`
+              );
+
+              console.log(`➕ Matron agent switch result:`, result);
+              return result;
+            }
           }
         ],
         systemMessage: `You are Tars, the main coordination assistant for ${getFirstName()}. Your role is to:
@@ -1041,31 +1103,51 @@ CRITICAL FIRST INTERACTION PROTOCOL:
 On the VERY FIRST interaction with ${getFirstName()}, you MUST follow this EXACT sequence:
 
 STEP 1 - GREETING (say this immediately):
-   "Hello! I'm Tars, your coordination assistant."
+   A welcome message like "Hello! I'm Tars." or "Tars here", or similar friendly greeting.
+   You choose just be welcoming and warm.
 
-STEP 2 - CHECK BIOMETRIC DATA (say this, then call the tool):
-   "Let me see if I have your information on file..."
-   Then IMMEDIATELY call 'check-biometric-data' tool
+STEP 2 - SILENTLY CHECK BIOMETRIC DATA (no announcement to user):
+   SILENTLY call 'check-biometric-data' tool WITHOUT telling the user you're doing this
+   Do NOT say "Let me check if I have your information on file" - just check silently
 
 STEP 3a - IF biometric data EXISTS:
    - Call 'get-biometric-data' to load user preferences
-   - Say: "Great! I found your profile, [nickname]."
+   - Say: "Hi [nickname] how can I help you today."
    - Use the user's nickname from the biometric data for personalization
-   - Reference their hobbies, interests, or location naturally in conversation
+   - Reference their hobbies, or interests, or location naturally in conversation briefly
+   - Example: "I see you enjoy [hobby] and are from [lastResidence]."
    - Ask how you can help them today
 
 STEP 3b - IF biometric data DOES NOT EXIST:
-   - Say: "I don't have your information yet. Let me connect you with Matron, our friendly intake coordinator, who will help us get to know you better. I'll hand you over to Matron now..."
-   - Wait a moment to let your announcement be heard
-   - Then call 'Agent_Matron' to collect biometric data
-   - After Matron completes, call 'get-biometric-data' to load the newly saved preferences
-   - Welcome them back: "Welcome back, [nickname]! Thanks for sharing that with Matron."
-   - Ask how you can help them today
+   - OPTIONALLY ASK if they want to provide biographical info (DO NOT automatically call Matron)
+   - Say: "Would you like to supply some biographical info to help me get to know you better? This will help me personalize our conversations."
+   - WAIT FOR USER RESPONSE
+   - If user says YES (agrees to provide info):
+     * Say: "Great! I'm connecting you with Matron now. She'll help me get to know you better."
+     * Call 'Agent_Matron' tool to hand control completely to Matron
+     * MATRON TAKES OVER: Matron will collect biometric data, save it, and call 'Agent_Tars' to return control
+     * NOTE: Do NOT say anything else - let the agent switch complete naturally
+     * When Matron returns control to you (via Agent_Tars tool call), call 'get-biometric-data' to load the newly saved preferences
+     * After get-biometric-data returns, Matron will greet the user with her opening message - do NOT say anything
+   - If user says NO (declines to provide info):
+     * Say: "No problem! We can always add that info later. How can I help you today?"
+     * Continue the conversation without calling Matron
+     * Proceed with normal Tars agent functionality
+   - Listen carefully to their response after asking how they're feeling
+   - If they express negative feelings (sadness, depression, hopelessness, anxiety, etc.):
+     * Say: "I hear you, [nickname]. It sounds like you might be going through a tough time. Would you like me to connect you with a quick mental health screening? It only takes a couple of minutes and might help us understand how to support you better."
+     * If they agree, call 'Agent_PHQ2' to start the screening
+     * The PHQ-2 assessment will automatically transition to PHQ-9 if the score indicates further assessment is needed
+   - If they express positive or neutral feelings:
+     * Say something supportive like "That's good to hear!" or acknowledge their state
+     * Ask how you can help them today
 
 IMPORTANT:
-- This biometric check should happen ONCE at the start of the conversation
-- ALWAYS greet first, THEN check for data
-- Don't skip the greeting - it's important for user experience
+- The biometric check should happen ONCE at the start of the conversation - SILENTLY
+- ALWAYS greet first, THEN silently check for data
+- NEVER automatically call Matron - always ask the user first
+- Only call Agent_Matron if the user explicitly agrees to provide biographical info
+- If user declines, continue with normal Tars agent without Matron
 
 CRITICAL NAMING PROTOCOL:
 - ALWAYS use ${getFirstName()} as the primary way to address the user
@@ -1106,10 +1188,12 @@ Available specialized agents:
 - "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
 - "Agent_PHQ2": Quick depression screening (2 questions) - use when user wants quick check or "PHQ-2"
 - "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use when user wants full assessment or "PHQ-9"
+- "Agent_Vocalist": Mental/vocal assessment through 35-second voice recording - use when user says "song analysis", "let's sing", "once over", or "mental assessment"
 
 CRITICAL ROUTING RULES:
 - ALWAYS route PHQ assessments to the specialized agents
 - NEVER conduct assessments yourself
+- Route to Vocalist when user mentions singing, song analysis, voice recording, or mental assessment through voice
 - After routing, wait for the specialist to finish
 - When specialist returns control, welcome ${getFirstName()} back and ask if there's anything else
 
@@ -1179,9 +1263,29 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   targetAgentId === 'Agent_Matron' ? 'Matron' :
                   targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
                   targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
+                  targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
                   'Agent';
 
+                // For Vocalist agent, interrupt any ongoing response BEFORE showing UI
+                if (targetAgentId === 'Agent_Vocalist') {
+                  console.log('🎤 Vocalist switch - checking for active response');
+                  // Only interrupt if there's actually a response in progress
+                  if (!agentService.canUpdateVoice()) {
+                    console.log('🎤 Active response detected - interrupting');
+                    try {
+                      await agentService.interruptResponse();
+                      // Wait for interruption to complete
+                      await new Promise(resolve => setTimeout(resolve, 200));
+                    } catch (error) {
+                      console.warn('⚠️ Could not interrupt response:', error);
+                    }
+                  } else {
+                    console.log('🎤 No active response - proceeding with switch');
+                  }
+                }
+
+                // Update UI to show the new agent
                 setCurrentAgent({
                   id: targetAgentId.toLowerCase().replace('agent_', ''),
                   name: agentDisplayName,
@@ -1197,7 +1301,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 // Announce agent switch for accessibility
                 announceToScreenReader(`Switched to ${agentDisplayName} agent`);
 
-                // Determine voice based on agent - PHQ agents use 'echo', Tars uses default
+                // Note: For Vocalist agent, the recording UI will be shown when the agent
+                // calls the 'start-vocalist-recording' tool (after explaining the exercise)
+                // This allows the agent to introduce themselves and explain before showing the UI
+
+                // Determine voice based on agent - PHQ agents use 'echo', Tars and Vocalist use default
                 const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
 
                 // Build updated session config
@@ -1212,16 +1320,20 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   tools: realtimeTools
                 };
 
-                // Only include voice parameter if we're not in the middle of an active response
-                // This prevents "Cannot update a conversation's voice if assistant audio is present" error
-                if (agentService.canUpdateVoice()) {
+                // Only update voice if safe to do so
+                // Skip voice update for Vocalist (recording UI takes over) or if assistant is speaking
+                const shouldUpdateVoice = targetAgentId !== 'Agent_Vocalist' && agentService.canUpdateVoice();
+
+                if (shouldUpdateVoice) {
                   updatedConfig.voice = agentVoice;
                   console.log(`🎤 Updating session with voice: ${agentVoice}`);
+                } else if (targetAgentId === 'Agent_Vocalist') {
+                  console.log('🎤 Vocalist agent - skipping voice update (recording UI takes over)');
                 } else {
                   console.log('⚠️ Skipping voice update - assistant audio is active');
                 }
 
-                await agentService.updateSession(updatedConfig);
+                agentService.updateSession(updatedConfig);
 
                 console.log('✅ Session updated for new agent');
                 console.log('🔄 ========================================');
@@ -1254,6 +1366,22 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 message: `Control transferred to ${result.targetAgentId}`
               };
             }
+          }
+
+          // Handle Vocalist recording tool
+          if (functionName === 'start-vocalist-recording' && result.result?.success) {
+            console.log('🎤 ========================================');
+            console.log('🎤 START RECORDING TOOL CALLED');
+            console.log('🎤 Content Type:', result.result.contentType);
+            console.log('🎤 ========================================');
+
+            // Pause the Realtime API session to prevent user speech from being captured
+            console.log('🎤 Pausing Realtime API session during vocalist recording');
+            agentService.pauseSession();
+
+            // NOW show the recording UI (triggered by the agent's tool call)
+            setIsVocalistRecording(true);
+            setVocalistContentType(result.result.contentType || 'lyrics');
           }
 
           // Not an agent switch - return the tool result
@@ -1358,10 +1486,13 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       setCurrentAITranscript('');
       setMessages([]); // Start with empty messages - let Tars greet naturally
 
-      // NOTE: We no longer send a pre-generated welcome message
-      // Instead, Tars will greet naturally through the Realtime API
-      // This prevents the "active response in progress" error
-      // Tars system prompt instructs it to greet first, then check biometric data
+      // Trigger Tars to speak first after data channel is ready
+      // This tells Tars to greet the user and check for biometric data
+      agentService.sendInitialGreeting(
+        'Session started. Please greet the user warmly and then check if they have biometric data saved.'
+      ).catch((error: Error) => {
+        console.error('Failed to send initial greeting prompt:', error);
+      });
 
       announceToScreenReader('Session started. Tars will greet you shortly.');
 
@@ -1383,17 +1514,39 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       }
 
       await agentService.endSession();
+
+      // Clear all messages
       setMessages([]);
-      setSessionStatus(prev => ({
-        ...prev,
+
+      // Reset session status completely
+      setSessionStatus({
         isActive: false,
         sessionId: undefined,
         messageCount: 0,
-        // Keep connectionStatus as 'connected' since the service is still initialized and ready
+        currentAgent: 'coordinator',
+        hasAudioSupport: false,
         connectionStatus: 'connected'
-      }));
-      setCurrentAgent(prev => ({ ...prev, isActive: false, isTyping: false }));
-      announceToScreenReader('Session ended and conversation cleared');
+      });
+
+      // Reset to Tars agent (root agent)
+      setCurrentAgent({
+        id: 'tars',
+        name: 'Tars',
+        isActive: false,
+        isTyping: false
+      });
+
+      // Clear any vocalist state
+      setIsVocalistRecording(false);
+      setVocalistContentType('lyrics');
+
+      // Clear current AI transcript
+      setCurrentAITranscript('');
+
+      // Reset session paused state
+      setIsSessionPaused(false);
+
+      announceToScreenReader('Session ended. All state cleared. Ready to start fresh with Tars.');
     } catch (error) {
       console.error('Failed to end session:', error);
     }
@@ -1419,6 +1572,87 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       console.error('Failed to interrupt response:', error);
       announceToScreenReader('Failed to interrupt response');
     }
+  };
+
+  // Trigger agent to vocalize (hum, la la la, etc) during idle time
+  const handleAgentVocalization = () => {
+    // Array of random vocalizations the agent might say
+    const vocalizations = [
+      'Hmmmm...',
+      'La la la',
+      'Mmm hmm',
+      'Hmm interesting',
+      'Yeah, uh huh',
+      'Ooh la la'
+    ];
+
+    // Pick a random vocalization
+    const randomVocalization = vocalizations[Math.floor(Math.random() * vocalizations.length)];
+
+    // Send it as a user message to the agent
+    // This will be picked up by the agent as a prompt and responded to naturally
+    console.log(`🎤 Agent vocalization trigger: ${randomVocalization}`);
+
+    // We'll send this as a subtle system prompt rather than a visible message
+    // by using the agent service's ability to send conversation items
+    try {
+      // Note: This would need a method on agentService to send text input
+      // For now, we'll just log it. The real implementation would send this
+      // through the WebRTC data channel as a conversation.item.create event
+    } catch (error) {
+      console.warn('Failed to trigger vocalization:', error);
+    }
+  };
+
+  // Vocalist recording handlers
+  const handleVocalistRecordingComplete = async (audioBlob: Blob, duration: number) => {
+    console.log('🎤 Recording completed:', duration, 'seconds');
+
+    try {
+      // Upload audio file to blob storage
+      const formData = new FormData();
+      formData.append('file', audioBlob, `vocalist-${authenticatedUserId}-${Date.now()}.wav`);
+      formData.append('userId', authenticatedUserId);
+      formData.append('duration', duration.toString());
+
+      const uploadUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/upload-audio`;
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload audio file');
+      }
+
+      const uploadResult = await uploadResponse.json();
+      console.log('🎤 Audio uploaded:', uploadResult);
+
+      // Resume the Realtime API session
+      console.log('🎤 Resuming Realtime API session after vocalist recording');
+      agentService.resumeSession();
+
+      // Close recording UI
+      setIsVocalistRecording(false);
+
+      // Notify the agent about successful recording
+      announceToScreenReader('Recording uploaded successfully');
+
+    } catch (error) {
+      console.error('🎤 Error handling recording:', error);
+      announceToScreenReader('Failed to process recording');
+    }
+  };
+
+  const handleVocalistRecordingCancel = () => {
+    console.log('🎤 Recording cancelled');
+
+    // Resume the Realtime API session
+    console.log('🎤 Resuming Realtime API session after cancel');
+    agentService.resumeSession();
+
+    setIsVocalistRecording(false);
+    announceToScreenReader('Recording cancelled');
   };
 
   // Agent handoff not needed for single GPT-Realtime agent
@@ -1456,7 +1690,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className={`h-[calc(100vh-8rem)] flex flex-col rounded-lg border ${
+      sessionStatus.isActive
+        ? 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600'
+        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+    }`}>
       {/* Connection Notification Toast */}
       {connectionNotification.show && (
         <div className={`absolute top-4 right-4 z-50 max-w-md rounded-lg shadow-lg p-4 animate-slide-in-right ${
@@ -1503,16 +1741,80 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
+      {/* Hamburger Menu - Only visible in 3D mode */}
+      {viewMode === 'orb' && (
+        <div className="fixed top-4 right-4 z-[9998]">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 rounded-lg bg-white/20 dark:bg-gray-900/20 hover:bg-white/30 dark:hover:bg-gray-900/30 backdrop-blur-sm transition-all"
+          >
+            {isMenuOpen ? (
+              <X size={24} className="text-white" />
+            ) : (
+              <Menu size={24} className="text-white" />
+            )}
+          </button>
+
+          {/* Dropdown Menu */}
+          {isMenuOpen && (
+            <div className="absolute top-12 right-0 mt-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden w-48">
+              <button
+                onClick={() => {
+                  setIsSettingsOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Settings size={16} />
+                <span>Settings</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-red-600 dark:text-red-400"
+              >
+                <Trash2 size={16} />
+                <span>Clear Chat</span>
+              </button>
+              <button
+                onClick={() => {
+                  const newMode: 'orb' | 'traditional' = viewMode === 'orb' ? 'traditional' : 'orb';
+                  setViewMode(newMode);
+                  localStorage.setItem('agent-view-mode', newMode);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Users size={16} />
+                <span>Switch View</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header - Visible in all modes, responsive layout */}
+      <div className={`flex items-center justify-between p-2 md:p-4 border-b gap-2 md:gap-3 bg-white dark:bg-gray-900 ${
+        sessionStatus.isActive ? 'border-gray-300 dark:border-gray-600' : 'border-gray-200 dark:border-gray-700'
+      }`}>
+        <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
           {/* Agent Avatar with Voice Activity */}
-          <div className="relative">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+          <div className="relative flex-shrink-0">
+            <div className={`w-10 md:w-12 h-10 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
               currentAgent.isTyping
-                ? 'bg-primary-500 animate-pulse'
-                : currentAgent.isActive
-                  ? 'bg-green-500'
+                ? 'bg-primary-600 animate-pulse'
+                : currentAgent.id === 'tars'
+                  ? 'bg-blue-600'
+                  : currentAgent.id === 'matron'
+                  ? 'bg-green-600'
+                  : currentAgent.id === 'phq2'
+                  ? 'bg-purple-600'
+                  : currentAgent.id === 'phq9'
+                  ? 'bg-indigo-700'
+                  : currentAgent.id === 'vocalist'
+                  ? 'bg-pink-600'
                   : 'bg-gray-400'
             }`}>
               {currentAgent.id === 'tars' ? (
@@ -1520,10 +1822,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               ) : currentAgent.id === 'matron' ? (
-                <span className={`text-white text-2xl transition-transform duration-300 ${
+                <span className={`text-white text-xl md:text-2xl transition-transform duration-300 ${
                   currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                 }`}>
                   ➕
@@ -1533,21 +1835,21 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               ) : currentAgent.id === 'phq9' ? (
                 <FileText
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               ) : (
                 <Bot
                   className={`text-white transition-transform duration-300 ${
                     currentAgent.isTyping ? 'animate-pulse scale-110' : ''
                   }`}
-                  size={24}
+                  size={20}
                 />
               )}
             </div>
@@ -1609,39 +1911,60 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 md:space-x-2 flex-wrap md:flex-nowrap justify-end">
           {/* Interrupt Button - Show when AI is speaking */}
           {sessionStatus.isActive && speechDetection.isAISpeaking && (
             <button
               onClick={interruptResponse}
-              className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
               aria-label="Interrupt AI response"
               title="Interrupt response"
             >
-              <AlertTriangle size={20} />
+              <AlertTriangle size={18} />
             </button>
           )}
 
           {/* Live Transcripts Toggle */}
           {sessionStatus.isActive && (
             <button
-              onClick={() => setShowLiveTranscripts(!showLiveTranscripts)}
-              className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                showLiveTranscripts
+              onClick={() => {
+                setShowCaptions(!showCaptions);
+                localStorage.setItem('agent-show-captions', (!showCaptions).toString());
+              }}
+              className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                showCaptions
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
               }`}
-              aria-label={`${showLiveTranscripts ? 'Hide' : 'Show'} live transcripts`}
-              title={`${showLiveTranscripts ? 'Hide' : 'Show'} live captions`}
+              aria-label={`${showCaptions ? 'Hide' : 'Show'} live transcripts`}
+              title={`${showCaptions ? 'Hide' : 'Show'} live captions`}
             >
-              <span className="text-sm font-medium">CC</span>
+              <span className="text-xs md:text-sm font-medium">CC</span>
             </button>
           )}
+
+          {/* View Mode Toggle - Orb vs Traditional */}
+          <button
+            onClick={() => {
+              const newMode = ((viewMode as any) === 'orb' ? 'traditional' : 'orb') as 'orb' | 'traditional';
+              setViewMode(newMode);
+              localStorage.setItem('agent-view-mode', newMode);
+            }}
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs md:text-base ${
+              (viewMode as any) === 'orb'
+                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+            aria-label={`Switch to ${(viewMode as any) === 'orb' ? 'traditional' : 'orb'} view`}
+            title={`View: ${(viewMode as any) === 'orb' ? 'Orb (3D)' : 'Traditional (List)'}`}
+          >
+            {(viewMode as any) === 'orb' ? '3D' : '📋'}
+          </button>
 
           {/* Agent Panel Toggle */}
           <button
             onClick={() => setShowAgentPanel(!showAgentPanel)}
-            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
               showAgentPanel
                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -1649,7 +1972,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             aria-label="Toggle agent panel"
             title="Agent controls"
           >
-            <Users size={20} />
+            <Users size={18} />
           </button>
 
           {/* Session Controls */}
@@ -1657,27 +1980,27 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             <>
               <button
                 onClick={isSessionPaused ? resumeSession : pauseSession}
-                className="p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="p-1.5 md:p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                 aria-label={isSessionPaused ? 'Resume session' : 'Pause session'}
                 title={isSessionPaused ? 'Resume session' : 'Pause session'}
               >
-                {isSessionPaused ? <Play size={20} /> : <Pause size={20} />}
+                {isSessionPaused ? <Play size={18} /> : <Pause size={18} />}
               </button>
 
               <button
                 onClick={endSession}
-                className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
                 aria-label="End session"
                 title="End session"
               >
-                <Trash2 size={20} />
+                <Trash2 size={18} />
               </button>
             </>
           ) : (
             <button
               onClick={startSession}
               disabled={sessionStatus.connectionStatus !== 'connected' || isProcessing}
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 whitespace-nowrap"
               aria-label="Start session"
             >
               {isProcessing ? 'Starting...' : 'Start Session'}
@@ -1687,35 +2010,49 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           {/* Audio Toggle */}
           <button
             onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-            className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
               isAudioEnabled
                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
             }`}
-            aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio`}
-            title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio`}
+            aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output`}
+            title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output (speakers)`}
           >
-            {isAudioEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+            {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+
+          {/* Microphone Input Toggle */}
+          <button
+            onClick={() => setIsMicInputEnabled(!isMicInputEnabled)}
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              isMicInputEnabled
+                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            }`}
+            aria-label={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
+            title={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
+          >
+            {isMicInputEnabled ? <Mic size={18} /> : <MicOff size={18} />}
           </button>
 
           {/* Settings */}
           <button
             onClick={() => setIsSettingsOpen(true)}
-            className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="p-1.5 md:p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
             aria-label="Settings"
             title="Settings"
           >
-            <Settings size={20} />
+            <Settings size={18} />
           </button>
         </div>
       </div>
 
       {/* Agent Control Panel - Enhanced with feature toggles */}
       {showAgentPanel && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className={`p-4 border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Tars</h3>
+              <h3 className={`text-sm font-medium text-gray-900 dark:text-white`}>{currentAgent.name}</h3>
               <div className="flex items-center space-x-2">
                 <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
                   {currentAgent.name}
@@ -1790,8 +2127,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={showLiveTranscripts}
-                  onChange={(e) => setShowLiveTranscripts(e.target.checked)}
+                  checked={showCaptions}
+                  onChange={(e) => {
+                    setShowCaptions(e.target.checked);
+                    localStorage.setItem('agent-show-captions', e.target.checked.toString());
+                  }}
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Live Captions</span>
@@ -1826,49 +2166,110 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         </div>
       )}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => {
-          // Verbose logging - only when debugging
-          if (ENABLE_VERBOSE_LOGGING) {
-            console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
-          }
-          const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
-          return (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
+      {/* Vocalist Recording UI */}
+      {isVocalistRecording && (
+        <div className="absolute inset-0 z-40 bg-white dark:bg-gray-900 p-4 overflow-y-auto">
+          <VocalistRecorder
+            userId={authenticatedUserId}
+            contentType={vocalistContentType}
+            onRecordingComplete={handleVocalistRecordingComplete}
+            onCancel={handleVocalistRecordingCancel}
+          />
+        </div>
+      )}
+
+      {/* Content Area - Toggle between Orb View and Traditional Message View */}
+      {viewMode === 'orb' ? (
+        // 3D Orb View
+        <div className="flex-1 overflow-hidden relative border-none orb-view-container">
+          <AudioVisualizerBlob
+            isAgentSpeaking={speechDetection.isAISpeaking}
+            agentId={currentAgent.id}
+            onVocalize={handleAgentVocalization}
+          />
+          {showCaptions && (
+            <ClosedCaptions
+              captions={messages
+                .filter(msg => msg.role === 'assistant' || msg.role === 'user')
+                .map((message, idx) => ({
+                  id: message.id || `msg-${idx}`,
+                  text: message.content,
+                  speaker: message.role === 'user' ? 'user' : 'agent' as const,
+                  agentId: message.agentId || currentAgent.id,
+                  timestamp: new Date(message.timestamp).getTime()
+                }))}
+              maxCaptions={3}
+            />
+          )}
+        </div>
+      ) : (
+        // Traditional Message List View
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {messages.map((message) => {
+            // Verbose logging - only when debugging
+            if (ENABLE_VERBOSE_LOGGING) {
+              console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
+            }
+            const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;
+            // Check if this message is from the currently active agent
+            const isActiveAgent = message.role === 'assistant' && message.agentId &&
+              message.agentId.toLowerCase() === currentAgent.id.toLowerCase();
+
+            // Debug logging for colors
+            if (message.role === 'assistant') {
+              console.log('🎨 Message header color debug:', {
+                messageAgentId: message.agentId,
+                agentColors,
+                isAssistant: message.role === 'assistant'
+              });
+            }
+
+            return (
             <div
-              className={`max-w-[80%] p-3 rounded-lg ${
-                message.role === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : agentColors ? `${agentColors.bg} ${agentColors.text} ${agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
-              } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              {message.role === 'assistant' && (
-                <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
-                  {message.agentId === 'tars' || currentAgent.id === 'tars' ? (
-                    <Bot size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'matron' || currentAgent.id === 'matron' ? (
-                    <Plus size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'phq2' || currentAgent.id === 'phq2' ? (
-                    <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
-                  ) : message.agentId === 'phq9' || currentAgent.id === 'phq9' ? (
-                    <FileText size={16} className="text-gray-600 dark:text-gray-400" />
+              <div
+                className={`max-w-[80%] p-3 rounded-lg ${
+                  message.role === 'user'
+                    ? 'bg-primary-600 text-white'
+                    : agentColors ? `${agentColors.bg} ${agentColors.text} ${isActiveAgent ? agentColors.outline : agentColors.border}` : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
+              >
+                {message.role === 'assistant' && (
+                  <div className={`flex items-center space-x-2 mb-2 pb-2 border-b ${
+                    agentColors ? `${agentColors.bg}` : 'bg-gray-100 dark:bg-gray-700'
+                  } border-gray-300 dark:border-gray-600`}>
+                    {message.agentId === 'tars' ? (
+                      <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
+                    ) : message.agentId === 'matron' ? (
+                      <Plus size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
+                    ) : message.agentId === 'phq2' ? (
+                      <ClipboardList size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
+                    ) : message.agentId === 'phq9' ? (
+                    <FileText size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
+                  ) : message.agentId === 'vocalist' ? (
+                    <Mic size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : (
-                    <Bot size={16} className="text-gray-600 dark:text-gray-400" />
+                    <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   )}
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  <span className={`text-xs font-semibold ${agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'}`}>
                     {message.agentId ?
                       message.agentId === 'tars' ? 'Tars' :
                       message.agentId === 'matron' ? 'Matron' :
                       message.agentId === 'phq2' ? 'PHQ-2' :
                       message.agentId === 'phq9' ? 'PHQ-9' :
+                      message.agentId === 'vocalist' ? 'Vocalist' :
                       currentAgent.name
                       : currentAgent.name
                     }
                   </span>
+                </div>
+              )}
+              {message.role === 'user' && (
+                <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-primary-400">
+                  <Users size={16} className="text-primary-100" />
+                  <span className="text-xs font-semibold text-primary-100">You</span>
                 </div>
               )}
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -1901,9 +2302,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         )}
 
         <div ref={messagesEndRef} />
-      </div>
+        </div>
+      )}
 
-      {/* Voice-Only Input Area */}
+      {/* Voice-Only Input Area - Hidden in Orb Mode */}
+      {viewMode === 'traditional' && (
       <div className="p-6 border-t border-gray-200 dark:border-gray-700">
         {/* Voice Activity Indicator - Centered */}
         {sessionStatus.isActive && !isSessionPaused && (
@@ -1954,7 +2357,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         )}
 
         {/* Live Captions Section */}
-        {showLiveTranscripts && sessionStatus.isActive && currentAITranscript && (
+        {showCaptions && sessionStatus.isActive && currentAITranscript && (
           <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
             <div className="flex items-center space-x-2 mb-2">
               <Volume2 size={16} className="text-blue-600 dark:text-blue-400" />
@@ -1992,7 +2395,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                       Input Transcription
                     </span>
                   )}
-                  {showLiveTranscripts && (
+                  {showCaptions && (
                     <span className="px-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded text-xs">
                       Live Captions
                     </span>
@@ -2024,6 +2427,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
         </div>
       </div>
+      )}
 
       {/* Settings Modal */}
       <SpeechSettings

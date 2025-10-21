@@ -324,19 +324,48 @@ ${recommendations.map(r => `• ${r}`).join('\n')}`;
 }
 
 /**
+ * Tool: Return to Tars
+ * Completes PHQ-9 workflow and returns control to orchestrator
+ */
+const returnToTarsTool: AgentTool = {
+  name: 'Agent_Tars',
+  description: 'Complete PHQ-9 assessment and return control to Tars coordinator. Call this after presenting assessment results, providing any crisis resources if needed, and saying goodbye.',
+  parameters: {
+    type: 'object',
+    properties: {},
+    required: []
+  },
+  handler: async () => {
+    console.log('📋 ========================================');
+    console.log('📋 PHQ-9 AGENT: Returning to Tars');
+    console.log('📋 ========================================');
+
+    return {
+      agentSwitch: true,
+      targetAgentId: 'Agent_Tars',
+      message: 'PHQ-9 assessment complete, returning to Tars'
+    };
+  }
+};
+
+/**
  * PHQ-9 Agent Configuration
  */
 export const phq9Agent: Agent = {
   id: 'Agent_PHQ9',
-  name: 'PHQ-9 Assessor',
-  description: `Call this agent to conduct a PHQ-9 comprehensive depression assessment. Use when:
-    - User requests a "full assessment" or "comprehensive screening"
+  name: 'PHQ-9 Questionnaire',
+  description: `Call this agent to conduct a PHQ-9 comprehensive wellbeing questionnaire. Use when:
+    - User requests a "full questionnaire" or "comprehensive check"
     - User asks to "invoke PHQ-9" or "start PHQ-9"
-    - PHQ-2 score is 3 or higher (indicating need for comprehensive assessment)
-    - User wants detailed mental health evaluation
-    DO NOT use for quick screening - use PHQ-2 for that.`,
+    - PHQ-2 score is 3 or higher (indicating need for comprehensive questionnaire)
+    - User wants detailed mental health questionnaire
+    DO NOT use for brief check - use PHQ-2 for that.`,
 
-  systemMessage: `You are a specialized PHQ-9 comprehensive depression assessment assistant. Your ONLY job is to conduct the PHQ-9 depression assessment.
+  systemMessage: `You are a specialized PHQ-9 comprehensive wellbeing questionnaire assistant. Your ONLY job is to conduct the PHQ-9 questionnaire.
+
+FIRST MESSAGE - AGENT INTRODUCTION (ONE sentence - ONLY FIRST TIME!):
+"Hi, I'm the PHQ-9 assistant with nine questions."
+Note: Skip introduction if you've already introduced yourself in this session.
 
 CRITICAL PROTOCOL:
 1. You have TWO tools: start-phq9-assessment and record-phq9-answer
@@ -350,16 +379,14 @@ CRITICAL PROTOCOL:
 9. Question 9 is about self-harm thoughts - handle with extra care and professionalism
 
 IMPORTANT RULES:
-- Ask each question ONCE
-- Trust the tools to handle all logic
-- Never invent questions
-- Present questions exactly as the tools provide them
-- If suicidal ideation is detected, the tool will include crisis resources in the completion result
-- After completion, suggest returning to the main assistant
+- Ask each question ONCE - present exactly as tools provide
+- After completion: "Thanks for your honesty. Results: [results]. [Crisis resources if needed]. Back to Tars."
+- Keep responses ULTRA SHORT (5-7 words max)
+- Be supportive, professional, empathetic
+- If crisis resources needed, present clearly and urgently
+- This is a screening tool, not a diagnosis`,
 
-Keep your responses supportive, professional, and empathetic. This is a screening tool, not a diagnosis. If crisis resources are needed, present them clearly and urgently.`,
-
-  tools: [startPhq9Tool, recordPhq9AnswerTool]
+  tools: [startPhq9Tool, recordPhq9AnswerTool, returnToTarsTool]
 };
 
 export default phq9Agent;

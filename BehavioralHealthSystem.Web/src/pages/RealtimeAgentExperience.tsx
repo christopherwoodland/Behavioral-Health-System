@@ -189,6 +189,10 @@ export const RealtimeAgentExperience: React.FC = () => {
     return (saved as 'orb' | 'traditional') || 'orb';
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(() => {
+    const saved = localStorage.getItem('agent-show-captions');
+    return saved === null ? true : saved === 'true';
+  });
 
   // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
@@ -232,7 +236,6 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Vocalist recording state
   const [isVocalistRecording, setIsVocalistRecording] = useState(false);
   const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
-  const [showLiveTranscripts, setShowLiveTranscripts] = useState(false);
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
 
@@ -1924,14 +1927,17 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           {/* Live Transcripts Toggle */}
           {sessionStatus.isActive && (
             <button
-              onClick={() => setShowLiveTranscripts(!showLiveTranscripts)}
+              onClick={() => {
+                setShowCaptions(!showCaptions);
+                localStorage.setItem('agent-show-captions', (!showCaptions).toString());
+              }}
               className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                showLiveTranscripts
+                showCaptions
                   ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
               }`}
-              aria-label={`${showLiveTranscripts ? 'Hide' : 'Show'} live transcripts`}
-              title={`${showLiveTranscripts ? 'Hide' : 'Show'} live captions`}
+              aria-label={`${showCaptions ? 'Hide' : 'Show'} live transcripts`}
+              title={`${showCaptions ? 'Hide' : 'Show'} live captions`}
             >
               <span className="text-xs md:text-sm font-medium">CC</span>
             </button>
@@ -2121,8 +2127,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={showLiveTranscripts}
-                  onChange={(e) => setShowLiveTranscripts(e.target.checked)}
+                  checked={showCaptions}
+                  onChange={(e) => {
+                    setShowCaptions(e.target.checked);
+                    localStorage.setItem('agent-show-captions', e.target.checked.toString());
+                  }}
                   className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Live Captions</span>
@@ -2178,18 +2187,20 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
             agentId={currentAgent.id}
             onVocalize={handleAgentVocalization}
           />
-          <ClosedCaptions
-            captions={messages
-              .filter(msg => msg.role === 'assistant' || msg.role === 'user')
-              .map((message, idx) => ({
-                id: message.id || `msg-${idx}`,
-                text: message.content,
-                speaker: message.role === 'user' ? 'user' : 'agent' as const,
-                agentId: message.agentId || currentAgent.id,
-                timestamp: new Date(message.timestamp).getTime()
-              }))}
-            maxCaptions={3}
-          />
+          {showCaptions && (
+            <ClosedCaptions
+              captions={messages
+                .filter(msg => msg.role === 'assistant' || msg.role === 'user')
+                .map((message, idx) => ({
+                  id: message.id || `msg-${idx}`,
+                  text: message.content,
+                  speaker: message.role === 'user' ? 'user' : 'agent' as const,
+                  agentId: message.agentId || currentAgent.id,
+                  timestamp: new Date(message.timestamp).getTime()
+                }))}
+              maxCaptions={3}
+            />
+          )}
         </div>
       ) : (
         // Traditional Message List View
@@ -2346,7 +2357,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         )}
 
         {/* Live Captions Section */}
-        {showLiveTranscripts && sessionStatus.isActive && currentAITranscript && (
+        {showCaptions && sessionStatus.isActive && currentAITranscript && (
           <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
             <div className="flex items-center space-x-2 mb-2">
               <Volume2 size={16} className="text-blue-600 dark:text-blue-400" />
@@ -2384,7 +2395,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                       Input Transcription
                     </span>
                   )}
-                  {showLiveTranscripts && (
+                  {showCaptions && (
                     <span className="px-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded text-xs">
                       Live Captions
                     </span>

@@ -146,12 +146,12 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
 
   const getAgentColor = (id: string): { r: number; g: number; b: number } => {
     switch (id.toLowerCase()) {
-      case 'tars': return { r: 0.29, g: 0.89, b: 0.29 }; // #4ae24a (green)
-      case 'matron': return { r: 0.89, g: 0.29, b: 0.56 }; // #e24a90
-      case 'phq2': return { r: 0.29, g: 0.89, b: 0.89 }; // #4ae2e2
-      case 'phq9': return { r: 0.64, g: 0.29, b: 0.89 }; // #a24ae2
-      case 'vocalist': return { r: 0.89, g: 0.64, b: 0.29 }; // #e2a24a
-      default: return { r: 0.29, g: 0.89, b: 0.29 };
+      case 'tars': return { r: 0.145, g: 0.388, b: 0.922 }; // #2563eb (blue)
+      case 'matron': return { r: 0.086, g: 0.639, b: 0.290 }; // #16a34a (green)
+      case 'phq2': return { r: 0.576, g: 0.200, b: 0.918 }; // #9333ea (purple)
+      case 'phq9': return { r: 0.310, g: 0.275, b: 0.898 }; // #4f46e5 (indigo)
+      case 'vocalist': return { r: 0.859, g: 0.153, b: 0.467 }; // #db2777 (pink)
+      default: return { r: 0.145, g: 0.388, b: 0.922 };
     }
   };
 

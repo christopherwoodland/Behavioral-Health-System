@@ -14,7 +14,9 @@ import {
   Bot,
   ClipboardList,
   FileText,
-  Plus
+  Plus,
+  Menu,
+  X
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
@@ -41,6 +43,7 @@ import { phq9Agent } from '@/agents/phq9Agent';
 import { matronAgent } from '@/agents/matronAgent';
 import { vocalistAgent } from '@/agents/vocalistAgent';
 import { VocalistRecorder } from '@/components/VocalistRecorder';
+import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
 type ConversationMessage = RealtimeMessage;
@@ -184,6 +187,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     const saved = localStorage.getItem('agent-view-mode');
     return (saved as 'orb' | 'traditional') || 'orb';
   });
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Agent State - Simplified for single GPT-Realtime agent
   const [currentAgent, setCurrentAgent] = useState<AgentStatus>({
@@ -1651,8 +1655,63 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      {/* Hamburger Menu - Only visible in 3D mode */}
+      {viewMode === 'orb' && (
+        <div className="fixed top-4 right-4 z-[9998]">
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="p-2 rounded-lg bg-white/20 dark:bg-gray-900/20 hover:bg-white/30 dark:hover:bg-gray-900/30 backdrop-blur-sm transition-all"
+          >
+            {isMenuOpen ? (
+              <X size={24} className="text-white" />
+            ) : (
+              <Menu size={24} className="text-white" />
+            )}
+          </button>
+
+          {/* Dropdown Menu */}
+          {isMenuOpen && (
+            <div className="absolute top-12 right-0 mt-2 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden w-48">
+              <button
+                onClick={() => {
+                  setIsSettingsOpen(true);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Settings size={16} />
+                <span>Settings</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMessages([]);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-red-600 dark:text-red-400"
+              >
+                <Trash2 size={16} />
+                <span>Clear Chat</span>
+              </button>
+              <button
+                onClick={() => {
+                  const newMode: 'orb' | 'traditional' = viewMode === 'orb' ? 'traditional' : 'orb';
+                  setViewMode(newMode);
+                  localStorage.setItem('agent-view-mode', newMode);
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 flex items-center space-x-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <Users size={16} />
+                <span>Switch View</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Header - Hidden in 3D mode */}
+      {viewMode !== 'orb' && (
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-3">
           {/* Agent Avatar with Voice Activity */}
           <div className="relative">
@@ -1789,19 +1848,19 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           {/* View Mode Toggle - Orb vs Traditional */}
           <button
             onClick={() => {
-              const newMode = viewMode === 'orb' ? 'traditional' : 'orb';
+              const newMode = ((viewMode as any) === 'orb' ? 'traditional' : 'orb') as 'orb' | 'traditional';
               setViewMode(newMode);
               localStorage.setItem('agent-view-mode', newMode);
             }}
             className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              viewMode === 'orb'
+              (viewMode as any) === 'orb'
                 ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
-            aria-label={`Switch to ${viewMode === 'orb' ? 'traditional' : 'orb'} view`}
-            title={`View: ${viewMode === 'orb' ? 'Orb (3D)' : 'Traditional (List)'}`}
+            aria-label={`Switch to ${(viewMode as any) === 'orb' ? 'traditional' : 'orb'} view`}
+            title={`View: ${(viewMode as any) === 'orb' ? 'Orb (3D)' : 'Traditional (List)'}`}
           >
-            {viewMode === 'orb' ? '3D' : '📋'}
+            {(viewMode as any) === 'orb' ? '3D' : '📋'}
           </button>
 
           {/* Agent Panel Toggle */}
@@ -1875,6 +1934,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </button>
         </div>
       </div>
+      )}
 
       {/* Agent Control Panel - Enhanced with feature toggles */}
       {showAgentPanel && (
@@ -2007,7 +2067,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       {/* Content Area - Toggle between Orb View and Traditional Message View */}
       {viewMode === 'orb' ? (
         // 3D Orb View
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-hidden relative border-none orb-view-container">
           <AudioVisualizerBlob
             isAgentSpeaking={speechDetection.isAISpeaking}
             agentId={currentAgent.id}

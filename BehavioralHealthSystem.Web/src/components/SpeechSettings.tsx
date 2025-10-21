@@ -113,7 +113,7 @@ export const SpeechSettings: React.FC<SpeechSettingsProps> = ({
         "Controls Tars' personality and humor in responses.",
         "100%: Maximum wit, sarcasm, and entertaining commentary. Addresses you as 'Hotshot', 'Chief', 'Sport', 'Slick', 'Champ', 'Ace', 'Top Gun', 'Sweetie'",
         "80%: High humor with clever quips and observations. Uses 'Hotshot', 'Chief', 'Sport'",
-        "60%: Moderate humor with professional balance. Calls you 'Captain', 'Buddy', 'Cap'",
+        "60%: Moderate humor with professional balance. Calls you 'Captain', 'Pal', 'Cap'",
         "40%: Professional tone with minimal humor. Uses 'Friend', 'Colleague'",
         "20%: Serious mode with rare humor. Addresses you formally as 'Sir', 'Ma'am'",
         "0%: Maximum efficiency mode, direct and concise. Strictly formal 'Sir', 'Ma'am', 'Operator'"

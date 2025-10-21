@@ -5,11 +5,13 @@ import './FloatingOrb.css';
 interface AudioVisualizerBlobProps {
   isAgentSpeaking: boolean;
   agentId: string;
+  onVocalize?: () => void; // Callback to trigger agent vocalization
 }
 
 const vertexShader = `
   uniform float u_time;
   uniform float u_frequency;
+  uniform float u_breathing; // Subtle breathing/ripple effect
 
   vec3 mod289(vec3 x) {
     return x - floor(x * (1.0 / 289.0)) * 289.0;
@@ -101,8 +103,14 @@ const vertexShader = `
 
   void main() {
     float noise = 8.0 * pnoise(position + u_time * 1.5, vec3(10.0));
-    float displacement = (u_frequency / 20.0) * (noise / 8.0);
-    vec3 newPosition = position + normal * displacement;
+    float displacement = (u_frequency / 40.0) * (noise / 12.0);
+
+    // Add subtle breathing/ripple effect - like gentle waves across the surface
+    // Creates ripples that propagate outward in concentric waves
+    float rippleWave = sin(length(position) * 0.8 - u_time * 2.0) * 0.5;
+    float rippleAmplitude = u_breathing * rippleWave * 0.3; // Subtle ripple effect
+
+    vec3 newPosition = position + normal * (displacement + rippleAmplitude);
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
   }
@@ -120,7 +128,8 @@ const fragmentShader = `
 
 export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
   isAgentSpeaking,
-  agentId
+  agentId,
+  onVocalize
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -131,13 +140,9 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
   const clockRef = useRef(new THREE.Clock());
   const animationIdRef = useRef<number | null>(null);
   const frequencyRef = useRef(0);
-  const targetFrequencyRef = useRef(0);
   const isAgentSpeakingRef = useRef(isAgentSpeaking);
   const idleStartTimeRef = useRef<number | null>(null); // Track when idle started
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const hummingOscillatorRef = useRef<OscillatorNode | null>(null);
-  const hummingGainRef = useRef<GainNode | null>(null);
-  const lastHummingTimeRef = useRef<number>(0);
+  const lastVocalizationTimeRef = useRef<number>(0);
 
   const getAgentColor = (id: string): { r: number; g: number; b: number } => {
     switch (id.toLowerCase()) {
@@ -151,74 +156,9 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
   };
 
   // Initialize audio context for humming
-  const initializeAudioContext = () => {
-    if (audioContextRef.current) return;
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      audioContextRef.current = audioContext;
-    } catch (err) {
-      console.warn('Audio context initialization failed:', err);
-    }
-  };
-
-  // Start humming sound
-  const startHumming = () => {
-    if (!audioContextRef.current) {
-      initializeAudioContext();
-    }
-    if (!audioContextRef.current || hummingOscillatorRef.current) return; // Already humming
-
-    try {
-      const ctx = audioContextRef.current;
-
-      // Create oscillator and gain
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      oscillator.type = 'sine';
-      oscillator.frequency.value = 150; // Gentle low hum frequency
-
-      // Fade in over 300ms
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.3);
-
-      // Connect and start
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-      oscillator.start();
-
-      hummingOscillatorRef.current = oscillator;
-      hummingGainRef.current = gain;
-    } catch (err) {
-      console.warn('Failed to start humming:', err);
-    }
-  };
-
-  // Stop humming sound
-  const stopHumming = () => {
-    if (hummingOscillatorRef.current && audioContextRef.current && hummingGainRef.current) {
-      try {
-        const ctx = audioContextRef.current;
-        // Fade out over 300ms
-        hummingGainRef.current.gain.setValueAtTime(hummingGainRef.current.gain.value, ctx.currentTime);
-        hummingGainRef.current.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
-
-        // Stop after fade out
-        setTimeout(() => {
-          if (hummingOscillatorRef.current) {
-            try {
-              hummingOscillatorRef.current.stop();
-            } catch (err) {
-              // Already stopped
-            }
-          }
-        }, 300);
-
-        hummingOscillatorRef.current = null;
-        hummingGainRef.current = null;
-      } catch (err) {
-        console.warn('Failed to stop humming:', err);
-      }
+  const triggerVocalization = () => {
+    if (onVocalize) {
+      onVocalize();
     }
   };
 
@@ -259,6 +199,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
     const uniforms = {
       u_time: { value: 0.0 },
       u_frequency: { value: 0.0 },
+      u_breathing: { value: 0.0 }, // Breathing/ripple effect when idle
       u_red: { value: color.r },
       u_green: { value: color.g },
       u_blue: { value: color.b }
@@ -308,13 +249,12 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
 
       // Update target frequency
       if (isSpeaking) {
-        targetFrequencyRef.current = 120;
+        // When speaking, jump to target frequency immediately for instant response
+        frequencyRef.current = 120;
       } else {
-        targetFrequencyRef.current = 0;
+        // When not speaking, gradually decay the frequency for smooth fade-out
+        frequencyRef.current += (0 - frequencyRef.current) * 0.005;
       }
-
-      // Smooth frequency interpolation - slower decay for longer animation
-      frequencyRef.current += (targetFrequencyRef.current - frequencyRef.current) * 0.005;
 
       // Update uniforms
       uniforms.u_time.value = clockRef.current.getElapsedTime();
@@ -330,7 +270,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
         blob.position.x = 0;
         blob.position.z = 0;
         idleStartTimeRef.current = null; // Reset idle timer when speaking
-        stopHumming(); // Stop humming when speaking
+        uniforms.u_breathing.value = 0; // No breathing when speaking
       } else {
         // Track idle time
         if (idleStartTimeRef.current === null) {
@@ -339,13 +279,16 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
         const idleTime = elapsedTime - idleStartTimeRef.current;
         const idleThreshold = 120; // 2 minutes in seconds
 
-        // Only show playful movement after 2 minutes of being idle
+        // Only show playful movement and vocalizations after 2 minutes of being idle
         if (idleTime >= idleThreshold) {
-          // Start humming when idle for 2+ minutes
-          const timeSinceLastHum = elapsedTime - lastHummingTimeRef.current;
-          if (timeSinceLastHum >= 4) { // Hum every 4 seconds
-            startHumming();
-            lastHummingTimeRef.current = elapsedTime;
+          // Enable gentle breathing ripples when idle
+          uniforms.u_breathing.value = 1.0 + Math.sin(elapsedTime * 0.5) * 0.3; // Breathing pulse
+
+          // Trigger agent vocalization (hmm, la la la, etc) every 4 seconds
+          const timeSinceLastVocalization = elapsedTime - lastVocalizationTimeRef.current;
+          if (timeSinceLastVocalization >= 4 && onVocalize) {
+            triggerVocalization();
+            lastVocalizationTimeRef.current = elapsedTime;
           }
 
           // When NOT speaking for 2+ minutes: Multiple fun movement patterns that cycle through (SLOWED DOWN)
@@ -405,20 +348,25 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
             blob.position.z = (timeInCycle / cycleDuration - 0.5) * 20; // Z oscillation
           }
         } else {
-          // First 2 minutes idle: stay at center
+          // First 2 minutes idle: stay at center with subtle breathing
           blob.position.x = 0;
           blob.position.y = 0;
           blob.position.z = 0;
+          // Subtle breathing even when early idle - shows the agent is "alive"
+          uniforms.u_breathing.value = 0.5 + Math.sin(elapsedTime * 0.3) * 0.2;
         }
       }
 
-      // Base rotation
-      blob.rotation.x += 0.0003;
-      blob.rotation.y += 0.0005;
+      // Only apply rotation when NOT speaking (prevents visual artifacts during speech animation)
+      if (!isSpeaking) {
+        // Base rotation
+        blob.rotation.x += 0.0003;
+        blob.rotation.y += 0.0005;
 
-      // 360 spin - every 8 seconds, do a full rotation
-      const spinCycle = Math.sin(elapsedTime * 0.25) * 0.5 + 0.5; // 0 to 1 over 8 seconds
-      blob.rotation.z += spinCycle * 0.01; // Add z-axis rotation for spinning effect
+        // 360 spin - every 8 seconds, do a full rotation
+        const spinCycle = Math.sin(elapsedTime * 0.25) * 0.5 + 0.5; // 0 to 1 over 8 seconds
+        blob.rotation.z += spinCycle * 0.01; // Add z-axis rotation for spinning effect
+      }
 
       // When NOT speaking: check idle time for dramatic spinning
       if (!isSpeaking && idleStartTimeRef.current !== null) {
@@ -453,7 +401,6 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
     animate();
 
     return () => {
-      stopHumming(); // Stop humming on cleanup
       window.removeEventListener('resize', handleResize);
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
@@ -465,7 +412,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
       geometry.dispose();
       material.dispose();
     };
-  }, [agentId]);
+  }, [agentId, onVocalize]);
 
   return (
     <div className="floating-orb-container" ref={containerRef} data-agent={agentId} />

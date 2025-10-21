@@ -1875,7 +1875,9 @@ export class AzureOpenAIRealtimeService {
       audioTracks.forEach(track => {
         track.enabled = !mute;
       });
-      console.log(mute ? '🔇 Microphone muted (agent speaking)' : '🔊 Microphone unmuted');
+      console.log(mute ? '🔇 Microphone muted' : '🔊 Microphone unmuted', `(${audioTracks.length} tracks)`);
+    } else {
+      console.warn('⚠️ Cannot mute microphone - localStream not initialized yet');
     }
   }
 
@@ -1893,6 +1895,23 @@ export class AzureOpenAIRealtimeService {
     if (!this.localStream) return true;
     const audioTracks = this.localStream.getAudioTracks();
     return audioTracks.length === 0 || !audioTracks[0].enabled;
+  }
+
+  /**
+   * Set audio output (speaker) muted/unmuted state
+   */
+  setAudioOutputMuted(muted: boolean): void {
+    if (this.audioElement) {
+      this.audioElement.muted = muted;
+      console.log(muted ? '🔇 Audio output muted (speakers)' : '🔊 Audio output unmuted (speakers)');
+    }
+  }
+
+  /**
+   * Check if audio output is muted
+   */
+  isAudioOutputMuted(): boolean {
+    return this.audioElement?.muted ?? false;
   }
 
   /**

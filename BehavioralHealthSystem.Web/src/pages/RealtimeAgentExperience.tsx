@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Mic,
+  MicOff,
   Trash2,
   Volume2,
   VolumeX,
@@ -84,36 +85,36 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
   switch (normalizedId) {
     case 'tars':
       return {
-        bg: 'bg-blue-50 dark:bg-blue-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
+        bg: 'bg-blue-100 dark:bg-blue-800',
+        text: 'text-blue-900 dark:text-blue-100',
         border: 'border-l-4 border-blue-500',
         outline: 'border-2 border-blue-500 dark:border-blue-400'
       };
     case 'matron':
       return {
-        bg: 'bg-green-50 dark:bg-green-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
+        bg: 'bg-green-100 dark:bg-green-800',
+        text: 'text-green-900 dark:text-green-100',
         border: 'border-l-4 border-green-500',
         outline: 'border-2 border-green-500 dark:border-green-400'
       };
     case 'phq2':
       return {
-        bg: 'bg-purple-50 dark:bg-purple-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
+        bg: 'bg-purple-100 dark:bg-purple-800',
+        text: 'text-purple-900 dark:text-purple-100',
         border: 'border-l-4 border-purple-500',
         outline: 'border-2 border-purple-500 dark:border-purple-400'
       };
     case 'phq9':
       return {
-        bg: 'bg-indigo-50 dark:bg-indigo-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
+        bg: 'bg-indigo-100 dark:bg-indigo-800',
+        text: 'text-indigo-900 dark:text-indigo-100',
         border: 'border-l-4 border-indigo-600',
         outline: 'border-2 border-indigo-600 dark:border-indigo-400'
       };
     case 'vocalist':
       return {
-        bg: 'bg-pink-50 dark:bg-pink-900/20',
-        text: 'text-gray-900 dark:text-gray-100',
+        bg: 'bg-pink-100 dark:bg-pink-800',
+        text: 'text-pink-900 dark:text-pink-100',
         border: 'border-l-4 border-pink-500',
         outline: 'border-2 border-pink-500 dark:border-pink-400'
       };
@@ -197,6 +198,14 @@ export const RealtimeAgentExperience: React.FC = () => {
     isTyping: false
   });
 
+  // Ref to track current agent in callbacks (so setupEventListeners can access latest agent)
+  const currentAgentRef = useRef<AgentStatus>({
+    id: 'tars',
+    name: 'Tars',
+    isActive: false,
+    isTyping: false
+  });
+
   // Session State
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>({
     isActive: false,
@@ -208,6 +217,7 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // Audio State
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isMicInputEnabled, setIsMicInputEnabled] = useState(true);
   const [voiceActivityLevel] = useState(0);
   const [isSessionPaused, setIsSessionPaused] = useState(false);
 
@@ -356,6 +366,11 @@ export const RealtimeAgentExperience: React.FC = () => {
       }
     };
   }, [sessionStatus.isActive, isSessionPaused]);
+
+  // Sync currentAgent to ref so callbacks always have access to latest agent
+  useEffect(() => {
+    currentAgentRef.current = currentAgent;
+  }, [currentAgent]);
 
   // PHQ Assessment Handlers - DEPRECATED: Now handled by PHQ agents
   const setupEventListeners = useCallback(() => {
@@ -566,7 +581,15 @@ Just speak naturally - I understand variations of these commands!`,
       if (ENABLE_VERBOSE_LOGGING) {
         console.log(`✅ Adding ${message.role} message to chat display`);
       }
-      setMessages(prev => [...prev, message]);
+
+      // CRITICAL: Ensure message has agentId set to current agent
+      // This prevents messages from showing wrong agent color when agent switches
+      const messageWithAgent: RealtimeMessage = {
+        ...message,
+        agentId: message.agentId || currentAgentRef.current.id
+      };
+
+      setMessages(prev => [...prev, messageWithAgent]);
       setSessionStatus(prev => ({ ...prev, messageCount: prev.messageCount + 1 }));
 
       // Save message to chat transcript
@@ -762,8 +785,18 @@ Just speak naturally - I understand variations of these commands!`,
       if (transcript.role === 'assistant') {
         setCurrentAITranscript(transcript.text);
         if (!transcript.isPartial) {
-          // Clear when transcript is complete
-          setTimeout(() => setCurrentAITranscript(''), 2000);
+          // Keep transcript visible for 8 seconds to handle agent speaking at variable speeds
+          // Only clear if agent is no longer speaking, otherwise let it display
+          setTimeout(() => {
+            setCurrentAITranscript(prevText => {
+              // Only clear if this was the same transcript (hasn't been updated)
+              // This ensures we keep showing new utterances as they arrive
+              if (prevText === transcript.text) {
+                return '';
+              }
+              return prevText;
+            });
+          }, 8000);
         }
       }
     });
@@ -805,6 +838,16 @@ Just speak naturally - I understand variations of these commands!`,
     });
 
   }, []);
+
+  // Handle audio output muting/unmuting
+  useEffect(() => {
+    agentService.setAudioOutputMuted(!isAudioEnabled);
+  }, [isAudioEnabled]);
+
+  // Handle mic input muting/unmuting
+  useEffect(() => {
+    agentService.muteMicrophone(!isMicInputEnabled);
+  }, [isMicInputEnabled]);
 
   // Agent display name not needed for single agent
   // const getAgentDisplayName = () => 'AI Assistant';
@@ -1528,6 +1571,36 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
     }
   };
 
+  // Trigger agent to vocalize (hum, la la la, etc) during idle time
+  const handleAgentVocalization = () => {
+    // Array of random vocalizations the agent might say
+    const vocalizations = [
+      'Hmmmm...',
+      'La la la',
+      'Mmm hmm',
+      'Hmm interesting',
+      'Yeah, uh huh',
+      'Ooh la la'
+    ];
+
+    // Pick a random vocalization
+    const randomVocalization = vocalizations[Math.floor(Math.random() * vocalizations.length)];
+
+    // Send it as a user message to the agent
+    // This will be picked up by the agent as a prompt and responded to naturally
+    console.log(`🎤 Agent vocalization trigger: ${randomVocalization}`);
+
+    // We'll send this as a subtle system prompt rather than a visible message
+    // by using the agent service's ability to send conversation items
+    try {
+      // Note: This would need a method on agentService to send text input
+      // For now, we'll just log it. The real implementation would send this
+      // through the WebRTC data channel as a conversation.item.create event
+    } catch (error) {
+      console.warn('Failed to trigger vocalization:', error);
+    }
+  };
+
   // Vocalist recording handlers
   const handleVocalistRecordingComplete = async (audioBlob: Blob, duration: number) => {
     console.log('🎤 Recording completed:', duration, 'seconds');
@@ -1614,7 +1687,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className={`h-[calc(100vh-8rem)] flex flex-col rounded-lg border ${
+      sessionStatus.isActive
+        ? 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600'
+        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+    }`}>
       {/* Connection Notification Toast */}
       {connectionNotification.show && (
         <div className={`absolute top-4 right-4 z-50 max-w-md rounded-lg shadow-lg p-4 animate-slide-in-right ${
@@ -1716,15 +1793,25 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
       )}
 
       {/* Header - Visible in all modes, responsive layout */}
-      <div className="flex items-center justify-between p-2 md:p-4 border-b border-gray-200 dark:border-gray-700 gap-2 md:gap-3">
+      <div className={`flex items-center justify-between p-2 md:p-4 border-b gap-2 md:gap-3 bg-white dark:bg-gray-900 ${
+        sessionStatus.isActive ? 'border-gray-300 dark:border-gray-600' : 'border-gray-200 dark:border-gray-700'
+      }`}>
         <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
           {/* Agent Avatar with Voice Activity */}
           <div className="relative flex-shrink-0">
             <div className={`w-10 md:w-12 h-10 md:h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
               currentAgent.isTyping
-                ? 'bg-primary-500 animate-pulse'
-                : currentAgent.isActive
-                  ? 'bg-green-500'
+                ? 'bg-primary-600 animate-pulse'
+                : currentAgent.id === 'tars'
+                  ? 'bg-blue-600'
+                  : currentAgent.id === 'matron'
+                  ? 'bg-green-600'
+                  : currentAgent.id === 'phq2'
+                  ? 'bg-purple-600'
+                  : currentAgent.id === 'phq9'
+                  ? 'bg-indigo-700'
+                  : currentAgent.id === 'vocalist'
+                  ? 'bg-pink-600'
                   : 'bg-gray-400'
             }`}>
               {currentAgent.id === 'tars' ? (
@@ -1922,10 +2009,24 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
                 : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
             }`}
-            aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio`}
-            title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio`}
+            aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output`}
+            title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output (speakers)`}
           >
             {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+
+          {/* Microphone Input Toggle */}
+          <button
+            onClick={() => setIsMicInputEnabled(!isMicInputEnabled)}
+            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+              isMicInputEnabled
+                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+            }`}
+            aria-label={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
+            title={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
+          >
+            {isMicInputEnabled ? <Mic size={18} /> : <MicOff size={18} />}
           </button>
 
           {/* Settings */}
@@ -1942,10 +2043,10 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
 
       {/* Agent Control Panel - Enhanced with feature toggles */}
       {showAgentPanel && (
-        <div className="p-4 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className={`p-4 border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">Tars</h3>
+              <h3 className={`text-sm font-medium text-gray-900 dark:text-white`}>{currentAgent.name}</h3>
               <div className="flex items-center space-x-2">
                 <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
                   {currentAgent.name}
@@ -2075,6 +2176,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           <AudioVisualizerBlob
             isAgentSpeaking={speechDetection.isAISpeaking}
             agentId={currentAgent.id}
+            onVocalize={handleAgentVocalization}
           />
           <ClosedCaptions
             captions={messages
@@ -2103,13 +2205,11 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               message.agentId.toLowerCase() === currentAgent.id.toLowerCase();
 
             // Debug logging for colors
-            if (message.role === 'assistant' && agentColors) {
-              console.log('🎨 Agent color debug:', {
+            if (message.role === 'assistant') {
+              console.log('🎨 Message header color debug:', {
                 messageAgentId: message.agentId,
-                currentAgentId: currentAgent.id,
-                isActiveAgent,
-                colors: agentColors,
-                appliedBorder: isActiveAgent ? agentColors.outline : agentColors.border
+                agentColors,
+                isAssistant: message.role === 'assistant'
               });
             }
 
@@ -2126,21 +2226,23 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 } ${message.isTranscript && message.role === 'user' ? 'border-l-4 border-yellow-400' : ''}`}
               >
                 {message.role === 'assistant' && (
-                  <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-gray-300 dark:border-gray-600">
+                  <div className={`flex items-center space-x-2 mb-2 pb-2 border-b ${
+                    agentColors ? `${agentColors.bg}` : 'bg-gray-100 dark:bg-gray-700'
+                  } border-gray-300 dark:border-gray-600`}>
                     {message.agentId === 'tars' ? (
-                      <Bot size={16} className="text-gray-600 dark:text-gray-400" />
+                      <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                     ) : message.agentId === 'matron' ? (
-                      <Plus size={16} className="text-gray-600 dark:text-gray-400" />
+                      <Plus size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                     ) : message.agentId === 'phq2' ? (
-                      <ClipboardList size={16} className="text-gray-600 dark:text-gray-400" />
+                      <ClipboardList size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                     ) : message.agentId === 'phq9' ? (
-                    <FileText size={16} className="text-gray-600 dark:text-gray-400" />
+                    <FileText size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : message.agentId === 'vocalist' ? (
-                    <Mic size={16} className="text-gray-600 dark:text-gray-400" />
+                    <Mic size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : (
-                    <Bot size={16} className="text-gray-600 dark:text-gray-400" />
+                    <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   )}
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  <span className={`text-xs font-semibold ${agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'}`}>
                     {message.agentId ?
                       message.agentId === 'tars' ? 'Tars' :
                       message.agentId === 'matron' ? 'Matron' :

@@ -29,27 +29,27 @@
 }
 
 .caption-item.caption-agent {
-  border-left: 3px solid #4ae24a;
+  border-left: 3px solid #2563eb;
 }
 
 .caption-item.caption-agent.speaker-tars {
-  border-left-color: #4ae24a;
+  border-left-color: #2563eb;
 }
 
 .caption-item.caption-agent.speaker-matron {
-  border-left-color: #e24a90;
+  border-left-color: #16a34a;
 }
 
 .caption-item.caption-agent.speaker-phq2 {
-  border-left-color: #4ae2e2;
+  border-left-color: #9333ea;
 }
 
 .caption-item.caption-agent.speaker-phq9 {
-  border-left-color: #a24ae2;
+  border-left-color: #4f46e5;
 }
 
 .caption-item.caption-agent.speaker-vocalist {
-  border-left-color: #e2a24a;
+  border-left-color: #db2777;
 }
 
 .caption-item.caption-user {
@@ -67,23 +67,23 @@
 }
 
 .caption-item.caption-agent.speaker-tars .caption-speaker {
-  color: #4ae24a;
+  color: #2563eb;
 }
 
 .caption-item.caption-agent.speaker-matron .caption-speaker {
-  color: #e24a90;
+  color: #16a34a;
 }
 
 .caption-item.caption-agent.speaker-phq2 .caption-speaker {
-  color: #4ae2e2;
+  color: #9333ea;
 }
 
 .caption-item.caption-agent.speaker-phq9 .caption-speaker {
-  color: #a24ae2;
+  color: #4f46e5;
 }
 
 .caption-item.caption-agent.speaker-vocalist .caption-speaker {
-  color: #e2a24a;
+  color: #db2777;
 }
 
 .caption-item.caption-user .caption-speaker {
@@ -164,11 +164,11 @@
   }
 }
 
-/* CSS Variables for agent colors */
+/* CSS Variables for agent colors - matching Tailwind */
 :root {
-  --agent-tars: #4ae24a;
-  --agent-matron: #e24a90;
-  --agent-phq2: #4ae2e2;
-  --agent-phq9: #a24ae2;
-  --agent-vocalist: #e2a24a;
+  --agent-tars: #2563eb;
+  --agent-matron: #16a34a;
+  --agent-phq2: #9333ea;
+  --agent-phq9: #4f46e5;
+  --agent-vocalist: #db2777;
 }

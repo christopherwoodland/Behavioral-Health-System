@@ -2255,6 +2255,12 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   </span>
                 </div>
               )}
+              {message.role === 'user' && (
+                <div className="flex items-center space-x-2 mb-2 pb-2 border-b border-primary-400">
+                  <Users size={16} className="text-primary-100" />
+                  <span className="text-xs font-semibold text-primary-100">You</span>
+                </div>
+              )}
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
               <div className={`flex items-center justify-between text-xs mt-1 opacity-70 ${
                 message.role === 'user' ? 'text-primary-200' : 'text-gray-500 dark:text-gray-400'

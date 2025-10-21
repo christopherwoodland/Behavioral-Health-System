@@ -100,8 +100,8 @@ const vertexShader = `
   }
 
   void main() {
-    float noise = 4.0 * pnoise(position + u_time, vec3(10.0));
-    float displacement = (u_frequency / 30.0) * (noise / 10.0);
+    float noise = 8.0 * pnoise(position + u_time * 1.5, vec3(10.0));
+    float displacement = (u_frequency / 20.0) * (noise / 8.0);
     vec3 newPosition = position + normal * displacement;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
@@ -133,6 +133,11 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
   const frequencyRef = useRef(0);
   const targetFrequencyRef = useRef(0);
   const isAgentSpeakingRef = useRef(isAgentSpeaking);
+  const idleStartTimeRef = useRef<number | null>(null); // Track when idle started
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const hummingOscillatorRef = useRef<OscillatorNode | null>(null);
+  const hummingGainRef = useRef<GainNode | null>(null);
+  const lastHummingTimeRef = useRef<number>(0);
 
   const getAgentColor = (id: string): { r: number; g: number; b: number } => {
     switch (id.toLowerCase()) {
@@ -142,6 +147,78 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
       case 'phq9': return { r: 0.64, g: 0.29, b: 0.89 }; // #a24ae2
       case 'vocalist': return { r: 0.89, g: 0.64, b: 0.29 }; // #e2a24a
       default: return { r: 0.29, g: 0.89, b: 0.29 };
+    }
+  };
+
+  // Initialize audio context for humming
+  const initializeAudioContext = () => {
+    if (audioContextRef.current) return;
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioContext;
+    } catch (err) {
+      console.warn('Audio context initialization failed:', err);
+    }
+  };
+
+  // Start humming sound
+  const startHumming = () => {
+    if (!audioContextRef.current) {
+      initializeAudioContext();
+    }
+    if (!audioContextRef.current || hummingOscillatorRef.current) return; // Already humming
+
+    try {
+      const ctx = audioContextRef.current;
+
+      // Create oscillator and gain
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.value = 150; // Gentle low hum frequency
+
+      // Fade in over 300ms
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.1, ctx.currentTime + 0.3);
+
+      // Connect and start
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+
+      hummingOscillatorRef.current = oscillator;
+      hummingGainRef.current = gain;
+    } catch (err) {
+      console.warn('Failed to start humming:', err);
+    }
+  };
+
+  // Stop humming sound
+  const stopHumming = () => {
+    if (hummingOscillatorRef.current && audioContextRef.current && hummingGainRef.current) {
+      try {
+        const ctx = audioContextRef.current;
+        // Fade out over 300ms
+        hummingGainRef.current.gain.setValueAtTime(hummingGainRef.current.gain.value, ctx.currentTime);
+        hummingGainRef.current.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.3);
+
+        // Stop after fade out
+        setTimeout(() => {
+          if (hummingOscillatorRef.current) {
+            try {
+              hummingOscillatorRef.current.stop();
+            } catch (err) {
+              // Already stopped
+            }
+          }
+        }, 300);
+
+        hummingOscillatorRef.current = null;
+        hummingGainRef.current = null;
+      } catch (err) {
+        console.warn('Failed to stop humming:', err);
+      }
     }
   };
 
@@ -231,7 +308,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
 
       // Update target frequency
       if (isSpeaking) {
-        targetFrequencyRef.current = 80;
+        targetFrequencyRef.current = 120;
       } else {
         targetFrequencyRef.current = 0;
       }
@@ -243,9 +320,131 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
       uniforms.u_time.value = clockRef.current.getElapsedTime();
       uniforms.u_frequency.value = frequencyRef.current;
 
-      // Rotate blob
+      // Subtle hover effect - gentle floating motion
+      const elapsedTime = clockRef.current.getElapsedTime();
+
+      // When speaking: stay at center with hover
+      if (isSpeaking) {
+        const hoverOffset = Math.sin(elapsedTime * 0.5) * 1; // ±1 unit hover when centered
+        blob.position.y = hoverOffset;
+        blob.position.x = 0;
+        blob.position.z = 0;
+        idleStartTimeRef.current = null; // Reset idle timer when speaking
+        stopHumming(); // Stop humming when speaking
+      } else {
+        // Track idle time
+        if (idleStartTimeRef.current === null) {
+          idleStartTimeRef.current = elapsedTime; // Start idle timer
+        }
+        const idleTime = elapsedTime - idleStartTimeRef.current;
+        const idleThreshold = 120; // 2 minutes in seconds
+
+        // Only show playful movement after 2 minutes of being idle
+        if (idleTime >= idleThreshold) {
+          // Start humming when idle for 2+ minutes
+          const timeSinceLastHum = elapsedTime - lastHummingTimeRef.current;
+          if (timeSinceLastHum >= 4) { // Hum every 4 seconds
+            startHumming();
+            lastHummingTimeRef.current = elapsedTime;
+          }
+
+          // When NOT speaking for 2+ minutes: Multiple fun movement patterns that cycle through (SLOWED DOWN)
+          const cycleDuration = 10; // Increased from 8 to 10 seconds for slower movement
+          const cycleTime = Math.floor((idleTime - idleThreshold) / cycleDuration); // Slower cycle
+          const timeInCycle = (idleTime - idleThreshold) % cycleDuration; // Time within current cycle
+          const movementPattern = cycleTime % 4; // 4 different movement types
+
+          if (movementPattern === 0) {
+            // CIRCULAR FLIGHT - smooth circle in horizontal plane
+            const radius = 15;
+            const circleSpeed = (timeInCycle / cycleDuration) * Math.PI * 2;
+            blob.position.x = Math.cos(circleSpeed) * radius;
+            blob.position.y = Math.sin(circleSpeed) * radius * 0.5;
+            blob.position.z = Math.sin(circleSpeed * 0.5) * radius * 0.3;
+          } else if (movementPattern === 1) {
+            // FIGURE-8 FLIGHT - lemniscate pattern
+            const figure8Speed = (timeInCycle / cycleDuration) * Math.PI * 2;
+            const scale = 12;
+            blob.position.x = Math.sin(figure8Speed) * scale;
+            blob.position.y = Math.sin(figure8Speed) * Math.cos(figure8Speed) * scale * 0.6;
+            blob.position.z = Math.cos(figure8Speed * 0.5) * scale * 0.4;
+          } else if (movementPattern === 2) {
+            // BOUNCING BALL - elastic bouncing around screen (SLOWED DOWN)
+            const bouncePhase = (timeInCycle / cycleDuration) * Math.PI * 3; // 3 bounces instead of 4
+            const bounceHeight = Math.max(0, Math.sin(bouncePhase)) * 20; // Parabolic bounce
+
+            // Bounce around corners in a square pattern
+            const cornerCycle = Math.floor((timeInCycle / cycleDuration) * 4) % 4;
+            const cornerProgress = ((timeInCycle / cycleDuration) * 4) % 1;
+
+            let targetX = 0, targetY = 0;
+            if (cornerCycle === 0) {
+              targetX = -15 + cornerProgress * 30;
+              targetY = -15;
+            } else if (cornerCycle === 1) {
+              targetX = 15;
+              targetY = -15 + cornerProgress * 30;
+            } else if (cornerCycle === 2) {
+              targetX = 15 - cornerProgress * 30;
+              targetY = 15;
+            } else {
+              targetX = -15;
+              targetY = 15 - cornerProgress * 30;
+            }
+
+            blob.position.x = targetX;
+            blob.position.y = targetY + bounceHeight;
+            blob.position.z = Math.sin(bouncePhase * 0.5) * 5;
+          } else {
+            // SPIRAL WUZZ - spiraling outward/inward pattern with speed (SLOWED DOWN)
+            const spiralPhase = (timeInCycle / cycleDuration) * Math.PI * 4; // Reduced from 6 to 4 rotations for slower spiral
+            const spiralRadius = 8 + Math.sin((timeInCycle / cycleDuration) * Math.PI * 2) * 8; // Grows and shrinks
+
+            blob.position.x = Math.cos(spiralPhase) * spiralRadius;
+            blob.position.y = Math.sin(spiralPhase) * spiralRadius * 0.7;
+            blob.position.z = (timeInCycle / cycleDuration - 0.5) * 20; // Z oscillation
+          }
+        } else {
+          // First 2 minutes idle: stay at center
+          blob.position.x = 0;
+          blob.position.y = 0;
+          blob.position.z = 0;
+        }
+      }
+
+      // Base rotation
       blob.rotation.x += 0.0003;
       blob.rotation.y += 0.0005;
+
+      // 360 spin - every 8 seconds, do a full rotation
+      const spinCycle = Math.sin(elapsedTime * 0.25) * 0.5 + 0.5; // 0 to 1 over 8 seconds
+      blob.rotation.z += spinCycle * 0.01; // Add z-axis rotation for spinning effect
+
+      // When NOT speaking: check idle time for dramatic spinning
+      if (!isSpeaking && idleStartTimeRef.current !== null) {
+        const idleTime = elapsedTime - idleStartTimeRef.current;
+        const idleThreshold = 120; // 2 minutes in seconds
+
+        // Only dramatic spinning after 2 minutes of idle
+        if (idleTime >= idleThreshold) {
+          // Faster, more dramatic spinning
+          blob.rotation.x += Math.sin(elapsedTime * 0.8) * 0.01;
+          blob.rotation.y += Math.cos(elapsedTime * 0.6) * 0.012;
+          blob.rotation.z += Math.sin(elapsedTime * 0.5) * 0.015;
+
+          // Every 18 seconds when agent is NOT speaking, do a full 360 rotation on various axes
+          const rotationCycle = (idleTime - idleThreshold) % 18; // Repeats every 18 seconds after idle threshold
+          if (rotationCycle < 2) { // 2 second rotation window
+            const rotationProgress = rotationCycle / 2; // 0 to 1 over 2 seconds
+            const rotationAmount = rotationProgress * Math.PI * 2; // Full 360 degree rotation
+
+            // Rotate on all three axes for dramatic effect
+            blob.rotation.x += Math.sin(rotationProgress * Math.PI) * 0.15;
+            blob.rotation.y += Math.cos(rotationProgress * Math.PI) * 0.15;
+            blob.rotation.z += rotationAmount * 0.05;
+          }
+        }
+      }
 
       // Render
       renderer.render(scene, camera);
@@ -254,6 +453,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
     animate();
 
     return () => {
+      stopHumming(); // Stop humming on cleanup
       window.removeEventListener('resize', handleResize);
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);

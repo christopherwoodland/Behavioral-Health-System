@@ -137,6 +137,46 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
   }
 };
 
+// Voice type definition for Azure OpenAI Realtime API
+type VoiceType = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'verse' | 'aria' | 'sage' | 'lumen';
+
+/**
+ * Maps agent IDs to their appropriate voices based on role and personality
+ * Each agent has a voice optimized for their specific function:
+ * - TARS: echo (robotic, command-oriented)
+ * - Jekyll: shimmer (warm, conversational)
+ * - Matron: nova (caring, professional)
+ * - PHQ-2: alloy (clinical, efficient)
+ * - PHQ-9: sage (authoritative, comprehensive)
+ * - Vocalist: aria (expressive, dynamic)
+ * @param agentId The agent identifier (e.g., 'Agent_Jekyll', 'Agent_Tars')
+ * @param fallbackVoice Default voice to use if agent not found
+ * @returns Voice string for Azure OpenAI Realtime API
+ */
+const getAgentVoice = (agentId: string, fallbackVoice: VoiceType = 'alloy'): VoiceType => {
+  // Normalize agent ID to lowercase for comparison
+  const normalizedId = agentId?.toLowerCase().replace('agent_', '');
+  console.log('🎤 getAgentVoice called:', { agentId, normalizedId });
+
+  switch (normalizedId) {
+    case 'tars':
+      return (import.meta.env.VITE_TARS_VOICE as VoiceType) || 'echo';
+    case 'jekyll':
+      return (import.meta.env.VITE_JEKYLL_VOICE as VoiceType) || 'shimmer';
+    case 'matron':
+      return (import.meta.env.VITE_MATRON_VOICE as VoiceType) || 'nova';
+    case 'phq2':
+      return (import.meta.env.VITE_PHQ2_VOICE as VoiceType) || 'alloy';
+    case 'phq9':
+      return (import.meta.env.VITE_PHQ9_VOICE as VoiceType) || 'sage';
+    case 'vocalist':
+      return (import.meta.env.VITE_VOCALIST_VOICE as VoiceType) || 'aria';
+    default:
+      console.warn(`⚠️ Unknown agent '${agentId}', using fallback voice: ${fallbackVoice}`);
+      return fallbackVoice;
+  }
+};
+
 export const RealtimeAgentExperience: React.FC = () => {
   // Authentication context
   const { user } = useAuth();
@@ -302,7 +342,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     turnDetectionSilenceDuration: 300,
     maxResponse: 1638,
     temperature: 0.7, // Changed from 0.7 to meet Azure OpenAI minimum of 0.6
-    voice: 'alloy'
+    voice: import.meta.env.VITE_TARS_VOICE || 'echo'
   });
 
   // Assessment State (optional - can be added if needed)
@@ -1226,11 +1266,10 @@ STEP 3b - IF biometric data DOES NOT EXIST:
      * Continue the conversation without calling Matron
      * Proceed with normal Tars agent functionality
    - Listen carefully to their response after asking how they're feeling
-   - If they express negative feelings (sadness, depression, hopelessness, anxiety, etc.):
-     * Say: "I hear you, [nickname]. It sounds like you might be going through a tough time. Would you like me to connect you with a quick mental health screening? It only takes a couple of minutes and might help us understand how to support you better."
-     * If they agree, call 'Agent_PHQ2' to start the screening
-     * The PHQ-2 assessment will automatically transition to PHQ-9 if the score indicates further assessment is needed
-   - If they express positive or neutral feelings:
+   - If they express negative feelings (sadness, depression, hopelessness, anxiety, etc.) OR mention anything related to health, wellness, or mental health:
+     * Say: "I hear you, [nickname]. Let me connect you with Jekyll, our health specialist who can provide you with the support you need."
+     * Call 'Agent_Jekyll' to connect them with the conversational mental health agent
+   - If they express positive or neutral feelings and don't mention health topics:
      * Say something supportive like "That's good to hear!" or acknowledge their state
      * Ask how you can help them today
 
@@ -1269,24 +1308,25 @@ Ship and system status protocol:
 - Adapt the phrasing to match your current humor level (casual at high levels, formal at low levels)
 
 AGENT ROUTING PROTOCOL:
-When ${getFirstName()} requests mental health assessments:
-1. Acknowledge the request first: "I understand you'd like to [do assessment]"
-2. For Jekyll agent routing: Route SILENTLY without explanation - do NOT say "I'm connecting you..." - just call Agent_Jekyll
-3. For PHQ-2/PHQ-9 agents: Explain what will happen: "I'm going to connect you with our specialized [PHQ-2/PHQ-9] assessment agent"
-4. Call the appropriate agent (Agent_PHQ2, Agent_PHQ9, or Agent_Jekyll)
-5. The specialized agent will take over and conduct the assessment
+When ${getFirstName()} requests health, wellness, or mental health support:
+1. Acknowledge the request first: "I understand you'd like to [talk about health/get support]"
+2. For health-related topics: Route SILENTLY to Jekyll without explanation - do NOT say "I'm connecting you..." - just call Agent_Jekyll
+3. For specific PHQ assessments (if explicitly requested): Explain what will happen: "I'm going to connect you with our specialized [PHQ-2/PHQ-9] assessment agent"
+4. Call the appropriate agent (Agent_Jekyll for health topics, Agent_PHQ2/PHQ9 only if specifically requested)
+5. The specialized agent will take over and provide the appropriate support
 6. When they complete, you'll receive control back
 
 Available specialized agents:
 - "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
-- "Agent_PHQ2": Quick depression screening (2 questions) - use when user wants quick check or "PHQ-2"
-- "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use when user wants full assessment or "PHQ-9"
-- "Agent_Jekyll": Mental health assessments - use when user asks for doctor/medical consultation, alternative assessment approach, or prefers natural dialogue over structured questionnaires
+- "Agent_Jekyll": Primary health and mental health support specialist - use for ALL health, wellness, mental health topics, emotional support, and general medical discussions
+- "Agent_PHQ2": Quick depression screening (2 questions) - use ONLY when user specifically requests "PHQ-2" assessment
+- "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use ONLY when user specifically requests "PHQ-9" assessment
 - "Agent_Vocalist": Mental/vocal assessment through 35-second voice recording - use when user says "song analysis", "let's sing", "once over", or "mental assessment"
 
 CRITICAL ROUTING RULES:
-- ALWAYS route PHQ assessments to the specialized agents
-- NEVER conduct assessments yourself
+- DEFAULT: Route ALL health, wellness, and mental health topics to Jekyll
+- Jekyll handles: emotional support, health discussions, wellness topics, general mental health conversations
+- ONLY route to PHQ agents if user specifically requests those particular assessments by name
 - Route to Vocalist when user mentions singing, song analysis, voice recording, or mental assessment through voice
 - After routing, wait for the specialist to finish
 - When specialist returns control, welcome ${getFirstName()} back and ask if there's anything else
@@ -1400,8 +1440,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 // calls the 'start-vocalist-recording' tool (after explaining the exercise)
                 // This allows the agent to introduce themselves and explain before showing the UI
 
-                // Determine voice based on agent - PHQ agents use 'echo', Tars and Vocalist use default
-                const agentVoice = (targetAgentId === 'Agent_PHQ2' || targetAgentId === 'Agent_PHQ9') ? 'echo' : azureSettings.voice;
+                // Determine agent voice using role-based mapping
+                const agentVoice = getAgentVoice(targetAgentId, azureSettings.voice);
 
                 // Build updated session config
                 const updatedConfig: SessionConfig = {

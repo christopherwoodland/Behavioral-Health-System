@@ -42,6 +42,8 @@ export const ClosedCaptions: React.FC<ClosedCaptionsProps> = ({
         return 'PHQ-9';
       case 'vocalist':
         return 'Vocalist';
+      case 'jekyll':
+        return 'Jekyll';
       default:
         return 'Agent';
     }
@@ -59,6 +61,8 @@ export const ClosedCaptions: React.FC<ClosedCaptionsProps> = ({
         return 'speaker-phq9';
       case 'vocalist':
         return 'speaker-vocalist';
+      case 'jekyll':
+        return 'speaker-jekyll';
       default:
         return 'speaker-default';
     }

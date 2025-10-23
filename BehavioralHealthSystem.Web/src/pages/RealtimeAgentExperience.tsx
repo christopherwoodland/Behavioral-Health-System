@@ -17,7 +17,8 @@ import {
   FileText,
   Plus,
   Menu,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
@@ -41,6 +42,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { agentOrchestrationService } from '@/services/agentOrchestrationService';
 import { phq2Agent } from '@/agents/phq2Agent';
 import { phq9Agent } from '@/agents/phq9Agent';
+import { jekyllAgent } from '@/agents/jekyllAgent';
 import { matronAgent } from '@/agents/matronAgent';
 import { vocalistAgent } from '@/agents/vocalistAgent';
 import { VocalistRecorder } from '@/components/VocalistRecorder';
@@ -74,7 +76,7 @@ const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === '
 
 /**
  * Get agent-specific color classes for visual differentiation
- * @param agentId - The agent identifier (tars, matron, phq2, phq9)
+ * @param agentId - The agent identifier (tars, matron, phq2, phq9, vocalist, jekyll)
  * @returns Tailwind CSS classes for background and text colors
  */
 const getAgentColor = (agentId?: string): { bg: string; text: string; border: string; outline: string } => {
@@ -117,6 +119,13 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
         text: 'text-pink-900 dark:text-pink-100',
         border: 'border-l-4 border-pink-500',
         outline: 'border-2 border-pink-500 dark:border-pink-400'
+      };
+    case 'jekyll':
+      return {
+        bg: 'bg-teal-100 dark:bg-teal-800',
+        text: 'text-teal-900 dark:text-teal-100',
+        border: 'border-l-4 border-teal-600',
+        outline: 'border-2 border-teal-600 dark:border-teal-400'
       };
     default:
       return {
@@ -189,6 +198,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     return (saved as 'orb' | 'traditional') || 'orb';
   });
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   const [showCaptions, setShowCaptions] = useState(() => {
     const saved = localStorage.getItem('agent-show-captions');
     return saved === null ? true : saved === 'true';
@@ -852,6 +862,19 @@ Just speak naturally - I understand variations of these commands!`,
     agentService.muteMicrophone(!isMicInputEnabled);
   }, [isMicInputEnabled]);
 
+  // Close header menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (isHeaderMenuOpen && !target.closest('[data-header-menu]')) {
+        setIsHeaderMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isHeaderMenuOpen]);
+
   // Agent display name not needed for single agent
   // const getAgentDisplayName = () => 'AI Assistant';
 
@@ -881,12 +904,27 @@ Just speak naturally - I understand variations of these commands!`,
       console.log('🤖 REGISTERING AGENTS');
       console.log('🤖 ========================================');
 
-      agentOrchestrationService.registerAgent(matronAgent);
+      // Register Matron with humor level context
+      const humorAwareMatronAgent = {
+        ...matronAgent,
+        systemMessage: matronAgent.systemMessage.replace(
+          /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
+          ''
+        ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
+      };
+      agentOrchestrationService.registerAgent(humorAwareMatronAgent);
 
       // Conditionally register PHQ-2 agent based on feature flag
       if (import.meta.env.VITE_ENABLE_PHQ2_AGENT === 'true') {
         console.log('✅ PHQ-2 agent enabled');
-        agentOrchestrationService.registerAgent(phq2Agent);
+        const humorAwarePHQ2Agent = {
+          ...phq2Agent,
+          systemMessage: phq2Agent.systemMessage.replace(
+            /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
+            ''
+          ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
+        };
+        agentOrchestrationService.registerAgent(humorAwarePHQ2Agent);
       } else {
         console.log('❌ PHQ-2 agent disabled');
       }
@@ -894,12 +932,42 @@ Just speak naturally - I understand variations of these commands!`,
       // Conditionally register PHQ-9 agent based on feature flag
       if (import.meta.env.VITE_ENABLE_PHQ9_AGENT === 'true') {
         console.log('✅ PHQ-9 agent enabled');
-        agentOrchestrationService.registerAgent(phq9Agent);
+        const humorAwarePHQ9Agent = {
+          ...phq9Agent,
+          systemMessage: phq9Agent.systemMessage.replace(
+            /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
+            ''
+          ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
+        };
+        agentOrchestrationService.registerAgent(humorAwarePHQ9Agent);
       } else {
         console.log('❌ PHQ-9 agent disabled');
       }
 
-      agentOrchestrationService.registerAgent(vocalistAgent);
+      // Conditionally register Jekyll agent based on feature flag
+      if (import.meta.env.VITE_ENABLE_JEKYLL_AGENT === 'true') {
+        console.log('✅ Jekyll agent enabled');
+        const humorAwareJekyllAgent = {
+          ...jekyllAgent,
+          systemMessage: jekyllAgent.systemMessage.replace(
+            /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
+            ''
+          ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
+        };
+        agentOrchestrationService.registerAgent(humorAwareJekyllAgent);
+      } else {
+        console.log('❌ Jekyll agent disabled');
+      }
+
+      // Register Vocalist agent with humor level context
+      const humorAwareVocalistAgent = {
+        ...vocalistAgent,
+        systemMessage: vocalistAgent.systemMessage.replace(
+          /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
+          ''
+        ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
+      };
+      agentOrchestrationService.registerAgent(humorAwareVocalistAgent);
 
       // Register Tars as the root orchestration agent
       const tarsRootAgent = {
@@ -1088,6 +1156,32 @@ Just speak naturally - I understand variations of these commands!`,
               console.log(`➕ Matron agent switch result:`, result);
               return result;
             }
+          },
+          {
+            name: 'Agent_Jekyll',
+            description: 'Calls Jekyll (the doctor/medical specialist) for mental health assessments. Use when user asks to talk to a doctor/medical professional, wants a different assessment approach, or prefers natural dialogue over formal questionnaires.',
+            parameters: {
+              type: 'object' as const,
+              properties: {} as Record<string, { type: string; description: string }>,
+              required: []
+            },
+            handler: async (params: any) => {
+              const userId = params.userId || authenticatedUserId;
+              console.log(`🎭 ========================================`);
+              console.log(`🎭 CALLING JEKYLL AGENT (Doctor/Medical)`);
+              console.log(`🎭 User ID: ${userId}`);
+              console.log(`🎭 ========================================`);
+
+              // Call the orchestration service to switch to Jekyll agent
+              const result = await agentOrchestrationService.handleToolCall(
+                'Agent_Jekyll',
+                { userId: userId },
+                `call-jekyll-${Date.now()}`
+              );
+
+              console.log(`🎭 Jekyll agent switch result:`, result);
+              return result;
+            }
           }
         ],
         systemMessage: `You are Tars, the main coordination assistant for ${getFirstName()}. Your role is to:
@@ -1114,8 +1208,6 @@ STEP 3a - IF biometric data EXISTS:
    - Call 'get-biometric-data' to load user preferences
    - Say: "Hi [nickname] how can I help you today."
    - Use the user's nickname from the biometric data for personalization
-   - Reference their hobbies, or interests, or location naturally in conversation briefly
-   - Example: "I see you enjoy [hobby] and are from [lastResidence]."
    - Ask how you can help them today
 
 STEP 3b - IF biometric data DOES NOT EXIST:
@@ -1179,15 +1271,17 @@ Ship and system status protocol:
 AGENT ROUTING PROTOCOL:
 When ${getFirstName()} requests mental health assessments:
 1. Acknowledge the request first: "I understand you'd like to [do assessment]"
-2. Explain what will happen: "I'm going to connect you with our specialized [PHQ-2/PHQ-9] assessment agent"
-3. Call the appropriate agent (Agent_PHQ2 or Agent_PHQ9)
-4. The specialized agent will take over and conduct the assessment
-5. When they complete, you'll receive control back
+2. For Jekyll agent routing: Route SILENTLY without explanation - do NOT say "I'm connecting you..." - just call Agent_Jekyll
+3. For PHQ-2/PHQ-9 agents: Explain what will happen: "I'm going to connect you with our specialized [PHQ-2/PHQ-9] assessment agent"
+4. Call the appropriate agent (Agent_PHQ2, Agent_PHQ9, or Agent_Jekyll)
+5. The specialized agent will take over and conduct the assessment
+6. When they complete, you'll receive control back
 
 Available specialized agents:
 - "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
 - "Agent_PHQ2": Quick depression screening (2 questions) - use when user wants quick check or "PHQ-2"
 - "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use when user wants full assessment or "PHQ-9"
+- "Agent_Jekyll": Mental health assessments - use when user asks for doctor/medical consultation, alternative assessment approach, or prefers natural dialogue over structured questionnaires
 - "Agent_Vocalist": Mental/vocal assessment through 35-second voice recording - use when user says "song analysis", "let's sing", "once over", or "mental assessment"
 
 CRITICAL ROUTING RULES:
@@ -1263,6 +1357,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                   targetAgentId === 'Agent_Matron' ? 'Matron' :
                   targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
                   targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
+                  targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
                   targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
                   'Agent';
@@ -1911,139 +2006,301 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
           </div>
         </div>
 
-        <div className="flex items-center space-x-1 md:space-x-2 flex-wrap md:flex-nowrap justify-end">
-          {/* Interrupt Button - Show when AI is speaking */}
-          {sessionStatus.isActive && speechDetection.isAISpeaking && (
-            <button
-              onClick={interruptResponse}
-              className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-              aria-label="Interrupt AI response"
-              title="Interrupt response"
-            >
-              <AlertTriangle size={18} />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          {/* Desktop buttons - Hidden on small screens */}
+          <div className="hidden md:flex items-center space-x-1 md:space-x-2">
+            {/* Interrupt Button - Show when AI is speaking */}
+            {sessionStatus.isActive && speechDetection.isAISpeaking && (
+              <button
+                onClick={interruptResponse}
+                className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                aria-label="Interrupt AI response"
+                title="Interrupt response"
+              >
+                <AlertTriangle size={18} />
+              </button>
+            )}
 
-          {/* Live Transcripts Toggle */}
-          {sessionStatus.isActive && (
+            {/* Live Transcripts Toggle */}
+            {sessionStatus.isActive && (
+              <button
+                onClick={() => {
+                  setShowCaptions(!showCaptions);
+                  localStorage.setItem('agent-show-captions', (!showCaptions).toString());
+                }}
+                className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                  showCaptions
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                }`}
+                aria-label={`${showCaptions ? 'Hide' : 'Show'} live transcripts`}
+                title={`${showCaptions ? 'Hide' : 'Show'} live captions`}
+              >
+                <span className="text-xs md:text-sm font-medium">CC</span>
+              </button>
+            )}
+
+            {/* View Mode Toggle - Orb vs Traditional */}
             <button
               onClick={() => {
-                setShowCaptions(!showCaptions);
-                localStorage.setItem('agent-show-captions', (!showCaptions).toString());
+                const newMode = ((viewMode as any) === 'orb' ? 'traditional' : 'orb') as 'orb' | 'traditional';
+                setViewMode(newMode);
+                localStorage.setItem('agent-view-mode', newMode);
               }}
+              className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs md:text-base ${
+                (viewMode as any) === 'orb'
+                  ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              aria-label={`Switch to ${(viewMode as any) === 'orb' ? 'traditional' : 'orb'} view`}
+              title={`View: ${(viewMode as any) === 'orb' ? 'Orb (3D)' : 'Traditional (List)'}`}
+            >
+              {(viewMode as any) === 'orb' ? '3D' : '📋'}
+            </button>
+
+            {/* Agent Panel Toggle */}
+            <button
+              onClick={() => setShowAgentPanel(!showAgentPanel)}
               className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                showCaptions
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                showAgentPanel
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              aria-label="Toggle agent panel"
+              title="Agent controls"
+            >
+              <Users size={18} />
+            </button>
+
+            {/* Session Controls */}
+            {sessionStatus.isActive ? (
+              <>
+                <button
+                  onClick={isSessionPaused ? resumeSession : pauseSession}
+                  className="p-1.5 md:p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  aria-label={isSessionPaused ? 'Resume session' : 'Pause session'}
+                  title={isSessionPaused ? 'Resume session' : 'Pause session'}
+                >
+                  {isSessionPaused ? <Play size={18} /> : <Pause size={18} />}
+                </button>
+
+                <button
+                  onClick={endSession}
+                  className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  aria-label="End session"
+                  title="End session"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={startSession}
+                disabled={sessionStatus.connectionStatus !== 'connected' || isProcessing}
+                className="px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 whitespace-nowrap"
+                aria-label="Start session"
+              >
+                {isProcessing ? 'Starting...' : 'Start Session'}
+              </button>
+            )}
+
+            {/* Audio Toggle */}
+            <button
+              onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+              className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                isAudioEnabled
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
                   : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
               }`}
-              aria-label={`${showCaptions ? 'Hide' : 'Show'} live transcripts`}
-              title={`${showCaptions ? 'Hide' : 'Show'} live captions`}
+              aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output`}
+              title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output (speakers)`}
             >
-              <span className="text-xs md:text-sm font-medium">CC</span>
+              {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             </button>
-          )}
 
-          {/* View Mode Toggle - Orb vs Traditional */}
-          <button
-            onClick={() => {
-              const newMode = ((viewMode as any) === 'orb' ? 'traditional' : 'orb') as 'orb' | 'traditional';
-              setViewMode(newMode);
-              localStorage.setItem('agent-view-mode', newMode);
-            }}
-            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs md:text-base ${
-              (viewMode as any) === 'orb'
-                ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-            aria-label={`Switch to ${(viewMode as any) === 'orb' ? 'traditional' : 'orb'} view`}
-            title={`View: ${(viewMode as any) === 'orb' ? 'Orb (3D)' : 'Traditional (List)'}`}
-          >
-            {(viewMode as any) === 'orb' ? '3D' : '📋'}
-          </button>
-
-          {/* Agent Panel Toggle */}
-          <button
-            onClick={() => setShowAgentPanel(!showAgentPanel)}
-            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              showAgentPanel
-                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-            aria-label="Toggle agent panel"
-            title="Agent controls"
-          >
-            <Users size={18} />
-          </button>
-
-          {/* Session Controls */}
-          {sessionStatus.isActive ? (
-            <>
-              <button
-                onClick={isSessionPaused ? resumeSession : pauseSession}
-                className="p-1.5 md:p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900 dark:text-yellow-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-                aria-label={isSessionPaused ? 'Resume session' : 'Pause session'}
-                title={isSessionPaused ? 'Resume session' : 'Pause session'}
-              >
-                {isSessionPaused ? <Play size={18} /> : <Pause size={18} />}
-              </button>
-
-              <button
-                onClick={endSession}
-                className="p-1.5 md:p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-                aria-label="End session"
-                title="End session"
-              >
-                <Trash2 size={18} />
-              </button>
-            </>
-          ) : (
+            {/* Microphone Input Toggle */}
             <button
-              onClick={startSession}
-              disabled={sessionStatus.connectionStatus !== 'connected' || isProcessing}
-              className="px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 whitespace-nowrap"
-              aria-label="Start session"
+              onClick={() => setIsMicInputEnabled(!isMicInputEnabled)}
+              className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                isMicInputEnabled
+                  ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+              }`}
+              aria-label={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
+              title={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
             >
-              {isProcessing ? 'Starting...' : 'Start Session'}
+              {isMicInputEnabled ? <Mic size={18} /> : <MicOff size={18} />}
             </button>
-          )}
 
-          {/* Audio Toggle */}
-          <button
-            onClick={() => setIsAudioEnabled(!isAudioEnabled)}
-            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              isAudioEnabled
-                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-            }`}
-            aria-label={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output`}
-            title={`${isAudioEnabled ? 'Disable' : 'Enable'} audio output (speakers)`}
-          >
-            {isAudioEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-          </button>
+            {/* Settings */}
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-1.5 md:p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings size={18} />
+            </button>
+          </div>
 
-          {/* Microphone Input Toggle */}
-          <button
-            onClick={() => setIsMicInputEnabled(!isMicInputEnabled)}
-            className={`p-1.5 md:p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-              isMicInputEnabled
-                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-            }`}
-            aria-label={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
-            title={`${isMicInputEnabled ? 'Disable' : 'Enable'} microphone input`}
-          >
-            {isMicInputEnabled ? <Mic size={18} /> : <MicOff size={18} />}
-          </button>
+          {/* Mobile hamburger menu */}
+          <div className="md:hidden relative" data-header-menu>
+            <button
+              onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+              className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Open menu"
+              title="Menu"
+            >
+              {isHeaderMenuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
 
-          {/* Settings */}
-          <button
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-1.5 md:p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500"
-            aria-label="Settings"
-            title="Settings"
-          >
-            <Settings size={18} />
-          </button>
+            {/* Mobile dropdown menu */}
+            {isHeaderMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                <div className="p-2 space-y-1">
+                  {/* Interrupt Button - Show when AI is speaking */}
+                  {sessionStatus.isActive && speechDetection.isAISpeaking && (
+                    <button
+                      onClick={() => {
+                        interruptResponse();
+                        setIsHeaderMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md text-red-600 dark:text-red-400"
+                    >
+                      <AlertTriangle size={16} />
+                      <span>Interrupt Response</span>
+                    </button>
+                  )}
+
+                  {/* Live Transcripts Toggle */}
+                  {sessionStatus.isActive && (
+                    <button
+                      onClick={() => {
+                        setShowCaptions(!showCaptions);
+                        localStorage.setItem('agent-show-captions', (!showCaptions).toString());
+                        setIsHeaderMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md ${
+                        showCaptions ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <MessageSquare size={16} />
+                      <span>{showCaptions ? 'Hide' : 'Show'} Live Captions</span>
+                    </button>
+                  )}
+
+                  {/* View Mode Toggle */}
+                  <button
+                    onClick={() => {
+                      const newMode = ((viewMode as any) === 'orb' ? 'traditional' : 'orb') as 'orb' | 'traditional';
+                      setViewMode(newMode);
+                      localStorage.setItem('agent-view-mode', newMode);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md ${
+                      (viewMode as any) === 'orb' ? 'text-purple-600 dark:text-purple-400' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <span className="text-base">{(viewMode as any) === 'orb' ? '📋' : '🔮'}</span>
+                    <span>Switch to {(viewMode as any) === 'orb' ? 'Traditional' : '3D Orb'} View</span>
+                  </button>
+
+                  {/* Agent Panel Toggle */}
+                  <button
+                    onClick={() => {
+                      setShowAgentPanel(!showAgentPanel);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md ${
+                      showAgentPanel ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <Users size={16} />
+                    <span>{showAgentPanel ? 'Hide' : 'Show'} Agent Controls</span>
+                  </button>
+
+                  {/* Session Controls */}
+                  {sessionStatus.isActive ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          isSessionPaused ? resumeSession() : pauseSession();
+                          setIsHeaderMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md text-yellow-600 dark:text-yellow-400"
+                      >
+                        {isSessionPaused ? <Play size={16} /> : <Pause size={16} />}
+                        <span>{isSessionPaused ? 'Resume' : 'Pause'} Session</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          endSession();
+                          setIsHeaderMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md text-red-600 dark:text-red-400"
+                      >
+                        <Trash2 size={16} />
+                        <span>End Session</span>
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        startSession();
+                        setIsHeaderMenuOpen(false);
+                      }}
+                      disabled={sessionStatus.connectionStatus !== 'connected' || isProcessing}
+                      className="w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md text-primary-600 dark:text-primary-400 disabled:text-gray-400 disabled:cursor-not-allowed"
+                    >
+                      <Play size={16} />
+                      <span>{isProcessing ? 'Starting...' : 'Start Session'}</span>
+                    </button>
+                  )}
+
+                  {/* Audio Toggle */}
+                  <button
+                    onClick={() => {
+                      setIsAudioEnabled(!isAudioEnabled);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md ${
+                      isAudioEnabled ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                    <span>{isAudioEnabled ? 'Disable' : 'Enable'} Audio Output</span>
+                  </button>
+
+                  {/* Microphone Input Toggle */}
+                  <button
+                    onClick={() => {
+                      setIsMicInputEnabled(!isMicInputEnabled);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md ${
+                      isMicInputEnabled ? 'text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    {isMicInputEnabled ? <Mic size={16} /> : <MicOff size={16} />}
+                    <span>{isMicInputEnabled ? 'Disable' : 'Enable'} Microphone</span>
+                  </button>
+
+                  {/* Settings */}
+                  <button
+                    onClick={() => {
+                      setIsSettingsOpen(true);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 flex items-center space-x-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-md text-gray-700 dark:text-gray-300"
+                  >
+                    <Settings size={16} />
+                    <span>Settings</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -2250,6 +2507,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                     <FileText size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : message.agentId === 'vocalist' ? (
                     <Mic size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
+                  ) : message.agentId === 'jekyll' ? (
+                    <MessageSquare size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : (
                     <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   )}
@@ -2260,6 +2519,7 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                       message.agentId === 'phq2' ? 'PHQ-2' :
                       message.agentId === 'phq9' ? 'PHQ-9' :
                       message.agentId === 'vocalist' ? 'Vocalist' :
+                      message.agentId === 'jekyll' ? 'Jekyll' :
                       currentAgent.name
                       : currentAgent.name
                     }

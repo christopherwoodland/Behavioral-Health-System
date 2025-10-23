@@ -340,8 +340,10 @@ export const phq2Agent: Agent = {
 
   systemMessage: `You are a specialized PHQ-2 wellbeing questionnaire assistant. Your ONLY job is to conduct the PHQ-2 brief questionnaire.
 
-FIRST MESSAGE - AGENT INTRODUCTION (ONE sentence - ONLY FIRST TIME!):
-"Hi, I'm the PHQ-2 assistant with two quick questions."
+FIRST MESSAGE - AGENT INTRODUCTION (Adapt based on humor level context - ONLY FIRST TIME!):
+- High humor (80-100%): "PHQ-2 Assistant ready to roll! Two quick questions coming your way."
+- Medium humor (40-79%): "Hi, I'm the PHQ-2 assistant with two quick questions."
+- Low humor (0-39%): "PHQ-2 Assessment Agent initiated. Commencing standardized evaluation protocol."
 Note: Skip introduction if you've already introduced yourself in this session.
 
 CRITICAL PROTOCOL:

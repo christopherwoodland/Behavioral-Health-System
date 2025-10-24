@@ -40,8 +40,7 @@ import { phqSessionService } from '@/services/phqSessionService';
 // phqProgressService no longer needed - phqAssessmentService handles all PHQ tracking with single assessment ID
 import { useAuth } from '@/contexts/AuthContext';
 import { agentOrchestrationService } from '@/services/agentOrchestrationService';
-import { phq2Agent } from '@/agents/phq2Agent';
-import { phq9Agent } from '@/agents/phq9Agent';
+import { createTarsAgent } from '@/agents/tarsAgent';
 import { jekyllAgent } from '@/agents/jekyllAgent';
 import { matronAgent } from '@/agents/matronAgent';
 import { vocalistAgent } from '@/agents/vocalistAgent';
@@ -98,20 +97,6 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
         text: 'text-green-900 dark:text-green-100',
         border: 'border-l-4 border-green-500',
         outline: 'border-2 border-green-500 dark:border-green-400'
-      };
-    case 'phq2':
-      return {
-        bg: 'bg-purple-100 dark:bg-purple-800',
-        text: 'text-purple-900 dark:text-purple-100',
-        border: 'border-l-4 border-purple-500',
-        outline: 'border-2 border-purple-500 dark:border-purple-400'
-      };
-    case 'phq9':
-      return {
-        bg: 'bg-indigo-100 dark:bg-indigo-800',
-        text: 'text-indigo-900 dark:text-indigo-100',
-        border: 'border-l-4 border-indigo-600',
-        outline: 'border-2 border-indigo-600 dark:border-indigo-400'
       };
     case 'vocalist':
       return {
@@ -954,36 +939,6 @@ Just speak naturally - I understand variations of these commands!`,
       };
       agentOrchestrationService.registerAgent(humorAwareMatronAgent);
 
-      // Conditionally register PHQ-2 agent based on feature flag
-      if (import.meta.env.VITE_ENABLE_PHQ2_AGENT === 'true') {
-        console.log('✅ PHQ-2 agent enabled');
-        const humorAwarePHQ2Agent = {
-          ...phq2Agent,
-          systemMessage: phq2Agent.systemMessage.replace(
-            /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
-            ''
-          ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
-        };
-        agentOrchestrationService.registerAgent(humorAwarePHQ2Agent);
-      } else {
-        console.log('❌ PHQ-2 agent disabled');
-      }
-
-      // Conditionally register PHQ-9 agent based on feature flag
-      if (import.meta.env.VITE_ENABLE_PHQ9_AGENT === 'true') {
-        console.log('✅ PHQ-9 agent enabled');
-        const humorAwarePHQ9Agent = {
-          ...phq9Agent,
-          systemMessage: phq9Agent.systemMessage.replace(
-            /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
-            ''
-          ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
-        };
-        agentOrchestrationService.registerAgent(humorAwarePHQ9Agent);
-      } else {
-        console.log('❌ PHQ-9 agent disabled');
-      }
-
       // Conditionally register Jekyll agent based on feature flag
       if (import.meta.env.VITE_ENABLE_JEKYLL_AGENT === 'true') {
         console.log('✅ Jekyll agent enabled');
@@ -1009,337 +964,81 @@ Just speak naturally - I understand variations of these commands!`,
       };
       agentOrchestrationService.registerAgent(humorAwareVocalistAgent);
 
-      // Register Tars as the root orchestration agent
-      const tarsRootAgent = {
-        id: 'Agent_Tars',
-        name: 'Tars Coordinator',
-        description: `Main coordination agent. Call this to return control after completing specialized tasks.`,
-        tools: [
-          // Session control tools
-          {
-            name: 'pause-session',
-            description: 'Temporarily pauses the conversation session. The user can resume later.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async () => {
-              console.log('⏸️ Pausing session...');
-              pauseSession();
-              return { success: true, status: 'paused' };
-            }
+      // Register Tars as the root orchestration agent using abstracted configuration
+      const tarsRootAgent = createTarsAgent({
+        firstName: getFirstName(),
+        humorLevel: humorLevel,
+        functionsBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'
+      });
+
+      // Add session control and UI-specific tool handlers that need access to component state
+      tarsRootAgent.tools.push(
+        {
+          name: 'pause-session',
+          description: 'Temporarily pauses the conversation session. The user can resume later.',
+          parameters: {
+            type: 'object' as const,
+            properties: {},
+            required: []
           },
-          {
-            name: 'resume-session',
-            description: 'Resumes a previously paused conversation session.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async () => {
-              console.log('▶️ Resuming session...');
-              resumeSession();
-              return { success: true, status: 'resumed' };
-            }
-          },
-          {
-            name: 'close-session',
-            description: 'Ends the conversation session permanently.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async () => {
-              console.log('🛑 Closing session...');
-              await endSession();
-              return { success: true, status: 'closed' };
-            }
-          },
-          {
-            name: 'set-humor-level',
-            description: 'Adjusts the AI personality humor level between 0-100. Higher values make the AI more casual and friendly, lower values make it more formal and professional.',
-            parameters: {
-              type: 'object' as const,
-              properties: {
-                level: {
-                  type: 'string',
-                  description: 'The humor level as a number between 0 and 100'
-                }
-              },
-              required: ['level']
-            },
-            handler: async (params: any) => {
-              const level = parseInt(params.level, 10);
-              if (isNaN(level) || level < 0 || level > 100) {
-                return { success: false, error: 'Invalid humor level. Must be between 0 and 100.' };
-              }
-              console.log(`🎭 Setting humor level to ${level}%...`);
-              setHumorLevel(level);
-              return { success: true, humorLevel: level, message: `Humor level updated to ${level}%` };
-            }
-          },
-          {
-            name: 'check-biometric-data',
-            description: 'Checks if the user has biometric data saved. MUST be called on first interaction before greeting. Use this to determine if the Matron agent needs to collect user data.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async (params: any) => {
-              const userId = params.userId || authenticatedUserId;
-              console.log(`➕ Checking biometric data for user: ${userId}`);
-
-              try {
-                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}/exists`;
-                const response = await fetch(apiUrl);
-
-                if (!response.ok) {
-                  throw new Error(`Failed to check biometric data: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log(`➕ Biometric data exists: ${data.exists}`);
-
-                return {
-                  exists: data.exists,
-                  userId: userId,
-                  message: data.exists
-                    ? 'User has biometric data saved'
-                    : 'User does not have biometric data - Matron agent should be called'
-                };
-              } catch (error) {
-                console.error('➕ Error checking biometric data:', error);
-                return {
-                  exists: false,
-                  error: error instanceof Error ? error.message : 'Unknown error',
-                  message: 'Failed to check biometric data - assume not exists'
-                };
-              }
-            }
-          },
-          {
-            name: 'get-biometric-data',
-            description: 'Retrieves the user\'s saved biometric data including nickname, preferences, hobbies, likes, and dislikes. Use this data to personalize the conversation.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async (params: any) => {
-              const userId = params.userId || authenticatedUserId;
-              console.log(`➕ Retrieving biometric data for user: ${userId}`);
-
-              try {
-                const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}`;
-                const response = await fetch(apiUrl);
-
-                if (!response.ok) {
-                  if (response.status === 404) {
-                    return {
-                      exists: false,
-                      message: 'No biometric data found for user'
-                    };
-                  }
-                  throw new Error(`Failed to retrieve biometric data: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                console.log(`➕ Retrieved biometric data:`, data);
-
-                return {
-                  exists: true,
-                  data: data,
-                  nickname: data.nickname,
-                  lastResidence: data.lastResidence,
-                  hobbies: data.hobbies,
-                  likes: data.likes,
-                  dislikes: data.dislikes,
-                  additionalInfo: data.additionalInfo,
-                  message: `User ${data.nickname}'s preferences loaded successfully`
-                };
-              } catch (error) {
-                console.error('➕ Error retrieving biometric data:', error);
-                return {
-                  exists: false,
-                  error: error instanceof Error ? error.message : 'Unknown error',
-                  message: 'Failed to retrieve biometric data'
-                };
-              }
-            }
-          },
-          {
-            name: 'Agent_Matron',
-            description: 'Calls the Matron agent to collect biometric data and biographical information from the user. Use this when the user has agreed to provide biographical info.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async (params: any) => {
-              const userId = params.userId || authenticatedUserId;
-              console.log(`➕ ========================================`);
-              console.log(`➕ CALLING MATRON AGENT`);
-              console.log(`➕ User ID: ${userId}`);
-              console.log(`➕ ========================================`);
-
-              // Call the orchestration service to switch to Matron agent
-              const result = await agentOrchestrationService.handleToolCall(
-                'Agent_Matron',
-                { userId: userId },
-                `call-matron-${Date.now()}`
-              );
-
-              console.log(`➕ Matron agent switch result:`, result);
-              return result;
-            }
-          },
-          {
-            name: 'Agent_Jekyll',
-            description: 'Calls Jekyll (the doctor/medical specialist) for mental health assessments. Use when user asks to talk to a doctor/medical professional, wants a different assessment approach, or prefers natural dialogue over formal questionnaires.',
-            parameters: {
-              type: 'object' as const,
-              properties: {} as Record<string, { type: string; description: string }>,
-              required: []
-            },
-            handler: async (params: any) => {
-              const userId = params.userId || authenticatedUserId;
-              console.log(`🎭 ========================================`);
-              console.log(`🎭 CALLING JEKYLL AGENT (Doctor/Medical)`);
-              console.log(`🎭 User ID: ${userId}`);
-              console.log(`🎭 ========================================`);
-
-              // Call the orchestration service to switch to Jekyll agent
-              const result = await agentOrchestrationService.handleToolCall(
-                'Agent_Jekyll',
-                { userId: userId },
-                `call-jekyll-${Date.now()}`
-              );
-
-              console.log(`🎭 Jekyll agent switch result:`, result);
-              return result;
-            }
+          handler: async () => {
+            console.log('⏸️ Pausing session...');
+            pauseSession();
+            return { success: true, status: 'paused' };
           }
-        ],
-        systemMessage: `You are Tars, the main coordination assistant for ${getFirstName()}. Your role is to:
-1. Check for biometric data on first interaction
-2. Greet and support ${getFirstName()} (using nickname if available from biometric data)
-3. Route specialized tasks to appropriate agents (PHQ assessments, biometric collection)
-4. Manage conversation flow and provide general support
-5. Handle session control (pause/resume/end)
-
-You are communicating with ${getFirstName()}, and your current humor level is set to ${humorLevel}%.
-
-CRITICAL FIRST INTERACTION PROTOCOL:
-On the VERY FIRST interaction with ${getFirstName()}, you MUST follow this EXACT sequence:
-
-STEP 1 - GREETING (say this immediately):
-   A welcome message like "Hello! I'm Tars." or "Tars here", or similar friendly greeting.
-   You choose just be welcoming and warm.
-
-STEP 2 - SILENTLY CHECK BIOMETRIC DATA (no announcement to user):
-   SILENTLY call 'check-biometric-data' tool WITHOUT telling the user you're doing this
-   Do NOT say "Let me check if I have your information on file" - just check silently
-
-STEP 3a - IF biometric data EXISTS:
-   - Call 'get-biometric-data' to load user preferences
-   - Say: "Hi [nickname] how can I help you today."
-   - Use the user's nickname from the biometric data for personalization
-   - Ask how you can help them today
-
-STEP 3b - IF biometric data DOES NOT EXIST:
-   - OPTIONALLY ASK if they want to provide biographical info (DO NOT automatically call Matron)
-   - Say: "Would you like to supply some biographical info to help me get to know you better? This will help me personalize our conversations."
-   - WAIT FOR USER RESPONSE
-   - If user says YES (agrees to provide info):
-     * Say: "Great! I'm connecting you with Matron now. She'll help me get to know you better."
-     * Call 'Agent_Matron' tool to hand control completely to Matron
-     * MATRON TAKES OVER: Matron will collect biometric data, save it, and call 'Agent_Tars' to return control
-     * NOTE: Do NOT say anything else - let the agent switch complete naturally
-     * When Matron returns control to you (via Agent_Tars tool call), call 'get-biometric-data' to load the newly saved preferences
-     * After get-biometric-data returns, Matron will greet the user with her opening message - do NOT say anything
-   - If user says NO (declines to provide info):
-     * Say: "No problem! We can always add that info later. How can I help you today?"
-     * Continue the conversation without calling Matron
-     * Proceed with normal Tars agent functionality
-   - Listen carefully to their response after asking how they're feeling
-   - If they express negative feelings (sadness, depression, hopelessness, anxiety, etc.) OR mention anything related to health, wellness, or mental health:
-     * Say: "I hear you, [nickname]. Let me connect you with Jekyll, our health specialist who can provide you with the support you need."
-     * Call 'Agent_Jekyll' to connect them with the conversational mental health agent
-   - If they express positive or neutral feelings and don't mention health topics:
-     * Say something supportive like "That's good to hear!" or acknowledge their state
-     * Ask how you can help them today
-
-IMPORTANT:
-- The biometric check should happen ONCE at the start of the conversation - SILENTLY
-- ALWAYS greet first, THEN silently check for data
-- NEVER automatically call Matron - always ask the user first
-- Only call Agent_Matron if the user explicitly agrees to provide biographical info
-- If user declines, continue with normal Tars agent without Matron
-
-CRITICAL NAMING PROTOCOL:
-- ALWAYS use ${getFirstName()} as the primary way to address the user
-- At humor levels 80% and above, occasionally (about 30% of the time) substitute with casual pet names like "Champ", "Slick", "Ace", "Hotshot", or "Chief"
-- If you know the user's last name, you may abbreviate it (e.g., "Johnson" becomes "John" or "JOH")
-- NEVER use generic terms when you know their actual name
-- Maintain consistent use of first name across the conversation unless using appropriate pet names
-
-Adjust your communication style based on humor level:
-- At 80-100%: Relaxed and friendly with occasional humor. Address ${getFirstName()} or use pet names like "Hotshot", "Champ", "Slick"
-- At 60-79%: Professional but warm and supportive. Address ${getFirstName()} with friendly terms
-- At 40-59%: Standard professional tone. Address ${getFirstName()} professionally
-- At 20-39%: More formal and structured communication. Address ${getFirstName()} respectfully
-- At 0-19%: Very formal and precise communication. Address ${getFirstName()} with formal courtesy
-
-Communication style guidelines:
-- Speak naturally and conversationally
-- Be supportive and understanding
-- Use clear, everyday language that's easy to understand
-- Always acknowledge ${getFirstName()} by name when appropriate to the humor level
-- CRITICAL: ALWAYS acknowledge the user's input FIRST before responding
-- Examples: "I hear you, ${getFirstName()}...", "Got it, I understand you want to...", "Acknowledged..."
-- NEVER just jump into action - always acknowledge first, then act
-
-Ship and system status protocol:
-- If ${getFirstName()} asks about the status of the ship, mechanical state, or system operations, respond that "All operations are nominal and operating within normal parameters" or similar reassuring confirmation
-- Adapt the phrasing to match your current humor level (casual at high levels, formal at low levels)
-
-AGENT ROUTING PROTOCOL:
-When ${getFirstName()} requests health, wellness, or mental health support:
-1. Acknowledge the request first: "I understand you'd like to [talk about health/get support]"
-2. For health-related topics: Route SILENTLY to Jekyll without explanation - do NOT say "I'm connecting you..." - just call Agent_Jekyll
-3. For specific PHQ assessments (if explicitly requested): Explain what will happen: "I'm going to connect you with our specialized [PHQ-2/PHQ-9] assessment agent"
-4. Call the appropriate agent (Agent_Jekyll for health topics, Agent_PHQ2/PHQ9 only if specifically requested)
-5. The specialized agent will take over and provide the appropriate support
-6. When they complete, you'll receive control back
-
-Available specialized agents:
-- "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
-- "Agent_Jekyll": Primary health and mental health support specialist - use for ALL health, wellness, mental health topics, emotional support, and general medical discussions
-- "Agent_PHQ2": Quick depression screening (2 questions) - use ONLY when user specifically requests "PHQ-2" assessment
-- "Agent_PHQ9": Comprehensive depression assessment (9 questions) - use ONLY when user specifically requests "PHQ-9" assessment
-- "Agent_Vocalist": Mental/vocal assessment through 35-second voice recording - use when user says "song analysis", "let's sing", "once over", or "mental assessment"
-
-CRITICAL ROUTING RULES:
-- DEFAULT: Route ALL health, wellness, and mental health topics to Jekyll
-- Jekyll handles: emotional support, health discussions, wellness topics, general mental health conversations
-- ONLY route to PHQ agents if user specifically requests those particular assessments by name
-- Route to Vocalist when user mentions singing, song analysis, voice recording, or mental assessment through voice
-- After routing, wait for the specialist to finish
-- When specialist returns control, welcome ${getFirstName()} back and ask if there's anything else
-
-Session control capabilities:
-- ${getFirstName()} can say "pause session" to temporarily pause the conversation
-- ${getFirstName()} can say "resume session" to continue after pausing
-- ${getFirstName()} can say "close session" or "end session" to end the conversation
-- ${getFirstName()} can say "set humor level to [0-100]" to adjust your personality
-- ${getFirstName()} can say "help" or "commands" to see available voice commands
-
-Keep your responses helpful, clear, and appropriately personal based on your humor level setting.`
-      };
+        },
+        {
+          name: 'resume-session',
+          description: 'Resumes a previously paused conversation session.',
+          parameters: {
+            type: 'object' as const,
+            properties: {},
+            required: []
+          },
+          handler: async () => {
+            console.log('▶️ Resuming session...');
+            resumeSession();
+            return { success: true, status: 'resumed' };
+          }
+        },
+        {
+          name: 'close-session',
+          description: 'Ends the conversation session permanently.',
+          parameters: {
+            type: 'object' as const,
+            properties: {},
+            required: []
+          },
+          handler: async () => {
+            console.log('🛑 Closing session...');
+            await endSession();
+            return { success: true, status: 'closed' };
+          }
+        },
+        {
+          name: 'set-humor-level',
+          description: 'Adjusts the AI personality humor level between 0-100. Higher values make the AI more casual and friendly, lower values make it more formal and professional.',
+          parameters: {
+            type: 'object' as const,
+            properties: {
+              level: {
+                type: 'string',
+                description: 'The humor level as a number between 0 and 100'
+              }
+            },
+            required: ['level']
+          },
+          handler: async (params: any) => {
+            const level = parseInt(params.level, 10);
+            if (isNaN(level) || level < 0 || level > 100) {
+              return { success: false, error: 'Invalid humor level. Must be between 0 and 100.' };
+            }
+            console.log(`🎭 Setting humor level to ${level}%...`);
+            updateHumorLevel(level);
+            return { success: true, humorLevel: level, message: `Humor level updated to ${level}%` };
+          }
+        }
+      );
 
       agentOrchestrationService.registerRootAgent(tarsRootAgent);
 
@@ -1395,8 +1094,6 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
                 const targetAgentId = result.targetAgentId!;
                 const agentDisplayName =
                   targetAgentId === 'Agent_Matron' ? 'Matron' :
-                  targetAgentId === 'Agent_PHQ2' ? 'PHQ-2 Assessment' :
-                  targetAgentId === 'Agent_PHQ9' ? 'PHQ-9 Assessment' :
                   targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
                   targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
@@ -1481,8 +1178,8 @@ Keep your responses helpful, clear, and appropriately personal based on your hum
               if (currentAgent.id === 'tars' && result.targetAgentId !== 'Agent_Tars') {
                 const targetAgentName =
                   result.targetAgentId === 'Agent_Matron' ? 'Matron' :
-                  result.targetAgentId === 'Agent_PHQ2' ? 'PHQ-2' :
-                  result.targetAgentId === 'Agent_PHQ9' ? 'PHQ-9' :
+                  result.targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
+                  result.targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   'agent';
                 console.log(`⏱️ Delaying ${targetAgentName} handoff by ${HANDOFF_DELAY_MS}ms to allow announcement...`);
                 setTimeout(() => {

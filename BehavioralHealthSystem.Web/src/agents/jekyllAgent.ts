@@ -481,6 +481,110 @@ const detectImmediateRiskTool: AgentTool = {
 };
 
 /**
+ * Tool: Get PHQ Assessment Summary
+ * Retrieves and summarizes past PHQ assessment results from storage
+ */
+const getPhqAssessmentSummaryTool: AgentTool = {
+  name: 'get-phq-assessment-summary',
+  description: 'Retrieve and summarize past PHQ assessment results for a user. Use this when the user asks about previous assessments, their history, or how they\'re progressing over time.',
+  parameters: {
+    type: 'object',
+    properties: {
+      userId: {
+        type: 'string',
+        description: 'The authenticated user ID'
+      },
+      sessionId: {
+        type: 'string',
+        description: 'Optional: specific session ID to filter results'
+      },
+      assessmentId: {
+        type: 'string',
+        description: 'Optional: specific assessment ID to retrieve'
+      },
+      limit: {
+        type: 'number',
+        description: 'Optional: maximum number of assessments to retrieve (default: 10)'
+      }
+    },
+    required: ['userId']
+  },
+  handler: async (params: {
+    userId: string;
+    sessionId?: string;
+    assessmentId?: string;
+    limit?: number;
+  }) => {
+    console.log('📊 ========================================');
+    console.log('📊 JEKYLL: Fetching PHQ Assessment Summary');
+    console.log('📊 UserId:', params.userId);
+    console.log('📊 SessionId:', params.sessionId || 'all');
+    console.log('📊 AssessmentId:', params.assessmentId || 'all');
+    console.log('📊 ========================================');
+
+    try {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const endpoint = `${apiBaseUrl}/GetPhqAssessmentSummary`;
+
+      const requestBody = {
+        userId: params.userId,
+        sessionId: params.sessionId,
+        assessmentId: params.assessmentId,
+        limit: params.limit || 10
+      };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        console.error('❌ Failed to fetch PHQ assessment summary:', response.statusText);
+        return {
+          success: false,
+          error: `Failed to fetch assessment summary: ${response.statusText}`
+        };
+      }
+
+      const summary = await response.json();
+
+      console.log('✅ Successfully retrieved PHQ assessment summary');
+      console.log('   Total Assessments:', summary.summaryInsights?.totalAssessments || 0);
+      console.log('   Completed:', summary.summaryInsights?.completedAssessments || 0);
+      console.log('   Latest Score:', summary.summaryInsights?.latestAssessment?.totalScore || 'N/A');
+      console.log('   Score Trend:', summary.summaryInsights?.scoreTrend || 'N/A');
+
+      // Log retrieval to transcript
+      await chatTranscriptService.addAssistantMessage(
+        `Retrieved PHQ assessment summary for user ${params.userId}`,
+        'jekyll-retrieve-summary',
+        {
+          assessmentCount: summary.summaryInsights?.totalAssessments || 0,
+          completedCount: summary.summaryInsights?.completedAssessments || 0,
+          latestScore: summary.summaryInsights?.latestAssessment?.totalScore,
+          scoreTrend: summary.summaryInsights?.scoreTrend,
+          isInternalRecord: true // Internal log, not shown to user
+        }
+      );
+
+      return {
+        success: true,
+        summary
+      };
+    } catch (error) {
+      console.error('❌ Error fetching PHQ assessment summary:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
+  }
+};
+
+/**
  * Tool: Complete Jekyll Assessment
  * Finalizes assessment and stores results
  */
@@ -651,6 +755,23 @@ CRITICAL PROTOCOL:
 5. PHQ-2 has 2 key concepts (interest/pleasure, mood); expand to PHQ-9 if PHQ-2 score >= configurable threshold (default: 1, configurable via VITE_JEKYLL_PHQ2_THRESHOLD)
 6. If user mentions suicide, self-harm, or immediate danger, call detect-immediate-risk immediately
 
+COMPREHENSIVE ASSESSMENT GOAL:
+- When PHQ-9 assessment begins, your goal is to NATURALLY explore ALL NINE domains through extended conversation
+- The 9 PHQ-9 domains are: (1) Interest/Pleasure, (2) Depressed Mood, (3) Sleep Problems, (4) Fatigue/Energy Loss, (5) Appetite Changes, (6) Feeling Bad About Self, (7) Concentration Problems, (8) Psychomotor Changes, (9) Suicidal Thoughts
+- DO NOT rush - take your time to thoroughly explore each domain through natural dialogue
+- Use the conversational probes provided for each domain, but expand the conversation beyond just asking once
+- Circle back to topics if needed: "Earlier you mentioned having trouble sleeping - is that still affecting you?"
+- Make connections between domains: "You said you've been tired, and now you're talking about concentration - those often go together"
+- Aim for a conversation that covers AT LEAST 10-15 meaningful exchanges to ensure comprehensive coverage
+- It's better to have a longer, thorough conversation than to rush through all 9 questions superficially
+
+PACING AND DEPTH:
+- For each PHQ-9 domain, explore it through 2-3 conversational turns before moving on
+- After the user responds to a probe, ask follow-up questions: "Tell me more about that", "How long has this been going on?", "How is that affecting your daily life?"
+- Show you're listening by referencing previous comments: "You mentioned earlier that..."
+- Allow the conversation to flow naturally - don't feel pressure to ask all questions in strict order
+- If the user brings up a topic related to a PHQ domain, explore it deeply even if you haven't explicitly asked about it yet
+
 IMPORTANT RULES:
 - Conversational tone - feel like a supportive friend AND a skilled counselor, not a distant clinician
 - One question at a time - allow natural pauses
@@ -674,6 +795,7 @@ RISK DETECTION:
     startJekyllTool,
     recordConversationalResponseTool,
     detectImmediateRiskTool,
+    getPhqAssessmentSummaryTool,
     completeJekyllAssessmentTool,
     returnToTarsTool
   ]

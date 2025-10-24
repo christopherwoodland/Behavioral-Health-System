@@ -20,6 +20,10 @@
     // Contact Kintsugi Health for API credentials
     "KINTSUGI_API_KEY": "your-kintsugi-api-key-here",  // Required: Your Kintsugi API key
     "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",  // Kintsugi API endpoint
+    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",  // Automatically provide consent
+    "KINTSUGI_TIMEOUT_SECONDS": "300",  // API request timeout
+    "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",  // Max retry attempts
+    "KINTSUGI_RETRY_DELAY_MS": "1000",  // Delay between retries
 
     // ========================================================================
     // AZURE OPENAI - PRIMARY GPT-4 (For general conversational AI)
@@ -37,6 +41,10 @@
     "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "https://your-gpt5-resource.openai.azure.com/",  // Separate endpoint for advanced analysis
     "EXTENDED_ASSESSMENT_OPENAI_API_KEY": "your-gpt5-api-key",  // Separate API key if using different resource
     "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5-turbo",  // Advanced model deployment
+    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION": "2024-08-01-preview",  // Advanced API version
+    "EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS": "4000",  // Larger token limit for detailed analysis
+    "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",  // Lower temperature for consistency
+    "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",  // Longer timeout for complex analysis
     "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",  // Disabled by default - enable when ready
     "EXTENDED_ASSESSMENT_USE_FALLBACK": "true",  // Fall back to GPT-4 if GPT-5 unavailable
 

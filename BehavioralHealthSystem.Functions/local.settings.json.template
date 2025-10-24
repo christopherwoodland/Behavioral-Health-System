@@ -19,6 +19,7 @@
     // Contact Kintsugi Health for API credentials
     "KINTSUGI_API_KEY": "your-kintsugi-api-key",  // Required: Your Kintsugi API key
     "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",  // API endpoint
+    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",  // Automatically provide consent
     "KINTSUGI_TIMEOUT_SECONDS": "300",  // API request timeout
     "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",  // Max retry attempts
     "KINTSUGI_RETRY_DELAY_MS": "1000",  // Delay between retries

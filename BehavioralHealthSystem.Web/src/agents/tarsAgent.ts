@@ -89,15 +89,20 @@ export function createTarsAgent(config: TarsAgentConfig): Agent {
       description: 'SILENTLY check if biometric data exists for the user. This should be called WITHOUT telling the user. Returns true/false.',
       parameters: {
         type: 'object' as const,
-        properties: {},
-        required: []
+        properties: {
+          userId: {
+            type: 'string',
+            description: 'User ID to check'
+          }
+        },
+        required: ['userId']
       },
-      handler: async () => {
+      handler: async (args: Record<string, unknown>) => {
         try {
-          const response = await fetch(`${functionsBaseUrl}/api/CheckBiometricData`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+          const userId = args.userId as string;
+          const response = await fetch(`${functionsBaseUrl}/biometric/${userId}/exists`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
           });
 
           if (!response.ok) {
@@ -120,15 +125,20 @@ export function createTarsAgent(config: TarsAgentConfig): Agent {
       description: 'Load biometric/biographical data to personalize interactions. Call this after check-biometric-data returns true.',
       parameters: {
         type: 'object' as const,
-        properties: {},
-        required: []
+        properties: {
+          userId: {
+            type: 'string',
+            description: 'User ID to fetch data for'
+          }
+        },
+        required: ['userId']
       },
-      handler: async () => {
+      handler: async (args: Record<string, unknown>) => {
         try {
-          const response = await fetch(`${functionsBaseUrl}/api/GetBiometricData`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+          const userId = args.userId as string;
+          const response = await fetch(`${functionsBaseUrl}/biometric/${userId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
           });
 
           if (!response.ok) {
@@ -171,7 +181,7 @@ export function createTarsAgent(config: TarsAgentConfig): Agent {
         try {
           const { userId, sessionId, limit } = args;
 
-          const response = await fetch(`${functionsBaseUrl}/api/GetPhqAssessmentSummary`, {
+          const response = await fetch(`${functionsBaseUrl}/GetPhqAssessmentSummary`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

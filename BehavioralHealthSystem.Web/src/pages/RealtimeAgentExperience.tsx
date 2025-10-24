@@ -237,6 +237,10 @@ export const RealtimeAgentExperience: React.FC = () => {
     isTyping: false
   });
 
+  // Agent transition state for smooth animations
+  const [isAgentTransitioning, setIsAgentTransitioning] = useState(false);
+  const [previousAgent, setPreviousAgent] = useState<string>('');
+
   // Ref to track current agent in callbacks (so setupEventListeners can access latest agent)
   const currentAgentRef = useRef<AgentStatus>({
     id: 'tars',
@@ -1117,6 +1121,13 @@ Just speak naturally - I understand variations of these commands!`,
                   }
                 }
 
+                // Start transition animation - fade out current agent
+                setPreviousAgent(currentAgent.name);
+                setIsAgentTransitioning(true);
+
+                // Wait for fade out animation
+                await new Promise(resolve => setTimeout(resolve, 300));
+
                 // Update UI to show the new agent
                 setCurrentAgent({
                   id: targetAgentId.toLowerCase().replace('agent_', ''),
@@ -1132,6 +1143,11 @@ Just speak naturally - I understand variations of these commands!`,
 
                 // Announce agent switch for accessibility
                 announceToScreenReader(`Switched to ${agentDisplayName} agent`);
+
+                // End transition after fade in completes
+                setTimeout(() => {
+                  setIsAgentTransitioning(false);
+                }, 400);
 
                 // Note: For Vocalist agent, the recording UI will be shown when the agent
                 // calls the 'start-vocalist-recording' tool (after explaining the exercise)
@@ -2046,7 +2062,7 @@ Just speak naturally - I understand variations of these commands!`,
         <div className={`p-4 border-b bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700`}>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className={`text-sm font-medium text-gray-900 dark:text-white`}>{currentAgent.name}</h3>
+              <h3 className={`text-sm font-medium text-gray-900 dark:text-white ${isAgentTransitioning ? 'agent-switching-in' : ''}`}>{currentAgent.name}</h3>
               <div className="flex items-center space-x-2">
                 <div className="px-3 py-1 text-xs rounded-full bg-primary-600 text-white">
                   {currentAgent.name}
@@ -2233,7 +2249,7 @@ Just speak naturally - I understand variations of these commands!`,
                 {message.role === 'assistant' && (
                   <div className={`flex items-center space-x-2 mb-2 pb-2 border-b ${
                     agentColors ? `${agentColors.bg}` : 'bg-gray-100 dark:bg-gray-700'
-                  } border-gray-300 dark:border-gray-600`}>
+                  } border-gray-300 dark:border-gray-600 ${isActiveAgent && isAgentTransitioning ? 'agent-badge-switching' : ''} ${isActiveAgent && !isAgentTransitioning && previousAgent !== currentAgent.name ? 'agent-glow-pulse' : ''}`}>
                     {message.agentId === 'tars' ? (
                       <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                     ) : message.agentId === 'matron' ? (

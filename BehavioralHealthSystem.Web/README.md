@@ -175,6 +175,16 @@ VITE_ENABLE_AGENT_EXPERIENCE=true
 VITE_ENABLE_TRANSCRIPTION=true
 VITE_ENABLE_REAL_TIME_UPDATES=true
 
+# Smart Band Configuration
+# Set to 'true' to enable Microsoft Band sensor data collection
+# When enabled, Jekyll will silently collect biometric data from connected Band devices
+# Requires BehavioralHealthSystem.BandService to be running (see: BehavioralHealthSystem.BandService/README.md)
+VITE_ENABLE_SMART_BAND=false
+
+# URL for the local Band Service (Windows Service that interfaces with Microsoft Band SDK)
+# The Band Service must be running for smart band data collection to work
+VITE_BAND_SERVICE_URL=http://localhost:8765
+
 # Application Configuration
 VITE_APP_TITLE=Behavioral Health System
 VITE_APP_VERSION=1.0.0

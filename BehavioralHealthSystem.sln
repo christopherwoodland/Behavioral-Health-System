@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Help
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Tests", "BehavioralHealthSystem.Tests\BehavioralHealthSystem.Tests.csproj", "{C41A2F4A-A734-4603-8113-596E6EAD7704}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.BandService", "BehavioralHealthSystem.BandService\BehavioralHealthSystem.BandService.csproj", "{D2A416C3-5CCE-48B7-9532-F1C722629BAB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -55,6 +57,18 @@ Global
 		{C41A2F4A-A734-4603-8113-596E6EAD7704}.Release|x64.Build.0 = Release|Any CPU
 		{C41A2F4A-A734-4603-8113-596E6EAD7704}.Release|x86.ActiveCfg = Release|Any CPU
 		{C41A2F4A-A734-4603-8113-596E6EAD7704}.Release|x86.Build.0 = Release|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Debug|x64.Build.0 = Debug|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Debug|x86.Build.0 = Debug|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Release|x64.ActiveCfg = Release|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Release|x64.Build.0 = Release|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Release|x86.ActiveCfg = Release|Any CPU
+		{D2A416C3-5CCE-48B7-9532-F1C722629BAB}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

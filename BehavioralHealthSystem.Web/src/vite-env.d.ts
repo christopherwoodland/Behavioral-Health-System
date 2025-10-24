@@ -8,7 +8,11 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_FFMPEG_WORKER: string;
   readonly VITE_ENABLE_DEBUG_LOGGING: string;
   readonly VITE_JOB_POLL_INTERVAL_MS: string;
-  
+
+  // Smart Band Configuration
+  readonly VITE_ENABLE_SMART_BAND: string;
+  readonly VITE_BAND_SERVICE_URL: string;
+
   // Azure OpenAI Realtime API Configuration (Two-Step Authentication)
   readonly VITE_AZURE_OPENAI_RESOURCE_NAME: string;
   readonly VITE_AZURE_OPENAI_REALTIME_KEY: string;

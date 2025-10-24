@@ -51,7 +51,6 @@ export interface PhqSessionSaveRequest {
 
 class PhqSessionService {
   private currentSession: PhqSession | null = null;
-  private isSaving = false;
   private saveTimer: NodeJS.Timeout | null = null;
   private readonly saveDelay = 1000; // 1 second delay to batch rapid updates
 
@@ -65,7 +64,7 @@ class PhqSessionService {
     assessmentType: 'PHQ-2' | 'PHQ-9'
   ): PhqSession {
     const questionCount = assessmentType === 'PHQ-2' ? 2 : 9;
-    
+
     this.currentSession = {
       userId,
       sessionId,
@@ -99,7 +98,7 @@ class PhqSessionService {
 
     // Save initial empty session
     this.saveSessionImmediate();
-    
+
     return this.currentSession;
   }
 
@@ -134,9 +133,9 @@ class PhqSessionService {
       question.answer = answer;
       question.answeredAt = new Date().toISOString();
       this.currentSession.lastUpdated = new Date().toISOString();
-      
+
       console.log(`📝 PHQ answer recorded: Q${questionNumber} = ${answer}`);
-      
+
       this.scheduleDelayedSave();
     }
   }
@@ -153,13 +152,13 @@ class PhqSessionService {
     const question = this.currentSession.questions.find(q => q.questionNumber === questionNumber);
     if (question) {
       question.attempts++;
-      
+
       // Mark as skipped after 3 attempts
       if (question.attempts >= 3) {
         question.skipped = true;
         console.log(`⏭️ PHQ question ${questionNumber} skipped after 3 attempts`);
       }
-      
+
       this.currentSession.lastUpdated = new Date().toISOString();
       this.scheduleDelayedSave();
     }
@@ -233,7 +232,7 @@ class PhqSessionService {
   endSession(): void {
     if (this.currentSession) {
       console.log('🔴 PHQ Session ended:', this.currentSession.assessmentId);
-      
+
       // Save one final time before clearing
       this.saveSessionImmediate();
       this.currentSession = null;
@@ -254,56 +253,14 @@ class PhqSessionService {
   }
 
   /**
-   * Save the session immediately
+   * DEPRECATED: Save the session immediately to phq-sessions container
+   * NOTE: PHQ data is now saved directly in chat transcript messages with metadata
+   * This method is kept for reference but is no longer actively saving
    */
   private async saveSessionImmediate(): Promise<void> {
-    if (!this.currentSession || this.isSaving) {
-      return;
-    }
-
-    this.isSaving = true;
-
-    try {
-      const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
-      const endpoint = `${functionsBaseUrl}/api/SavePhqSession`;
-
-      const request: PhqSessionSaveRequest = {
-        sessionData: this.currentSession,
-        metadata: {
-          savedAt: new Date().toISOString(),
-          version: '1.0.0'
-        },
-        containerName: 'phq-sessions',
-        fileName: `users/${this.currentSession.userId}/${this.currentSession.assessmentType.toLowerCase()}-${this.currentSession.assessmentId}.json`
-      };
-
-      console.log('💾 Saving PHQ session:', {
-        assessmentId: this.currentSession.assessmentId,
-        questionCount: this.currentSession.questions.length,
-        answeredCount: this.currentSession.questions.filter(q => q.answer !== undefined).length,
-        isCompleted: this.currentSession.isCompleted
-      });
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(request)
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Failed to save PHQ session: ${response.status} ${response.statusText}`, errorText);
-      } else {
-        const result = await response.json();
-        console.log('✅ PHQ session saved successfully:', result);
-      }
-    } catch (error) {
-      console.error('❌ Error saving PHQ session:', error);
-    } finally {
-      this.isSaving = false;
-    }
+    // Deprecated - PHQ data now flows through chatTranscriptService only
+    // Keeping state management for Jekyll agent's local tracking
+    console.log('ℹ️ PHQ session state updated (auto-save to blob deprecated - data saved via chat transcripts)');
   }
 }
 

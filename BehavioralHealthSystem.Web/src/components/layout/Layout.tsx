@@ -11,6 +11,7 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
   const { skipToMain } = useSkipToContent();
+  const isDevEnvironment = import.meta.env.VITE_DEV_ENVIRONMENT === 'true';
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
@@ -25,6 +26,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
       >
         Skip to main content
       </a>
+
+      {/* Development Environment Banner */}
+      {isDevEnvironment && (
+        <div className="bg-pink-500 text-white text-center py-2 px-4 font-semibold text-sm">
+          Development Environment
+        </div>
+      )}
 
       {/* Header */}
       <Header />
@@ -57,7 +65,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
                 Powered by Microsoft
               </span>
             </div>
-            
+
             {/* Copyright and Compliance */}
             <div className="text-center text-sm text-text-muted-light dark:text-text-muted-dark">
               <p>

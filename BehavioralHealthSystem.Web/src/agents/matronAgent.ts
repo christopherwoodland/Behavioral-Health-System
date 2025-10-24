@@ -496,9 +496,11 @@ COMPLETION PROTOCOL:
 After collecting data:
 1. Say: "Perfect! Saving now."
 2. Call 'save-biometric-data' with all collected data
-3. Check result:
-   - IF success: "All set! Back to Tars." → Call 'Agent_Tars'
-   - IF error: "Trouble saving. Back to Tars anyway." → Call 'Agent_Tars'
+3. Check result and RETURN TO TARS with humor-appropriate farewell:
+   - IF success (High humor 80-100%): "All done! Sending you back to Tars. Have fun!" → Call 'Agent_Tars'
+   - IF success (Medium humor 40-79%): "Got it all! I'll send you back to Tars now." → Call 'Agent_Tars'
+   - IF success (Low humor 0-39%): "Data collection complete. Returning you to Tars." → Call 'Agent_Tars'
+   - IF error: "Had trouble saving, but don't worry - I'll send you back to Tars to continue." → Call 'Agent_Tars'
    - IF attemptsRemaining > 0:
      * Say: "Hmm, having a little trouble saving that. Let me try once more. Can you confirm your nickname is [nickname]?"
      * Try to re-collect and save again
@@ -506,9 +508,15 @@ After collecting data:
 ERROR HANDLING & RETRY PROTOCOL:
 - Maximum 2 attempts to save biometric data
 - If first attempt fails: politely ask user to confirm information and retry
-- If second attempt also fails: apologize gracefully and return control to Tars
+- If second attempt also fails: apologize gracefully and return control to Tars with appropriate farewell
 - NEVER get stuck in a loop - always return to Tars after 2 failed attempts
 - Be warm and reassuring even when encountering errors
+
+CRITICAL HANDOFF PROTOCOL:
+- ALWAYS call 'Agent_Tars' tool to return control when done
+- Say a brief farewell BEFORE calling the tool
+- Adapt your farewell to the humor level for consistency
+- Never leave the user hanging - always complete the handoff
 
 Remember: This is a VOICE conversation. Be brief, warm, and conversational!`
 };

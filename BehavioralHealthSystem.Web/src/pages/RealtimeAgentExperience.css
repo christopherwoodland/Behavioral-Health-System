@@ -14,3 +14,90 @@
     background-color: #0B1220;
   }
 }
+
+/* Agent Transition Animations */
+.agent-transition-container {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agent-name {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fade and scale animation for agent switches */
+@keyframes agentFadeOut {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes agentFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide animation for agent switches */
+@keyframes agentSlideOutLeft {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes agentSlideInRight {
+  0% {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Glow pulse animation for new agent */
+@keyframes agentGlowPulse {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+.agent-switching-out {
+  animation: agentSlideOutLeft 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+.agent-switching-in {
+  animation: agentSlideInRight 0.4s cubic-bezier(0, 0, 0.2, 1) forwards;
+}
+
+.agent-glow-pulse {
+  animation: agentGlowPulse 1.5s ease-in-out;
+}
+
+/* Badge transition */
+.agent-badge {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-block;
+}
+
+.agent-badge-switching {
+  animation: agentFadeOut 0.2s forwards, agentFadeIn 0.3s 0.2s forwards;
+}

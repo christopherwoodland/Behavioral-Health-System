@@ -52,6 +52,10 @@
   border-left-color: #db2777;
 }
 
+.caption-item.caption-agent.speaker-jekyll {
+  border-left-color: #0891b2;
+}
+
 .caption-item.caption-user {
   border-left: 3px solid #ffffff;
   align-items: flex-end;
@@ -84,6 +88,10 @@
 
 .caption-item.caption-agent.speaker-vocalist .caption-speaker {
   color: #db2777;
+}
+
+.caption-item.caption-agent.speaker-jekyll .caption-speaker {
+  color: #0891b2;
 }
 
 .caption-item.caption-user .caption-speaker {
@@ -171,4 +179,5 @@
   --agent-phq2: #9333ea;
   --agent-phq9: #4f46e5;
   --agent-vocalist: #db2777;
+  --agent-jekyll: #0891b2;
 }

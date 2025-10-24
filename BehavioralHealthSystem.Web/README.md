@@ -12,6 +12,11 @@ This React application serves as the user interface for the comprehensive behavi
 - ✅ **Real-Time Communication** - SignalR integration for live updates
 - ✅ **Advanced Audio Processing** - Web Speech API with FFmpeg integration
 - ✅ **AI Agent Experience** - Interactive chat with specialized behavioral health agents
+  - **Jekyll** - Primary health and wellness specialist (handles all health-related conversations)
+  - **TARS** - Orchestrator agent (routes users to appropriate specialists)
+  - **Matron** - Biometric data collection specialist
+  - **PHQ-2/PHQ-9** - Structured mental health assessments (only when specifically requested)
+  - **Vocalist** - Voice-based mental health assessments
 - ✅ **Session Management** - Comprehensive session tracking and analytics
 - ✅ **Responsive Design** - Mobile-first approach with dark/light mode support
 - ✅ **Accessibility** - WCAG 2.2 Level AA compliant interface
@@ -178,6 +183,34 @@ VITE_ENABLE_REAL_TIME_UPDATES=true
 # Application Configuration
 VITE_APP_TITLE=Behavioral Health System
 VITE_APP_VERSION=1.0.0
+
+# Agent Voice Configuration
+# Configure individual voices for each agent based on their roles
+# Available voices: alloy, echo, fable, onyx, nova, shimmer, verse, aria, sage, lumen
+
+# TARS (Orchestrator Agent) - robotic, command-oriented
+VITE_TARS_VOICE=echo
+
+# Jekyll (Primary Health Specialist) - warm, conversational
+VITE_JEKYLL_VOICE=shimmer
+
+# Jekyll PHQ-2 Assessment Configuration
+# Threshold for expanding PHQ-2 to full PHQ-9 assessment (0-6 range)
+# Default: 1 (lower threshold = more comprehensive assessments)
+# Clinical standard: 3 (higher threshold = more conservative)
+VITE_JEKYLL_PHQ2_THRESHOLD=1
+
+# Matron (Biometric Intake) - warm, professional, reassuring  
+VITE_MATRON_VOICE=nova
+
+# PHQ-2 (Quick Screening) - professional, clinical, efficient
+VITE_PHQ2_VOICE=alloy
+
+# PHQ-9 (Comprehensive Assessment) - authoritative, clinical
+VITE_PHQ9_VOICE=sage
+
+# Vocalist (Voice Recording) - expressive, dynamic
+VITE_VOCALIST_VOICE=aria
 ```
 
 ### Development

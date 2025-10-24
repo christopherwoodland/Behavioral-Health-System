@@ -54,7 +54,7 @@ class PhqProgressService {
   startAssessment(userId: string, assessmentType: 'PHQ-2' | 'PHQ-9', assessmentId?: string): PhqAssessmentProgress {
     const newAssessmentId = assessmentId || this.generateAssessmentId();
     const totalQuestions = assessmentType === 'PHQ-2' ? 2 : 9;
-    
+
     this.currentProgress = {
       userId,
       assessmentId: newAssessmentId,
@@ -74,7 +74,7 @@ class PhqProgressService {
 
     // Save initial empty progress
     this.saveProgressImmediate();
-    
+
     return this.currentProgress;
   }
 
@@ -82,10 +82,10 @@ class PhqProgressService {
    * Record an answer to a question
    */
   recordAnswer(
-    questionNumber: number, 
-    questionText: string, 
-    answer: number, 
-    attempts: number = 1, 
+    questionNumber: number,
+    questionText: string,
+    answer: number,
+    attempts: number = 1,
     wasSkipped: boolean = false
   ): boolean {
     if (!this.currentProgress) {
@@ -236,7 +236,7 @@ class PhqProgressService {
 
     // Count valid answers (not skipped)
     const validAnswers = this.currentProgress.answeredQuestions.filter(q => q.answer >= 0).length;
-    
+
     // Assessment is complete if all questions have valid answers
     if (validAnswers === this.currentProgress.totalQuestions && !this.currentProgress.isCompleted) {
       // Don't auto-complete here, wait for explicit completion call with scores
@@ -272,8 +272,8 @@ class PhqProgressService {
         this.saveTimer = null;
       }
 
-      const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
-      const endpoint = `${functionsBaseUrl}/api/SavePhqProgress`;
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const endpoint = `${apiBaseUrl}/SavePhqProgress`;
 
       console.log('🟢 Saving PHQ progress to:', endpoint);
       console.log('📊 Progress data:', {
@@ -313,7 +313,7 @@ class PhqProgressService {
 
     } catch (error) {
       console.error('Error saving PHQ assessment progress:', error);
-      
+
       // Retry failed saves after a delay
       setTimeout(() => {
         if (this.currentProgress) {
@@ -341,7 +341,7 @@ class PhqProgressService {
    */
   resetProgress(): void {
     this.currentProgress = null;
-    
+
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
@@ -375,7 +375,7 @@ class PhqProgressService {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    
+
     // Force final save if there is current progress
     if (this.currentProgress) {
       this.saveProgressImmediate();

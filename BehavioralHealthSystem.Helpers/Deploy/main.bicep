@@ -179,20 +179,40 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
           value: azureOpenAIApiKey
         }
         {
+          name: 'AZURE_OPENAI_DEPLOYMENT'
+          value: 'gpt-4o'
+        }
+        {
+          name: 'AZURE_OPENAI_API_VERSION'
+          value: '2024-02-01'
+        }
+        {
+          name: 'KINTSUGI_AUTO_PROVIDE_CONSENT'
+          value: 'false'
+        }
+        {
+          name: 'EXTENDED_ASSESSMENT_OPENAI_ENDPOINT'
+          value: azureOpenAIEndpoint
+        }
+        {
+          name: 'EXTENDED_ASSESSMENT_OPENAI_API_KEY'
+          value: azureOpenAIApiKey
+        }
+        {
+          name: 'EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT'
+          value: 'gpt-4o'
+        }
+        {
+          name: 'EXTENDED_ASSESSMENT_OPENAI_API_VERSION'
+          value: '2024-08-01-preview'
+        }
+        {
           name: 'DSM5_STORAGE_ACCOUNT_NAME'
           value: storageAccount.name
         }
         {
           name: 'DSM5_CONTAINER_NAME'
           value: 'dsm5-data'
-        }
-        {
-          name: 'EXTENDED_RISK_ASSESSMENT_ENABLED'
-          value: 'true'
-        }
-        {
-          name: 'GPT5_MODEL_NAME'
-          value: 'gpt-4o'
         }
       ]
     }

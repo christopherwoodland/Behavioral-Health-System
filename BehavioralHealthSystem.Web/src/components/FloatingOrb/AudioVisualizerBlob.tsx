@@ -151,6 +151,7 @@ export const AudioVisualizerBlob: React.FC<AudioVisualizerBlobProps> = ({
       case 'phq2': return { r: 0.576, g: 0.200, b: 0.918 }; // #9333ea (purple)
       case 'phq9': return { r: 0.310, g: 0.275, b: 0.898 }; // #4f46e5 (indigo)
       case 'vocalist': return { r: 0.859, g: 0.153, b: 0.467 }; // #db2777 (pink)
+      case 'jekyll': return { r: 0.034, g: 0.569, b: 0.698 }; // #0891b2 (teal-600)
       default: return { r: 0.145, g: 0.388, b: 0.922 };
     }
   };

@@ -68,7 +68,7 @@ export interface RealtimeSessionConfig {
   enableVAD: boolean; // Voice Activity Detection
   temperature?: number;
   maxTokens?: number;
-  voice?: 'alloy' | 'echo' | 'shimmer';
+  voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'verse' | 'aria' | 'sage' | 'lumen';
   instructions?: string;
   tools?: ToolDefinition[]; // Function calling tools
   // Server turn detection settings
@@ -92,7 +92,7 @@ export interface AzureOpenAIRealtimeSettings {
   // Parameters
   maxResponse: number;
   temperature: number;
-  voice: 'alloy' | 'echo' | 'shimmer';
+  voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'verse' | 'aria' | 'sage' | 'lumen';
 }
 
 /**

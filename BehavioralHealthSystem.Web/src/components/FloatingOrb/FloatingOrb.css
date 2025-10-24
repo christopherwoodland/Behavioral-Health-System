@@ -16,45 +16,121 @@
 canvas {
   display: block;
   background: transparent;
+  max-width: 400px !important;
+  max-height: 400px !important;
+  border-radius: 50% !important; /* Make it a perfect circle */
+  overflow: hidden !important; /* Ensure clipping to circle */
+  object-fit: cover !important; /* Maintain aspect ratio */
 }
 
 /* Responsive agent circle size */
+@media (min-width: 1921px) {
+  canvas {
+    width: 1%;
+    height: 1%;
+    aspect-ratio: 1 / 1;
+    max-width: 320px !important;
+    max-height: 320px !important;
+    border-radius: 50% !important;
+  }
+}
+
 @media (max-width: 1920px) {
   canvas {
-    width: 10%;
-    height: 10%;
+    width: 1.3%;
+    height: 1.3%;
     aspect-ratio: 1 / 1;
+    max-width: 360px !important;
+    max-height: 360px !important;
+    border-radius: 50% !important;
   }
 }
 
 @media (max-width: 1366px) {
   canvas {
-    width: 11%;
-    height: 11%;
+    width: 1.6%;
+    height: 1.6%;
     aspect-ratio: 1 / 1;
+    max-width: 400px !important;
+    max-height: 400px !important;
+    border-radius: 50% !important;
   }
 }
 
 @media (max-width: 1024px) {
   canvas {
-    width: 12%;
-    height: 12%;
+    width: 3.5%;
+    height: 3.5%;
     aspect-ratio: 1 / 1;
+    max-width: 200px !important;
+    max-height: 200px !important;
+    border-radius: 50% !important;
   }
 }
 
 @media (max-width: 768px) {
   canvas {
-    width: 14%;
-    height: 14%;
+    width: 4.5%;
+    height: 4.5%;
     aspect-ratio: 1 / 1;
+    max-width: 180px !important;
+    max-height: 180px !important;
+    border-radius: 50% !important;
   }
 }
 
 @media (max-width: 480px) {
   canvas {
-    width: 18%;
-    height: 18%;
+    width: 5.5%;
+    height: 5.5%;
     aspect-ratio: 1 / 1;
+    max-width: 150px !important;
+    max-height: 150px !important;
+    border-radius: 50% !important;
+  }
+}
+
+/* Very small screens (like 412x915) - Ensure orb is visible and circular */
+@media (max-width: 420px) {
+  canvas {
+    width: 25% !important;
+    height: 25% !important;
+    aspect-ratio: 1 / 1;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    min-width: 80px !important;
+    min-height: 80px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 20px rgba(74, 144, 226, 0.3) !important; /* Subtle glow for visibility */
+  }
+}
+
+/* Extra small screens (360px and below) */
+@media (max-width: 360px) {
+  canvas {
+    width: 30% !important;
+    height: 30% !important;
+    aspect-ratio: 1 / 1;
+    max-width: 100px !important;
+    max-height: 100px !important;
+    min-width: 70px !important;
+    min-height: 70px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 15px rgba(74, 144, 226, 0.4) !important; /* More prominent glow for tiny screens */
+  }
+}
+
+/* Ultra small screens (below 320px) */
+@media (max-width: 320px) {
+  canvas {
+    width: 35% !important;
+    height: 35% !important;
+    aspect-ratio: 1 / 1;
+    max-width: 90px !important;
+    max-height: 90px !important;
+    min-width: 60px !important;
+    min-height: 60px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 0 12px rgba(74, 144, 226, 0.5) !important; /* Strong glow for ultra-small screens */
   }
 }

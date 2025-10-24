@@ -55,7 +55,7 @@ class ChatTranscriptService {
    */
   initializeSession(userId: string, sessionId?: string): ChatTranscript {
     const newSessionId = sessionId || this.generateSessionId();
-    
+
     this.currentTranscript = {
       userId,
       sessionId: newSessionId,
@@ -73,7 +73,7 @@ class ChatTranscriptService {
 
     // Save initial empty transcript
     this.saveTranscriptImmediate();
-    
+
     return this.currentTranscript;
   }
 
@@ -165,10 +165,10 @@ class ChatTranscriptService {
 
     const messageCount = this.currentTranscript.messages.length;
     const startTime = new Date(this.currentTranscript.createdAt);
-    const endTime = this.currentTranscript.sessionEndedAt ? 
-      new Date(this.currentTranscript.sessionEndedAt) : 
+    const endTime = this.currentTranscript.sessionEndedAt ?
+      new Date(this.currentTranscript.sessionEndedAt) :
       new Date();
-    
+
     const durationMs = endTime.getTime() - startTime.getTime();
     const durationMinutes = Math.floor(durationMs / 60000);
     const durationSeconds = Math.floor((durationMs % 60000) / 1000);
@@ -212,8 +212,8 @@ class ChatTranscriptService {
         this.saveTimer = null;
       }
 
-      const functionsBaseUrl = import.meta.env.VITE_FUNCTIONS_URL || 'http://localhost:7071';
-      const endpoint = `${functionsBaseUrl}/api/SaveChatTranscript`;
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const endpoint = `${apiBaseUrl}/SaveChatTranscript`;
 
       const request: ChatTranscriptSaveRequest = {
         transcriptData: { ...this.currentTranscript },
@@ -243,7 +243,7 @@ class ChatTranscriptService {
 
     } catch (error) {
       console.error('Error saving chat transcript:', error);
-      
+
       // Retry failed saves after a delay
       setTimeout(() => {
         if (this.currentTranscript && this.saveQueue.length === 0) {
@@ -309,7 +309,7 @@ class ChatTranscriptService {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    
+
     // Force final save if there are pending messages
     if (this.currentTranscript && this.saveQueue.length > 0) {
       this.saveTranscriptImmediate();

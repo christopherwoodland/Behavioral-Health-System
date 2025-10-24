@@ -7,18 +7,24 @@
 # - DeploymentTarget: "static-web-app", "storage", or "app-service"
 # - ResourceName: Name of your Azure resource
 # - ResourceGroupName: Name of your Resource Group
+# - Environment: "production" (uses .env.production) or "development" (uses .env.development)
+# - FunctionAppName: Optional Function App name for API URL
 
 param(
     [Parameter(Mandatory=$true)]
     [ValidateSet("static-web-app", "storage", "app-service")]
     [string]$DeploymentTarget,
-    
+
     [Parameter(Mandatory=$true)]
     [string]$ResourceName,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$ResourceGroupName = "bhi",
-    
+
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("production", "development")]
+    [string]$Environment = "production",
+
     [Parameter(Mandatory=$false)]
     [string]$FunctionAppName = $null
 )
@@ -33,7 +39,7 @@ $SolutionRoot = Split-Path -Parent $ScriptDir
 $WebProjectDir = Join-Path $SolutionRoot "BehavioralHealthSystem.Web"
 
 Write-Host "=================================================================================" -ForegroundColor Cyan
-Write-Host "                        UI DEPLOYMENT SCRIPT                                     " -ForegroundColor Cyan  
+Write-Host "                        UI DEPLOYMENT SCRIPT                                     " -ForegroundColor Cyan
 Write-Host "                     Behavioral Health System Web App                           " -ForegroundColor Cyan
 Write-Host "=================================================================================" -ForegroundColor Cyan
 Write-Host ""
@@ -41,6 +47,7 @@ Write-Host "UI DEPLOYMENT CONFIGURATION:" -ForegroundColor Yellow
 Write-Host "   Target: $DeploymentTarget" -ForegroundColor Green
 Write-Host "   Resource: $ResourceName" -ForegroundColor Green
 Write-Host "   Resource Group: $ResourceGroupName" -ForegroundColor Green
+Write-Host "   Environment: $Environment" -ForegroundColor Green
 Write-Host "   Project Directory: $WebProjectDir" -ForegroundColor Green
 Write-Host ""
 
@@ -97,44 +104,37 @@ try {
         exit 1
     }
 
-    # Update environment variables for production
-    Write-Host "Configuring production environment..." -ForegroundColor Yellow
-    
-    # Determine API base URL dynamically based on Function App name pattern
-    $apiBaseUrl = "https://cwbhieastus001.azurewebsites.net/api"
-    
-    # Use provided Function App name if available
-    if ($FunctionAppName) {
-        $apiBaseUrl = "https://$FunctionAppName.azurewebsites.net/api"
-    } 
-    # If we can determine the Function App name from the Web App name, use it
-    elseif ($ResourceName -like "*uibhi*") {
-        $functionAppName = $ResourceName -replace "cwuibhi", "cwbhi"
-        $apiBaseUrl = "https://$functionAppName.azurewebsites.net/api"
-    } elseif ($ResourceName -like "*-web") {
-        $functionAppName = $ResourceName -replace "-web", ""
-        $apiBaseUrl = "https://$functionAppName.azurewebsites.net/api"
+    # Determine which .env file to use
+    $envSourceFile = if ($Environment -eq "development") { ".env.development" } else { ".env.production" }
+
+    Write-Host "Configuring $Environment environment..." -ForegroundColor Yellow
+    Write-Host "   Using environment file: $envSourceFile" -ForegroundColor Gray
+
+    # Check if the environment file exists
+    if (-not (Test-Path $envSourceFile)) {
+        Write-Host "   [ERROR] Environment file not found: $envSourceFile" -ForegroundColor Red
+        Write-Host "   Please create $envSourceFile before deploying" -ForegroundColor Yellow
+        exit 1
     }
-    
-    Write-Host "   API Base URL: $apiBaseUrl" -ForegroundColor Gray
-    
-    # Create production .env file
-    $prodEnvContent = @"
-# Production Environment Configuration
-VITE_API_BASE_URL=$apiBaseUrl
-VITE_AZURE_BLOB_SAS_URL=https://aistgvi.blob.core.windows.net/?sv=2024-11-04&ss=bfqt&srt=sco&sp=rwdlacupiyx&se=2026-06-26T11:43:55Z&st=2025-09-06T03:28:55Z&spr=https&sig=jlfi75igY6qW805u%2FWErZpEu7AZSll5hJOdvSJU35%2Bo%3D
-VITE_STORAGE_CONTAINER_NAME=audio-uploads
-VITE_POLL_INTERVAL_MS=3000
-VITE_ENABLE_FFMPEG_WORKER=true
-VITE_ENABLE_DEBUG_LOGGING=false
-"@
-    
-    # Backup existing .env and create production version
+
+    # Backup existing .env and copy the appropriate environment file
     if (Test-Path ".env") {
         Copy-Item ".env" ".env.backup" -Force
     }
-    Set-Content ".env" $prodEnvContent -Encoding UTF8
-    Write-Host "   [SUCCESS] Production environment configured" -ForegroundColor Green
+    Copy-Item $envSourceFile ".env" -Force
+
+    # If Function App name is provided, update the API URL in the .env file
+    if ($FunctionAppName) {
+        $apiBaseUrl = "https://$FunctionAppName.azurewebsites.net/api"
+        Write-Host "   Overriding API Base URL: $apiBaseUrl" -ForegroundColor Gray
+
+        # Read the .env file and update VITE_API_BASE_URL
+        $envContent = Get-Content ".env" -Raw
+        $envContent = $envContent -replace 'VITE_API_BASE_URL=.*', "VITE_API_BASE_URL=$apiBaseUrl"
+        Set-Content ".env" $envContent -Encoding UTF8 -NoNewline
+    }
+
+    Write-Host "   [SUCCESS] $Environment environment configured" -ForegroundColor Green
 
     # Build the application
     Write-Host "Building web application..." -ForegroundColor Yellow
@@ -147,7 +147,7 @@ VITE_ENABLE_DEBUG_LOGGING=false
     }
     catch {
         Write-Host "   [ERROR] Build failed: $($_.Exception.Message)" -ForegroundColor Red
-        
+
         # Restore original .env if backup exists
         if (Test-Path ".env.backup") {
             Move-Item ".env.backup" ".env" -Force
@@ -172,7 +172,7 @@ VITE_ENABLE_DEBUG_LOGGING=false
                 exit 1
             }
         }
-        
+
         "storage" {
             try {
                 # Deploy to Azure Storage static website
@@ -188,15 +188,15 @@ VITE_ENABLE_DEBUG_LOGGING=false
                 exit 1
             }
         }
-        
+
         "app-service" {
             try {
                 # Deploy to Azure App Service
                 Write-Host "   Deploying to App Service: $ResourceName" -ForegroundColor Gray
-                
+
                 # Configure app settings for the App Service
                 Write-Host "   Configuring app settings..." -ForegroundColor Gray
-                
+
                 # Set app settings one by one to avoid shell interpretation issues
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "WEBSITE_NODE_DEFAULT_VERSION=~22" --output none
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_API_BASE_URL=https://cwbhieastus001.azurewebsites.net/api" --output none
@@ -205,27 +205,27 @@ VITE_ENABLE_DEBUG_LOGGING=false
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_POLL_INTERVAL_MS=3000" --output none
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_ENABLE_FFMPEG_WORKER=true" --output none
                 az webapp config appsettings set --resource-group $ResourceGroupName --name $ResourceName --settings "VITE_ENABLE_DEBUG_LOGGING=false" --output none
-                
+
                 # Create deployment package
                 Write-Host "   Creating deployment package..." -ForegroundColor Gray
                 if (Test-Path "deploy.zip") {
                     Remove-Item "deploy.zip" -Force
                 }
-                
+
                 # Compress the dist folder
                 Compress-Archive -Path "dist\*" -DestinationPath "deploy.zip" -Force
-                
+
                 # Deploy using ZIP deployment
                 Write-Host "   Uploading to App Service..." -ForegroundColor Gray
                 az webapp deployment source config-zip --resource-group $ResourceGroupName --name $ResourceName --src "deploy.zip"
-                
+
                 if ($LASTEXITCODE -ne 0) {
                     throw "App Service deployment failed"
                 }
-                
+
                 $deploymentUrl = "https://$ResourceName.azurewebsites.net"
                 Write-Host "   [SUCCESS] Deployed to App Service: $ResourceName" -ForegroundColor Green
-                
+
                 # Clean up
                 if (Test-Path "deploy.zip") {
                     Remove-Item "deploy.zip" -Force

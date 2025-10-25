@@ -1176,17 +1176,17 @@ Just speak naturally - I understand variations of these commands!`,
                   console.log('🎙️ ========================================');
                   console.log('🎙️ JEKYLL AGENT ACTIVATED - STARTING VOICE RECORDING');
                   console.log('🎙️ ========================================');
-                  
+
                   const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
                   const userId = authenticatedUserId || getUserId();
-                  
+
                   try {
                     await jekyllVoiceRecordingService.startRecording(
                       sessionId,
                       userId,
                       (progress: RecordingProgress) => {
                         setJekyllRecording(progress);
-                        
+
                         // Auto-stop recording after 45 seconds (minimum duration reached)
                         if (progress.hasMinimumDuration && !progress.isSaving) {
                           console.log('🎙️ Minimum duration reached (45s), auto-stopping recording');
@@ -1429,6 +1429,10 @@ Just speak naturally - I understand variations of these commands!`,
 
   const endSession = async () => {
     try {
+      // Wait 3.5 seconds to allow agent to finish speaking its final utterance
+      console.log('⏳ Waiting for agent to complete final response before ending session...');
+      await new Promise(resolve => setTimeout(resolve, 3500));
+
       // End chat transcript session
       if (authenticatedUserId) {
         chatTranscriptService.endSession();
@@ -1819,9 +1823,9 @@ Just speak naturally - I understand variations of these commands!`,
               {/* Jekyll Recording Indicator */}
               {currentAgent.id === 'jekyll' && jekyllRecording && (
                 <div className={`flex items-center space-x-2 px-2 py-1 rounded ${
-                  jekyllRecording.isRecording 
-                    ? 'bg-red-100 dark:bg-red-900/30' 
-                    : jekyllRecording.isSaving 
+                  jekyllRecording.isRecording
+                    ? 'bg-red-100 dark:bg-red-900/30'
+                    : jekyllRecording.isSaving
                       ? 'bg-yellow-100 dark:bg-yellow-900/30'
                       : jekyllRecording.error
                         ? 'bg-red-100 dark:bg-red-900/30'
@@ -1831,8 +1835,8 @@ Just speak naturally - I understand variations of these commands!`,
                     <>
                       <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                       <span className={`text-xs font-medium ${
-                        jekyllRecording.hasMinimumDuration 
-                          ? 'text-green-700 dark:text-green-300' 
+                        jekyllRecording.hasMinimumDuration
+                          ? 'text-green-700 dark:text-green-300'
                           : 'text-red-700 dark:text-red-300'
                       }`}>
                         Recording: {Math.floor(jekyllRecording.duration)}s / 45s

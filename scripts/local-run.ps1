@@ -33,8 +33,8 @@ try {
 
     # Kill existing Azure Functions processes
     Write-Host "Killing existing Azure Functions processes..."
-    Get-Process | Where-Object { 
-        $_.ProcessName -eq "func" -or 
+    Get-Process | Where-Object {
+        $_.ProcessName -eq "func" -or
         $_.ProcessName -eq "dotnet" -or
         $_.ProcessName -like "*Azure*" -or
         $_.ProcessName -like "*Function*"
@@ -105,12 +105,14 @@ try {
         exit $LASTEXITCODE
     }
 
-    Write-Host "Starting frontend dev server..."
+    Write-Host "Starting frontend dev server (using .env.localdev via dev:local command)..."
     Push-Location $webPath
-    Start-Process "cmd.exe" -ArgumentList '/c npm run dev'
+    # Use the dev:local npm script which runs Vite with --mode localdev
+    # This ensures .env.localdev is loaded instead of .env.development
+    Start-Process "cmd.exe" -ArgumentList '/c npm run dev:local'
     Pop-Location
 
-    Write-Host "All services started."
+    Write-Host "All services started (Web using .env.localdev)."
 }
 finally {
     # Return to original directory

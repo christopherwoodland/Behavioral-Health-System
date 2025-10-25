@@ -45,6 +45,7 @@ import { jekyllAgent } from '@/agents/jekyllAgent';
 import { matronAgent } from '@/agents/matronAgent';
 import { vocalistAgent } from '@/agents/vocalistAgent';
 import { VocalistRecorder } from '@/components/VocalistRecorder';
+import { jekyllVoiceRecordingService, RecordingProgress } from '@/services/jekyllVoiceRecordingService';
 import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
@@ -277,6 +278,9 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
+
+  // Jekyll voice recording state
+  const [jekyllRecording, setJekyllRecording] = useState<RecordingProgress | null>(null);
 
   // Connection notification state
   const [connectionNotification, setConnectionNotification] = useState<{
@@ -1089,6 +1093,24 @@ Just speak naturally - I understand variations of these commands!`,
             if (result.switchConfig && result.targetAgentId) {
               // Helper function to perform the actual agent switch
               const performAgentSwitch = async () => {
+                // Stop Jekyll recording if switching away from Jekyll agent
+                if (currentAgent.id === 'jekyll' && result.targetAgentId !== 'Agent_Jekyll') {
+                  console.log('🎙️ Switching away from Jekyll - stopping voice recording');
+                  if (jekyllRecording?.isRecording) {
+                    try {
+                      const recordingResult = await jekyllVoiceRecordingService.stopRecording(true);
+                      console.log('🎙️ Jekyll recording saved:', recordingResult);
+                      setJekyllRecording(null);
+                      announceToScreenReader('Voice recording saved');
+                    } catch (error) {
+                      console.error('❌ Failed to save Jekyll recording:', error);
+                      // Cancel the recording if save fails
+                      jekyllVoiceRecordingService.cancelRecording();
+                      setJekyllRecording(null);
+                    }
+                  }
+                }
+
                 // Convert tools to Realtime API format
                 const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig!.tools);
 
@@ -1148,6 +1170,57 @@ Just speak naturally - I understand variations of these commands!`,
                 setTimeout(() => {
                   setIsAgentTransitioning(false);
                 }, 400);
+
+                // Jekyll agent: Start voice recording when activated
+                if (targetAgentId === 'Agent_Jekyll') {
+                  console.log('🎙️ ========================================');
+                  console.log('🎙️ JEKYLL AGENT ACTIVATED - STARTING VOICE RECORDING');
+                  console.log('🎙️ ========================================');
+                  
+                  const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
+                  const userId = authenticatedUserId || getUserId();
+                  
+                  try {
+                    await jekyllVoiceRecordingService.startRecording(
+                      sessionId,
+                      userId,
+                      (progress: RecordingProgress) => {
+                        setJekyllRecording(progress);
+                        
+                        // Auto-stop recording after 45 seconds (minimum duration reached)
+                        if (progress.hasMinimumDuration && !progress.isSaving) {
+                          console.log('🎙️ Minimum duration reached (45s), auto-stopping recording');
+                          jekyllVoiceRecordingService.stopRecording(true)
+                            .then((result) => {
+                              console.log('🎙️ Recording saved:', result);
+                              setJekyllRecording(null);
+                              announceToScreenReader('Voice recording saved successfully');
+                            })
+                            .catch((error) => {
+                              console.error('❌ Failed to save recording:', error);
+                              setJekyllRecording({
+                                isRecording: false,
+                                duration: 0,
+                                hasMinimumDuration: false,
+                                isSaving: false,
+                                error: error instanceof Error ? error.message : 'Failed to save recording'
+                              });
+                            });
+                        }
+                      }
+                    );
+                    console.log('🎙️ Voice recording started successfully');
+                  } catch (error) {
+                    console.error('❌ Failed to start Jekyll voice recording:', error);
+                    setJekyllRecording({
+                      isRecording: false,
+                      duration: 0,
+                      hasMinimumDuration: false,
+                      isSaving: false,
+                      error: error instanceof Error ? error.message : 'Failed to start recording'
+                    });
+                  }
+                }
 
                 // Note: For Vocalist agent, the recording UI will be shown when the agent
                 // calls the 'start-vocalist-recording' tool (after explaining the exercise)
@@ -1513,6 +1586,16 @@ Just speak naturally - I understand variations of these commands!`,
     chatTranscriptService.cleanup();
     // Note: phqProgressService no longer used - phqAssessmentService handles all PHQ tracking
 
+    // Stop Jekyll recording if active
+    if (jekyllRecording?.isRecording) {
+      console.log('🎙️ Cleaning up Jekyll recording');
+      try {
+        await jekyllVoiceRecordingService.stopRecording(true);
+      } catch (error) {
+        console.error('❌ Failed to stop Jekyll recording during cleanup:', error);
+      }
+    }
+
     await agentService.destroy();
     if (voiceActivityIntervalRef.current) {
       clearInterval(voiceActivityIntervalRef.current);
@@ -1732,6 +1815,42 @@ Just speak naturally - I understand variations of these commands!`,
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Active Agent</span>
+
+              {/* Jekyll Recording Indicator */}
+              {currentAgent.id === 'jekyll' && jekyllRecording && (
+                <div className={`flex items-center space-x-2 px-2 py-1 rounded ${
+                  jekyllRecording.isRecording 
+                    ? 'bg-red-100 dark:bg-red-900/30' 
+                    : jekyllRecording.isSaving 
+                      ? 'bg-yellow-100 dark:bg-yellow-900/30'
+                      : jekyllRecording.error
+                        ? 'bg-red-100 dark:bg-red-900/30'
+                        : 'bg-green-100 dark:bg-green-900/30'
+                }`}>
+                  {jekyllRecording.isRecording ? (
+                    <>
+                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                      <span className={`text-xs font-medium ${
+                        jekyllRecording.hasMinimumDuration 
+                          ? 'text-green-700 dark:text-green-300' 
+                          : 'text-red-700 dark:text-red-300'
+                      }`}>
+                        Recording: {Math.floor(jekyllRecording.duration)}s / 45s
+                      </span>
+                    </>
+                  ) : jekyllRecording.isSaving ? (
+                    <>
+                      <Activity size={12} className="text-yellow-600 animate-spin" />
+                      <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Saving...</span>
+                    </>
+                  ) : jekyllRecording.error ? (
+                    <>
+                      <AlertTriangle size={12} className="text-red-600" />
+                      <span className="text-xs font-medium text-red-700 dark:text-red-300">{jekyllRecording.error}</span>
+                    </>
+                  ) : null}
+                </div>
+              )}
 
               {/* Connection Status */}
               <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>

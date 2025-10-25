@@ -1,6 +1,6 @@
 /**
  * Jekyll Voice Recording Service
- * 
+ *
  * Handles continuous recording of user voice during Jekyll agent conversations.
  * Records at highest quality possible, accumulates 45+ seconds of speech,
  * and converts to 44100Hz WAV format for upload to Azure Blob Storage.
@@ -35,8 +35,8 @@ class JekyllVoiceRecordingService {
   private sessionId: string | null = null;
   private userId: string | null = null;
 
-  // Minimum duration required (45 seconds)
-  private readonly MIN_DURATION_SECONDS = 45;
+  // Minimum duration required (from environment variable, defaults to 45 seconds)
+  private readonly MIN_DURATION_SECONDS = parseInt(import.meta.env.VITE_JEKYLL_RECORDING_MIN_DURATION || '45', 10);
 
   // Recording configuration for highest quality
   private readonly RECORDING_OPTIONS = {
@@ -49,8 +49,8 @@ class JekyllVoiceRecordingService {
    */
   isRecordingSupported(): boolean {
     return !!(
-      navigator.mediaDevices && 
-      typeof navigator.mediaDevices.getUserMedia === 'function' && 
+      navigator.mediaDevices &&
+      typeof navigator.mediaDevices.getUserMedia === 'function' &&
       'MediaRecorder' in window
     );
   }
@@ -102,7 +102,7 @@ class JekyllVoiceRecordingService {
           'audio/mp4',
           'audio/wav'
         ];
-        
+
         for (const type of fallbackTypes) {
           if (MediaRecorder.isTypeSupported(type)) {
             mimeType = type;
@@ -167,7 +167,7 @@ class JekyllVoiceRecordingService {
 
     } catch (error) {
       console.error('❌ Jekyll Recording: Failed to start recording:', error);
-      
+
       let errorMessage = 'Failed to start recording';
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -271,8 +271,8 @@ class JekyllVoiceRecordingService {
             });
 
             // Create blob from chunks
-            const recordedBlob = new Blob(this.audioChunks, { 
-              type: this.mediaRecorder?.mimeType || 'audio/webm' 
+            const recordedBlob = new Blob(this.audioChunks, {
+              type: this.mediaRecorder?.mimeType || 'audio/webm'
             });
             const sizeBytes = recordedBlob.size;
 
@@ -329,7 +329,7 @@ class JekyllVoiceRecordingService {
 
           } catch (error) {
             console.error('❌ Jekyll Recording: Error processing/uploading recording:', error);
-            
+
             const errorMessage = error instanceof Error ? error.message : 'Failed to save recording';
             this.notifyProgress({
               isRecording: false,
@@ -349,7 +349,7 @@ class JekyllVoiceRecordingService {
 
     } catch (error) {
       console.error('❌ Jekyll Recording: Error stopping recording:', error);
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Failed to stop recording';
       this.notifyProgress({
         isRecording: false,

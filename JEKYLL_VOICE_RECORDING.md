@@ -113,9 +113,18 @@ user123_session456_1704067200000.wav
 
 ## Environment Variables
 
-No new environment variables required. Uses existing:
+Configure Jekyll recording behavior via environment variables:
+
+- `VITE_JEKYLL_RECORDING_MIN_DURATION` - Minimum recording duration in seconds (default: 45)
 - `VITE_API_BASE_URL` - Azure Functions API endpoint
 - `VITE_ENABLE_JEKYLL_AGENT` - Must be `'true'` to enable Jekyll agent
+
+Example:
+```bash
+# .env.local or .env.production
+VITE_JEKYLL_RECORDING_MIN_DURATION=45
+VITE_ENABLE_JEKYLL_AGENT=true
+```
 
 ## Dependencies
 

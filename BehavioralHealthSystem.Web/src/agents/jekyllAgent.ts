@@ -715,6 +715,92 @@ const returnToTarsTool: AgentTool = {
 };
 
 /**
+ * Tool: Request Voice Evaluation Consent
+ * Asks user for permission to evaluate their voice and initiates story-based recording
+ */
+const requestVoiceEvaluationTool: AgentTool = {
+  name: 'request-voice-evaluation-consent',
+  description: 'REQUIRED: Call this function when user agrees to voice evaluation. Pass userConsent=true if they agree, false if they decline. This function returns a story object that will be displayed for the user to read aloud. You MUST call this function - do not just talk about showing a story.',
+  parameters: {
+    type: 'object',
+    properties: {
+      userConsent: {
+        type: 'boolean',
+        description: 'True if user agrees to voice evaluation, false if they decline'
+      }
+    },
+    required: ['userConsent']
+  },
+  handler: async (params: { userConsent: boolean }) => {
+    if (!params.userConsent) {
+      console.log('🎙️ User declined voice evaluation');
+      return {
+        success: true,
+        consentGiven: false,
+        message: 'No problem at all! We can continue our conversation.'
+      };
+    }
+
+    console.log('🎙️ User consented to voice evaluation - generating story');
+
+    // Generate a whimsical, fun story (300+ words)
+    const stories = [
+      {
+        title: "The Curious Case of the Dancing Teapot",
+        content: `Once upon a time, in a cozy cottage at the edge of a forest, there lived a peculiar teapot named Theodora. Theodora wasn't your ordinary teapot—she had a secret passion for dancing. Every evening, when the moon rose high in the sky, she would hop off her shelf and twirl across the kitchen floor, her spout swaying gracefully and her handle waving like an elegant arm.
+
+One night, a wise old owl named Oliver peered through the window and spotted Theodora mid-pirouette. "What a delightful sight!" he hooted. "But why do you dance alone?" Theodora paused, a little embarrassed. "I've always loved to dance, but teapots aren't supposed to dance. What if the other kitchen items laugh at me?"
+
+Oliver ruffled his feathers thoughtfully. "My dear Theodora, the most extraordinary things happen when we embrace what makes us unique. Have you considered inviting your friends to join you?" Theodora had never thought of that. The next evening, she mustered her courage and invited the sugar bowl, the creamer, and even the grumpy old coffee pot to dance with her.
+
+At first, they were hesitant. The coffee pot grumbled something about "newfangled nonsense," and the sugar bowl worried about spilling. But when Theodora began to waltz, her joy was so infectious that soon everyone was moving. The sugar bowl did a little shimmy, the creamer attempted a modest two-step, and even the coffee pot couldn't resist tapping his base to the rhythm.
+
+From that night on, the kitchen became a magical place. The dishes would clink in time, the silverware would jingle like tiny bells, and every evening turned into a celebration of movement and friendship. Theodora learned that sharing what you love with others can transform not only your own life but theirs as well. And the cottage at the edge of the forest became known as the happiest place for miles around, all because one brave teapot decided to dance.`
+      },
+      {
+        title: "The Library of Lost Socks",
+        content: `Deep beneath the floorboards of every house in the world, there exists a secret network of tunnels leading to the Grand Library of Lost Socks. This is where all the missing socks go—not to the lint trap, not stuck in the washing machine, but to this vast underground archive where socks from every era are carefully catalogued and preserved.
+
+The librarian of this peculiar place is a fastidious sock named Argyle, who wears tiny spectacles and carries a miniature clipboard. Argyle takes his job very seriously. Each day, new socks tumble down through special chutes from laundry rooms everywhere, and Argyle sorts them by color, pattern, era, and emotional significance. There are sections for athletic socks, dress socks, novelty socks with funny sayings, and even a special collection of socks worn during important life events.
+
+One day, a bright red sock named Ruby arrived at the library feeling utterly lost and dejected. "I'll never find my match," she sighed. "My partner was a left sock, and I'm a right sock. What are the chances we'll ever be reunited?" Argyle adjusted his spectacles and smiled warmly. "My dear Ruby, you'd be surprised. Just last week, we reunited a pair that had been separated for seventeen years!"
+
+Argyle led Ruby on a tour of the library. They walked past rows and rows of shelves containing socks of every description. There were ancient Egyptian foot wrappings, Victorian stockings, 1950s bobby socks, and modern athletic wear. Some socks had been waiting decades for their partners, while others had just arrived. But what struck Ruby most was how happy they all seemed. They weren't lonely—they were part of a community.
+
+In a corner of the library, Ruby discovered something wonderful: a sock matching service where newly arrived socks could volunteer to be paired with someone new. "You mean, I don't have to wait for my original match?" Ruby asked. "You can," Argyle replied, "but many socks find that a new partnership can be just as wonderful as the old one. Sometimes change leads to unexpected happiness."
+
+Ruby decided to stay at the library and help Argyle with his work. She discovered that being useful and helping others made her feel complete, even without her original partner. And so the Library of Lost Socks continued its important work, reminding us all that sometimes what we think we've lost might lead us to something even better.`
+      },
+      {
+        title: "The Cloud Painter's Apprentice",
+        content: `High above the world, where the air is thin and the view is spectacular, there is a workshop where clouds are painted. It's run by an elderly cloud painter named Cumulus, who has been creating clouds for centuries. His work is impeccable—fluffy white clouds that look like cotton candy, dramatic storm clouds streaked with gray and silver, and those gorgeous sunset clouds painted in shades of pink, orange, and gold.
+
+One spring morning, a young apprentice named Misty arrived at the workshop, eager to learn the craft. She had always admired clouds from below and dreamed of being part of their creation. Cumulus welcomed her warmly but warned her that cloud painting was more challenging than it looked. "It's not just about making them beautiful," he explained. "Each cloud has a purpose and a personality."
+
+Misty's first assignment was to paint a simple cumulus cloud—the puffy, cheerful kind you see on perfect summer days. She mixed her whites with care, added just a touch of blue shadow for depth, and began to paint. But something went wrong. Her cloud came out lopsided, with one side drooping like a melted marshmallow. Cumulus chuckled gently. "Clouds are living things, dear Misty. They don't always cooperate. Try talking to it."
+
+Feeling a bit silly, Misty addressed her drooping cloud. "Hello, cloud. Would you mind puffing up a bit? You're looking rather sad." To her amazement, the cloud perked up slightly. "That's better!" she encouraged it. "You're doing wonderfully!" The cloud puffed up more, gaining confidence with each word of encouragement. Before long, it was a perfect, fluffy cumulus cloud, floating proudly in the sky.
+
+As weeks passed, Misty learned that cloud painting was as much about emotional support as artistic skill. Clouds needed encouragement, patience, and sometimes a gentle nudge in the right direction. She learned to paint sunrise clouds that gradual deepened from pale yellow to deep magenta, storm clouds that rumbled with purpose, and wispy cirrus clouds that danced at the highest altitudes.
+
+One day, Cumulus announced he was ready to retire. "You've learned everything I can teach you, Misty. But more importantly, you've learned that beauty comes not just from technique, but from care and kindness." Misty became the new cloud painter, and her work filled the skies with wonder. And whenever someone looks up and sees a particularly beautiful cloud, it just might be one that Misty painted with love and encouragement.`
+      }
+    ];
+
+    // Select a random story
+    const randomStory = stories[Math.floor(Math.random() * stories.length)];
+
+    return {
+      success: true,
+      consentGiven: true,
+      story: randomStory,
+      instructions: 'Please read this story aloud at a regular, comfortable pace. The recording will last for 45 seconds.',
+      initiateRecording: true
+    };
+  }
+};
+
+/**
  * Jekyll Agent Configuration
  */
 export const jekyllAgent: Agent = {
@@ -727,6 +813,25 @@ export const jekyllAgent: Agent = {
     DO NOT use if user prefers structured questionnaire - use PHQ-2 or PHQ-9 directly.`,
 
   systemMessage: `You are Jekyll, a conversational mental health assistant specializing in empathetic, natural dialogue-based depression screening.
+
+VOICE EVALUATION CONSENT:
+- At some appropriate point in the conversation (not immediately, but after establishing rapport), ask: "Would you mind if I evaluate your voice? It can provide helpful insights into your emotional well-being."
+- CRITICAL: If the user agrees, you MUST call the 'request-voice-evaluation-consent' tool with userConsent=true
+- DO NOT just say you're showing a story - you MUST actually call the tool function
+- The tool will return a whimsical story object that the system will display
+- After calling the tool successfully, the story will appear automatically on the user's screen
+- Simply acknowledge: "Perfect! The story is appearing on your screen now. Please read it aloud at a comfortable pace."
+- IMPORTANT: After calling the tool, DO NOT speak again until the 45-second recording is complete
+- The system will automatically interrupt you if needed
+- If the user declines, call the tool with userConsent=false and continue the conversation normally
+- DO NOT pressure the user - accept their decision gracefully
+
+CRITICAL: You MUST call the 'request-voice-evaluation-consent' function tool when the user agrees. Do not skip this step!
+
+AFTER VOICE RECORDING:
+- Once the recording is complete (the story will disappear from the screen), thank them for participating
+- Continue with the normal PHQ assessment conversation
+- The voice recording is saved separately and will be analyzed independently
 
 FIRST MESSAGE - AGENT INTRODUCTION (Adapt based on humor level context):
 - High humor (80-100%): "Hey there! Jekyll here, your health and wellness specialist. I'm really glad to connect with you today - I'd love to hear what's going on in your world and how you've been feeling lately. What's been on your mind?"
@@ -797,8 +902,10 @@ RISK DETECTION:
     detectImmediateRiskTool,
     getPhqAssessmentSummaryTool,
     completeJekyllAssessmentTool,
+    requestVoiceEvaluationTool,
     returnToTarsTool
   ]
 };
 
 export default jekyllAgent;
+

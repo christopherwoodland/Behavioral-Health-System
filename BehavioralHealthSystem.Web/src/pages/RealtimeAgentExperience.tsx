@@ -46,6 +46,7 @@ import { matronAgent } from '@/agents/matronAgent';
 import { vocalistAgent } from '@/agents/vocalistAgent';
 import { VocalistRecorder } from '@/components/VocalistRecorder';
 import { jekyllVoiceRecordingService, RecordingProgress } from '@/services/jekyllVoiceRecordingService';
+import { sessionVoiceRecordingService, SessionRecordingState } from '@/services/sessionVoiceRecordingService';
 import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
@@ -281,6 +282,10 @@ export const RealtimeAgentExperience: React.FC = () => {
 
   // Jekyll voice recording state
   const [jekyllRecording, setJekyllRecording] = useState<RecordingProgress | null>(null);
+  const [jekyllStory, setJekyllStory] = useState<{ title: string; content: string } | null>(null);
+
+  // Session-wide voice recording state (captures all user speech across all agents)
+  const [sessionRecording, setSessionRecording] = useState<SessionRecordingState | null>(null);
 
   // Connection notification state
   const [connectionNotification, setConnectionNotification] = useState<{
@@ -895,6 +900,104 @@ Just speak naturally - I understand variations of these commands!`,
     agentService.muteMicrophone(!isMicInputEnabled);
   }, [isMicInputEnabled]);
 
+  // Start Jekyll voice recording when story is displayed
+  useEffect(() => {
+    if (jekyllStory && currentAgent.id === 'Agent_Jekyll' && !jekyllRecording?.isRecording) {
+      console.log('🎙️ ========================================');
+      console.log('🎙️ STORY DISPLAYED - STARTING VOICE RECORDING');
+      console.log('🎙️ Story title:', jekyllStory.title);
+      console.log('🎙️ Story length:', jekyllStory.content.length, 'characters');
+      console.log('🎙️ Current agent:', currentAgent.id);
+      console.log('🎙️ Recording state:', jekyllRecording);
+      console.log('🎙️ ========================================');
+
+      const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
+      const userId = authenticatedUserId || getUserId();
+
+      const startRecording = async () => {
+        try {
+          console.log('🎙️ Calling jekyllVoiceRecordingService.startRecording...');
+          await jekyllVoiceRecordingService.startRecording(
+            sessionId,
+            userId,
+            (progress: RecordingProgress) => {
+              setJekyllRecording(progress);
+
+              // Log progress for debugging
+              console.log(`🎙️ Recording progress: ${progress.duration.toFixed(1)}s / 45s (hasMin: ${progress.hasMinimumDuration})`);
+
+              // Auto-stop recording after 45 seconds (minimum duration reached)
+              if (progress.hasMinimumDuration && !progress.isSaving) {
+                console.log('🎙️ ========================================');
+                console.log('🎙️ MINIMUM DURATION REACHED - AUTO-STOPPING');
+                console.log('🎙️ Duration:', progress.duration.toFixed(1), 'seconds');
+                console.log('🎙️ ========================================');
+                jekyllVoiceRecordingService.stopRecording(true)
+                  .then((result) => {
+                    console.log('🎙️ Recording saved:', result);
+                    setJekyllRecording(null);
+
+                    // Delay clearing the story to allow orb fade-in animation
+                    setTimeout(() => {
+                      setJekyllStory(null);
+                      console.log('✅ Story overlay cleared - orb should be visible');
+                    }, 500); // 500ms delay for smooth transition
+
+                    announceToScreenReader('Voice recording saved successfully');
+                  })
+                  .catch((error) => {
+                    console.error('❌ Failed to save recording:', error);
+                    setJekyllRecording({
+                      isRecording: false,
+                      duration: 0,
+                      hasMinimumDuration: false,
+                      isSaving: false,
+                      error: error instanceof Error ? error.message : 'Failed to save recording'
+                    });
+
+                    // Still clear story on error, with delay
+                    setTimeout(() => {
+                      setJekyllStory(null);
+                    }, 500);
+                  });
+              }
+            }
+          );
+          console.log('✅ Jekyll Recording: startRecording completed successfully');
+        } catch (error) {
+          console.error('❌ Failed to start Jekyll voice recording:', error);
+          setJekyllRecording({
+            isRecording: false,
+            duration: 0,
+            hasMinimumDuration: false,
+            isSaving: false,
+            error: error instanceof Error ? error.message : 'Failed to start recording'
+          });
+        }
+      };
+
+      startRecording();
+    } else if (jekyllStory && jekyllRecording?.isRecording) {
+      console.log('⚠️ Story displayed but recording already in progress - this is normal');
+    }
+  }, [jekyllStory, currentAgent.id, authenticatedUserId]); // Removed jekyllRecording?.isRecording from deps
+
+  // Handle session-wide voice recording based on user speech detection
+  useEffect(() => {
+    if (speechDetection.isUserSpeaking) {
+      // User started speaking - start capturing audio
+      sessionVoiceRecordingService.onUserSpeechStart();
+    } else {
+      // User stopped speaking - stop capturing audio
+      sessionVoiceRecordingService.onUserSpeechStop();
+    }
+
+    // Update session recording state for UI (if needed in future)
+    if (sessionVoiceRecordingService.isRecording()) {
+      setSessionRecording(sessionVoiceRecordingService.getState());
+    }
+  }, [speechDetection.isUserSpeaking]);
+
   // Close header menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1073,7 +1176,10 @@ Just speak naturally - I understand variations of these commands!`,
       // MULTI-AGENT FUNCTION CALL HANDLER: Routes calls through orchestration service
       // =============================================================================
       agentService.onFunctionCall(async (functionName, args) => {
-        console.log(`🎯 Function called: ${functionName}`, args);
+        console.log('🎯 ========================================');
+        console.log(`🎯 FUNCTION CALLED: ${functionName}`);
+        console.log('🎯 Arguments:', JSON.stringify(args, null, 2));
+        console.log('🎯 ========================================');
 
         try {
           // Route through orchestration service
@@ -1082,6 +1188,33 @@ Just speak naturally - I understand variations of these commands!`,
             { ...args, userId: authenticatedUserId },
             `call-${Date.now()}`
           );
+
+          console.log('🎯 Tool result:', JSON.stringify(result, null, 2));
+
+          // Check if this is a voice evaluation consent response with a story
+          if (functionName === 'request-voice-evaluation-consent' && result.result?.consentGiven && result.result?.story) {
+            console.log('🎙️ ========================================');
+            console.log('🎙️ VOICE EVALUATION CONSENT GIVEN');
+            console.log('🎙️ Story title:', result.result.story.title);
+            console.log('🎙️ Story length:', result.result.story.content.length, 'chars');
+            console.log('🎙️ ========================================');
+            setJekyllStory(result.result.story);
+            
+            // Interrupt any ongoing agent response so the user can start reading immediately
+            console.log('🛑 Interrupting agent response to show story');
+            try {
+              await agentService.interruptResponse();
+              console.log('✅ Agent response interrupted successfully');
+            } catch (error) {
+              console.error('❌ Failed to interrupt agent response:', error);
+            }
+            
+            // Story will be displayed in the UI overlay during recording
+          } else if (functionName === 'request-voice-evaluation-consent' && result.result?.consentGiven === false) {
+            console.log('🎙️ Voice evaluation consent declined');
+            // Clear any story
+            setJekyllStory(null);
+          }
 
           if (result.isAgentSwitch) {
             // This is an agent switch - update the session
@@ -1101,12 +1234,14 @@ Just speak naturally - I understand variations of these commands!`,
                       const recordingResult = await jekyllVoiceRecordingService.stopRecording(true);
                       console.log('🎙️ Jekyll recording saved:', recordingResult);
                       setJekyllRecording(null);
+                      setJekyllStory(null); // Clear the story overlay
                       announceToScreenReader('Voice recording saved');
                     } catch (error) {
                       console.error('❌ Failed to save Jekyll recording:', error);
                       // Cancel the recording if save fails
                       jekyllVoiceRecordingService.cancelRecording();
                       setJekyllRecording(null);
+                      setJekyllStory(null); // Clear the story overlay
                     }
                   }
                 }
@@ -1171,57 +1306,7 @@ Just speak naturally - I understand variations of these commands!`,
                   setIsAgentTransitioning(false);
                 }, 400);
 
-                // Jekyll agent: Start voice recording when activated
-                if (targetAgentId === 'Agent_Jekyll') {
-                  console.log('🎙️ ========================================');
-                  console.log('🎙️ JEKYLL AGENT ACTIVATED - STARTING VOICE RECORDING');
-                  console.log('🎙️ ========================================');
-
-                  const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
-                  const userId = authenticatedUserId || getUserId();
-
-                  try {
-                    await jekyllVoiceRecordingService.startRecording(
-                      sessionId,
-                      userId,
-                      (progress: RecordingProgress) => {
-                        setJekyllRecording(progress);
-
-                        // Auto-stop recording after 45 seconds (minimum duration reached)
-                        if (progress.hasMinimumDuration && !progress.isSaving) {
-                          console.log('🎙️ Minimum duration reached (45s), auto-stopping recording');
-                          jekyllVoiceRecordingService.stopRecording(true)
-                            .then((result) => {
-                              console.log('🎙️ Recording saved:', result);
-                              setJekyllRecording(null);
-                              announceToScreenReader('Voice recording saved successfully');
-                            })
-                            .catch((error) => {
-                              console.error('❌ Failed to save recording:', error);
-                              setJekyllRecording({
-                                isRecording: false,
-                                duration: 0,
-                                hasMinimumDuration: false,
-                                isSaving: false,
-                                error: error instanceof Error ? error.message : 'Failed to save recording'
-                              });
-                            });
-                        }
-                      }
-                    );
-                    console.log('🎙️ Voice recording started successfully');
-                  } catch (error) {
-                    console.error('❌ Failed to start Jekyll voice recording:', error);
-                    setJekyllRecording({
-                      isRecording: false,
-                      duration: 0,
-                      hasMinimumDuration: false,
-                      isSaving: false,
-                      error: error instanceof Error ? error.message : 'Failed to start recording'
-                    });
-                  }
-                }
-
+                // Jekyll agent: Voice recording now starts when story is displayed (see useEffect below)
                 // Note: For Vocalist agent, the recording UI will be shown when the agent
                 // calls the 'start-vocalist-recording' tool (after explaining the exercise)
                 // This allows the agent to introduce themselves and explain before showing the UI
@@ -1402,6 +1487,18 @@ Just speak naturally - I understand variations of these commands!`,
         console.log('📎 Chat session initialized:', transcript.sessionId);
       }
 
+      // Start session-wide voice recording (captures all user speech)
+      const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
+      const userId = authenticatedUserId || getUserId();
+      try {
+        await sessionVoiceRecordingService.startSessionRecording(sessionId, userId);
+        setSessionRecording(sessionVoiceRecordingService.getState());
+        console.log('✅ Session voice recording started');
+      } catch (error) {
+        console.error('❌ Failed to start session voice recording:', error);
+        // Continue with session even if recording fails
+      }
+
       // Clear previous state
       setLiveTranscripts([]);
       setCurrentAITranscript('');
@@ -1432,6 +1529,22 @@ Just speak naturally - I understand variations of these commands!`,
       // Wait 3.5 seconds to allow agent to finish speaking its final utterance
       console.log('⏳ Waiting for agent to complete final response before ending session...');
       await new Promise(resolve => setTimeout(resolve, 3500));
+
+      // Stop and save session-wide voice recording
+      if (sessionVoiceRecordingService.isRecording()) {
+        try {
+          console.log('🎙️ Stopping session voice recording...');
+          const result = await sessionVoiceRecordingService.stopSessionRecording();
+          if (result) {
+            console.log(`✅ Session recording saved: ${result.audioUrl}`);
+            console.log(`   Total duration: ${result.totalDuration.toFixed(1)}s`);
+            console.log(`   Captured speech: ${result.capturedDuration.toFixed(1)}s`);
+          }
+          setSessionRecording(null);
+        } catch (error) {
+          console.error('❌ Failed to save session recording:', error);
+        }
+      }
 
       // End chat transcript session
       if (authenticatedUserId) {
@@ -2315,11 +2428,13 @@ Just speak naturally - I understand variations of these commands!`,
       {viewMode === 'orb' ? (
         // 3D Orb View
         <div className="flex-1 overflow-hidden relative border-none orb-view-container">
-          <AudioVisualizerBlob
-            isAgentSpeaking={speechDetection.isAISpeaking}
-            agentId={currentAgent.id}
-            onVocalize={handleAgentVocalization}
-          />
+          <div style={{ opacity: jekyllStory ? 0 : 1, transition: 'opacity 0.3s ease-in-out' }}>
+            <AudioVisualizerBlob
+              isAgentSpeaking={speechDetection.isAISpeaking}
+              agentId={currentAgent.id}
+              onVocalize={handleAgentVocalization}
+            />
+          </div>
           {showCaptions && (
             <ClosedCaptions
               captions={messages
@@ -2333,6 +2448,33 @@ Just speak naturally - I understand variations of these commands!`,
                 }))}
               maxCaptions={3}
             />
+          )}
+
+          {/* Jekyll Story Overlay - Shown during voice recording */}
+          {jekyllStory && (
+            <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 animate-fade-in">
+              <div className="max-w-3xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8 space-y-6 overflow-y-auto max-h-[80vh]">
+                <div className="text-center space-y-4">
+                  <div className="flex items-center justify-center space-x-3 mb-4">
+                    <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
+                    <span className="text-sm font-semibold text-red-600 dark:text-red-400">
+                      Recording: {jekyllRecording ? Math.floor(jekyllRecording.duration) : 0}s / 45s
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{jekyllStory.title}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Please read this story aloud at a comfortable, regular pace</p>
+                </div>
+                <div className="prose prose-lg dark:prose-invert max-w-none">
+                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+                    {jekyllStory.content}
+                  </p>
+                </div>
+                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                  <Mic size={16} />
+                  <span>Continue reading until the recording completes</span>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       ) : (

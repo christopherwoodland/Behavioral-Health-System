@@ -26,9 +26,6 @@ export const FloatingOrb: React.FC<FloatingOrbProps> = ({
     switch (id) {
       case 'tars': return 0x4a90e2;
       case 'matron': return 0xe24a90;
-      case 'phq2': return 0x4ae2e2;
-      case 'phq9': return 0xa24ae2;
-      case 'vocalist': return 0xe2a24a;
       case 'jekyll': return 0x0891b2; // teal
       default: return 0x4a90e2;
     }

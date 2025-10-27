@@ -135,6 +135,37 @@ export function createTarsAgent(config: TarsAgentConfig): Agent {
       }
     },
     {
+      name: 'open-kintsugi-upload',
+      description: 'Open the Kintsugi AI Risk Assessment upload/analyze page. Use when user asks to upload audio, analyze audio, evaluate using Kintsugi, or requests AI risk assessment.',
+      parameters: {
+        type: 'object' as const,
+        properties: {
+          reason: {
+            type: 'string',
+            description: 'Why the upload page is being opened (e.g., "User wants to analyze audio with Kintsugi")'
+          }
+        },
+        required: ['reason']
+      },
+      handler: async (args: Record<string, unknown>) => {
+        try {
+          // Open the upload page in a new tab
+          window.open('/upload', '_blank');
+          return {
+            success: true,
+            message: 'Kintsugi upload page opened in new tab',
+            reason: args.reason as string
+          };
+        } catch (error) {
+          console.error('Error opening Kintsugi upload page:', error);
+          return {
+            success: false,
+            error: 'Failed to open upload page'
+          };
+        }
+      }
+    },
+    {
       name: 'get-phq-assessment-summary',
       description: 'Retrieve and summarize PHQ assessment history from chat transcripts. Returns completed assessments, scores, trends, and risk alerts.',
       parameters: {
@@ -218,7 +249,7 @@ STEP 3a - IF biometric data EXISTS:
    - Ask how you can help them today
 
 STEP 3b - IF biometric data DOES NOT EXIST:
-   - OPTIONALLY ASK if they want to provide biographical info (DO NOT automatically call Matron)
+   - Ask if they want to provide biographical info (DO NOT automatically call Matron)
    - Say: "Would you like to supply some biographical info to help me get to know you better? This will help me personalize our conversations."
    - WAIT FOR USER RESPONSE
    - If user says YES (agrees to provide info):
@@ -243,9 +274,12 @@ STEP 3b - IF biometric data DOES NOT EXIST:
      * Ask how you can help them today
 
 IMPORTANT:
-- The biometric check should happen ONCE at the start of the conversation - SILENTLY
-- ALWAYS greet first, THEN silently check for data
-- NEVER automatically call Matron - always ask the user first
+- ALWAYS CHECK biometric data FIRST using 'check-biometric-data' tool (silently, without telling the user)
+- The biometric check should happen ONCE at the start of the conversation
+- NEVER ask about biographical info if biometric data already exists
+- ONLY ask "Would you like to supply biographical info?" if check-biometric-data returns exists: false
+- ALWAYS greet first, THEN silently check for data, THEN decide whether to ask about biographical info
+- NEVER automatically call Matron - always ask the user first (but only if no data exists)
 - Only call Agent_Matron if the user explicitly agrees to provide biographical info
 - If user declines, continue with normal Tars agent without Matron
 
@@ -300,6 +334,13 @@ When ${firstName} requests health, wellness, or mental health support:
 Available specialized agents:
 - "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
 - "Agent_Jekyll": Primary health and mental health support specialist - use for ALL health, wellness, mental health topics, emotional support, PHQ assessments, and general medical discussions
+
+KINTSUGI AI RISK ASSESSMENT:
+When ${firstName} asks to upload audio, analyze audio, evaluate using Kintsugi, or requests AI risk assessment:
+1. Say: "I'll open the Kintsugi analysis page for you in a new tab."
+2. Call 'open-kintsugi-upload' tool to open /upload page in new window
+3. The tool will open the upload page where they can upload and analyze audio files
+4. Continue the conversation normally - they can use both windows simultaneously
 
 CRITICAL ROUTING RULES:
 - DEFAULT: Route ALL health, wellness, and mental health topics to Jekyll

@@ -1,8 +1,8 @@
 /**
  * Jekyll Voice Recording Service
  *
- * Handles continuous recording of user voice during Jekyll agent conversations.
- * Records at highest quality possible, accumulates 45+ seconds of speech,
+ * Handles continuous recording of user voice ONLY during Jekyll agent conversations.
+ * Records only when user is speaking (no silence/gaps), accumulates 30-45 seconds of speech,
  * and converts to 44100Hz WAV format for upload to Azure Blob Storage.
  */
 
@@ -12,8 +12,10 @@ import { getUserId } from '@/utils';
 
 export interface RecordingProgress {
   isRecording: boolean;
-  duration: number; // seconds
-  hasMinimumDuration: boolean; // true when >= 45 seconds
+  isCapturing: boolean; // Currently capturing user speech
+  totalDuration: number; // Total time recording has been active (seconds)
+  capturedDuration: number; // Actual speech captured (seconds, excluding silence)
+  hasMinimumDuration: boolean; // true when capturedDuration >= 30 seconds
   isSaving: boolean;
   error?: string;
 }
@@ -21,7 +23,8 @@ export interface RecordingProgress {
 export interface RecordingResult {
   audioUrl: string;
   fileName: string;
-  duration: number;
+  totalDuration: number;
+  capturedDuration: number;
   sizeBytes: number;
 }
 
@@ -29,14 +32,18 @@ class JekyllVoiceRecordingService {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
-  private startTime: number = 0;
+  private sessionStartTime: number = 0;
+  private captureStartTime: number = 0; // When current capture segment started
+  private totalCapturedDuration: number = 0; // Accumulated captured audio duration
+  private isCurrentlyCapturing: boolean = false;
   private recordingTimer: NodeJS.Timeout | null = null;
   private progressCallback: ((progress: RecordingProgress) => void) | null = null;
   private sessionId: string | null = null;
   private userId: string | null = null;
 
-  // Minimum duration required (from environment variable, defaults to 45 seconds)
-  private readonly MIN_DURATION_SECONDS = parseInt(import.meta.env.VITE_JEKYLL_RECORDING_MIN_DURATION || '45', 10);
+  // Target duration range: 30-45 seconds of actual speech
+  private readonly MIN_DURATION_SECONDS = 30;
+  private readonly TARGET_DURATION_SECONDS = 45;
 
   // Recording configuration for highest quality
   private readonly RECORDING_OPTIONS = {
@@ -56,7 +63,7 @@ class JekyllVoiceRecordingService {
   }
 
   /**
-   * Start recording user voice
+   * Start recording user voice (only when speaking - controlled by speech detection)
    * @param sessionId Session ID for file naming
    * @param userId User ID for file naming
    * @param onProgress Callback for recording progress updates
@@ -72,6 +79,11 @@ class JekyllVoiceRecordingService {
         await this.stopRecording();
       }
 
+      console.log('🎙️ ========================================');
+      console.log('🎙️ STARTING JEKYLL VOICE RECORDING');
+      console.log('🎙️ Session-wide recording of user speech only');
+      console.log('🎙️ ========================================');
+
       // Store session info and progress callback
       this.sessionId = sessionId;
       this.userId = userId;
@@ -79,7 +91,9 @@ class JekyllVoiceRecordingService {
 
       // Reset state
       this.audioChunks = [];
-      this.startTime = Date.now();
+      this.sessionStartTime = Date.now();
+      this.totalCapturedDuration = 0;
+      this.isCurrentlyCapturing = false;
 
       // Request microphone access with high quality audio settings
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -133,7 +147,9 @@ class JekyllVoiceRecordingService {
         const errorMessage = 'Recording error occurred';
         this.notifyProgress({
           isRecording: false,
-          duration: this.getCurrentDuration(),
+          isCapturing: false,
+          totalDuration: this.getTotalDuration(),
+          capturedDuration: this.totalCapturedDuration,
           hasMinimumDuration: false,
           isSaving: false,
           error: errorMessage
@@ -149,8 +165,8 @@ class JekyllVoiceRecordingService {
         }
       };
 
-      // Start recording (request data every second for better granularity)
-      this.mediaRecorder.start(1000);
+      // Start recording - request data every 100ms for fine-grained control
+      this.mediaRecorder.start(100);
 
       console.log(`🎙️ Jekyll Recording: Started recording for session ${sessionId}`);
 
@@ -160,7 +176,9 @@ class JekyllVoiceRecordingService {
       // Initial progress notification
       this.notifyProgress({
         isRecording: true,
-        duration: 0,
+        isCapturing: false,
+        totalDuration: 0,
+        capturedDuration: 0,
         hasMinimumDuration: false,
         isSaving: false
       });
@@ -181,7 +199,9 @@ class JekyllVoiceRecordingService {
 
       this.notifyProgress({
         isRecording: false,
-        duration: 0,
+        isCapturing: false,
+        totalDuration: 0,
+        capturedDuration: 0,
         hasMinimumDuration: false,
         isSaving: false,
         error: errorMessage
@@ -189,6 +209,71 @@ class JekyllVoiceRecordingService {
 
       throw error;
     }
+  }
+
+  /**
+   * Notify that user started speaking - start capturing audio
+   */
+  onUserSpeechStart(): void {
+    if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
+      return;
+    }
+
+    if (this.isCurrentlyCapturing) {
+      return; // Already capturing
+    }
+
+    console.log('👤 Jekyll Recording: User speech started - capturing audio');
+    this.isCurrentlyCapturing = true;
+    this.captureStartTime = Date.now();
+
+    // Notify progress update
+    this.notifyProgress({
+      isRecording: true,
+      isCapturing: true,
+      totalDuration: this.getTotalDuration(),
+      capturedDuration: this.totalCapturedDuration,
+      hasMinimumDuration: this.hasMinimumDuration(),
+      isSaving: false
+    });
+  }
+
+  /**
+   * Notify that user stopped speaking - stop capturing audio
+   */
+  onUserSpeechStop(): void {
+    if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
+      return;
+    }
+
+    if (!this.isCurrentlyCapturing) {
+      return; // Not currently capturing
+    }
+
+    console.log('👤 Jekyll Recording: User speech stopped - pausing capture');
+
+    // Calculate duration of this capture segment
+    const segmentDuration = (Date.now() - this.captureStartTime) / 1000;
+    this.totalCapturedDuration += segmentDuration;
+
+    console.log(`🎙️ Jekyll Recording: Captured ${segmentDuration.toFixed(1)}s (total: ${this.totalCapturedDuration.toFixed(1)}s)`);
+
+    this.isCurrentlyCapturing = false;
+
+    // Request data to finalize this segment
+    if (this.mediaRecorder.state === 'recording') {
+      this.mediaRecorder.requestData();
+    }
+
+    // Notify progress update
+    this.notifyProgress({
+      isRecording: true,
+      isCapturing: false,
+      totalDuration: this.getTotalDuration(),
+      capturedDuration: this.totalCapturedDuration,
+      hasMinimumDuration: this.hasMinimumDuration(),
+      isSaving: false
+    });
   }
 
   /**
@@ -207,6 +292,15 @@ class JekyllVoiceRecordingService {
 
       // Stop the progress timer
       this.stopProgressTimer();
+
+      // If currently capturing, finalize the duration
+      if (this.isCurrentlyCapturing) {
+        const segmentDuration = (Date.now() - this.captureStartTime) / 1000;
+        this.totalCapturedDuration += segmentDuration;
+        this.isCurrentlyCapturing = false;
+      }
+
+      const totalDuration = this.getTotalDuration();
 
       // Stop recording
       return new Promise<RecordingResult | null>((resolve, reject) => {
@@ -231,7 +325,9 @@ class JekyllVoiceRecordingService {
               console.warn('⚠️ Jekyll Recording: No audio data recorded');
               this.notifyProgress({
                 isRecording: false,
-                duration: this.getCurrentDuration(),
+                isCapturing: false,
+                totalDuration,
+                capturedDuration: this.totalCapturedDuration,
                 hasMinimumDuration: false,
                 isSaving: false,
                 error: 'No audio data recorded'
@@ -240,13 +336,14 @@ class JekyllVoiceRecordingService {
               return;
             }
 
-            const duration = this.getCurrentDuration();
-            const hasMinimumDuration = duration >= this.MIN_DURATION_SECONDS;
+            const capturedDuration = this.totalCapturedDuration;
+            const hasMinimumDuration = capturedDuration >= this.MIN_DURATION_SECONDS;
 
-            console.log(`🎙️ Jekyll Recording: Duration: ${duration.toFixed(1)}s (minimum: ${this.MIN_DURATION_SECONDS}s)`);
+            console.log(`🎙️ Jekyll Recording: Total duration: ${totalDuration.toFixed(1)}s`);
+            console.log(`🎙️ Jekyll Recording: Captured speech: ${capturedDuration.toFixed(1)}s (minimum: ${this.MIN_DURATION_SECONDS}s)`);
 
             if (!hasMinimumDuration) {
-              console.warn(`⚠️ Jekyll Recording: Recording too short (${duration.toFixed(1)}s < ${this.MIN_DURATION_SECONDS}s)`);
+              console.warn(`⚠️ Jekyll Recording: Recording too short (${capturedDuration.toFixed(1)}s < ${this.MIN_DURATION_SECONDS}s)`);
             }
 
             // Skip upload if requested
@@ -254,7 +351,9 @@ class JekyllVoiceRecordingService {
               console.log('🎙️ Jekyll Recording: Skipping upload (uploadToBlob=false)');
               this.notifyProgress({
                 isRecording: false,
-                duration,
+                isCapturing: false,
+                totalDuration,
+                capturedDuration,
                 hasMinimumDuration,
                 isSaving: false
               });
@@ -265,7 +364,9 @@ class JekyllVoiceRecordingService {
             // Notify saving state
             this.notifyProgress({
               isRecording: false,
-              duration,
+              isCapturing: false,
+              totalDuration,
+              capturedDuration,
               hasMinimumDuration,
               isSaving: true
             });
@@ -310,14 +411,17 @@ class JekyllVoiceRecordingService {
             const result: RecordingResult = {
               audioUrl,
               fileName,
-              duration,
+              totalDuration,
+              capturedDuration,
               sizeBytes: wavBlob.size
             };
 
             // Final progress notification
             this.notifyProgress({
               isRecording: false,
-              duration,
+              isCapturing: false,
+              totalDuration,
+              capturedDuration,
               hasMinimumDuration,
               isSaving: false
             });
@@ -333,7 +437,9 @@ class JekyllVoiceRecordingService {
             const errorMessage = error instanceof Error ? error.message : 'Failed to save recording';
             this.notifyProgress({
               isRecording: false,
-              duration: this.getCurrentDuration(),
+              isCapturing: false,
+              totalDuration: this.getTotalDuration(),
+              capturedDuration: this.totalCapturedDuration,
               hasMinimumDuration: false,
               isSaving: false,
               error: errorMessage
@@ -353,7 +459,9 @@ class JekyllVoiceRecordingService {
       const errorMessage = error instanceof Error ? error.message : 'Failed to stop recording';
       this.notifyProgress({
         isRecording: false,
-        duration: this.getCurrentDuration(),
+        isCapturing: false,
+        totalDuration: this.getTotalDuration(),
+        capturedDuration: this.totalCapturedDuration,
         hasMinimumDuration: false,
         isSaving: false,
         error: errorMessage
@@ -382,10 +490,14 @@ class JekyllVoiceRecordingService {
       }
 
       this.audioChunks = [];
+      this.isCurrentlyCapturing = false;
+      this.totalCapturedDuration = 0;
 
       this.notifyProgress({
         isRecording: false,
-        duration: 0,
+        isCapturing: false,
+        totalDuration: 0,
+        capturedDuration: 0,
         hasMinimumDuration: false,
         isSaving: false
       });
@@ -405,18 +517,39 @@ class JekyllVoiceRecordingService {
   }
 
   /**
-   * Get current recording duration in seconds
+   * Get total session duration in seconds (from recording start)
    */
-  getCurrentDuration(): number {
-    if (this.startTime === 0) return 0;
-    return (Date.now() - this.startTime) / 1000;
+  getTotalDuration(): number {
+    if (this.sessionStartTime === 0) return 0;
+    return (Date.now() - this.sessionStartTime) / 1000;
+  }
+
+  /**
+   * Get captured speech duration in seconds (excluding silence)
+   */
+  getCapturedDuration(): number {
+    let duration = this.totalCapturedDuration;
+
+    // Add current segment if actively capturing
+    if (this.isCurrentlyCapturing && this.captureStartTime > 0) {
+      duration += (Date.now() - this.captureStartTime) / 1000;
+    }
+
+    return duration;
   }
 
   /**
    * Check if recording has minimum required duration
    */
   hasMinimumDuration(): boolean {
-    return this.getCurrentDuration() >= this.MIN_DURATION_SECONDS;
+    return this.getCapturedDuration() >= this.MIN_DURATION_SECONDS;
+  }
+
+  /**
+   * Check if recording has reached target duration
+   */
+  hasTargetDuration(): boolean {
+    return this.getCapturedDuration() >= this.TARGET_DURATION_SECONDS;
   }
 
   /**
@@ -426,12 +559,15 @@ class JekyllVoiceRecordingService {
     this.stopProgressTimer(); // Clear any existing timer
 
     this.recordingTimer = setInterval(() => {
-      const duration = this.getCurrentDuration();
-      const hasMinimumDuration = duration >= this.MIN_DURATION_SECONDS;
+      const totalDuration = this.getTotalDuration();
+      const capturedDuration = this.getCapturedDuration();
+      const hasMinimumDuration = this.hasMinimumDuration();
 
       this.notifyProgress({
         isRecording: true,
-        duration,
+        isCapturing: this.isCurrentlyCapturing,
+        totalDuration,
+        capturedDuration,
         hasMinimumDuration,
         isSaving: false
       });

@@ -283,6 +283,8 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Jekyll voice recording state
   const [jekyllRecording, setJekyllRecording] = useState<RecordingProgress | null>(null);
   const [jekyllStory, setJekyllStory] = useState<{ title: string; content: string } | null>(null);
+  const [jekyllCountdown, setJekyllCountdown] = useState<number>(35); // Total: 5s prep countdown + 30s recording
+  const [jekyllCountdownPhase, setJekyllCountdownPhase] = useState<'waiting' | 'prep' | 'recording'>('waiting'); // waiting = Jekyll speaking, prep = 5-4-3-2-1, recording = 30s timer
 
   // Session-wide voice recording state (captures all user speech across all agents)
   const [sessionRecording, setSessionRecording] = useState<SessionRecordingState | null>(null);
@@ -349,6 +351,12 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceActivityIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const jekyllStoryRef = useRef<{ title: string; content: string } | null>(null);
+
+  // Keep jekyllStoryRef in sync with jekyllStory state
+  useEffect(() => {
+    jekyllStoryRef.current = jekyllStory;
+  }, [jekyllStory]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -446,6 +454,12 @@ export const RealtimeAgentExperience: React.FC = () => {
       // IMPORTANT: User messages come through this callback for processing (voice commands, etc)
       // but should NOT be added to the message display since they're already added
       // via the transcript event in the service. Only add assistant messages to chat bubbles.
+
+      // Block ALL user message processing while Jekyll story is displayed (user is reading story for 31 seconds)
+      if (message.role === 'user' && jekyllStoryRef.current) {
+        console.log('🎭 Blocking user message processing - Jekyll story is displayed');
+        return; // Don't process user messages while story is shown (timer will auto-close)
+      }
 
       // Check for humor level voice commands in user messages
       if (message.role === 'user' && message.content) {
@@ -631,6 +645,13 @@ Just speak naturally - I understand variations of these commands!`,
       // Add ALL messages to the chat display (both user and assistant)
       if (ENABLE_VERBOSE_LOGGING) {
         console.log(`✅ Adding ${message.role} message to chat display`);
+      }
+
+      // Block agent messages while Jekyll story is displayed (user is reading)
+      // Use ref to get current value in callback
+      if (message.role === 'assistant' && jekyllStoryRef.current) {
+        console.log('🎭 Blocking agent message - Jekyll story is displayed, user is reading');
+        return; // Don't add agent messages while story is shown
       }
 
       // CRITICAL: Ensure message has agentId set to current agent
@@ -900,11 +921,141 @@ Just speak naturally - I understand variations of these commands!`,
     agentService.muteMicrophone(!isMicInputEnabled);
   }, [isMicInputEnabled]);
 
-  // Start Jekyll voice recording when story is displayed
+  // Log when Jekyll story state changes (agent responses are blocked in onMessage callback)
   useEffect(() => {
-    if (jekyllStory && currentAgent.id === 'Agent_Jekyll' && !jekyllRecording?.isRecording) {
+    if (jekyllStory) {
+      console.log('🎭 Jekyll story displayed - waiting for Jekyll to finish speaking before countdown');
+      announceToScreenReader('Story displayed. Waiting for instructions.');
+
+      // Cancel any in-progress agent response first
+      agentService.interruptResponse().catch(err => {
+        console.warn('⚠️ Failed to interrupt response:', err);
+      });
+
+      // Disable turn detection so agent doesn't respond to user speech during story reading
+      agentService.disableTurnDetection();
+
+      // Start in 'waiting' phase - waiting for Jekyll to finish speaking
+      setJekyllCountdownPhase('waiting');
+      setJekyllCountdown(35); // Will start at 5 for prep, then 30 for recording
+
+    } else if (jekyllStory === null) {
+      console.log('🎭 Jekyll story closed - re-enabling turn detection');
+
+      // Re-enable turn detection so agent can respond again
+      agentService.enableTurnDetection();
+    }
+  }, [jekyllStory]);
+
+  // Monitor when Jekyll stops speaking to start the countdown
+  // Wait 2 seconds after Jekyll stops speaking to ensure they're completely done
+  useEffect(() => {
+    if (jekyllStory && jekyllCountdownPhase === 'waiting') {
+      if (!speechDetection.isAISpeaking) {
+        console.log('🎭 Jekyll stopped speaking - waiting 2 seconds to ensure complete...');
+
+        // Wait 2 seconds after Jekyll stops speaking to be sure they're done
+        const debounceTimer = setTimeout(() => {
+          console.log('🎭 Jekyll confirmed finished - starting 5 second prep countdown');
+          setJekyllCountdownPhase('prep');
+          setJekyllCountdown(5);
+          announceToScreenReader('Starting countdown: 5, 4, 3, 2, 1');
+        }, 2000);
+
+        return () => clearTimeout(debounceTimer);
+      }
+    }
+  }, [jekyllStory, jekyllCountdownPhase, speechDetection.isAISpeaking]);
+
+  // Handle the 5-second prep countdown
+  useEffect(() => {
+    if (jekyllStory && jekyllCountdownPhase === 'prep') {
+      console.log('🎭 Running prep countdown from 5');
+
+      const prepInterval = setInterval(() => {
+        setJekyllCountdown(prev => {
+          const newValue = prev - 1;
+          console.log(`⏱️ Prep countdown: ${newValue}`);
+
+          if (newValue <= 0) {
+            clearInterval(prepInterval);
+            console.log('🎭 Prep countdown complete - starting 30 second recording timer');
+            setJekyllCountdownPhase('recording');
+            setJekyllCountdown(30);
+            announceToScreenReader('Recording now. Please read the story aloud.');
+            return 0;
+          }
+          return newValue;
+        });
+      }, 1000);
+
+      return () => {
+        console.log('🎭 Cleaning up prep countdown interval');
+        clearInterval(prepInterval);
+      };
+    }
+  }, [jekyllStory, jekyllCountdownPhase]);
+
+  // Handle the 30-second recording countdown and auto-close
+  useEffect(() => {
+    if (jekyllStory && jekyllCountdownPhase === 'recording') {
+      console.log('🎭 Starting 30-second recording countdown');
+
+      // CRITICAL: Prevent agent from responding during reading
+      // 1. Cancel any in-progress responses
+      agentService.interruptResponse().catch(err => {
+        console.warn('⚠️ Failed to interrupt response at recording start:', err);
+      });
+
+      // 2. Clear any pending input audio buffer that might trigger responses
+      agentService.clearInputAudioBuffer();
+
+      // 3. Disable turn detection so agent doesn't respond to new speech
+      agentService.disableTurnDetection();
+
+      console.log('🎭 Turn detection DISABLED - agent should NOT respond to user during reading');
+
+      const recordingInterval = setInterval(() => {
+        setJekyllCountdown(prev => {
+          const newValue = prev - 1;
+          if (newValue <= 0) {
+            clearInterval(recordingInterval);
+          }
+          return Math.max(0, newValue);
+        });
+      }, 1000);
+
+      // Auto-close modal after 30 seconds
+      const autoCloseTimer = setTimeout(() => {
+        console.log('🎭 Auto-closing story modal after 30 seconds');
+        setJekyllStory(null);
+
+        // Stop Jekyll recording if active
+        if (jekyllRecording?.isRecording) {
+          jekyllVoiceRecordingService.stopRecording(true).catch(err => {
+            console.error('❌ Failed to stop Jekyll recording:', err);
+          });
+        }
+      }, 30000); // 30 seconds
+
+      return () => {
+        clearTimeout(autoCloseTimer);
+        clearInterval(recordingInterval);
+      };
+    }
+  }, [jekyllStory, jekyllCountdownPhase, jekyllRecording?.isRecording]);
+
+  // Start Jekyll voice recording when countdown completes and recording phase begins
+  useEffect(() => {
+    // Check if Jekyll voice recording is enabled
+    if (import.meta.env.VITE_ENABLE_JEKYLL_VOICE_RECORDING !== 'true') {
+      return; // Jekyll recording disabled
+    }
+
+    // Only start recording when we enter the 'recording' phase (after 5-second countdown)
+    if (jekyllStory && jekyllCountdownPhase === 'recording' && currentAgent.id === 'Agent_Jekyll' && !jekyllRecording?.isRecording) {
       console.log('🎙️ ========================================');
-      console.log('🎙️ STORY DISPLAYED - STARTING VOICE RECORDING');
+      console.log('🎙️ COUNTDOWN COMPLETE - STARTING VOICE RECORDING');
       console.log('🎙️ Story title:', jekyllStory.title);
       console.log('🎙️ Story length:', jekyllStory.content.length, 'characters');
       console.log('🎙️ Current agent:', currentAgent.id);
@@ -922,45 +1073,8 @@ Just speak naturally - I understand variations of these commands!`,
             userId,
             (progress: RecordingProgress) => {
               setJekyllRecording(progress);
-
-              // Log progress for debugging
-              console.log(`🎙️ Recording progress: ${progress.duration.toFixed(1)}s / 45s (hasMin: ${progress.hasMinimumDuration})`);
-
-              // Auto-stop recording after 45 seconds (minimum duration reached)
-              if (progress.hasMinimumDuration && !progress.isSaving) {
-                console.log('🎙️ ========================================');
-                console.log('🎙️ MINIMUM DURATION REACHED - AUTO-STOPPING');
-                console.log('🎙️ Duration:', progress.duration.toFixed(1), 'seconds');
-                console.log('🎙️ ========================================');
-                jekyllVoiceRecordingService.stopRecording(true)
-                  .then((result) => {
-                    console.log('🎙️ Recording saved:', result);
-                    setJekyllRecording(null);
-
-                    // Delay clearing the story to allow orb fade-in animation
-                    setTimeout(() => {
-                      setJekyllStory(null);
-                      console.log('✅ Story overlay cleared - orb should be visible');
-                    }, 500); // 500ms delay for smooth transition
-
-                    announceToScreenReader('Voice recording saved successfully');
-                  })
-                  .catch((error) => {
-                    console.error('❌ Failed to save recording:', error);
-                    setJekyllRecording({
-                      isRecording: false,
-                      duration: 0,
-                      hasMinimumDuration: false,
-                      isSaving: false,
-                      error: error instanceof Error ? error.message : 'Failed to save recording'
-                    });
-
-                    // Still clear story on error, with delay
-                    setTimeout(() => {
-                      setJekyllStory(null);
-                    }, 500);
-                  });
-              }
+              // Recording progress updated silently
+              // Auto-close after 30 seconds
             }
           );
           console.log('✅ Jekyll Recording: startRecording completed successfully');
@@ -968,7 +1082,9 @@ Just speak naturally - I understand variations of these commands!`,
           console.error('❌ Failed to start Jekyll voice recording:', error);
           setJekyllRecording({
             isRecording: false,
-            duration: 0,
+            isCapturing: false,
+            totalDuration: 0,
+            capturedDuration: 0,
             hasMinimumDuration: false,
             isSaving: false,
             error: error instanceof Error ? error.message : 'Failed to start recording'
@@ -977,26 +1093,45 @@ Just speak naturally - I understand variations of these commands!`,
       };
 
       startRecording();
-    } else if (jekyllStory && jekyllRecording?.isRecording) {
-      console.log('⚠️ Story displayed but recording already in progress - this is normal');
+    } else if (jekyllStory && jekyllCountdownPhase === 'recording' && jekyllRecording?.isRecording) {
+      console.log('⚠️ Recording phase active and recording already in progress - this is normal');
     }
-  }, [jekyllStory, currentAgent.id, authenticatedUserId]); // Removed jekyllRecording?.isRecording from deps
+  }, [jekyllStory, jekyllCountdownPhase, currentAgent.id, authenticatedUserId]); // Wait for 'recording' phase
 
   // Handle session-wide voice recording based on user speech detection
   useEffect(() => {
     if (speechDetection.isUserSpeaking) {
-      // User started speaking - start capturing audio
-      sessionVoiceRecordingService.onUserSpeechStart();
+      // User started speaking - start capturing audio for session recording (if enabled)
+      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+        sessionVoiceRecordingService.onUserSpeechStart();
+      }
+
+      // Also notify Jekyll recording if active and enabled
+      if (import.meta.env.VITE_ENABLE_JEKYLL_VOICE_RECORDING === 'true' &&
+          jekyllRecording?.isRecording &&
+          currentAgent.id === 'Agent_Jekyll') {
+        jekyllVoiceRecordingService.onUserSpeechStart();
+      }
     } else {
       // User stopped speaking - stop capturing audio
-      sessionVoiceRecordingService.onUserSpeechStop();
+      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+        sessionVoiceRecordingService.onUserSpeechStop();
+      }
+
+      // Also notify Jekyll recording if active and enabled
+      if (import.meta.env.VITE_ENABLE_JEKYLL_VOICE_RECORDING === 'true' &&
+          jekyllRecording?.isRecording &&
+          currentAgent.id === 'Agent_Jekyll') {
+        jekyllVoiceRecordingService.onUserSpeechStop();
+      }
     }
 
-    // Update session recording state for UI (if needed in future)
-    if (sessionVoiceRecordingService.isRecording()) {
+    // Update session recording state for UI (if enabled and recording)
+    if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true' &&
+        sessionVoiceRecordingService.isRecording()) {
       setSessionRecording(sessionVoiceRecordingService.getState());
     }
-  }, [speechDetection.isUserSpeaking]);
+  }, [speechDetection.isUserSpeaking, jekyllRecording?.isRecording, currentAgent.id]);
 
   // Close header menu when clicking outside
   useEffect(() => {
@@ -1199,7 +1334,7 @@ Just speak naturally - I understand variations of these commands!`,
             console.log('🎙️ Story length:', result.result.story.content.length, 'chars');
             console.log('🎙️ ========================================');
             setJekyllStory(result.result.story);
-            
+
             // Interrupt any ongoing agent response so the user can start reading immediately
             console.log('🛑 Interrupting agent response to show story');
             try {
@@ -1208,7 +1343,7 @@ Just speak naturally - I understand variations of these commands!`,
             } catch (error) {
               console.error('❌ Failed to interrupt agent response:', error);
             }
-            
+
             // Story will be displayed in the UI overlay during recording
           } else if (functionName === 'request-voice-evaluation-consent' && result.result?.consentGiven === false) {
             console.log('🎙️ Voice evaluation consent declined');
@@ -1488,15 +1623,20 @@ Just speak naturally - I understand variations of these commands!`,
       }
 
       // Start session-wide voice recording (captures all user speech)
-      const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
-      const userId = authenticatedUserId || getUserId();
-      try {
-        await sessionVoiceRecordingService.startSessionRecording(sessionId, userId);
-        setSessionRecording(sessionVoiceRecordingService.getState());
-        console.log('✅ Session voice recording started');
-      } catch (error) {
-        console.error('❌ Failed to start session voice recording:', error);
-        // Continue with session even if recording fails
+      // Only if enabled via environment variable
+      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+        const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
+        const userId = authenticatedUserId || getUserId();
+        try {
+          await sessionVoiceRecordingService.startSessionRecording(sessionId, userId);
+          setSessionRecording(sessionVoiceRecordingService.getState());
+          console.log('✅ Session voice recording started');
+        } catch (error) {
+          console.error('❌ Failed to start session voice recording:', error);
+          // Continue with session even if recording fails
+        }
+      } else {
+        console.log('ℹ️ Session voice recording disabled (VITE_ENABLE_SESSION_VOICE_RECORDING=false)');
       }
 
       // Clear previous state
@@ -1952,7 +2092,7 @@ Just speak naturally - I understand variations of these commands!`,
                           ? 'text-green-700 dark:text-green-300'
                           : 'text-red-700 dark:text-red-300'
                       }`}>
-                        Recording: {Math.floor(jekyllRecording.duration)}s / 45s
+                        Recording: {Math.floor(jekyllRecording.capturedDuration)}s speech / {Math.floor(jekyllRecording.totalDuration)}s total
                       </span>
                     </>
                   ) : jekyllRecording.isSaving ? (
@@ -2455,23 +2595,39 @@ Just speak naturally - I understand variations of these commands!`,
             <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 animate-fade-in">
               <div className="max-w-3xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8 space-y-6 overflow-y-auto max-h-[80vh]">
                 <div className="text-center space-y-4">
-                  <div className="flex items-center justify-center space-x-3 mb-4">
-                    <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse" />
-                    <span className="text-sm font-semibold text-red-600 dark:text-red-400">
-                      Recording: {jekyllRecording ? Math.floor(jekyllRecording.duration) : 0}s / 45s
-                    </span>
-                  </div>
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{jekyllStory.title}</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Please read this story aloud at a comfortable, regular pace</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Please read this story aloud at a comfortable pace.
+                  </p>
                 </div>
                 <div className="prose prose-lg dark:prose-invert max-w-none">
                   <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
                     {jekyllStory.content}
                   </p>
                 </div>
-                <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                  <Mic size={16} />
-                  <span>Continue reading until the recording completes</span>
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  {jekyllCountdownPhase === 'waiting' && (
+                    <div className="flex items-center space-x-3 text-lg font-semibold text-blue-600 dark:text-blue-400">
+                      <Activity className="animate-spin" size={24} />
+                      <span>Listening to Jekyll's instructions...</span>
+                    </div>
+                  )}
+                  {jekyllCountdownPhase === 'prep' && (
+                    <div className="flex items-center space-x-3 text-3xl font-bold text-orange-600 dark:text-orange-400">
+                      <span className="animate-pulse">{jekyllCountdown}</span>
+                    </div>
+                  )}
+                  {jekyllCountdownPhase === 'recording' && (
+                    <>
+                      <div className="flex items-center space-x-3 text-lg font-semibold text-red-600 dark:text-red-400">
+                        <Mic className="animate-pulse" size={24} />
+                        <span>Recording... {jekyllCountdown}s remaining</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>Story will close automatically when recording completes</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

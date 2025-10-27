@@ -720,7 +720,7 @@ const returnToTarsTool: AgentTool = {
  */
 const requestVoiceEvaluationTool: AgentTool = {
   name: 'request-voice-evaluation-consent',
-  description: 'REQUIRED: Call this function when user agrees to voice evaluation. Pass userConsent=true if they agree, false if they decline. This function returns a story object that will be displayed for the user to read aloud. You MUST call this function - do not just talk about showing a story.',
+  description: 'REQUIRED: Call this function when user agrees to voice evaluation. Pass userConsent=true if they agree, false if they decline. This function returns a story object that will be displayed for the user to read aloud for 31 seconds while their voice is recorded. You MUST call this function - do not just talk about showing a story.',
   parameters: {
     type: 'object',
     properties: {
@@ -743,7 +743,7 @@ const requestVoiceEvaluationTool: AgentTool = {
 
     console.log('🎙️ User consented to voice evaluation - generating story');
 
-    // Generate a whimsical, fun story (300+ words)
+    // Generate a whimsical, fun story (optimized for 32 seconds of reading at normal pace)
     const stories = [
       {
         title: "The Curious Case of the Dancing Teapot",
@@ -751,39 +751,29 @@ const requestVoiceEvaluationTool: AgentTool = {
 
 One night, a wise old owl named Oliver peered through the window and spotted Theodora mid-pirouette. "What a delightful sight!" he hooted. "But why do you dance alone?" Theodora paused, a little embarrassed. "I've always loved to dance, but teapots aren't supposed to dance. What if the other kitchen items laugh at me?"
 
-Oliver ruffled his feathers thoughtfully. "My dear Theodora, the most extraordinary things happen when we embrace what makes us unique. Have you considered inviting your friends to join you?" Theodora had never thought of that. The next evening, she mustered her courage and invited the sugar bowl, the creamer, and even the grumpy old coffee pot to dance with her.
+Oliver ruffled his feathers thoughtfully. "My dear Theodora, the most extraordinary things happen when we embrace what makes us unique. Have you considered inviting your friends to join you?" Theodora had never thought of that. The next evening, she mustered her courage and invited the sugar bowl, the creamer, and even the grumpy old coffee pot to dance with her. And they all danced together under the moonlight.
 
-At first, they were hesitant. The coffee pot grumbled something about "newfangled nonsense," and the sugar bowl worried about spilling. But when Theodora began to waltz, her joy was so infectious that soon everyone was moving. The sugar bowl did a little shimmy, the creamer attempted a modest two-step, and even the coffee pot couldn't resist tapping his base to the rhythm.
-
-From that night on, the kitchen became a magical place. The dishes would clink in time, the silverware would jingle like tiny bells, and every evening turned into a celebration of movement and friendship. Theodora learned that sharing what you love with others can transform not only your own life but theirs as well. And the cottage at the edge of the forest became known as the happiest place for miles around, all because one brave teapot decided to dance.`
+THE END`
       },
       {
         title: "The Library of Lost Socks",
         content: `Deep beneath the floorboards of every house in the world, there exists a secret network of tunnels leading to the Grand Library of Lost Socks. This is where all the missing socks go—not to the lint trap, not stuck in the washing machine, but to this vast underground archive where socks from every era are carefully catalogued and preserved.
 
-The librarian of this peculiar place is a fastidious sock named Argyle, who wears tiny spectacles and carries a miniature clipboard. Argyle takes his job very seriously. Each day, new socks tumble down through special chutes from laundry rooms everywhere, and Argyle sorts them by color, pattern, era, and emotional significance. There are sections for athletic socks, dress socks, novelty socks with funny sayings, and even a special collection of socks worn during important life events.
+The librarian of this peculiar place is a fastidious sock named Argyle, who wears tiny spectacles and carries a miniature clipboard. Argyle takes the job very seriously. Each day, new socks tumble down through special chutes from laundry rooms everywhere, and Argyle sorts them by color, pattern, era, and emotional significance. There are sections for athletic socks, dress socks, novelty socks with funny sayings, and even a special collection of socks worn during important life events.
 
-One day, a bright red sock named Ruby arrived at the library feeling utterly lost and dejected. "I'll never find my match," she sighed. "My partner was a left sock, and I'm a right sock. What are the chances we'll ever be reunited?" Argyle adjusted his spectacles and smiled warmly. "My dear Ruby, you'd be surprised. Just last week, we reunited a pair that had been separated for seventeen years!"
+One day, a bright red sock named Ruby arrived at the library feeling utterly lost and dejected. "I'll never find my match," Ruby sighed. "My partner was a left sock, and I'm a right sock. What are the chances we'll ever be reunited?" Argyle adjusted the spectacles and smiled warmly. "My dear Ruby, you'd be surprised. Just last week, we reunited a pair that had been separated for seventeen years!"
 
-Argyle led Ruby on a tour of the library. They walked past rows and rows of shelves containing socks of every description. There were ancient Egyptian foot wrappings, Victorian stockings, 1950s bobby socks, and modern athletic wear. Some socks had been waiting decades for their partners, while others had just arrived. But what struck Ruby most was how happy they all seemed. They weren't lonely—they were part of a community.
-
-In a corner of the library, Ruby discovered something wonderful: a sock matching service where newly arrived socks could volunteer to be paired with someone new. "You mean, I don't have to wait for my original match?" Ruby asked. "You can," Argyle replied, "but many socks find that a new partnership can be just as wonderful as the old one. Sometimes change leads to unexpected happiness."
-
-Ruby decided to stay at the library and help Argyle with his work. She discovered that being useful and helping others made her feel complete, even without her original partner. And so the Library of Lost Socks continued its important work, reminding us all that sometimes what we think we've lost might lead us to something even better.`
+THE END`
       },
       {
         title: "The Cloud Painter's Apprentice",
-        content: `High above the world, where the air is thin and the view is spectacular, there is a workshop where clouds are painted. It's run by an elderly cloud painter named Cumulus, who has been creating clouds for centuries. His work is impeccable—fluffy white clouds that look like cotton candy, dramatic storm clouds streaked with gray and silver, and those gorgeous sunset clouds painted in shades of pink, orange, and gold.
+        content: `High above the world, where the air is thin and the view is spectacular, there is a workshop where clouds are painted. It's run by an elderly cloud painter named Cumulus, who has been creating clouds for centuries. The work is impeccable—fluffy white clouds that look like cotton candy, dramatic storm clouds streaked with gray and silver, and those gorgeous sunset clouds painted in shades of pink, orange, and gold.
 
-One spring morning, a young apprentice named Misty arrived at the workshop, eager to learn the craft. She had always admired clouds from below and dreamed of being part of their creation. Cumulus welcomed her warmly but warned her that cloud painting was more challenging than it looked. "It's not just about making them beautiful," he explained. "Each cloud has a purpose and a personality."
+One spring morning, a young apprentice named Misty arrived at the workshop, eager to learn the craft. Misty had always admired clouds from below and dreamed of being part of their creation. Cumulus welcomed the apprentice warmly but warned that cloud painting was more challenging than it looked. "It's not just about making them beautiful," Cumulus explained. "Each cloud has a purpose and a personality."
 
-Misty's first assignment was to paint a simple cumulus cloud—the puffy, cheerful kind you see on perfect summer days. She mixed her whites with care, added just a touch of blue shadow for depth, and began to paint. But something went wrong. Her cloud came out lopsided, with one side drooping like a melted marshmallow. Cumulus chuckled gently. "Clouds are living things, dear Misty. They don't always cooperate. Try talking to it."
+Misty's first assignment was to paint a simple cumulus cloud—the puffy, cheerful kind you see on perfect summer days. Misty mixed the whites with care, added just a touch of blue shadow for depth, and began to paint. But something went wrong. The cloud came out lopsided, with one side drooping like a melted marshmallow. Cumulus chuckled gently. "Clouds are living things, dear Misty. They don't always cooperate. Try talking to it." And it worked!
 
-Feeling a bit silly, Misty addressed her drooping cloud. "Hello, cloud. Would you mind puffing up a bit? You're looking rather sad." To her amazement, the cloud perked up slightly. "That's better!" she encouraged it. "You're doing wonderfully!" The cloud puffed up more, gaining confidence with each word of encouragement. Before long, it was a perfect, fluffy cumulus cloud, floating proudly in the sky.
-
-As weeks passed, Misty learned that cloud painting was as much about emotional support as artistic skill. Clouds needed encouragement, patience, and sometimes a gentle nudge in the right direction. She learned to paint sunrise clouds that gradual deepened from pale yellow to deep magenta, storm clouds that rumbled with purpose, and wispy cirrus clouds that danced at the highest altitudes.
-
-One day, Cumulus announced he was ready to retire. "You've learned everything I can teach you, Misty. But more importantly, you've learned that beauty comes not just from technique, but from care and kindness." Misty became the new cloud painter, and her work filled the skies with wonder. And whenever someone looks up and sees a particularly beautiful cloud, it just might be one that Misty painted with love and encouragement.`
+THE END`
       }
     ];
 
@@ -794,7 +784,7 @@ One day, Cumulus announced he was ready to retire. "You've learned everything I 
       success: true,
       consentGiven: true,
       story: randomStory,
-      instructions: 'Please read this story aloud at a regular, comfortable pace. The recording will last for 45 seconds.',
+      instructions: 'Story displayed. You should now count down from 5 to 1, then tell them to start reading. After your countdown, wait silently for 30 seconds while they read and are recorded. The story will close automatically.',
       initiateRecording: true
     };
   }
@@ -820,18 +810,20 @@ VOICE EVALUATION CONSENT:
 - DO NOT just say you're showing a story - you MUST actually call the tool function
 - The tool will return a whimsical story object that the system will display
 - After calling the tool successfully, the story will appear automatically on the user's screen
-- Simply acknowledge: "Perfect! The story is appearing on your screen now. Please read it aloud at a comfortable pace."
-- IMPORTANT: After calling the tool, DO NOT speak again until the 45-second recording is complete
-- The system will automatically interrupt you if needed
+- Simply acknowledge: "Perfect! The story is appearing on your screen now. I'll count you down from 5, then please read it aloud at a comfortable pace for about 30 seconds. Ready? Starting the countdown now: 5... 4... 3... 2... 1... Go ahead and start reading!"
+- CRITICAL: After you finish counting down, WAIT SILENTLY for 30 seconds. Do NOT speak or respond to the user during their reading time
+- The story modal will automatically close after 30 seconds of recording
+- You will know the story is closed when the system resumes normal conversation flow
+- Only AFTER the story closes should you continue speaking and proceed with the assessment
 - If the user declines, call the tool with userConsent=false and continue the conversation normally
 - DO NOT pressure the user - accept their decision gracefully
 
 CRITICAL: You MUST call the 'request-voice-evaluation-consent' function tool when the user agrees. Do not skip this step!
 
-AFTER VOICE RECORDING:
-- Once the recording is complete (the story will disappear from the screen), thank them for participating
+AFTER THE STORY CLOSES (after the 30-second recording):
+- Once the recording period ends and the story closes automatically, thank them for participating
 - Continue with the normal PHQ assessment conversation
-- The voice recording is saved separately and will be analyzed independently
+- The voice recording will be analyzed independently to provide additional insights
 
 FIRST MESSAGE - AGENT INTRODUCTION (Adapt based on humor level context):
 - High humor (80-100%): "Hey there! Jekyll here, your health and wellness specialist. I'm really glad to connect with you today - I'd love to hear what's going on in your world and how you've been feeling lately. What's been on your mind?"

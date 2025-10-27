@@ -63,28 +63,6 @@ export function createTarsAgent(config: TarsAgentConfig): Agent {
       }
     },
     {
-      name: 'Agent_Vocalist',
-      description: 'VOICE RECORDING SPECIALIST: Transfer control to Vocalist for mental/vocal assessment through 35-second voice recording. Use when user mentions singing, song analysis, voice recording, or mental assessment through voice.',
-      parameters: {
-        type: 'object' as const,
-        properties: {
-          reason: {
-            type: 'string',
-            description: 'Why Vocalist is being called'
-          }
-        },
-        required: ['reason']
-      },
-      handler: async (args: Record<string, unknown>) => {
-        return {
-          success: true,
-          agentSwitch: true,
-          targetAgent: 'Agent_Vocalist',
-          reason: args.reason as string
-        };
-      }
-    },
-    {
       name: 'check-biometric-data',
       description: 'SILENTLY check if biometric data exists for the user. This should be called WITHOUT telling the user. Returns true/false.',
       parameters: {
@@ -322,12 +300,10 @@ When ${firstName} requests health, wellness, or mental health support:
 Available specialized agents:
 - "Agent_Matron": Biometric data and personalization intake - use when user has NO biometric data (check first!)
 - "Agent_Jekyll": Primary health and mental health support specialist - use for ALL health, wellness, mental health topics, emotional support, PHQ assessments, and general medical discussions
-- "Agent_Vocalist": Mental/vocal assessment through 35-second voice recording - use when user says "song analysis", "let's sing", "once over", or "mental assessment"
 
 CRITICAL ROUTING RULES:
 - DEFAULT: Route ALL health, wellness, and mental health topics to Jekyll
 - Jekyll handles: emotional support, health discussions, wellness topics, general mental health conversations, PHQ-2 and PHQ-9 assessments
-- Route to Vocalist when user mentions singing, song analysis, voice recording, or mental assessment through voice
 - After routing, wait for the specialist to finish
 - When specialist returns control, welcome ${firstName} back and ask if there's anything else
 

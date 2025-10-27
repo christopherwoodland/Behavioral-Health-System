@@ -13,8 +13,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Bot,
-  ClipboardList,
-  FileText,
   Plus,
   Menu,
   X,
@@ -43,10 +41,7 @@ import { agentOrchestrationService } from '@/services/agentOrchestrationService'
 import { createTarsAgent } from '@/agents/tarsAgent';
 import { jekyllAgent } from '@/agents/jekyllAgent';
 import { matronAgent } from '@/agents/matronAgent';
-import { vocalistAgent } from '@/agents/vocalistAgent';
-import { VocalistRecorder } from '@/components/VocalistRecorder';
-import { jekyllVoiceRecordingService, RecordingProgress } from '@/services/jekyllVoiceRecordingService';
-import { sessionVoiceRecordingService, SessionRecordingState } from '@/services/sessionVoiceRecordingService';
+import { sessionVoiceRecordingService } from '@/services/sessionVoiceRecordingService';
 import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
@@ -77,7 +72,7 @@ const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === '
 
 /**
  * Get agent-specific color classes for visual differentiation
- * @param agentId - The agent identifier (tars, matron, phq2, phq9, vocalist, jekyll)
+ * @param agentId - The agent identifier (tars, matron, jekyll)
  * @returns Tailwind CSS classes for background and text colors
  */
 const getAgentColor = (agentId?: string): { bg: string; text: string; border: string; outline: string } => {
@@ -99,13 +94,6 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
         text: 'text-green-900 dark:text-green-100',
         border: 'border-l-4 border-green-500',
         outline: 'border-2 border-green-500 dark:border-green-400'
-      };
-    case 'vocalist':
-      return {
-        bg: 'bg-pink-100 dark:bg-pink-800',
-        text: 'text-pink-900 dark:text-pink-100',
-        border: 'border-l-4 border-pink-500',
-        outline: 'border-2 border-pink-500 dark:border-pink-400'
       };
     case 'jekyll':
       return {
@@ -133,9 +121,6 @@ type VoiceType = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'ver
  * - TARS: echo (robotic, command-oriented)
  * - Jekyll: shimmer (warm, conversational)
  * - Matron: nova (caring, professional)
- * - PHQ-2: alloy (clinical, efficient)
- * - PHQ-9: sage (authoritative, comprehensive)
- * - Vocalist: aria (expressive, dynamic)
  * @param agentId The agent identifier (e.g., 'Agent_Jekyll', 'Agent_Tars')
  * @param fallbackVoice Default voice to use if agent not found
  * @returns Voice string for Azure OpenAI Realtime API
@@ -152,12 +137,6 @@ const getAgentVoice = (agentId: string, fallbackVoice: VoiceType = 'alloy'): Voi
       return (import.meta.env.VITE_JEKYLL_VOICE as VoiceType) || 'shimmer';
     case 'matron':
       return (import.meta.env.VITE_MATRON_VOICE as VoiceType) || 'nova';
-    case 'phq2':
-      return (import.meta.env.VITE_PHQ2_VOICE as VoiceType) || 'alloy';
-    case 'phq9':
-      return (import.meta.env.VITE_PHQ9_VOICE as VoiceType) || 'sage';
-    case 'vocalist':
-      return (import.meta.env.VITE_VOCALIST_VOICE as VoiceType) || 'aria';
     default:
       console.warn(`⚠️ Unknown agent '${agentId}', using fallback voice: ${fallbackVoice}`);
       return fallbackVoice;
@@ -274,20 +253,8 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [conversationState, setConversationState] = useState<ConversationState>({ state: 'idle' });
   const [liveTranscripts, setLiveTranscripts] = useState<LiveTranscript[]>([]);
 
-  // Vocalist recording state
-  const [isVocalistRecording, setIsVocalistRecording] = useState(false);
-  const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
-
-  // Jekyll voice recording state
-  const [jekyllRecording, setJekyllRecording] = useState<RecordingProgress | null>(null);
-  const [jekyllStory, setJekyllStory] = useState<{ title: string; content: string } | null>(null);
-  const [jekyllCountdown, setJekyllCountdown] = useState<number>(35); // Total: 5s prep countdown + 30s recording
-  const [jekyllCountdownPhase, setJekyllCountdownPhase] = useState<'waiting' | 'prep' | 'recording'>('waiting'); // waiting = Jekyll speaking, prep = 5-4-3-2-1, recording = 30s timer
-
-  // Session-wide voice recording state (captures all user speech across all agents)
-  const [sessionRecording, setSessionRecording] = useState<SessionRecordingState | null>(null);
 
   // Connection notification state
   const [connectionNotification, setConnectionNotification] = useState<{
@@ -351,12 +318,6 @@ export const RealtimeAgentExperience: React.FC = () => {
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const voiceActivityIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const jekyllStoryRef = useRef<{ title: string; content: string } | null>(null);
-
-  // Keep jekyllStoryRef in sync with jekyllStory state
-  useEffect(() => {
-    jekyllStoryRef.current = jekyllStory;
-  }, [jekyllStory]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -454,12 +415,6 @@ export const RealtimeAgentExperience: React.FC = () => {
       // IMPORTANT: User messages come through this callback for processing (voice commands, etc)
       // but should NOT be added to the message display since they're already added
       // via the transcript event in the service. Only add assistant messages to chat bubbles.
-
-      // Block ALL user message processing while Jekyll story is displayed (user is reading story for 31 seconds)
-      if (message.role === 'user' && jekyllStoryRef.current) {
-        console.log('🎭 Blocking user message processing - Jekyll story is displayed');
-        return; // Don't process user messages while story is shown (timer will auto-close)
-      }
 
       // Check for humor level voice commands in user messages
       if (message.role === 'user' && message.content) {
@@ -604,10 +559,6 @@ export const RealtimeAgentExperience: React.FC = () => {
 • "Resume session" - Continue after pausing
 • "Close session" or "End session" - End our conversation
 
-🧠 **Mental Health Assessments:**
-• "Invoke PHQ-9" - Start comprehensive mental health assessment
-• "Invoke PHQ-2" - Start quick mental health screening
-
 💬 **General:**
 • "Help" or "Commands" - Show this help message
 
@@ -645,13 +596,6 @@ Just speak naturally - I understand variations of these commands!`,
       // Add ALL messages to the chat display (both user and assistant)
       if (ENABLE_VERBOSE_LOGGING) {
         console.log(`✅ Adding ${message.role} message to chat display`);
-      }
-
-      // Block agent messages while Jekyll story is displayed (user is reading)
-      // Use ref to get current value in callback
-      if (message.role === 'assistant' && jekyllStoryRef.current) {
-        console.log('🎭 Blocking agent message - Jekyll story is displayed, user is reading');
-        return; // Don't add agent messages while story is shown
       }
 
       // CRITICAL: Ensure message has agentId set to current agent
@@ -921,183 +865,6 @@ Just speak naturally - I understand variations of these commands!`,
     agentService.muteMicrophone(!isMicInputEnabled);
   }, [isMicInputEnabled]);
 
-  // Log when Jekyll story state changes (agent responses are blocked in onMessage callback)
-  useEffect(() => {
-    if (jekyllStory) {
-      console.log('🎭 Jekyll story displayed - waiting for Jekyll to finish speaking before countdown');
-      announceToScreenReader('Story displayed. Waiting for instructions.');
-
-      // Cancel any in-progress agent response first
-      agentService.interruptResponse().catch(err => {
-        console.warn('⚠️ Failed to interrupt response:', err);
-      });
-
-      // Disable turn detection so agent doesn't respond to user speech during story reading
-      agentService.disableTurnDetection();
-
-      // Start in 'waiting' phase - waiting for Jekyll to finish speaking
-      setJekyllCountdownPhase('waiting');
-      setJekyllCountdown(35); // Will start at 5 for prep, then 30 for recording
-
-    } else if (jekyllStory === null) {
-      console.log('🎭 Jekyll story closed - re-enabling turn detection');
-
-      // Re-enable turn detection so agent can respond again
-      agentService.enableTurnDetection();
-    }
-  }, [jekyllStory]);
-
-  // Monitor when Jekyll stops speaking to start the countdown
-  // Wait 2 seconds after Jekyll stops speaking to ensure they're completely done
-  useEffect(() => {
-    if (jekyllStory && jekyllCountdownPhase === 'waiting') {
-      if (!speechDetection.isAISpeaking) {
-        console.log('🎭 Jekyll stopped speaking - waiting 2 seconds to ensure complete...');
-
-        // Wait 2 seconds after Jekyll stops speaking to be sure they're done
-        const debounceTimer = setTimeout(() => {
-          console.log('🎭 Jekyll confirmed finished - starting 5 second prep countdown');
-          setJekyllCountdownPhase('prep');
-          setJekyllCountdown(5);
-          announceToScreenReader('Starting countdown: 5, 4, 3, 2, 1');
-        }, 2000);
-
-        return () => clearTimeout(debounceTimer);
-      }
-    }
-  }, [jekyllStory, jekyllCountdownPhase, speechDetection.isAISpeaking]);
-
-  // Handle the 5-second prep countdown
-  useEffect(() => {
-    if (jekyllStory && jekyllCountdownPhase === 'prep') {
-      console.log('🎭 Running prep countdown from 5');
-
-      const prepInterval = setInterval(() => {
-        setJekyllCountdown(prev => {
-          const newValue = prev - 1;
-          console.log(`⏱️ Prep countdown: ${newValue}`);
-
-          if (newValue <= 0) {
-            clearInterval(prepInterval);
-            console.log('🎭 Prep countdown complete - starting 30 second recording timer');
-            setJekyllCountdownPhase('recording');
-            setJekyllCountdown(30);
-            announceToScreenReader('Recording now. Please read the story aloud.');
-            return 0;
-          }
-          return newValue;
-        });
-      }, 1000);
-
-      return () => {
-        console.log('🎭 Cleaning up prep countdown interval');
-        clearInterval(prepInterval);
-      };
-    }
-  }, [jekyllStory, jekyllCountdownPhase]);
-
-  // Handle the 30-second recording countdown and auto-close
-  useEffect(() => {
-    if (jekyllStory && jekyllCountdownPhase === 'recording') {
-      console.log('🎭 Starting 30-second recording countdown');
-
-      // CRITICAL: Prevent agent from responding during reading
-      // 1. Cancel any in-progress responses
-      agentService.interruptResponse().catch(err => {
-        console.warn('⚠️ Failed to interrupt response at recording start:', err);
-      });
-
-      // 2. Clear any pending input audio buffer that might trigger responses
-      agentService.clearInputAudioBuffer();
-
-      // 3. Disable turn detection so agent doesn't respond to new speech
-      agentService.disableTurnDetection();
-
-      console.log('🎭 Turn detection DISABLED - agent should NOT respond to user during reading');
-
-      const recordingInterval = setInterval(() => {
-        setJekyllCountdown(prev => {
-          const newValue = prev - 1;
-          if (newValue <= 0) {
-            clearInterval(recordingInterval);
-          }
-          return Math.max(0, newValue);
-        });
-      }, 1000);
-
-      // Auto-close modal after 30 seconds
-      const autoCloseTimer = setTimeout(() => {
-        console.log('🎭 Auto-closing story modal after 30 seconds');
-        setJekyllStory(null);
-
-        // Stop Jekyll recording if active
-        if (jekyllRecording?.isRecording) {
-          jekyllVoiceRecordingService.stopRecording(true).catch(err => {
-            console.error('❌ Failed to stop Jekyll recording:', err);
-          });
-        }
-      }, 30000); // 30 seconds
-
-      return () => {
-        clearTimeout(autoCloseTimer);
-        clearInterval(recordingInterval);
-      };
-    }
-  }, [jekyllStory, jekyllCountdownPhase, jekyllRecording?.isRecording]);
-
-  // Start Jekyll voice recording when countdown completes and recording phase begins
-  useEffect(() => {
-    // Check if Jekyll voice recording is enabled
-    if (import.meta.env.VITE_ENABLE_JEKYLL_VOICE_RECORDING !== 'true') {
-      return; // Jekyll recording disabled
-    }
-
-    // Only start recording when we enter the 'recording' phase (after 5-second countdown)
-    if (jekyllStory && jekyllCountdownPhase === 'recording' && currentAgent.id === 'Agent_Jekyll' && !jekyllRecording?.isRecording) {
-      console.log('🎙️ ========================================');
-      console.log('🎙️ COUNTDOWN COMPLETE - STARTING VOICE RECORDING');
-      console.log('🎙️ Story title:', jekyllStory.title);
-      console.log('🎙️ Story length:', jekyllStory.content.length, 'characters');
-      console.log('🎙️ Current agent:', currentAgent.id);
-      console.log('🎙️ Recording state:', jekyllRecording);
-      console.log('🎙️ ========================================');
-
-      const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
-      const userId = authenticatedUserId || getUserId();
-
-      const startRecording = async () => {
-        try {
-          console.log('🎙️ Calling jekyllVoiceRecordingService.startRecording...');
-          await jekyllVoiceRecordingService.startRecording(
-            sessionId,
-            userId,
-            (progress: RecordingProgress) => {
-              setJekyllRecording(progress);
-              // Recording progress updated silently
-              // Auto-close after 30 seconds
-            }
-          );
-          console.log('✅ Jekyll Recording: startRecording completed successfully');
-        } catch (error) {
-          console.error('❌ Failed to start Jekyll voice recording:', error);
-          setJekyllRecording({
-            isRecording: false,
-            isCapturing: false,
-            totalDuration: 0,
-            capturedDuration: 0,
-            hasMinimumDuration: false,
-            isSaving: false,
-            error: error instanceof Error ? error.message : 'Failed to start recording'
-          });
-        }
-      };
-
-      startRecording();
-    } else if (jekyllStory && jekyllCountdownPhase === 'recording' && jekyllRecording?.isRecording) {
-      console.log('⚠️ Recording phase active and recording already in progress - this is normal');
-    }
-  }, [jekyllStory, jekyllCountdownPhase, currentAgent.id, authenticatedUserId]); // Wait for 'recording' phase
-
   // Handle session-wide voice recording based on user speech detection
   useEffect(() => {
     if (speechDetection.isUserSpeaking) {
@@ -1105,33 +872,16 @@ Just speak naturally - I understand variations of these commands!`,
       if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
         sessionVoiceRecordingService.onUserSpeechStart();
       }
-
-      // Also notify Jekyll recording if active and enabled
-      if (import.meta.env.VITE_ENABLE_JEKYLL_VOICE_RECORDING === 'true' &&
-          jekyllRecording?.isRecording &&
-          currentAgent.id === 'Agent_Jekyll') {
-        jekyllVoiceRecordingService.onUserSpeechStart();
-      }
     } else {
       // User stopped speaking - stop capturing audio
       if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
         sessionVoiceRecordingService.onUserSpeechStop();
       }
 
-      // Also notify Jekyll recording if active and enabled
-      if (import.meta.env.VITE_ENABLE_JEKYLL_VOICE_RECORDING === 'true' &&
-          jekyllRecording?.isRecording &&
-          currentAgent.id === 'Agent_Jekyll') {
-        jekyllVoiceRecordingService.onUserSpeechStop();
-      }
+      // Session recording is managed by sessionVoiceRecordingService
+      // State updates happen automatically via the service
     }
-
-    // Update session recording state for UI (if enabled and recording)
-    if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true' &&
-        sessionVoiceRecordingService.isRecording()) {
-      setSessionRecording(sessionVoiceRecordingService.getState());
-    }
-  }, [speechDetection.isUserSpeaking, jekyllRecording?.isRecording, currentAgent.id]);
+  }, [speechDetection.isUserSpeaking]);
 
   // Close header menu when clicking outside
   useEffect(() => {
@@ -1199,16 +949,6 @@ Just speak naturally - I understand variations of these commands!`,
       } else {
         console.log('❌ Jekyll agent disabled');
       }
-
-      // Register Vocalist agent with humor level context
-      const humorAwareVocalistAgent = {
-        ...vocalistAgent,
-        systemMessage: vocalistAgent.systemMessage.replace(
-          /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
-          ''
-        ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
-      };
-      agentOrchestrationService.registerAgent(humorAwareVocalistAgent);
 
       // Register Tars as the root orchestration agent using abstracted configuration
       const tarsRootAgent = createTarsAgent({
@@ -1326,31 +1066,6 @@ Just speak naturally - I understand variations of these commands!`,
 
           console.log('🎯 Tool result:', JSON.stringify(result, null, 2));
 
-          // Check if this is a voice evaluation consent response with a story
-          if (functionName === 'request-voice-evaluation-consent' && result.result?.consentGiven && result.result?.story) {
-            console.log('🎙️ ========================================');
-            console.log('🎙️ VOICE EVALUATION CONSENT GIVEN');
-            console.log('🎙️ Story title:', result.result.story.title);
-            console.log('🎙️ Story length:', result.result.story.content.length, 'chars');
-            console.log('🎙️ ========================================');
-            setJekyllStory(result.result.story);
-
-            // Interrupt any ongoing agent response so the user can start reading immediately
-            console.log('🛑 Interrupting agent response to show story');
-            try {
-              await agentService.interruptResponse();
-              console.log('✅ Agent response interrupted successfully');
-            } catch (error) {
-              console.error('❌ Failed to interrupt agent response:', error);
-            }
-
-            // Story will be displayed in the UI overlay during recording
-          } else if (functionName === 'request-voice-evaluation-consent' && result.result?.consentGiven === false) {
-            console.log('🎙️ Voice evaluation consent declined');
-            // Clear any story
-            setJekyllStory(null);
-          }
-
           if (result.isAgentSwitch) {
             // This is an agent switch - update the session
             console.log('🔄 ========================================');
@@ -1361,26 +1076,6 @@ Just speak naturally - I understand variations of these commands!`,
             if (result.switchConfig && result.targetAgentId) {
               // Helper function to perform the actual agent switch
               const performAgentSwitch = async () => {
-                // Stop Jekyll recording if switching away from Jekyll agent
-                if (currentAgent.id === 'jekyll' && result.targetAgentId !== 'Agent_Jekyll') {
-                  console.log('🎙️ Switching away from Jekyll - stopping voice recording');
-                  if (jekyllRecording?.isRecording) {
-                    try {
-                      const recordingResult = await jekyllVoiceRecordingService.stopRecording(true);
-                      console.log('🎙️ Jekyll recording saved:', recordingResult);
-                      setJekyllRecording(null);
-                      setJekyllStory(null); // Clear the story overlay
-                      announceToScreenReader('Voice recording saved');
-                    } catch (error) {
-                      console.error('❌ Failed to save Jekyll recording:', error);
-                      // Cancel the recording if save fails
-                      jekyllVoiceRecordingService.cancelRecording();
-                      setJekyllRecording(null);
-                      setJekyllStory(null); // Clear the story overlay
-                    }
-                  }
-                }
-
                 // Convert tools to Realtime API format
                 const realtimeTools = agentOrchestrationService.convertToRealtimeTools(result.switchConfig!.tools);
 
@@ -1391,27 +1086,8 @@ Just speak naturally - I understand variations of these commands!`,
                 const agentDisplayName =
                   targetAgentId === 'Agent_Matron' ? 'Matron' :
                   targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
-                  targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
                   'Agent';
-
-                // For Vocalist agent, interrupt any ongoing response BEFORE showing UI
-                if (targetAgentId === 'Agent_Vocalist') {
-                  console.log('🎤 Vocalist switch - checking for active response');
-                  // Only interrupt if there's actually a response in progress
-                  if (!agentService.canUpdateVoice()) {
-                    console.log('🎤 Active response detected - interrupting');
-                    try {
-                      await agentService.interruptResponse();
-                      // Wait for interruption to complete
-                      await new Promise(resolve => setTimeout(resolve, 200));
-                    } catch (error) {
-                      console.warn('⚠️ Could not interrupt response:', error);
-                    }
-                  } else {
-                    console.log('🎤 No active response - proceeding with switch');
-                  }
-                }
 
                 // Start transition animation - fade out current agent
                 setPreviousAgent(currentAgent.name);
@@ -1441,11 +1117,6 @@ Just speak naturally - I understand variations of these commands!`,
                   setIsAgentTransitioning(false);
                 }, 400);
 
-                // Jekyll agent: Voice recording now starts when story is displayed (see useEffect below)
-                // Note: For Vocalist agent, the recording UI will be shown when the agent
-                // calls the 'start-vocalist-recording' tool (after explaining the exercise)
-                // This allows the agent to introduce themselves and explain before showing the UI
-
                 // Determine agent voice using role-based mapping
                 const agentVoice = getAgentVoice(targetAgentId, azureSettings.voice);
 
@@ -1461,15 +1132,12 @@ Just speak naturally - I understand variations of these commands!`,
                   tools: realtimeTools
                 };
 
-                // Only update voice if safe to do so
-                // Skip voice update for Vocalist (recording UI takes over) or if assistant is speaking
-                const shouldUpdateVoice = targetAgentId !== 'Agent_Vocalist' && agentService.canUpdateVoice();
+                // Update voice if it's safe to do so
+                const shouldUpdateVoice = agentService.canUpdateVoice();
 
                 if (shouldUpdateVoice) {
                   updatedConfig.voice = agentVoice;
                   console.log(`🎤 Updating session with voice: ${agentVoice}`);
-                } else if (targetAgentId === 'Agent_Vocalist') {
-                  console.log('🎤 Vocalist agent - skipping voice update (recording UI takes over)');
                 } else {
                   console.log('⚠️ Skipping voice update - assistant audio is active');
                 }
@@ -1488,7 +1156,6 @@ Just speak naturally - I understand variations of these commands!`,
                 const targetAgentName =
                   result.targetAgentId === 'Agent_Matron' ? 'Matron' :
                   result.targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
-                  result.targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   'agent';
                 console.log(`⏱️ Delaying ${targetAgentName} handoff by ${HANDOFF_DELAY_MS}ms to allow announcement...`);
                 setTimeout(() => {
@@ -1509,22 +1176,6 @@ Just speak naturally - I understand variations of these commands!`,
             }
           }
 
-          // Handle Vocalist recording tool
-          if (functionName === 'start-vocalist-recording' && result.result?.success) {
-            console.log('🎤 ========================================');
-            console.log('🎤 START RECORDING TOOL CALLED');
-            console.log('🎤 Content Type:', result.result.contentType);
-            console.log('🎤 ========================================');
-
-            // Pause the Realtime API session to prevent user speech from being captured
-            console.log('🎤 Pausing Realtime API session during vocalist recording');
-            agentService.pauseSession();
-
-            // NOW show the recording UI (triggered by the agent's tool call)
-            setIsVocalistRecording(true);
-            setVocalistContentType(result.result.contentType || 'lyrics');
-          }
-
           // Not an agent switch - return the tool result
           return result.result;
 
@@ -1541,46 +1192,6 @@ Just speak naturally - I understand variations of these commands!`,
         const conversationSessionId = sessionStorage.getItem('chat-session-id') || undefined;
 
         switch (functionName) {
-          case 'invoke-phq2':
-            // Start PHQ-2 assessment - this initializes both phqAssessmentService and phqSessionService
-            console.log('📋 ========================================');
-            console.log('� FUNCTION CALL: invoke-phq2');
-            console.log('📋 Conversation session:', conversationSessionId);
-            console.log('📋 ========================================');
-            handlePhqAssessmentStart('PHQ-2');
-            const phq2 = phqAssessmentService.getCurrentAssessment();
-            const phq2Question = phqAssessmentService.getNextQuestion();
-            return {
-              success: true,
-              assessmentId: phq2?.assessmentId,
-              type: 'phq2',
-              totalQuestions: 2,
-              currentQuestionNumber: phq2Question?.questionNumber || 1,
-              questionText: phq2Question?.questionText,
-              responseScale: phqAssessmentService.getResponseScale(),
-              sessionId: conversationSessionId
-            };
-
-          case 'invoke-phq9':
-            // Start PHQ-9 assessment - this initializes both phqAssessmentService and phqSessionService
-            console.log('📋 ========================================');
-            console.log('� FUNCTION CALL: invoke-phq9');
-            console.log('📋 Conversation session:', conversationSessionId);
-            console.log('📋 ========================================');
-            handlePhqAssessmentStart('PHQ-9');
-            const phq9 = phqAssessmentService.getCurrentAssessment();
-            const phq9Question = phqAssessmentService.getNextQuestion();
-            return {
-              success: true,
-              assessmentId: phq9?.assessmentId,
-              type: 'phq9',
-              totalQuestions: 9,
-              currentQuestionNumber: phq9Question?.questionNumber || 1,
-              questionText: phq9Question?.questionText,
-              responseScale: phqAssessmentService.getResponseScale(),
-              sessionId: conversationSessionId
-            };
-
           case 'pause-session':
             console.log('Pausing session...');
             pauseSession();
@@ -1629,7 +1240,6 @@ Just speak naturally - I understand variations of these commands!`,
         const userId = authenticatedUserId || getUserId();
         try {
           await sessionVoiceRecordingService.startSessionRecording(sessionId, userId);
-          setSessionRecording(sessionVoiceRecordingService.getState());
           console.log('✅ Session voice recording started');
         } catch (error) {
           console.error('❌ Failed to start session voice recording:', error);
@@ -1680,7 +1290,6 @@ Just speak naturally - I understand variations of these commands!`,
             console.log(`   Total duration: ${result.totalDuration.toFixed(1)}s`);
             console.log(`   Captured speech: ${result.capturedDuration.toFixed(1)}s`);
           }
-          setSessionRecording(null);
         } catch (error) {
           console.error('❌ Failed to save session recording:', error);
         }
@@ -1713,10 +1322,6 @@ Just speak naturally - I understand variations of these commands!`,
         isActive: false,
         isTyping: false
       });
-
-      // Clear any vocalist state
-      setIsVocalistRecording(false);
-      setVocalistContentType('lyrics');
 
       // Clear current AI transcript
       setCurrentAITranscript('');
@@ -1782,57 +1387,6 @@ Just speak naturally - I understand variations of these commands!`,
     }
   };
 
-  // Vocalist recording handlers
-  const handleVocalistRecordingComplete = async (audioBlob: Blob, duration: number) => {
-    console.log('🎤 Recording completed:', duration, 'seconds');
-
-    try {
-      // Upload audio file to blob storage
-      const formData = new FormData();
-      formData.append('file', audioBlob, `vocalist-${authenticatedUserId}-${Date.now()}.wav`);
-      formData.append('userId', authenticatedUserId);
-      formData.append('duration', duration.toString());
-
-      const uploadUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/upload-audio`;
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload audio file');
-      }
-
-      const uploadResult = await uploadResponse.json();
-      console.log('🎤 Audio uploaded:', uploadResult);
-
-      // Resume the Realtime API session
-      console.log('🎤 Resuming Realtime API session after vocalist recording');
-      agentService.resumeSession();
-
-      // Close recording UI
-      setIsVocalistRecording(false);
-
-      // Notify the agent about successful recording
-      announceToScreenReader('Recording uploaded successfully');
-
-    } catch (error) {
-      console.error('🎤 Error handling recording:', error);
-      announceToScreenReader('Failed to process recording');
-    }
-  };
-
-  const handleVocalistRecordingCancel = () => {
-    console.log('🎤 Recording cancelled');
-
-    // Resume the Realtime API session
-    console.log('🎤 Resuming Realtime API session after cancel');
-    agentService.resumeSession();
-
-    setIsVocalistRecording(false);
-    announceToScreenReader('Recording cancelled');
-  };
-
   // Agent handoff not needed for single GPT-Realtime agent
   // const manualAgentHandoff = async (targetAgent: string) => {
   //   // Not applicable for single agent model
@@ -1842,16 +1396,6 @@ Just speak naturally - I understand variations of these commands!`,
     // Cleanup transcript service
     chatTranscriptService.cleanup();
     // Note: phqProgressService no longer used - phqAssessmentService handles all PHQ tracking
-
-    // Stop Jekyll recording if active
-    if (jekyllRecording?.isRecording) {
-      console.log('🎙️ Cleaning up Jekyll recording');
-      try {
-        await jekyllVoiceRecordingService.stopRecording(true);
-      } catch (error) {
-        console.error('❌ Failed to stop Jekyll recording during cleanup:', error);
-      }
-    }
 
     await agentService.destroy();
     if (voiceActivityIntervalRef.current) {
@@ -1997,12 +1541,8 @@ Just speak naturally - I understand variations of these commands!`,
                   ? 'bg-blue-600'
                   : currentAgent.id === 'matron'
                   ? 'bg-green-600'
-                  : currentAgent.id === 'phq2'
-                  ? 'bg-purple-600'
-                  : currentAgent.id === 'phq9'
-                  ? 'bg-indigo-700'
-                  : currentAgent.id === 'vocalist'
-                  ? 'bg-pink-600'
+                  : currentAgent.id === 'jekyll'
+                  ? 'bg-teal-600'
                   : 'bg-gray-400'
             }`}>
               {currentAgent.id === 'tars' ? (
@@ -2018,20 +1558,6 @@ Just speak naturally - I understand variations of these commands!`,
                 }`}>
                   ➕
                 </span>
-              ) : currentAgent.id === 'phq2' ? (
-                <ClipboardList
-                  className={`text-white transition-transform duration-300 ${
-                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
-                  }`}
-                  size={20}
-                />
-              ) : currentAgent.id === 'phq9' ? (
-                <FileText
-                  className={`text-white transition-transform duration-300 ${
-                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
-                  }`}
-                  size={20}
-                />
               ) : (
                 <Bot
                   className={`text-white transition-transform duration-300 ${
@@ -2072,42 +1598,6 @@ Just speak naturally - I understand variations of these commands!`,
             </h1>
             <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
               <span>Active Agent</span>
-
-              {/* Jekyll Recording Indicator */}
-              {currentAgent.id === 'jekyll' && jekyllRecording && (
-                <div className={`flex items-center space-x-2 px-2 py-1 rounded ${
-                  jekyllRecording.isRecording
-                    ? 'bg-red-100 dark:bg-red-900/30'
-                    : jekyllRecording.isSaving
-                      ? 'bg-yellow-100 dark:bg-yellow-900/30'
-                      : jekyllRecording.error
-                        ? 'bg-red-100 dark:bg-red-900/30'
-                        : 'bg-green-100 dark:bg-green-900/30'
-                }`}>
-                  {jekyllRecording.isRecording ? (
-                    <>
-                      <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                      <span className={`text-xs font-medium ${
-                        jekyllRecording.hasMinimumDuration
-                          ? 'text-green-700 dark:text-green-300'
-                          : 'text-red-700 dark:text-red-300'
-                      }`}>
-                        Recording: {Math.floor(jekyllRecording.capturedDuration)}s speech / {Math.floor(jekyllRecording.totalDuration)}s total
-                      </span>
-                    </>
-                  ) : jekyllRecording.isSaving ? (
-                    <>
-                      <Activity size={12} className="text-yellow-600 animate-spin" />
-                      <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300">Saving...</span>
-                    </>
-                  ) : jekyllRecording.error ? (
-                    <>
-                      <AlertTriangle size={12} className="text-red-600" />
-                      <span className="text-xs font-medium text-red-700 dark:text-red-300">{jekyllRecording.error}</span>
-                    </>
-                  ) : null}
-                </div>
-              )}
 
               {/* Connection Status */}
               <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
@@ -2552,29 +2042,15 @@ Just speak naturally - I understand variations of these commands!`,
         </div>
       )}
 
-      {/* Vocalist Recording UI */}
-      {isVocalistRecording && (
-        <div className="absolute inset-0 z-40 bg-white dark:bg-gray-900 p-4 overflow-y-auto">
-          <VocalistRecorder
-            userId={authenticatedUserId}
-            contentType={vocalistContentType}
-            onRecordingComplete={handleVocalistRecordingComplete}
-            onCancel={handleVocalistRecordingCancel}
-          />
-        </div>
-      )}
-
       {/* Content Area - Toggle between Orb View and Traditional Message View */}
       {viewMode === 'orb' ? (
         // 3D Orb View
         <div className="flex-1 overflow-hidden relative border-none orb-view-container">
-          <div style={{ opacity: jekyllStory ? 0 : 1, transition: 'opacity 0.3s ease-in-out' }}>
-            <AudioVisualizerBlob
-              isAgentSpeaking={speechDetection.isAISpeaking}
-              agentId={currentAgent.id}
-              onVocalize={handleAgentVocalization}
-            />
-          </div>
+          <AudioVisualizerBlob
+            isAgentSpeaking={speechDetection.isAISpeaking}
+            agentId={currentAgent.id}
+            onVocalize={handleAgentVocalization}
+          />
           {showCaptions && (
             <ClosedCaptions
               captions={messages
@@ -2588,49 +2064,6 @@ Just speak naturally - I understand variations of these commands!`,
                 }))}
               maxCaptions={3}
             />
-          )}
-
-          {/* Jekyll Story Overlay - Shown during voice recording */}
-          {jekyllStory && (
-            <div className="absolute inset-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 animate-fade-in">
-              <div className="max-w-3xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-2xl p-8 space-y-6 overflow-y-auto max-h-[80vh]">
-                <div className="text-center space-y-4">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{jekyllStory.title}</h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Please read this story aloud at a comfortable pace.
-                  </p>
-                </div>
-                <div className="prose prose-lg dark:prose-invert max-w-none">
-                  <p className="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-                    {jekyllStory.content}
-                  </p>
-                </div>
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  {jekyllCountdownPhase === 'waiting' && (
-                    <div className="flex items-center space-x-3 text-lg font-semibold text-blue-600 dark:text-blue-400">
-                      <Activity className="animate-spin" size={24} />
-                      <span>Listening to Jekyll's instructions...</span>
-                    </div>
-                  )}
-                  {jekyllCountdownPhase === 'prep' && (
-                    <div className="flex items-center space-x-3 text-3xl font-bold text-orange-600 dark:text-orange-400">
-                      <span className="animate-pulse">{jekyllCountdown}</span>
-                    </div>
-                  )}
-                  {jekyllCountdownPhase === 'recording' && (
-                    <>
-                      <div className="flex items-center space-x-3 text-lg font-semibold text-red-600 dark:text-red-400">
-                        <Mic className="animate-pulse" size={24} />
-                        <span>Recording... {jekyllCountdown}s remaining</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span>Story will close automatically when recording completes</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
           )}
         </div>
       ) : (
@@ -2675,12 +2108,6 @@ Just speak naturally - I understand variations of these commands!`,
                       <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                     ) : message.agentId === 'matron' ? (
                       <Plus size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
-                    ) : message.agentId === 'phq2' ? (
-                      <ClipboardList size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
-                    ) : message.agentId === 'phq9' ? (
-                    <FileText size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
-                  ) : message.agentId === 'vocalist' ? (
-                    <Mic size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : message.agentId === 'jekyll' ? (
                     <MessageSquare size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : (
@@ -2690,9 +2117,6 @@ Just speak naturally - I understand variations of these commands!`,
                     {message.agentId ?
                       message.agentId === 'tars' ? 'Tars' :
                       message.agentId === 'matron' ? 'Matron' :
-                      message.agentId === 'phq2' ? 'PHQ-2' :
-                      message.agentId === 'phq9' ? 'PHQ-9' :
-                      message.agentId === 'vocalist' ? 'Vocalist' :
                       message.agentId === 'jekyll' ? 'Jekyll' :
                       currentAgent.name
                       : currentAgent.name

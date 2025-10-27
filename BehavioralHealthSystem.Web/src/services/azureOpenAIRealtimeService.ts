@@ -158,40 +158,10 @@ export interface SessionStatus {
 }
 
 /**
- * Standard tool definitions for PHQ assessments and session control
+ * Standard tool definitions for session control
  * These must be registered with the Azure OpenAI Realtime API session
  */
 export const REALTIME_TOOLS: ToolDefinition[] = [
-  {
-    type: 'function',
-    name: 'invoke-phq2',
-    description: 'Initiates a PHQ-2 (Patient Health Questionnaire-2) depression screening. This is a quick 2-question assessment used for initial screening. Call this when the user wants to START, BEGIN, TAKE, DO, COMMENCE, COMPLETE, or INITIATE a PHQ-2 assessment, quick mental health screening, or brief depression check. Recognize phrases like: "start PHQ-2", "begin the screening", "take a quick assessment", "do the PHQ-2", "I want to complete a mental health check".',
-    parameters: {
-      type: 'object',
-      properties: {
-        reason: {
-          type: 'string',
-          description: 'Brief reason for initiating the assessment (e.g., "User requested quick screening", "Follow-up check")'
-        }
-      },
-      required: []
-    }
-  },
-  {
-    type: 'function',
-    name: 'invoke-phq9',
-    description: 'Initiates a PHQ-9 (Patient Health Questionnaire-9) comprehensive depression assessment. This is a detailed 9-question evaluation. Call this when the user wants to START, BEGIN, TAKE, DO, COMMENCE, COMPLETE, or INITIATE a PHQ-9 assessment, full mental health evaluation, or comprehensive depression screening. Recognize phrases like: "start the PHQ-9", "begin the full assessment", "take the comprehensive screening", "do the depression evaluation", "I want to complete the mental health assessment".',
-    parameters: {
-      type: 'object',
-      properties: {
-        reason: {
-          type: 'string',
-          description: 'Brief reason for initiating the assessment (e.g., "User requested full assessment", "Detailed evaluation needed")'
-        }
-      },
-      required: []
-    }
-  },
   {
     type: 'function',
     name: 'pause-session',

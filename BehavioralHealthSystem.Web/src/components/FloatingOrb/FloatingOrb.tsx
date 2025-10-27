@@ -65,7 +65,21 @@ export const FloatingOrb: React.FC<FloatingOrbProps> = ({
     scene.add(group);
     groupRef.current = group;
 
-    const ballGeometry = new THREE.IcosahedronGeometry(7, 6);
+    // Use different geometry based on agent
+    let ballGeometry: THREE.BufferGeometry;
+    if (agentId === 'jekyll') {
+      // Create upside-down pyramid/triangle for Jekyll
+      // Using cone geometry with point facing down
+      console.log('🔺 Creating PYRAMID geometry for Jekyll agent');
+      ballGeometry = new THREE.ConeGeometry(7, 14, 32, 6);
+      // Rotate so point faces down
+      ballGeometry.rotateX(Math.PI);
+    } else {
+      // Default sphere for other agents
+      console.log('⚪ Creating SPHERE geometry for agent:', agentId);
+      ballGeometry = new THREE.IcosahedronGeometry(7, 6);
+    }
+
     const ballColor = getAgentColor(agentId);
     const ballMaterial = new THREE.MeshLambertMaterial({
       color: ballColor,

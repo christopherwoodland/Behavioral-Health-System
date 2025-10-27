@@ -1070,6 +1070,61 @@ export class AzureOpenAIRealtimeService {
   }
 
   /**
+   * Disable turn detection (VAD) - agent will not automatically respond to user speech
+   * Use this when you want the user to speak without triggering agent responses
+   */
+  public disableTurnDetection(): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Data channel not open, cannot disable turn detection');
+      return;
+    }
+
+    const event = {
+      type: 'session.update',
+      session: {
+        turn_detection: null
+      }
+    };
+
+    try {
+      this.dataChannel.send(JSON.stringify(event));
+      console.log('🔇 Turn detection disabled - agent will not respond to user speech');
+    } catch (error) {
+      console.error('❌ Failed to disable turn detection:', error);
+    }
+  }
+
+  /**
+   * Enable turn detection (VAD) - agent will automatically respond to user speech
+   * Restores the default turn detection settings
+   */
+  public enableTurnDetection(): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Data channel not open, cannot enable turn detection');
+      return;
+    }
+
+    const event = {
+      type: 'session.update',
+      session: {
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.5,
+          prefix_padding_ms: 200,
+          silence_duration_ms: 300
+        }
+      }
+    };
+
+    try {
+      this.dataChannel.send(JSON.stringify(event));
+      console.log('🔊 Turn detection enabled - agent will respond to user speech');
+    } catch (error) {
+      console.error('❌ Failed to enable turn detection:', error);
+    }
+  }
+
+  /**
    * Play remote audio from AI
    */
   private playRemoteAudio(): void {
@@ -1593,6 +1648,28 @@ export class AzureOpenAIRealtimeService {
     } catch (error) {
       console.error('❌ Failed to interrupt response:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Clear input audio buffer
+   * Discards any pending user audio that hasn't been processed yet
+   */
+  public clearInputAudioBuffer(): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Data channel not open, cannot clear input audio buffer');
+      return;
+    }
+
+    const event = {
+      type: 'input_audio_buffer.clear'
+    };
+
+    try {
+      this.dataChannel.send(JSON.stringify(event));
+      console.log('🗑️ Input audio buffer cleared - pending user audio discarded');
+    } catch (error) {
+      console.error('❌ Failed to clear input audio buffer:', error);
     }
   }
 

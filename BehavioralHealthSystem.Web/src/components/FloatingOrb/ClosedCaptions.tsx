@@ -36,12 +36,6 @@ export const ClosedCaptions: React.FC<ClosedCaptionsProps> = ({
         return 'Tars';
       case 'matron':
         return 'Matron';
-      case 'phq2':
-        return 'PHQ-2';
-      case 'phq9':
-        return 'PHQ-9';
-      case 'vocalist':
-        return 'Vocalist';
       case 'jekyll':
         return 'Jekyll';
       default:
@@ -55,12 +49,6 @@ export const ClosedCaptions: React.FC<ClosedCaptionsProps> = ({
         return 'speaker-tars';
       case 'matron':
         return 'speaker-matron';
-      case 'phq2':
-        return 'speaker-phq2';
-      case 'phq9':
-        return 'speaker-phq9';
-      case 'vocalist':
-        return 'speaker-vocalist';
       case 'jekyll':
         return 'speaker-jekyll';
       default:

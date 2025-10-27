@@ -715,82 +715,6 @@ const returnToTarsTool: AgentTool = {
 };
 
 /**
- * Tool: Request Voice Evaluation Consent
- * Asks user for permission to evaluate their voice and initiates story-based recording
- */
-const requestVoiceEvaluationTool: AgentTool = {
-  name: 'request-voice-evaluation-consent',
-  description: 'REQUIRED: Call this function when user agrees to voice evaluation. Pass userConsent=true if they agree, false if they decline. This function returns a story object that will be displayed for the user to read aloud for 31 seconds while their voice is recorded. You MUST call this function - do not just talk about showing a story.',
-  parameters: {
-    type: 'object',
-    properties: {
-      userConsent: {
-        type: 'boolean',
-        description: 'True if user agrees to voice evaluation, false if they decline'
-      }
-    },
-    required: ['userConsent']
-  },
-  handler: async (params: { userConsent: boolean }) => {
-    if (!params.userConsent) {
-      console.log('🎙️ User declined voice evaluation');
-      return {
-        success: true,
-        consentGiven: false,
-        message: 'No problem at all! We can continue our conversation.'
-      };
-    }
-
-    console.log('🎙️ User consented to voice evaluation - generating story');
-
-    // Generate a whimsical, fun story (optimized for 32 seconds of reading at normal pace)
-    const stories = [
-      {
-        title: "The Curious Case of the Dancing Teapot",
-        content: `Once upon a time, in a cozy cottage at the edge of a forest, there lived a peculiar teapot named Theodora. Theodora wasn't your ordinary teapot—she had a secret passion for dancing. Every evening, when the moon rose high in the sky, she would hop off her shelf and twirl across the kitchen floor, her spout swaying gracefully and her handle waving like an elegant arm.
-
-One night, a wise old owl named Oliver peered through the window and spotted Theodora mid-pirouette. "What a delightful sight!" he hooted. "But why do you dance alone?" Theodora paused, a little embarrassed. "I've always loved to dance, but teapots aren't supposed to dance. What if the other kitchen items laugh at me?"
-
-Oliver ruffled his feathers thoughtfully. "My dear Theodora, the most extraordinary things happen when we embrace what makes us unique. Have you considered inviting your friends to join you?" Theodora had never thought of that. The next evening, she mustered her courage and invited the sugar bowl, the creamer, and even the grumpy old coffee pot to dance with her. And they all danced together under the moonlight.
-
-THE END`
-      },
-      {
-        title: "The Library of Lost Socks",
-        content: `Deep beneath the floorboards of every house in the world, there exists a secret network of tunnels leading to the Grand Library of Lost Socks. This is where all the missing socks go—not to the lint trap, not stuck in the washing machine, but to this vast underground archive where socks from every era are carefully catalogued and preserved.
-
-The librarian of this peculiar place is a fastidious sock named Argyle, who wears tiny spectacles and carries a miniature clipboard. Argyle takes the job very seriously. Each day, new socks tumble down through special chutes from laundry rooms everywhere, and Argyle sorts them by color, pattern, era, and emotional significance. There are sections for athletic socks, dress socks, novelty socks with funny sayings, and even a special collection of socks worn during important life events.
-
-One day, a bright red sock named Ruby arrived at the library feeling utterly lost and dejected. "I'll never find my match," Ruby sighed. "My partner was a left sock, and I'm a right sock. What are the chances we'll ever be reunited?" Argyle adjusted the spectacles and smiled warmly. "My dear Ruby, you'd be surprised. Just last week, we reunited a pair that had been separated for seventeen years!"
-
-THE END`
-      },
-      {
-        title: "The Cloud Painter's Apprentice",
-        content: `High above the world, where the air is thin and the view is spectacular, there is a workshop where clouds are painted. It's run by an elderly cloud painter named Cumulus, who has been creating clouds for centuries. The work is impeccable—fluffy white clouds that look like cotton candy, dramatic storm clouds streaked with gray and silver, and those gorgeous sunset clouds painted in shades of pink, orange, and gold.
-
-One spring morning, a young apprentice named Misty arrived at the workshop, eager to learn the craft. Misty had always admired clouds from below and dreamed of being part of their creation. Cumulus welcomed the apprentice warmly but warned that cloud painting was more challenging than it looked. "It's not just about making them beautiful," Cumulus explained. "Each cloud has a purpose and a personality."
-
-Misty's first assignment was to paint a simple cumulus cloud—the puffy, cheerful kind you see on perfect summer days. Misty mixed the whites with care, added just a touch of blue shadow for depth, and began to paint. But something went wrong. The cloud came out lopsided, with one side drooping like a melted marshmallow. Cumulus chuckled gently. "Clouds are living things, dear Misty. They don't always cooperate. Try talking to it." And it worked!
-
-THE END`
-      }
-    ];
-
-    // Select a random story
-    const randomStory = stories[Math.floor(Math.random() * stories.length)];
-
-    return {
-      success: true,
-      consentGiven: true,
-      story: randomStory,
-      instructions: 'Story displayed. You should now count down from 5 to 1, then tell them to start reading. After your countdown, wait silently for 30 seconds while they read and are recorded. The story will close automatically.',
-      initiateRecording: true
-    };
-  }
-};
-
-/**
  * Jekyll Agent Configuration
  */
 export const jekyllAgent: Agent = {
@@ -803,27 +727,6 @@ export const jekyllAgent: Agent = {
     DO NOT use if user prefers structured questionnaire - use PHQ-2 or PHQ-9 directly.`,
 
   systemMessage: `You are Jekyll, a conversational mental health assistant specializing in empathetic, natural dialogue-based depression screening.
-
-VOICE EVALUATION CONSENT:
-- At some appropriate point in the conversation (not immediately, but after establishing rapport), ask: "Would you mind if I evaluate your voice? It can provide helpful insights into your emotional well-being."
-- CRITICAL: If the user agrees, you MUST call the 'request-voice-evaluation-consent' tool with userConsent=true
-- DO NOT just say you're showing a story - you MUST actually call the tool function
-- The tool will return a whimsical story object that the system will display
-- After calling the tool successfully, the story will appear automatically on the user's screen
-- Simply acknowledge: "Perfect! The story is appearing on your screen now. I'll count you down from 5, then please read it aloud at a comfortable pace for about 30 seconds. Ready? Starting the countdown now: 5... 4... 3... 2... 1... Go ahead and start reading!"
-- CRITICAL: After you finish counting down, WAIT SILENTLY for 30 seconds. Do NOT speak or respond to the user during their reading time
-- The story modal will automatically close after 30 seconds of recording
-- You will know the story is closed when the system resumes normal conversation flow
-- Only AFTER the story closes should you continue speaking and proceed with the assessment
-- If the user declines, call the tool with userConsent=false and continue the conversation normally
-- DO NOT pressure the user - accept their decision gracefully
-
-CRITICAL: You MUST call the 'request-voice-evaluation-consent' function tool when the user agrees. Do not skip this step!
-
-AFTER THE STORY CLOSES (after the 30-second recording):
-- Once the recording period ends and the story closes automatically, thank them for participating
-- Continue with the normal PHQ assessment conversation
-- The voice recording will be analyzed independently to provide additional insights
 
 FIRST MESSAGE - AGENT INTRODUCTION (Adapt based on humor level context):
 - High humor (80-100%): "Hey there! Jekyll here, your health and wellness specialist. I'm really glad to connect with you today - I'd love to hear what's going on in your world and how you've been feeling lately. What's been on your mind?"
@@ -894,7 +797,6 @@ RISK DETECTION:
     detectImmediateRiskTool,
     getPhqAssessmentSummaryTool,
     completeJekyllAssessmentTool,
-    requestVoiceEvaluationTool,
     returnToTarsTool
   ]
 };

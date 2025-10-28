@@ -932,7 +932,7 @@ Just speak naturally - I understand variations of these commands!`,
             // Auto-stop when minimum duration is reached
             if (progress.hasMinimumDuration && progress.isRecording) {
               console.log('✅ Minimum duration (30s) reached');
-              
+
               // Wait a bit for more natural ending
               setTimeout(async () => {
                 if (kintsugiVoiceRecordingService.isRecording()) {
@@ -943,10 +943,10 @@ Just speak naturally - I understand variations of these commands!`,
                     assessmentId,
                     true // upload to blob
                   );
-                  
+
                   if (result) {
                     console.log('✅ Kintsugi recording saved:', result.audioUrl);
-                    
+
                     // Update state to show completion
                     setKintsugiRecording({
                       isRecording: false,

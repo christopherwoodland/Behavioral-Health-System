@@ -39,7 +39,7 @@ class KintsugiVoiceRecordingService {
   private startTime: number = 0;
   private durationInterval: NodeJS.Timeout | null = null;
   private progressCallback: ((progress: KintsugiRecordingProgress) => void) | null = null;
-  
+
   // Configuration
   private readonly MIN_DURATION_SECONDS = 30; // Minimum required duration
   private readonly RECORDING_OPTIONS = {

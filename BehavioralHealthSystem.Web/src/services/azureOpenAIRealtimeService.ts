@@ -267,6 +267,7 @@ export class AzureOpenAIRealtimeService {
   private lastConfig: RealtimeSessionConfig | null = null;
   private isReconnecting: boolean = false;
   private isConnecting: boolean = false; // Guard flag to prevent concurrent connection attempts
+  private hasInitialGreetingBeenSent: boolean = false; // Prevent duplicate initial greetings
 
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
@@ -543,9 +544,7 @@ export class AzureOpenAIRealtimeService {
       console.log('⏳ Response already in progress, queuing new response request');
       this.pendingResponseQueue.push(() => this.safeCreateResponse(options));
       return;
-    }
-
-    // Send response.create event
+    }    // Send response.create event
     const responseEvent: any = {
       type: 'response.create'
     };
@@ -1079,9 +1078,9 @@ export class AzureOpenAIRealtimeService {
       session: {
         turn_detection: {
           type: 'server_vad',
-          threshold: 0.5,
+          threshold: 0.7, // Increased from 0.5 to reduce false positives from ambient noise
           prefix_padding_ms: 200,
-          silence_duration_ms: 300
+          silence_duration_ms: 500 // Increased from 300ms to require longer pauses
         }
       }
     };
@@ -1518,6 +1517,12 @@ export class AzureOpenAIRealtimeService {
    * Waits for data channel to open, then sends a system message to trigger AI greeting
    */
   async sendInitialGreeting(instructions: string): Promise<void> {
+    // Guard: Prevent duplicate initial greetings
+    if (this.hasInitialGreetingBeenSent) {
+      console.log('⚠️ Initial greeting already sent, skipping duplicate call');
+      return;
+    }
+
     // Wait for data channel to be open
     const waitForDataChannel = (): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -1544,6 +1549,9 @@ export class AzureOpenAIRealtimeService {
       // Wait for data channel to be ready
       await waitForDataChannel();
       console.log('✅ Data channel is ready for initial greeting');
+
+      // Set flag BEFORE sending to prevent race condition if called again quickly
+      this.hasInitialGreetingBeenSent = true;
 
       // Wait to ensure session setup is complete (configurable via env)
       const sessionDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_SESSION_DELAY_MS || '1500', 10);
@@ -1749,6 +1757,9 @@ export class AzureOpenAIRealtimeService {
     // Reset connection flags
     this.isConnecting = false;
     this.isSessionActive = false;
+
+    // Reset initial greeting flag so next session can send greeting
+    this.hasInitialGreetingBeenSent = false;
 
     // Clear response state
     this.isResponseInProgress = false;

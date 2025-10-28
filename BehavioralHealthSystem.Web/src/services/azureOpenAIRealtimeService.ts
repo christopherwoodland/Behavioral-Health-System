@@ -158,40 +158,10 @@ export interface SessionStatus {
 }
 
 /**
- * Standard tool definitions for PHQ assessments and session control
+ * Standard tool definitions for session control
  * These must be registered with the Azure OpenAI Realtime API session
  */
 export const REALTIME_TOOLS: ToolDefinition[] = [
-  {
-    type: 'function',
-    name: 'invoke-phq2',
-    description: 'Initiates a PHQ-2 (Patient Health Questionnaire-2) depression screening. This is a quick 2-question assessment used for initial screening. Call this when the user wants to START, BEGIN, TAKE, DO, COMMENCE, COMPLETE, or INITIATE a PHQ-2 assessment, quick mental health screening, or brief depression check. Recognize phrases like: "start PHQ-2", "begin the screening", "take a quick assessment", "do the PHQ-2", "I want to complete a mental health check".',
-    parameters: {
-      type: 'object',
-      properties: {
-        reason: {
-          type: 'string',
-          description: 'Brief reason for initiating the assessment (e.g., "User requested quick screening", "Follow-up check")'
-        }
-      },
-      required: []
-    }
-  },
-  {
-    type: 'function',
-    name: 'invoke-phq9',
-    description: 'Initiates a PHQ-9 (Patient Health Questionnaire-9) comprehensive depression assessment. This is a detailed 9-question evaluation. Call this when the user wants to START, BEGIN, TAKE, DO, COMMENCE, COMPLETE, or INITIATE a PHQ-9 assessment, full mental health evaluation, or comprehensive depression screening. Recognize phrases like: "start the PHQ-9", "begin the full assessment", "take the comprehensive screening", "do the depression evaluation", "I want to complete the mental health assessment".',
-    parameters: {
-      type: 'object',
-      properties: {
-        reason: {
-          type: 'string',
-          description: 'Brief reason for initiating the assessment (e.g., "User requested full assessment", "Detailed evaluation needed")'
-        }
-      },
-      required: []
-    }
-  },
   {
     type: 'function',
     name: 'pause-session',
@@ -297,6 +267,7 @@ export class AzureOpenAIRealtimeService {
   private lastConfig: RealtimeSessionConfig | null = null;
   private isReconnecting: boolean = false;
   private isConnecting: boolean = false; // Guard flag to prevent concurrent connection attempts
+  private hasInitialGreetingBeenSent: boolean = false; // Prevent duplicate initial greetings
 
   // Event callbacks
   private onMessageCallback: ((message: RealtimeMessage) => void) | null = null;
@@ -573,9 +544,7 @@ export class AzureOpenAIRealtimeService {
       console.log('⏳ Response already in progress, queuing new response request');
       this.pendingResponseQueue.push(() => this.safeCreateResponse(options));
       return;
-    }
-
-    // Send response.create event
+    }    // Send response.create event
     const responseEvent: any = {
       type: 'response.create'
     };
@@ -1070,6 +1039,61 @@ export class AzureOpenAIRealtimeService {
   }
 
   /**
+   * Disable turn detection (VAD) - agent will not automatically respond to user speech
+   * Use this when you want the user to speak without triggering agent responses
+   */
+  public disableTurnDetection(): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Data channel not open, cannot disable turn detection');
+      return;
+    }
+
+    const event = {
+      type: 'session.update',
+      session: {
+        turn_detection: null
+      }
+    };
+
+    try {
+      this.dataChannel.send(JSON.stringify(event));
+      console.log('🔇 Turn detection disabled - agent will not respond to user speech');
+    } catch (error) {
+      console.error('❌ Failed to disable turn detection:', error);
+    }
+  }
+
+  /**
+   * Enable turn detection (VAD) - agent will automatically respond to user speech
+   * Restores the default turn detection settings
+   */
+  public enableTurnDetection(): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Data channel not open, cannot enable turn detection');
+      return;
+    }
+
+    const event = {
+      type: 'session.update',
+      session: {
+        turn_detection: {
+          type: 'server_vad',
+          threshold: 0.7, // Increased from 0.5 to reduce false positives from ambient noise
+          prefix_padding_ms: 200,
+          silence_duration_ms: 500 // Increased from 300ms to require longer pauses
+        }
+      }
+    };
+
+    try {
+      this.dataChannel.send(JSON.stringify(event));
+      console.log('🔊 Turn detection enabled - agent will respond to user speech');
+    } catch (error) {
+      console.error('❌ Failed to enable turn detection:', error);
+    }
+  }
+
+  /**
    * Play remote audio from AI
    */
   private playRemoteAudio(): void {
@@ -1493,6 +1517,12 @@ export class AzureOpenAIRealtimeService {
    * Waits for data channel to open, then sends a system message to trigger AI greeting
    */
   async sendInitialGreeting(instructions: string): Promise<void> {
+    // Guard: Prevent duplicate initial greetings
+    if (this.hasInitialGreetingBeenSent) {
+      console.log('⚠️ Initial greeting already sent, skipping duplicate call');
+      return;
+    }
+
     // Wait for data channel to be open
     const waitForDataChannel = (): Promise<void> => {
       return new Promise((resolve, reject) => {
@@ -1519,6 +1549,9 @@ export class AzureOpenAIRealtimeService {
       // Wait for data channel to be ready
       await waitForDataChannel();
       console.log('✅ Data channel is ready for initial greeting');
+
+      // Set flag BEFORE sending to prevent race condition if called again quickly
+      this.hasInitialGreetingBeenSent = true;
 
       // Wait to ensure session setup is complete (configurable via env)
       const sessionDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_SESSION_DELAY_MS || '1500', 10);
@@ -1593,6 +1626,28 @@ export class AzureOpenAIRealtimeService {
     } catch (error) {
       console.error('❌ Failed to interrupt response:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Clear input audio buffer
+   * Discards any pending user audio that hasn't been processed yet
+   */
+  public clearInputAudioBuffer(): void {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      console.warn('⚠️ Data channel not open, cannot clear input audio buffer');
+      return;
+    }
+
+    const event = {
+      type: 'input_audio_buffer.clear'
+    };
+
+    try {
+      this.dataChannel.send(JSON.stringify(event));
+      console.log('🗑️ Input audio buffer cleared - pending user audio discarded');
+    } catch (error) {
+      console.error('❌ Failed to clear input audio buffer:', error);
     }
   }
 
@@ -1702,6 +1757,9 @@ export class AzureOpenAIRealtimeService {
     // Reset connection flags
     this.isConnecting = false;
     this.isSessionActive = false;
+
+    // Reset initial greeting flag so next session can send greeting
+    this.hasInitialGreetingBeenSent = false;
 
     // Clear response state
     this.isResponseInProgress = false;

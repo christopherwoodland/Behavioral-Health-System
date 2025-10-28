@@ -13,8 +13,6 @@ import {
   AlertTriangle,
   CheckCircle,
   Bot,
-  ClipboardList,
-  FileText,
   Plus,
   Menu,
   X,
@@ -43,8 +41,7 @@ import { agentOrchestrationService } from '@/services/agentOrchestrationService'
 import { createTarsAgent } from '@/agents/tarsAgent';
 import { jekyllAgent } from '@/agents/jekyllAgent';
 import { matronAgent } from '@/agents/matronAgent';
-import { vocalistAgent } from '@/agents/vocalistAgent';
-import { VocalistRecorder } from '@/components/VocalistRecorder';
+import { sessionVoiceRecordingService } from '@/services/sessionVoiceRecordingService';
 import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
@@ -75,7 +72,7 @@ const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === '
 
 /**
  * Get agent-specific color classes for visual differentiation
- * @param agentId - The agent identifier (tars, matron, phq2, phq9, vocalist, jekyll)
+ * @param agentId - The agent identifier (tars, matron, jekyll)
  * @returns Tailwind CSS classes for background and text colors
  */
 const getAgentColor = (agentId?: string): { bg: string; text: string; border: string; outline: string } => {
@@ -97,13 +94,6 @@ const getAgentColor = (agentId?: string): { bg: string; text: string; border: st
         text: 'text-green-900 dark:text-green-100',
         border: 'border-l-4 border-green-500',
         outline: 'border-2 border-green-500 dark:border-green-400'
-      };
-    case 'vocalist':
-      return {
-        bg: 'bg-pink-100 dark:bg-pink-800',
-        text: 'text-pink-900 dark:text-pink-100',
-        border: 'border-l-4 border-pink-500',
-        outline: 'border-2 border-pink-500 dark:border-pink-400'
       };
     case 'jekyll':
       return {
@@ -131,9 +121,6 @@ type VoiceType = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' | 'ver
  * - TARS: echo (robotic, command-oriented)
  * - Jekyll: shimmer (warm, conversational)
  * - Matron: nova (caring, professional)
- * - PHQ-2: alloy (clinical, efficient)
- * - PHQ-9: sage (authoritative, comprehensive)
- * - Vocalist: aria (expressive, dynamic)
  * @param agentId The agent identifier (e.g., 'Agent_Jekyll', 'Agent_Tars')
  * @param fallbackVoice Default voice to use if agent not found
  * @returns Voice string for Azure OpenAI Realtime API
@@ -150,12 +137,6 @@ const getAgentVoice = (agentId: string, fallbackVoice: VoiceType = 'alloy'): Voi
       return (import.meta.env.VITE_JEKYLL_VOICE as VoiceType) || 'shimmer';
     case 'matron':
       return (import.meta.env.VITE_MATRON_VOICE as VoiceType) || 'nova';
-    case 'phq2':
-      return (import.meta.env.VITE_PHQ2_VOICE as VoiceType) || 'alloy';
-    case 'phq9':
-      return (import.meta.env.VITE_PHQ9_VOICE as VoiceType) || 'sage';
-    case 'vocalist':
-      return (import.meta.env.VITE_VOCALIST_VOICE as VoiceType) || 'aria';
     default:
       console.warn(`⚠️ Unknown agent '${agentId}', using fallback voice: ${fallbackVoice}`);
       return fallbackVoice;
@@ -272,9 +253,6 @@ export const RealtimeAgentExperience: React.FC = () => {
   const [conversationState, setConversationState] = useState<ConversationState>({ state: 'idle' });
   const [liveTranscripts, setLiveTranscripts] = useState<LiveTranscript[]>([]);
 
-  // Vocalist recording state
-  const [isVocalistRecording, setIsVocalistRecording] = useState(false);
-  const [vocalistContentType, setVocalistContentType] = useState<'lyrics' | 'story'>('lyrics');
   const [enableInputTranscription, setEnableInputTranscription] = useState(true);
   const [currentAITranscript, setCurrentAITranscript] = useState<string>('');
 
@@ -580,10 +558,6 @@ export const RealtimeAgentExperience: React.FC = () => {
 • "Pause session" - Temporarily pause our conversation
 • "Resume session" - Continue after pausing
 • "Close session" or "End session" - End our conversation
-
-🧠 **Mental Health Assessments:**
-• "Invoke PHQ-9" - Start comprehensive mental health assessment
-• "Invoke PHQ-2" - Start quick mental health screening
 
 💬 **General:**
 • "Help" or "Commands" - Show this help message
@@ -891,6 +865,24 @@ Just speak naturally - I understand variations of these commands!`,
     agentService.muteMicrophone(!isMicInputEnabled);
   }, [isMicInputEnabled]);
 
+  // Handle session-wide voice recording based on user speech detection
+  useEffect(() => {
+    if (speechDetection.isUserSpeaking) {
+      // User started speaking - start capturing audio for session recording (if enabled)
+      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+        sessionVoiceRecordingService.onUserSpeechStart();
+      }
+    } else {
+      // User stopped speaking - stop capturing audio
+      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+        sessionVoiceRecordingService.onUserSpeechStop();
+      }
+
+      // Session recording is managed by sessionVoiceRecordingService
+      // State updates happen automatically via the service
+    }
+  }, [speechDetection.isUserSpeaking]);
+
   // Close header menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -957,16 +949,6 @@ Just speak naturally - I understand variations of these commands!`,
       } else {
         console.log('❌ Jekyll agent disabled');
       }
-
-      // Register Vocalist agent with humor level context
-      const humorAwareVocalistAgent = {
-        ...vocalistAgent,
-        systemMessage: vocalistAgent.systemMessage.replace(
-          /High humor \(80-100%\):|Medium humor \(40-79%\):|Low humor \(0-39%\):/g,
-          ''
-        ) + `\n\nCURRENT HUMOR LEVEL: ${humorLevel}%`
-      };
-      agentOrchestrationService.registerAgent(humorAwareVocalistAgent);
 
       // Register Tars as the root orchestration agent using abstracted configuration
       const tarsRootAgent = createTarsAgent({
@@ -1069,7 +1051,10 @@ Just speak naturally - I understand variations of these commands!`,
       // MULTI-AGENT FUNCTION CALL HANDLER: Routes calls through orchestration service
       // =============================================================================
       agentService.onFunctionCall(async (functionName, args) => {
-        console.log(`🎯 Function called: ${functionName}`, args);
+        console.log('🎯 ========================================');
+        console.log(`🎯 FUNCTION CALLED: ${functionName}`);
+        console.log('🎯 Arguments:', JSON.stringify(args, null, 2));
+        console.log('🎯 ========================================');
 
         try {
           // Route through orchestration service
@@ -1078,6 +1063,8 @@ Just speak naturally - I understand variations of these commands!`,
             { ...args, userId: authenticatedUserId },
             `call-${Date.now()}`
           );
+
+          console.log('🎯 Tool result:', JSON.stringify(result, null, 2));
 
           if (result.isAgentSwitch) {
             // This is an agent switch - update the session
@@ -1099,27 +1086,8 @@ Just speak naturally - I understand variations of these commands!`,
                 const agentDisplayName =
                   targetAgentId === 'Agent_Matron' ? 'Matron' :
                   targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
-                  targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   targetAgentId === 'Agent_Tars' ? 'Tars' :
                   'Agent';
-
-                // For Vocalist agent, interrupt any ongoing response BEFORE showing UI
-                if (targetAgentId === 'Agent_Vocalist') {
-                  console.log('🎤 Vocalist switch - checking for active response');
-                  // Only interrupt if there's actually a response in progress
-                  if (!agentService.canUpdateVoice()) {
-                    console.log('🎤 Active response detected - interrupting');
-                    try {
-                      await agentService.interruptResponse();
-                      // Wait for interruption to complete
-                      await new Promise(resolve => setTimeout(resolve, 200));
-                    } catch (error) {
-                      console.warn('⚠️ Could not interrupt response:', error);
-                    }
-                  } else {
-                    console.log('🎤 No active response - proceeding with switch');
-                  }
-                }
 
                 // Start transition animation - fade out current agent
                 setPreviousAgent(currentAgent.name);
@@ -1149,10 +1117,6 @@ Just speak naturally - I understand variations of these commands!`,
                   setIsAgentTransitioning(false);
                 }, 400);
 
-                // Note: For Vocalist agent, the recording UI will be shown when the agent
-                // calls the 'start-vocalist-recording' tool (after explaining the exercise)
-                // This allows the agent to introduce themselves and explain before showing the UI
-
                 // Determine agent voice using role-based mapping
                 const agentVoice = getAgentVoice(targetAgentId, azureSettings.voice);
 
@@ -1168,15 +1132,12 @@ Just speak naturally - I understand variations of these commands!`,
                   tools: realtimeTools
                 };
 
-                // Only update voice if safe to do so
-                // Skip voice update for Vocalist (recording UI takes over) or if assistant is speaking
-                const shouldUpdateVoice = targetAgentId !== 'Agent_Vocalist' && agentService.canUpdateVoice();
+                // Update voice if it's safe to do so
+                const shouldUpdateVoice = agentService.canUpdateVoice();
 
                 if (shouldUpdateVoice) {
                   updatedConfig.voice = agentVoice;
                   console.log(`🎤 Updating session with voice: ${agentVoice}`);
-                } else if (targetAgentId === 'Agent_Vocalist') {
-                  console.log('🎤 Vocalist agent - skipping voice update (recording UI takes over)');
                 } else {
                   console.log('⚠️ Skipping voice update - assistant audio is active');
                 }
@@ -1195,7 +1156,6 @@ Just speak naturally - I understand variations of these commands!`,
                 const targetAgentName =
                   result.targetAgentId === 'Agent_Matron' ? 'Matron' :
                   result.targetAgentId === 'Agent_Jekyll' ? 'Jekyll' :
-                  result.targetAgentId === 'Agent_Vocalist' ? 'Vocalist' :
                   'agent';
                 console.log(`⏱️ Delaying ${targetAgentName} handoff by ${HANDOFF_DELAY_MS}ms to allow announcement...`);
                 setTimeout(() => {
@@ -1216,22 +1176,6 @@ Just speak naturally - I understand variations of these commands!`,
             }
           }
 
-          // Handle Vocalist recording tool
-          if (functionName === 'start-vocalist-recording' && result.result?.success) {
-            console.log('🎤 ========================================');
-            console.log('🎤 START RECORDING TOOL CALLED');
-            console.log('🎤 Content Type:', result.result.contentType);
-            console.log('🎤 ========================================');
-
-            // Pause the Realtime API session to prevent user speech from being captured
-            console.log('🎤 Pausing Realtime API session during vocalist recording');
-            agentService.pauseSession();
-
-            // NOW show the recording UI (triggered by the agent's tool call)
-            setIsVocalistRecording(true);
-            setVocalistContentType(result.result.contentType || 'lyrics');
-          }
-
           // Not an agent switch - return the tool result
           return result.result;
 
@@ -1248,46 +1192,6 @@ Just speak naturally - I understand variations of these commands!`,
         const conversationSessionId = sessionStorage.getItem('chat-session-id') || undefined;
 
         switch (functionName) {
-          case 'invoke-phq2':
-            // Start PHQ-2 assessment - this initializes both phqAssessmentService and phqSessionService
-            console.log('📋 ========================================');
-            console.log('� FUNCTION CALL: invoke-phq2');
-            console.log('📋 Conversation session:', conversationSessionId);
-            console.log('📋 ========================================');
-            handlePhqAssessmentStart('PHQ-2');
-            const phq2 = phqAssessmentService.getCurrentAssessment();
-            const phq2Question = phqAssessmentService.getNextQuestion();
-            return {
-              success: true,
-              assessmentId: phq2?.assessmentId,
-              type: 'phq2',
-              totalQuestions: 2,
-              currentQuestionNumber: phq2Question?.questionNumber || 1,
-              questionText: phq2Question?.questionText,
-              responseScale: phqAssessmentService.getResponseScale(),
-              sessionId: conversationSessionId
-            };
-
-          case 'invoke-phq9':
-            // Start PHQ-9 assessment - this initializes both phqAssessmentService and phqSessionService
-            console.log('📋 ========================================');
-            console.log('� FUNCTION CALL: invoke-phq9');
-            console.log('📋 Conversation session:', conversationSessionId);
-            console.log('📋 ========================================');
-            handlePhqAssessmentStart('PHQ-9');
-            const phq9 = phqAssessmentService.getCurrentAssessment();
-            const phq9Question = phqAssessmentService.getNextQuestion();
-            return {
-              success: true,
-              assessmentId: phq9?.assessmentId,
-              type: 'phq9',
-              totalQuestions: 9,
-              currentQuestionNumber: phq9Question?.questionNumber || 1,
-              questionText: phq9Question?.questionText,
-              responseScale: phqAssessmentService.getResponseScale(),
-              sessionId: conversationSessionId
-            };
-
           case 'pause-session':
             console.log('Pausing session...');
             pauseSession();
@@ -1329,6 +1233,22 @@ Just speak naturally - I understand variations of these commands!`,
         console.log('📎 Chat session initialized:', transcript.sessionId);
       }
 
+      // Start session-wide voice recording (captures all user speech)
+      // Only if enabled via environment variable
+      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+        const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
+        const userId = authenticatedUserId || getUserId();
+        try {
+          await sessionVoiceRecordingService.startSessionRecording(sessionId, userId);
+          console.log('✅ Session voice recording started');
+        } catch (error) {
+          console.error('❌ Failed to start session voice recording:', error);
+          // Continue with session even if recording fails
+        }
+      } else {
+        console.log('ℹ️ Session voice recording disabled (VITE_ENABLE_SESSION_VOICE_RECORDING=false)');
+      }
+
       // Clear previous state
       setLiveTranscripts([]);
       setCurrentAITranscript('');
@@ -1356,6 +1276,25 @@ Just speak naturally - I understand variations of these commands!`,
 
   const endSession = async () => {
     try {
+      // Wait 3.5 seconds to allow agent to finish speaking its final utterance
+      console.log('⏳ Waiting for agent to complete final response before ending session...');
+      await new Promise(resolve => setTimeout(resolve, 3500));
+
+      // Stop and save session-wide voice recording
+      if (sessionVoiceRecordingService.isRecording()) {
+        try {
+          console.log('🎙️ Stopping session voice recording...');
+          const result = await sessionVoiceRecordingService.stopSessionRecording();
+          if (result) {
+            console.log(`✅ Session recording saved: ${result.audioUrl}`);
+            console.log(`   Total duration: ${result.totalDuration.toFixed(1)}s`);
+            console.log(`   Captured speech: ${result.capturedDuration.toFixed(1)}s`);
+          }
+        } catch (error) {
+          console.error('❌ Failed to save session recording:', error);
+        }
+      }
+
       // End chat transcript session
       if (authenticatedUserId) {
         chatTranscriptService.endSession();
@@ -1383,10 +1322,6 @@ Just speak naturally - I understand variations of these commands!`,
         isActive: false,
         isTyping: false
       });
-
-      // Clear any vocalist state
-      setIsVocalistRecording(false);
-      setVocalistContentType('lyrics');
 
       // Clear current AI transcript
       setCurrentAITranscript('');
@@ -1450,57 +1385,6 @@ Just speak naturally - I understand variations of these commands!`,
     } catch (error) {
       console.warn('Failed to trigger vocalization:', error);
     }
-  };
-
-  // Vocalist recording handlers
-  const handleVocalistRecordingComplete = async (audioBlob: Blob, duration: number) => {
-    console.log('🎤 Recording completed:', duration, 'seconds');
-
-    try {
-      // Upload audio file to blob storage
-      const formData = new FormData();
-      formData.append('file', audioBlob, `vocalist-${authenticatedUserId}-${Date.now()}.wav`);
-      formData.append('userId', authenticatedUserId);
-      formData.append('duration', duration.toString());
-
-      const uploadUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/upload-audio`;
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload audio file');
-      }
-
-      const uploadResult = await uploadResponse.json();
-      console.log('🎤 Audio uploaded:', uploadResult);
-
-      // Resume the Realtime API session
-      console.log('🎤 Resuming Realtime API session after vocalist recording');
-      agentService.resumeSession();
-
-      // Close recording UI
-      setIsVocalistRecording(false);
-
-      // Notify the agent about successful recording
-      announceToScreenReader('Recording uploaded successfully');
-
-    } catch (error) {
-      console.error('🎤 Error handling recording:', error);
-      announceToScreenReader('Failed to process recording');
-    }
-  };
-
-  const handleVocalistRecordingCancel = () => {
-    console.log('🎤 Recording cancelled');
-
-    // Resume the Realtime API session
-    console.log('🎤 Resuming Realtime API session after cancel');
-    agentService.resumeSession();
-
-    setIsVocalistRecording(false);
-    announceToScreenReader('Recording cancelled');
   };
 
   // Agent handoff not needed for single GPT-Realtime agent
@@ -1657,12 +1541,8 @@ Just speak naturally - I understand variations of these commands!`,
                   ? 'bg-blue-600'
                   : currentAgent.id === 'matron'
                   ? 'bg-green-600'
-                  : currentAgent.id === 'phq2'
-                  ? 'bg-purple-600'
-                  : currentAgent.id === 'phq9'
-                  ? 'bg-indigo-700'
-                  : currentAgent.id === 'vocalist'
-                  ? 'bg-pink-600'
+                  : currentAgent.id === 'jekyll'
+                  ? 'bg-teal-600'
                   : 'bg-gray-400'
             }`}>
               {currentAgent.id === 'tars' ? (
@@ -1678,20 +1558,6 @@ Just speak naturally - I understand variations of these commands!`,
                 }`}>
                   ➕
                 </span>
-              ) : currentAgent.id === 'phq2' ? (
-                <ClipboardList
-                  className={`text-white transition-transform duration-300 ${
-                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
-                  }`}
-                  size={20}
-                />
-              ) : currentAgent.id === 'phq9' ? (
-                <FileText
-                  className={`text-white transition-transform duration-300 ${
-                    currentAgent.isTyping ? 'animate-pulse scale-110' : ''
-                  }`}
-                  size={20}
-                />
               ) : (
                 <Bot
                   className={`text-white transition-transform duration-300 ${
@@ -2176,18 +2042,6 @@ Just speak naturally - I understand variations of these commands!`,
         </div>
       )}
 
-      {/* Vocalist Recording UI */}
-      {isVocalistRecording && (
-        <div className="absolute inset-0 z-40 bg-white dark:bg-gray-900 p-4 overflow-y-auto">
-          <VocalistRecorder
-            userId={authenticatedUserId}
-            contentType={vocalistContentType}
-            onRecordingComplete={handleVocalistRecordingComplete}
-            onCancel={handleVocalistRecordingCancel}
-          />
-        </div>
-      )}
-
       {/* Content Area - Toggle between Orb View and Traditional Message View */}
       {viewMode === 'orb' ? (
         // 3D Orb View
@@ -2254,12 +2108,6 @@ Just speak naturally - I understand variations of these commands!`,
                       <Bot size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                     ) : message.agentId === 'matron' ? (
                       <Plus size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
-                    ) : message.agentId === 'phq2' ? (
-                      <ClipboardList size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
-                    ) : message.agentId === 'phq9' ? (
-                    <FileText size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
-                  ) : message.agentId === 'vocalist' ? (
-                    <Mic size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : message.agentId === 'jekyll' ? (
                     <MessageSquare size={16} className={agentColors ? agentColors.text : 'text-gray-600 dark:text-gray-400'} />
                   ) : (
@@ -2269,9 +2117,6 @@ Just speak naturally - I understand variations of these commands!`,
                     {message.agentId ?
                       message.agentId === 'tars' ? 'Tars' :
                       message.agentId === 'matron' ? 'Matron' :
-                      message.agentId === 'phq2' ? 'PHQ-2' :
-                      message.agentId === 'phq9' ? 'PHQ-9' :
-                      message.agentId === 'vocalist' ? 'Vocalist' :
                       message.agentId === 'jekyll' ? 'Jekyll' :
                       currentAgent.name
                       : currentAgent.name

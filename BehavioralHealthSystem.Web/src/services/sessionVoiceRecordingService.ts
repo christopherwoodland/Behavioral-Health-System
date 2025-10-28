@@ -39,6 +39,13 @@ class SessionVoiceRecordingService {
   private isCurrentlyCapturing: boolean = false;
   private sessionId: string | null = null;
   private userId: string | null = null;
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private audioLevelCheckInterval: NodeJS.Timeout | null = null;
+
+  // Audio level thresholds for filtering out non-speech
+  private readonly MIN_AUDIO_LEVEL = 0.02; // Minimum RMS level (0-1 scale) to consider as speech
+  private readonly SPEECH_CONFIRMATION_THRESHOLD = 0.05; // Stronger signal = definitely speech
 
   // Recording configuration for highest quality (same as Jekyll)
   private readonly RECORDING_OPTIONS = {
@@ -139,6 +146,9 @@ class SessionVoiceRecordingService {
         }
       };
 
+      // Set up audio analysis for client-side level checking
+      this.setupAudioAnalysis();
+
       // Start recording - but we'll control when to actually request data
       // Request data every 100ms for fine-grained control
       this.mediaRecorder.start(100);
@@ -164,6 +174,108 @@ class SessionVoiceRecordingService {
   }
 
   /**
+   * Set up Web Audio API for real-time audio level analysis
+   */
+  private setupAudioAnalysis(): void {
+    if (!this.stream) {
+      return;
+    }
+
+    try {
+      // Create audio context and analyser
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.analyser.smoothingTimeConstant = 0.8;
+
+      // Connect stream to analyser
+      const source = this.audioContext.createMediaStreamSource(this.stream);
+      source.connect(this.analyser);
+
+      console.log('🎚️ Session Recording: Audio analysis setup complete');
+    } catch (error) {
+      console.warn('⚠️ Session Recording: Could not setup audio analysis:', error);
+    }
+  }
+
+  /**
+   * Get current audio level (RMS) from the microphone
+   * @returns Audio level between 0 and 1
+   */
+  private getAudioLevel(): number {
+    if (!this.analyser) {
+      return 0;
+    }
+
+    const bufferLength = this.analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    this.analyser.getByteTimeDomainData(dataArray);
+
+    // Calculate RMS (Root Mean Square) for audio level
+    let sum = 0;
+    for (let i = 0; i < bufferLength; i++) {
+      const normalized = (dataArray[i] - 128) / 128; // Normalize to -1 to 1
+      sum += normalized * normalized;
+    }
+    const rms = Math.sqrt(sum / bufferLength);
+
+    return rms;
+  }
+
+  /**
+   * Check if current audio level indicates speech
+   */
+  private isSpeechLevel(): boolean {
+    const level = this.getAudioLevel();
+
+    // Speech typically has RMS > 0.02, strong speech > 0.05
+    const isSpeech = level >= this.MIN_AUDIO_LEVEL;
+
+    if (level >= this.SPEECH_CONFIRMATION_THRESHOLD) {
+      // Strong signal - definitely speech
+      return true;
+    } else if (isSpeech) {
+      // Weak but above threshold - could be speech or ambient noise
+      // Let server VAD be the final decision maker
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Start monitoring audio levels during capture
+   */
+  private startAudioLevelMonitoring(): void {
+    // Clear any existing interval
+    this.stopAudioLevelMonitoring();
+
+    // Check audio level every 100ms while capturing
+    this.audioLevelCheckInterval = setInterval(() => {
+      if (!this.isCurrentlyCapturing) {
+        this.stopAudioLevelMonitoring();
+        return;
+      }
+
+      // If audio level drops below threshold for too long, stop capturing
+      if (!this.isSpeechLevel()) {
+        console.log('🔇 Session Recording: Audio level dropped below speech threshold - stopping capture');
+        this.onUserSpeechStop();
+      }
+    }, 100);
+  }
+
+  /**
+   * Stop monitoring audio levels
+   */
+  private stopAudioLevelMonitoring(): void {
+    if (this.audioLevelCheckInterval) {
+      clearInterval(this.audioLevelCheckInterval);
+      this.audioLevelCheckInterval = null;
+    }
+  }
+
+  /**
    * Notify that user started speaking - start capturing audio
    */
   onUserSpeechStart(): void {
@@ -175,9 +287,19 @@ class SessionVoiceRecordingService {
       return; // Already capturing
     }
 
+    // Double-check with client-side audio level analysis
+    if (!this.isSpeechLevel()) {
+      const level = this.getAudioLevel();
+      console.log(`🔇 Session Recording: VAD detected speech but audio level too low (${level.toFixed(3)}) - filtering out ambient noise`);
+      return;
+    }
+
     console.log('👤 Session Recording: User speech started - capturing audio');
     this.isCurrentlyCapturing = true;
     this.captureStartTime = Date.now();
+
+    // Start periodic audio level checking to ensure we stop if level drops
+    this.startAudioLevelMonitoring();
 
     // Request data to ensure we capture from this moment
     // The MediaRecorder will continue collecting data automatically
@@ -196,6 +318,9 @@ class SessionVoiceRecordingService {
     }
 
     console.log('👤 Session Recording: User speech stopped - pausing capture');
+
+    // Stop audio level monitoring
+    this.stopAudioLevelMonitoring();
 
     // Calculate duration of this capture segment
     const segmentDuration = (Date.now() - this.captureStartTime) / 1000;
@@ -225,6 +350,9 @@ class SessionVoiceRecordingService {
       console.log('🎙️ STOPPING SESSION-WIDE VOICE RECORDING');
       console.log('🎙️ ========================================');
 
+      // Stop audio level monitoring
+      this.stopAudioLevelMonitoring();
+
       // If currently capturing, finalize the duration
       if (this.isCurrentlyCapturing) {
         const segmentDuration = (Date.now() - this.captureStartTime) / 1000;
@@ -246,6 +374,13 @@ class SessionVoiceRecordingService {
             if (this.stream) {
               this.stream.getTracks().forEach(track => track.stop());
               this.stream = null;
+            }
+
+            // Clean up audio context
+            if (this.audioContext) {
+              await this.audioContext.close();
+              this.audioContext = null;
+              this.analyser = null;
             }
 
             // Check if we have audio data
@@ -363,8 +498,8 @@ class SessionVoiceRecordingService {
    * Get current recording state
    */
   getState(): SessionRecordingState {
-    const totalDuration = this.sessionStartTime > 0 
-      ? (Date.now() - this.sessionStartTime) / 1000 
+    const totalDuration = this.sessionStartTime > 0
+      ? (Date.now() - this.sessionStartTime) / 1000
       : 0;
 
     return {

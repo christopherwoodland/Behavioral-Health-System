@@ -42,6 +42,7 @@ import { createTarsAgent } from '@/agents/tarsAgent';
 import { jekyllAgent } from '@/agents/jekyllAgent';
 import { matronAgent } from '@/agents/matronAgent';
 import { sessionVoiceRecordingService } from '@/services/sessionVoiceRecordingService';
+import { kintsugiVoiceRecordingService, KintsugiRecordingProgress } from '@/services/kintsugiVoiceRecordingService';
 import './RealtimeAgentExperience.css';
 
 // Type alias for backward compatibility with existing UI
@@ -268,6 +269,9 @@ export const RealtimeAgentExperience: React.FC = () => {
     const saved = localStorage.getItem('tars-flight-ops-mode');
     return saved ? parseInt(saved, 10) : 100;
   });
+
+  // Kintsugi voice recording state
+  const [kintsugiRecording, setKintsugiRecording] = useState<KintsugiRecordingProgress | null>(null);
 
   // Function to update humor level with localStorage persistence
   const updateHumorLevel = useCallback((newLevel: number) => {
@@ -902,6 +906,91 @@ Just speak naturally - I understand variations of these commands!`,
   // NOTE: Initial greeting is now handled by Tars through Realtime API
   // Greeting generation logic removed as it's no longer needed
 
+  // =============================================================================
+  // KINTSUGI RECORDING HANDLER: Manages 30-second voice sample recording
+  // =============================================================================
+  const handleKintsugiRecordingRequest = useCallback(async (toolResult: any) => {
+    if (toolResult.action === 'start-kintsugi-recording') {
+      console.log('🎙️ ========================================');
+      console.log('🎙️ KINTSUGI RECORDING REQUEST');
+      console.log('🎙️ Prompt:', toolResult.prompt);
+      console.log('🎙️ Session ID:', toolResult.sessionId);
+      console.log('🎙️ Assessment ID:', toolResult.assessmentId);
+      console.log('🎙️ ========================================');
+
+      const sessionId = toolResult.sessionId;
+      const assessmentId = toolResult.assessmentId;
+
+      try {
+        // Start recording with progress callback
+        await kintsugiVoiceRecordingService.startRecording(
+          sessionId,
+          assessmentId,
+          (progress) => {
+            setKintsugiRecording(progress);
+
+            // Auto-stop when minimum duration is reached
+            if (progress.hasMinimumDuration && progress.isRecording) {
+              console.log('✅ Minimum duration (30s) reached');
+              
+              // Wait a bit for more natural ending
+              setTimeout(async () => {
+                if (kintsugiVoiceRecordingService.isRecording()) {
+                  console.log('🛑 Auto-stopping Kintsugi recording...');
+                  const result = await kintsugiVoiceRecordingService.stopRecording(
+                    sessionId,
+                    authenticatedUserId,
+                    assessmentId,
+                    true // upload to blob
+                  );
+                  
+                  if (result) {
+                    console.log('✅ Kintsugi recording saved:', result.audioUrl);
+                    
+                    // Update state to show completion
+                    setKintsugiRecording({
+                      isRecording: false,
+                      duration: result.duration,
+                      hasMinimumDuration: true,
+                      isSaving: false
+                    });
+
+                    // Clear after showing success
+                    setTimeout(() => {
+                      setKintsugiRecording(null);
+                    }, 3000);
+
+                    announceToScreenReader('Voice sample saved for analysis');
+                  }
+                }
+              }, 2000); // Allow 2 more seconds of speech
+            }
+          }
+        );
+
+        console.log('✅ Kintsugi recording started');
+        announceToScreenReader('Recording voice sample for analysis. Please speak for at least 30 seconds.');
+
+      } catch (error) {
+        console.error('❌ Failed to start Kintsugi recording:', error);
+        setKintsugiRecording({
+          isRecording: false,
+          duration: 0,
+          hasMinimumDuration: false,
+          isSaving: false,
+          error: error instanceof Error ? error.message : 'Failed to start recording'
+        });
+
+        announceToScreenReader('Failed to start voice recording');
+
+        // Clear error after 5 seconds
+        setTimeout(() => {
+          setKintsugiRecording(null);
+        }, 5000);
+      }
+    }
+  }, [authenticatedUserId]);
+
 
   const startSession = async () => {
     // Guard: Don't start if already active or connecting
@@ -1174,6 +1263,12 @@ Just speak naturally - I understand variations of these commands!`,
                 message: `Control transferred to ${result.targetAgentId}`
               };
             }
+          }
+
+          // Check if this is a Kintsugi recording request
+          if (functionName === 'request-kintsugi-voice-sample' && result.result.action === 'start-kintsugi-recording') {
+            console.log('🎙️ Detected Kintsugi recording request, triggering handler...');
+            await handleKintsugiRecordingRequest(result.result);
           }
 
           // Not an agent switch - return the tool result
@@ -1619,6 +1714,30 @@ Just speak naturally - I understand variations of these commands!`,
                   {conversationState.message && (
                     <span className="text-xs opacity-75">- {conversationState.message}</span>
                   )}
+                </div>
+              )}
+
+              {/* Kintsugi Recording Indicator */}
+              {kintsugiRecording?.isRecording && (
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <span className={kintsugiRecording.hasMinimumDuration ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-600 dark:text-red-400'}>
+                    Voice Sample: {kintsugiRecording.duration}s / 30s
+                  </span>
+                </div>
+              )}
+
+              {kintsugiRecording?.isSaving && (
+                <div className="flex items-center space-x-1 text-yellow-600 dark:text-yellow-400">
+                  <div className="animate-spin">⏳</div>
+                  <span>Saving sample...</span>
+                </div>
+              )}
+
+              {kintsugiRecording?.error && (
+                <div className="flex items-center space-x-1 text-red-600 dark:text-red-400">
+                  <AlertTriangle size={12} />
+                  <span>{kintsugiRecording.error}</span>
                 </div>
               )}
             </div>

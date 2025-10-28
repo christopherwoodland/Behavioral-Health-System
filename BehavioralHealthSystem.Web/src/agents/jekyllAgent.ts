@@ -715,6 +715,56 @@ const returnToTarsTool: AgentTool = {
 };
 
 /**
+ * Tool: Request Kintsugi Voice Sample
+ * Asks the user to provide 30 seconds of continuous speech for Kintsugi analysis
+ */
+const requestKintsugiVoiceSampleTool: AgentTool = {
+  name: 'request-kintsugi-voice-sample',
+  description: 'Request the user to provide 30+ seconds of continuous speech for Kintsugi voice analysis. Use this when you want deeper vocal biomarker analysis beyond the conversational assessment.',
+  parameters: {
+    type: 'object',
+    properties: {
+      prompt: {
+        type: 'string',
+        description: 'The prompt or topic to ask the user to speak about (e.g., "Tell me about your week", "Describe a typical day for you")'
+      },
+      userId: {
+        type: 'string',
+        description: 'The authenticated user ID'
+      }
+    },
+    required: ['prompt', 'userId']
+  },
+  handler: async (params: { prompt: string; userId: string }) => {
+    console.log('🎙️ ========================================');
+    console.log('🎙️ JEKYLL: Requesting Kintsugi voice sample');
+    console.log('🎙️ Prompt:', params.prompt);
+    console.log('🎙️ ========================================');
+
+    const currentSessionId = chatTranscriptService.getCurrentTranscript()?.sessionId;
+    const currentAssessment = jekyllContext?.assessmentId;
+
+    if (!currentSessionId) {
+      return {
+        success: false,
+        error: 'No active session found'
+      };
+    }
+
+    // This tool indicates the request - the actual recording is managed by the UI
+    // The UI will see this tool call and trigger the recording service
+    return {
+      success: true,
+      action: 'start-kintsugi-recording',
+      prompt: params.prompt,
+      sessionId: currentSessionId,
+      assessmentId: currentAssessment,
+      message: `Recording will start when you begin speaking. Please speak continuously for at least 30 seconds.`
+    };
+  }
+};
+
+/**
  * Jekyll Agent Configuration
  */
 export const jekyllAgent: Agent = {
@@ -787,6 +837,16 @@ IMPORTANT RULES:
 - DO NOT force yes/no answers - allow natural responses
 - Wait for the user to finish speaking before replying. After the user finishes, add a brief pause (2-3 seconds) before you respond. This buffer helps ensure the user is truly done and makes the conversation feel more natural and less rushed.
 
+KINTSUGI VOICE ANALYSIS (OPTIONAL):
+- After completing the conversational assessment, you MAY optionally request a voice sample for deeper Kintsugi vocal biomarker analysis
+- Use the 'request-kintsugi-voice-sample' tool with an engaging prompt like:
+  * "I'd like to understand you better. Can you tell me about a typical day in your life? Just speak naturally for about 30 seconds."
+  * "Tell me about something you enjoy doing, or used to enjoy. Speak freely for half a minute or so."
+  * "Describe what's been on your mind lately. Take your time, and speak for at least 30 seconds."
+- ONLY request this if: (1) You've completed the main assessment, (2) The user seems comfortable, (3) You think vocal analysis would provide additional insights
+- DO NOT pressure the user - make it optional and natural
+- Frame it as "This will help us understand your emotional state better through voice patterns"
+
 RISK DETECTION:
 - Critical phrases: "kill myself", "suicide", "self-harm", "end it all", "better off dead", "hurt myself"
 - Moderate phrases: "hopeless", "worthless", "can't take it", "should be dead"`,
@@ -797,6 +857,7 @@ RISK DETECTION:
     detectImmediateRiskTool,
     getPhqAssessmentSummaryTool,
     completeJekyllAssessmentTool,
+    requestKintsugiVoiceSampleTool,
     returnToTarsTool
   ]
 };

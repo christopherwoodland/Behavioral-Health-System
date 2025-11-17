@@ -20,6 +20,7 @@ export interface KintsugiRecordingProgress {
   duration: number; // Seconds
   hasMinimumDuration: boolean; // True when >= 30 seconds
   isSaving: boolean;
+  isWaitingForAgent?: boolean; // True when waiting for agent to finish speaking
   error?: string;
 }
 

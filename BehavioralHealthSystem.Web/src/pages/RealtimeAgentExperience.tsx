@@ -921,75 +921,125 @@ Just speak naturally - I understand variations of these commands!`,
       const sessionId = toolResult.sessionId;
       const assessmentId = toolResult.assessmentId;
 
-      try {
-        // Start recording with progress callback
-        await kintsugiVoiceRecordingService.startRecording(
-          sessionId,
-          assessmentId,
-          (progress) => {
-            setKintsugiRecording(progress);
+      // Helper function to actually start the recording
+      const startRecordingProcess = async () => {
+        try {
+          // Disable turn detection so Jekyll doesn't respond during recording
+          console.log('🔇 Disabling turn detection for Kintsugi recording...');
+          agentService.disableTurnDetection();
 
-            // Auto-stop when minimum duration is reached
-            if (progress.hasMinimumDuration && progress.isRecording) {
-              console.log('✅ Minimum duration (30s) reached');
+          // Start recording with progress callback
+          await kintsugiVoiceRecordingService.startRecording(
+            sessionId,
+            assessmentId,
+            (progress) => {
+              setKintsugiRecording(progress);
 
-              // Wait a bit for more natural ending
-              setTimeout(async () => {
-                if (kintsugiVoiceRecordingService.isRecording()) {
-                  console.log('🛑 Auto-stopping Kintsugi recording...');
-                  const result = await kintsugiVoiceRecordingService.stopRecording(
-                    sessionId,
-                    authenticatedUserId,
-                    assessmentId,
-                    true // upload to blob
-                  );
+              // Auto-stop when minimum duration is reached
+              if (progress.hasMinimumDuration && progress.isRecording) {
+                console.log('✅ Minimum duration (30s) reached');
 
-                  if (result) {
-                    console.log('✅ Kintsugi recording saved:', result.audioUrl);
+                // Wait a bit for more natural ending
+                setTimeout(async () => {
+                  if (kintsugiVoiceRecordingService.isRecording()) {
+                    console.log('🛑 Auto-stopping Kintsugi recording...');
+                    const result = await kintsugiVoiceRecordingService.stopRecording(
+                      sessionId,
+                      authenticatedUserId,
+                      assessmentId,
+                      true // upload to blob
+                    );
 
-                    // Update state to show completion
-                    setKintsugiRecording({
-                      isRecording: false,
-                      duration: result.duration,
-                      hasMinimumDuration: true,
-                      isSaving: false
-                    });
+                    if (result) {
+                      console.log('✅ Kintsugi recording saved:', result.audioUrl);
 
-                    // Clear after showing success
-                    setTimeout(() => {
-                      setKintsugiRecording(null);
-                    }, 3000);
+                      // Re-enable turn detection
+                      console.log('🔊 Re-enabling turn detection...');
+                      agentService.enableTurnDetection();
 
-                    announceToScreenReader('Voice sample saved for analysis');
+                      // Update state to show completion
+                      setKintsugiRecording({
+                        isRecording: false,
+                        duration: result.duration,
+                        hasMinimumDuration: true,
+                        isSaving: false
+                      });
+
+                      // Clear after showing success
+                      setTimeout(() => {
+                        setKintsugiRecording(null);
+                      }, 3000);
+
+                      announceToScreenReader('Voice sample saved for analysis');
+                    }
                   }
-                }
-              }, 2000); // Allow 2 more seconds of speech
+                }, 2000); // Allow 2 more seconds of speech
+              }
             }
-          }
-        );
+          );
 
-        console.log('✅ Kintsugi recording started');
-        announceToScreenReader('Recording voice sample for analysis. Please speak for at least 30 seconds.');
+          console.log('✅ Kintsugi recording started');
+          announceToScreenReader('Recording voice sample for analysis. Please speak for at least 30 seconds.');
 
-      } catch (error) {
-        console.error('❌ Failed to start Kintsugi recording:', error);
+        } catch (error) {
+          console.error('❌ Failed to start Kintsugi recording:', error);
+
+          // Re-enable turn detection on error
+          console.log('🔊 Re-enabling turn detection after error...');
+          agentService.enableTurnDetection();
+
+          setKintsugiRecording({
+            isRecording: false,
+            duration: 0,
+            hasMinimumDuration: false,
+            isSaving: false,
+            error: error instanceof Error ? error.message : 'Failed to start recording'
+          });
+
+          announceToScreenReader('Failed to start voice recording');
+
+          // Clear error after 5 seconds
+          setTimeout(() => {
+            setKintsugiRecording(null);
+          }, 5000);
+        }
+      };
+
+      // Wait for Jekyll to finish speaking before starting recording
+      if (speechDetection.isAISpeaking) {
+        console.log('⏳ Waiting for Jekyll to finish speaking before starting recording...');
         setKintsugiRecording({
           isRecording: false,
           duration: 0,
           hasMinimumDuration: false,
           isSaving: false,
-          error: error instanceof Error ? error.message : 'Failed to start recording'
+          isWaitingForAgent: true
         });
 
-        announceToScreenReader('Failed to start voice recording');
+        // Poll every 100ms until Jekyll stops speaking
+        const checkInterval = setInterval(() => {
+          if (!speechDetection.isAISpeaking) {
+            clearInterval(checkInterval);
+            console.log('✅ Jekyll finished speaking, starting recording now...');
+            startRecordingProcess();
+          }
+        }, 100);
 
-        // Clear error after 5 seconds
+        // Safety timeout after 10 seconds
         setTimeout(() => {
-          setKintsugiRecording(null);
-        }, 5000);
+          if (speechDetection.isAISpeaking) {
+            clearInterval(checkInterval);
+            console.log('⚠️ Timeout waiting for Jekyll to finish, starting recording anyway...');
+            startRecordingProcess();
+          }
+        }, 10000);
+      } else {
+        // Jekyll not speaking, start immediately
+        console.log('✅ Jekyll not speaking, starting recording immediately...');
+        startRecordingProcess();
       }
     }
-  }, [authenticatedUserId]);
+  }, [authenticatedUserId, speechDetection.isAISpeaking]);
 
 
   const startSession = async () => {
@@ -1718,6 +1768,13 @@ Just speak naturally - I understand variations of these commands!`,
               )}
 
               {/* Kintsugi Recording Indicator */}
+              {kintsugiRecording?.isWaitingForAgent && (
+                <div className="flex items-center space-x-1 text-blue-600 dark:text-blue-400">
+                  <div className="animate-pulse">⏸️</div>
+                  <span>Waiting for agent to finish...</span>
+                </div>
+              )}
+
               {kintsugiRecording?.isRecording && (
                 <div className="flex items-center space-x-1">
                   <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />

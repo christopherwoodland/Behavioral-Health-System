@@ -308,7 +308,7 @@ public class ChatTranscriptData
     public string LastUpdated { get; set; } = "";
     public string? SessionEndedAt { get; set; }
     public bool IsActive { get; set; } = true;
-    public List<ChatMessageData> Messages { get; set; } = new();
+    public List<ChatMessageData> Messages { get; set; } = [];
     public ChatSessionMetadata? Metadata { get; set; }
 }
 

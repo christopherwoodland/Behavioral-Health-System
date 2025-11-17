@@ -13,8 +13,8 @@ public interface IAzureContentUnderstandingService
     /// <param name="endPage">Ending page number (inclusive)</param>
     /// <returns>List of extracted DSM-5 conditions with full structure</returns>
     Task<List<DSM5ConditionData>> ExtractDSM5ConditionsAsync(
-        byte[] pdfData, 
-        int startPage = 1, 
+        byte[] pdfData,
+        int startPage = 1,
         int? endPage = null);
 
     /// <summary>
@@ -55,20 +55,20 @@ public class DSM5ValidationResult
     /// <summary>
     /// List of validation issues found
     /// </summary>
-    public List<string> Issues { get; set; } = new();
+    public List<string> Issues { get; set; } = [];
 
     /// <summary>
     /// List of warnings (non-critical)
     /// </summary>
-    public List<string> Warnings { get; set; } = new();
+    public List<string> Warnings { get; set; } = [];
 
     /// <summary>
     /// Sections that were successfully extracted
     /// </summary>
-    public List<string> CompleteSections { get; set; } = new();
+    public List<string> CompleteSections { get; set; } = [];
 
     /// <summary>
     /// Sections that are incomplete or missing
     /// </summary>
-    public List<string> IncompleteSections { get; set; } = new();
+    public List<string> IncompleteSections { get; set; } = [];
 }

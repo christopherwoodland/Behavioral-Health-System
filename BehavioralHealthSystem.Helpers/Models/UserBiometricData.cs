@@ -69,21 +69,21 @@ public class UserBiometricData
     /// Used for conversation personalization by Tars and other agents.
     /// </summary>
     /// <value>A list of hobbies, or empty list if not provided.</value>
-    public List<string> Hobbies { get; set; } = new List<string>();
+    public List<string> Hobbies { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the list of things the user likes.
     /// Used for conversation personalization and rapport building.
     /// </summary>
     /// <value>A list of things the user likes, or empty list if not provided.</value>
-    public List<string> Likes { get; set; } = new List<string>();
+    public List<string> Likes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the list of things the user dislikes.
     /// Used to avoid topics or approaches that may be uncomfortable for the user.
     /// </summary>
     /// <value>A list of things the user dislikes, or empty list if not provided.</value>
-    public List<string> Dislikes { get; set; } = new List<string>();
+    public List<string> Dislikes { get; set; } = [];
 
     /// <summary>
     /// Gets or sets additional information provided by the user.

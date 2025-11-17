@@ -28,13 +28,13 @@ public class MultiConditionExtendedRiskAssessment : RiskAssessment
     /// DSM-5 conditions that were evaluated
     /// </summary>
     [JsonPropertyName("evaluatedConditions")]
-    public List<string> EvaluatedConditions { get; set; } = new();
+    public List<string> EvaluatedConditions { get; set; } = [];
 
     /// <summary>
     /// Assessment results for each evaluated condition
     /// </summary>
     [JsonPropertyName("conditionAssessments")]
-    public List<ConditionAssessmentResult> ConditionAssessments { get; set; } = new();
+    public List<ConditionAssessmentResult> ConditionAssessments { get; set; } = [];
 
     /// <summary>
     /// Overall summary across all evaluated conditions
@@ -52,13 +52,13 @@ public class MultiConditionExtendedRiskAssessment : RiskAssessment
     /// Combined recommended actions across all conditions
     /// </summary>
     [JsonPropertyName("combinedRecommendedActions")]
-    public List<string> CombinedRecommendedActions { get; set; } = new();
+    public List<string> CombinedRecommendedActions { get; set; } = [];
 
     /// <summary>
     /// Cross-condition differential diagnosis considerations
     /// </summary>
     [JsonPropertyName("crossConditionDifferentialDiagnosis")]
-    public List<string> CrossConditionDifferentialDiagnosis { get; set; } = new();
+    public List<string> CrossConditionDifferentialDiagnosis { get; set; } = [];
 
     /// <summary>
     /// Legacy schizophrenia assessment for backward compatibility
@@ -126,31 +126,31 @@ public class ConditionAssessmentResult
     /// Evaluation of diagnostic criteria for this condition
     /// </summary>
     [JsonPropertyName("criteriaEvaluations")]
-    public List<CriterionEvaluationResult> CriteriaEvaluations { get; set; } = new();
+    public List<CriterionEvaluationResult> CriteriaEvaluations { get; set; } = [];
 
     /// <summary>
     /// Risk factors identified for this specific condition
     /// </summary>
     [JsonPropertyName("riskFactorsIdentified")]
-    public List<string> RiskFactorsIdentified { get; set; } = new();
+    public List<string> RiskFactorsIdentified { get; set; } = [];
 
     /// <summary>
     /// Recommended actions specific to this condition
     /// </summary>
     [JsonPropertyName("recommendedActions")]
-    public List<string> RecommendedActions { get; set; } = new();
+    public List<string> RecommendedActions { get; set; } = [];
 
     /// <summary>
     /// Clinical notes specific to this condition
     /// </summary>
     [JsonPropertyName("clinicalNotes")]
-    public List<string> ClinicalNotes { get; set; } = new();
+    public List<string> ClinicalNotes { get; set; } = [];
 
     /// <summary>
     /// Differential diagnosis considerations for this condition
     /// </summary>
     [JsonPropertyName("differentialDiagnosis")]
-    public List<string> DifferentialDiagnosis { get; set; } = new();
+    public List<string> DifferentialDiagnosis { get; set; } = [];
 
     /// <summary>
     /// Duration assessment notes for this condition
@@ -204,13 +204,13 @@ public class CriterionEvaluationResult
     /// Evidence supporting the criterion evaluation
     /// </summary>
     [JsonPropertyName("evidence")]
-    public List<string> Evidence { get; set; } = new();
+    public List<string> Evidence { get; set; } = [];
 
     /// <summary>
     /// Evaluation of sub-criteria within this criterion
     /// </summary>
     [JsonPropertyName("subCriteriaEvaluations")]
-    public List<SubCriterionEvaluationResult> SubCriteriaEvaluations { get; set; } = new();
+    public List<SubCriterionEvaluationResult> SubCriteriaEvaluations { get; set; } = [];
 
     /// <summary>
     /// Additional notes about this criterion
@@ -282,7 +282,7 @@ public class SubCriterionEvaluationResult
     /// Evidence supporting this evaluation
     /// </summary>
     [JsonPropertyName("evidence")]
-    public List<string> Evidence { get; set; } = new();
+    public List<string> Evidence { get; set; } = [];
 
     /// <summary>
     /// Additional notes about this sub-criterion
@@ -294,7 +294,7 @@ public class SubCriterionEvaluationResult
     /// Examples or manifestations observed
     /// </summary>
     [JsonPropertyName("observedExamples")]
-    public List<string> ObservedExamples { get; set; } = new();
+    public List<string> ObservedExamples { get; set; } = [];
 }
 
 /// <summary>
@@ -312,7 +312,7 @@ public class MultiConditionAssessmentRequest
     /// List of DSM-5 condition IDs to evaluate
     /// </summary>
     [JsonPropertyName("selectedConditions")]
-    public List<string> SelectedConditions { get; set; } = new();
+    public List<string> SelectedConditions { get; set; } = [];
 
     /// <summary>
     /// Additional assessment options
@@ -360,7 +360,7 @@ public class AssessmentOptions
     /// Focus on specific symptoms or areas
     /// </summary>
     [JsonPropertyName("focusAreas")]
-    public List<string> FocusAreas { get; set; } = new();
+    public List<string> FocusAreas { get; set; } = [];
 }
 
 /// <summary>

@@ -53,12 +53,12 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         };
 
         // Get configuration
-        _endpoint = configuration["AZURE_CONTENT_UNDERSTANDING_ENDPOINT"] 
+        _endpoint = configuration["AZURE_CONTENT_UNDERSTANDING_ENDPOINT"]
             ?? throw new InvalidOperationException("AZURE_CONTENT_UNDERSTANDING_ENDPOINT not configured");
 
         // Support both API key (local) and Managed Identity (production)
         _apiKey = configuration["AZURE_CONTENT_UNDERSTANDING_KEY"];
-        
+
         if (string.IsNullOrEmpty(_apiKey))
         {
             _logger.LogInformation("Using Managed Identity for Content Understanding authentication");
@@ -72,7 +72,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         // Initialize blob storage client for temporary PDF uploads
         var storageConnectionString = configuration["AzureWebJobsStorage"];
         var storageAccountName = configuration["AZURE_STORAGE_ACCOUNT_NAME"];
-        
+
         if (!string.IsNullOrEmpty(storageConnectionString))
         {
             _blobServiceClient = new BlobServiceClient(storageConnectionString);
@@ -135,11 +135,11 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             // Extract only specified pages
             var startPage = pageNumbers.Min();
             var endPage = pageNumbers.Max();
-            
+
             var result = await AnalyzeDocumentAsync(pdfData, null, startPage, endPage);
             var conditions = ParseExtractionResult(result);
 
-            var condition = conditions.FirstOrDefault(c => 
+            var condition = conditions.FirstOrDefault(c =>
                 c.Name.Equals(conditionName, StringComparison.OrdinalIgnoreCase));
 
             if (condition == null)
@@ -153,7 +153,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, 
+            _logger.LogError(ex,
                 "[{MethodName}] Error extracting single condition '{Condition}'",
                 nameof(ExtractSingleConditionAsync), conditionName);
             throw;
@@ -308,7 +308,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             using var stream = new MemoryStream(pdfData);
             await blobClient.UploadAsync(stream, overwrite: true);
 
-            _logger.LogInformation("[{MethodName}] Uploaded PDF to blob: {BlobName} ({Size} bytes)", 
+            _logger.LogInformation("[{MethodName}] Uploaded PDF to blob: {BlobName} ({Size} bytes)",
                 nameof(UploadPdfToBlobAsync), blobName, pdfData.Length);
 
             // Generate a SAS URL valid for 2 hours
@@ -326,14 +326,14 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             var sasToken = blobClient.GenerateSasUri(sasBuilder).Query;
             var blobUrl = $"{blobClient.Uri}{sasToken}";
 
-            _logger.LogInformation("[{MethodName}] Generated SAS URL (expires in 2 hours)", 
+            _logger.LogInformation("[{MethodName}] Generated SAS URL (expires in 2 hours)",
                 nameof(UploadPdfToBlobAsync));
 
             return blobUrl;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{MethodName}] Failed to upload PDF to blob storage", 
+            _logger.LogError(ex, "[{MethodName}] Failed to upload PDF to blob storage",
                 nameof(UploadPdfToBlobAsync));
             throw;
         }
@@ -349,13 +349,13 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         {
             // Azure AI Content Understanding API
             // Using prebuilt-documentAnalyzer to extract document content
-            
+
             var pageRange = endPage.HasValue ? $"{startPage}-{endPage.Value}" : $"{startPage}-";
-            
+
             // Azure Content Understanding API requires a URL, not base64 data
             // Upload the PDF to blob storage and get a SAS URL
             var blobUrl = await UploadPdfToBlobAsync(pdfData);
-            
+
             // Build the analyze request according to Azure Content Understanding API spec
             // Request body format: { "url": "https://..." }
             var request = new
@@ -386,7 +386,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                 var token = await _credential.GetTokenAsync(
                     new TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" }),
                     CancellationToken.None);
-                _httpClient.DefaultRequestHeaders.Authorization = 
+                _httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", token.Token);
                 _logger.LogInformation("[{MethodName}] Using Managed Identity authentication (token refreshed)", nameof(AnalyzeDocumentAsync));
             }
@@ -395,7 +395,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             var baseEndpoint = _endpoint.TrimEnd('/');
             var analyzerId = "prebuilt-documentAnalyzer";
             var url = $"{baseEndpoint}/contentunderstanding/analyzers/{analyzerId}:analyze?api-version=2025-05-01-preview";
-            
+
             _logger.LogInformation("[{MethodName}] Calling Azure Content Understanding API", nameof(AnalyzeDocumentAsync));
             _logger.LogInformation("[{MethodName}] URL: {Url}", nameof(AnalyzeDocumentAsync), url);
             _logger.LogInformation("[{MethodName}] Pages: {Pages}", nameof(AnalyzeDocumentAsync), pageRange);
@@ -406,20 +406,20 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                _logger.LogError("[{MethodName}] API returned {StatusCode}: {Error}", 
+                _logger.LogError("[{MethodName}] API returned {StatusCode}: {Error}",
                     nameof(AnalyzeDocumentAsync), response.StatusCode, errorContent);
                 throw new HttpRequestException(
                     $"Azure Content Understanding API returned {response.StatusCode}: {errorContent}");
             }
 
             // Azure Content Understanding returns 202 Accepted with Operation-Location header
-            if (response.StatusCode == System.Net.HttpStatusCode.Accepted && 
+            if (response.StatusCode == System.Net.HttpStatusCode.Accepted &&
                 response.Headers.Contains("Operation-Location"))
             {
                 var operationLocation = response.Headers.GetValues("Operation-Location").FirstOrDefault();
-                _logger.LogInformation("[{MethodName}] Long-running operation started: {Location}", 
+                _logger.LogInformation("[{MethodName}] Long-running operation started: {Location}",
                     nameof(AnalyzeDocumentAsync), operationLocation);
-                
+
                 // Poll the operation until complete
                 return await PollOperationAsync(operationLocation!);
             }
@@ -447,11 +447,11 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             await Task.Delay(5000); // Wait 5 seconds between polls
             attempt++;
 
-            _logger.LogInformation("[{MethodName}] Polling operation status (attempt {Attempt}/{Max})", 
+            _logger.LogInformation("[{MethodName}] Polling operation status (attempt {Attempt}/{Max})",
                 nameof(PollOperationAsync), attempt, maxAttempts);
 
             var response = await CallWithRetryAsync(async () => await _httpClient.GetAsync(operationUrl));
-            
+
             if (!response.IsSuccessStatusCode)
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
@@ -465,20 +465,20 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             if (result.TryGetProperty("status", out var status))
             {
                 var statusValue = status.GetString();
-                _logger.LogInformation("[{MethodName}] Operation status: {Status}", 
+                _logger.LogInformation("[{MethodName}] Operation status: {Status}",
                     nameof(PollOperationAsync), statusValue);
 
                 // Content Understanding uses "Succeeded" (capital S), not "succeeded"
                 if (statusValue == "Succeeded")
                 {
-                    _logger.LogInformation("[{MethodName}] Operation completed successfully", 
+                    _logger.LogInformation("[{MethodName}] Operation completed successfully",
                         nameof(PollOperationAsync));
                     return result;
                 }
                 else if (statusValue == "Failed")
                 {
-                    var error = result.TryGetProperty("error", out var err) 
-                        ? err.ToString() 
+                    var error = result.TryGetProperty("error", out var err)
+                        ? err.ToString()
                         : "Unknown error";
                     throw new InvalidOperationException($"Content Understanding analysis failed: {error}");
                 }
@@ -501,33 +501,33 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         {
             try
             {
-                _logger.LogInformation("[{MethodName}] HTTP call attempt {Attempt}/{MaxRetries}", 
+                _logger.LogInformation("[{MethodName}] HTTP call attempt {Attempt}/{MaxRetries}",
                     nameof(CallWithRetryAsync), attempt, maxRetries);
-                
+
                 return await httpCall();
             }
             catch (HttpRequestException ex) when (attempt < maxRetries)
             {
                 var delay = TimeSpan.FromMilliseconds(baseDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
-                
-                _logger.LogWarning("[{MethodName}] HTTP call failed on attempt {Attempt}/{MaxRetries}: {Error}. Retrying in {Delay}ms", 
+
+                _logger.LogWarning("[{MethodName}] HTTP call failed on attempt {Attempt}/{MaxRetries}: {Error}. Retrying in {Delay}ms",
                     nameof(CallWithRetryAsync), attempt, maxRetries, ex.Message, delay.TotalMilliseconds);
-                
+
                 await Task.Delay(delay);
             }
             catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException && attempt < maxRetries)
             {
                 var delay = TimeSpan.FromMilliseconds(baseDelay.TotalMilliseconds * Math.Pow(2, attempt - 1));
-                
-                _logger.LogWarning("[{MethodName}] HTTP call timed out on attempt {Attempt}/{MaxRetries}. Retrying in {Delay}ms", 
+
+                _logger.LogWarning("[{MethodName}] HTTP call timed out on attempt {Attempt}/{MaxRetries}. Retrying in {Delay}ms",
                     nameof(CallWithRetryAsync), attempt, maxRetries, delay.TotalMilliseconds);
-                
+
                 await Task.Delay(delay);
             }
         }
 
         // Final attempt without catching exceptions
-        _logger.LogInformation("[{MethodName}] Final HTTP call attempt {Attempt}/{MaxRetries}", 
+        _logger.LogInformation("[{MethodName}] Final HTTP call attempt {Attempt}/{MaxRetries}",
             nameof(CallWithRetryAsync), maxRetries, maxRetries);
         return await httpCall();
     }
@@ -543,7 +543,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         {
             // Azure Content Understanding response structure:
             // { "id": "...", "status": "Succeeded", "result": { "analyzerId": "...", "contents": [...] } }
-            
+
             if (!result.TryGetProperty("result", out var resultData))
             {
                 _logger.LogWarning("[{MethodName}] No result property in response", nameof(ParseExtractionResult));
@@ -564,13 +564,13 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
 
             // Get the first content item (document content)
             var content = contents[0];
-            
+
             // Extract markdown text for parsing
             string? markdownText = null;
             if (content.TryGetProperty("markdown", out var markdown))
             {
                 markdownText = markdown.GetString();
-                _logger.LogInformation("[{MethodName}] Extracted markdown text: {Length} characters", 
+                _logger.LogInformation("[{MethodName}] Extracted markdown text: {Length} characters",
                     nameof(ParseExtractionResult), markdownText?.Length ?? 0);
             }
 
@@ -616,16 +616,16 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             // Example patterns to look for:
             // - "Major Depressive Disorder 296.23 (F32.1)"
             // - "Schizophrenia 295.90 (F20.9)"
-            
+
             // Split markdown into sections by looking for condition headers
             // A condition header typically contains both name and a diagnostic code
-            
+
             // Regex to find condition headers with codes
             // Format: "# Condition Name Code: 292.89 (F16.983)"
             var conditionHeaderPattern = @"(?m)^#{1,3}\s+(.+?)\s+Code:\s*(\d{3}\.\d{1,2})\s+\(([A-Z]\d{2}\.\d+)\)";
             var matches = Regex.Matches(markdownText, conditionHeaderPattern);
 
-            _logger.LogInformation("[{MethodName}] Found {Count} potential condition headers", 
+            _logger.LogInformation("[{MethodName}] Found {Count} potential condition headers",
                 nameof(ParseDSM5ConditionsFromMarkdown), matches.Count);
 
             for (int i = 0; i < matches.Count; i++)
@@ -645,12 +645,12 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                 if (condition != null)
                 {
                     conditions.Add(condition);
-                    _logger.LogInformation("[{MethodName}] Successfully parsed condition: {Name} ({Code})", 
+                    _logger.LogInformation("[{MethodName}] Successfully parsed condition: {Name} ({Code})",
                         nameof(ParseDSM5ConditionsFromMarkdown), condition.Name, condition.Code);
                 }
             }
 
-            _logger.LogInformation("[{MethodName}] Total conditions parsed: {Count}", 
+            _logger.LogInformation("[{MethodName}] Total conditions parsed: {Count}",
                 nameof(ParseDSM5ConditionsFromMarkdown), conditions.Count);
         }
         catch (Exception ex)
@@ -672,11 +672,11 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                 LastUpdated = DateTime.UtcNow,
                 Name = name,
                 Code = code,
-                DiagnosticCriteria = new List<DSM5DiagnosticCriterion>(),
-                DifferentialDiagnosis = new List<string>(),
-                Specifiers = new List<DSM5Specifier>(),
-                PresentSections = new List<string>(),
-                MissingSections = new List<string>()
+                DiagnosticCriteria = [],
+                DifferentialDiagnosis = [],
+                Specifiers = [],
+                PresentSections = [],
+                MissingSections = []
             };
 
             // Extract category from the text if present (usually at the beginning)
@@ -690,33 +690,33 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
 
             // Section extraction patterns - Updated for Content Understanding OCR output
             // The OCR produces plain text without markdown headers, so we look for section names as plain text
-            ExtractSection(conditionText, @"(?i)\bDiagnostic Criteria\b([\s\S]{20,3000}?)(?=\b(?:Diagnostic Features|Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity|Specifiers)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bDiagnostic Criteria\b([\s\S]{20,3000}?)(?=\b(?:Diagnostic Features|Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity|Specifiers)|\z)",
                 "Diagnostic Criteria", condition);
-            ExtractSection(conditionText, @"(?i)\bDiagnostic Features?\b([\s\S]{20,3000}?)(?=\b(?:Associated Features|Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bDiagnostic Features?\b([\s\S]{20,3000}?)(?=\b(?:Associated Features|Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Diagnostic Features", condition);
-            ExtractSection(conditionText, @"(?i)\bAssociated Features?[^\n]{0,50}\b([\s\S]{20,3000}?)(?=\b(?:Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bAssociated Features?[^\n]{0,50}\b([\s\S]{20,3000}?)(?=\b(?:Prevalence|Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Associated Features", condition);
-            ExtractSection(conditionText, @"(?i)\bPrevalence\b([\s\S]{20,3000}?)(?=\b(?:Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bPrevalence\b([\s\S]{20,3000}?)(?=\b(?:Development and Course|Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Prevalence", condition);
-            ExtractSection(conditionText, @"(?i)\b(?:Development and Course|Dirvelopment and Course)\b([\s\S]{20,3000}?)(?=\b(?:Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\b(?:Development and Course|Dirvelopment and Course)\b([\s\S]{20,3000}?)(?=\b(?:Risk|Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Development and Course", condition);
-            ExtractSection(conditionText, @"(?i)\b(?:Risk and Prognostic Factors|Risk and Prognossite Factors)\b([\s\S]{20,3000}?)(?=\b(?:Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\b(?:Risk and Prognostic Factors|Risk and Prognossite Factors)\b([\s\S]{20,3000}?)(?=\b(?:Culture|Gender|Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Risk and Prognostic Factors", condition);
-            ExtractSection(conditionText, @"(?i)\bCulture[- ]?Related[^\n]{0,30}Issues?\b([\s\S]{20,3000}?)(?=\b(?:Gender|Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bCulture[- ]?Related[^\n]{0,30}Issues?\b([\s\S]{20,3000}?)(?=\b(?:Gender|Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Culture-Related Diagnostic Issues", condition);
-            ExtractSection(conditionText, @"(?i)\b(?:Gender|Sex)[- ]?Related[^\n]{0,30}Issues?\b([\s\S]{20,3000}?)(?=\b(?:Suicide|Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\b(?:Gender|Sex)[- ]?Related[^\n]{0,30}Issues?\b([\s\S]{20,3000}?)(?=\b(?:Suicide|Functional|Differential|Comorbidity)|\z)",
                 "Gender-Related Diagnostic Issues", condition);
-            ExtractSection(conditionText, @"(?i)\bSuicide Risk\b([\s\S]{20,3000}?)(?=\b(?:Functional|Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bSuicide Risk\b([\s\S]{20,3000}?)(?=\b(?:Functional|Differential|Comorbidity)|\z)",
                 "Suicide Risk", condition);
-            ExtractSection(conditionText, @"(?i)\bFunctional Consequences?[^\n]{0,50}\b([\s\S]{20,3000}?)(?=\b(?:Differential|Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bFunctional Consequences?[^\n]{0,50}\b([\s\S]{20,3000}?)(?=\b(?:Differential|Comorbidity)|\z)",
                 "Functional Consequences", condition);
-            ExtractSection(conditionText, @"(?i)\bDifferential Diagnosis\b([\s\S]{20,3000}?)(?=\b(?:Comorbidity)|\z)", 
+            ExtractSection(conditionText, @"(?i)\bDifferential Diagnosis\b([\s\S]{20,3000}?)(?=\b(?:Comorbidity)|\z)",
                 "Differential Diagnosis", condition);
-            ExtractSection(conditionText, @"(?i)\bComorbidity\b([\s\S]{20,3000})(?=\z)", 
+            ExtractSection(conditionText, @"(?i)\bComorbidity\b([\s\S]{20,3000})(?=\z)",
                 "Comorbidity", condition);
 
             _logger.LogInformation("[{MethodName}] Condition {Name}: Found {Present} sections, missing {Missing}",
-                nameof(ParseSingleConditionFromMarkdown), condition.Name, 
+                nameof(ParseSingleConditionFromMarkdown), condition.Name,
                 condition.PresentSections.Count, condition.MissingSections.Count);
 
             return condition;
@@ -786,9 +786,9 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                         condition.Comorbidity = content;
                         break;
                 }
-                
+
                 condition.PresentSections.Add(sectionName);
-                _logger.LogDebug("[{MethodName}] Section '{Section}': Found {Length} characters", 
+                _logger.LogDebug("[{MethodName}] Section '{Section}': Found {Length} characters",
                     nameof(ExtractSection), sectionName, content.Length);
             }
             else
@@ -799,7 +799,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         else
         {
             condition.MissingSections.Add(sectionName);
-            _logger.LogDebug("[{MethodName}] Section '{Section}': Not found", 
+            _logger.LogDebug("[{MethodName}] Section '{Section}': Not found",
                 nameof(ExtractSection), sectionName);
         }
     }

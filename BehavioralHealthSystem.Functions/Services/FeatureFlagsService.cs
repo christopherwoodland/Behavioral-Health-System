@@ -13,7 +13,7 @@ public class FeatureFlagsService
     {
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _featureFlagsCache = new Dictionary<string, bool>();
+        _featureFlagsCache = [];
     }
 
     /// <summary>
@@ -68,7 +68,9 @@ public class FeatureFlagsService
             // Define all known feature flags
             var knownFlags = new[]
             {
-                "AGENT_MODE_ENABLED"
+                "AGENT_MODE_ENABLED",
+                "AZURE_OPENAI_ENABLED",
+                "EXTENDED_ASSESSMENT_OPENAI_ENABLED"
             };
 
             foreach (var flagName in knownFlags)

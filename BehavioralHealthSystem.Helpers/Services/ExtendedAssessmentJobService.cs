@@ -54,18 +54,18 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             // Track jobs by session
             var sessionJobsKey = $"{SessionJobsKeyPrefix}{sessionId}";
-            var sessionJobs = _cache.Get<List<string>>(sessionJobsKey) ?? new List<string>();
+            var sessionJobs = _cache.Get<List<string>>(sessionJobsKey) ?? [];
             sessionJobs.Add(jobId);
             _cache.Set(sessionJobsKey, sessionJobs, cacheOptions);
 
-            _logger.LogInformation("[{ServiceName}] Created job {JobId} for session {SessionId}", 
+            _logger.LogInformation("[{ServiceName}] Created job {JobId} for session {SessionId}",
                 nameof(ExtendedAssessmentJobService), jobId, sessionId);
 
             return jobId;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error creating job for session {SessionId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error creating job for session {SessionId}",
                 nameof(ExtendedAssessmentJobService), sessionId);
             throw;
         }
@@ -80,7 +80,7 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error getting job {JobId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error getting job {JobId}",
                 nameof(ExtendedAssessmentJobService), jobId);
             return null;
         }
@@ -93,14 +93,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
             var job = _cache.Get<ExtendedAssessmentJob>($"{JobKeyPrefix}{jobId}");
             if (job == null)
             {
-                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for status update", 
+                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for status update",
                     nameof(ExtendedAssessmentJobService), jobId);
                 return false;
             }
 
             job.Status = status;
             job.ProgressPercentage = Math.Clamp(progressPercentage, 0, 100);
-            
+
             if (!string.IsNullOrEmpty(currentStep))
             {
                 job.CurrentStep = currentStep;
@@ -122,14 +122,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             _cache.Set($"{JobKeyPrefix}{jobId}", job);
 
-            _logger.LogInformation("[{ServiceName}] Updated job {JobId} status to {Status} ({Progress}%) - {Step}", 
+            _logger.LogInformation("[{ServiceName}] Updated job {JobId} status to {Status} ({Progress}%) - {Step}",
                 nameof(ExtendedAssessmentJobService), jobId, status, progressPercentage, currentStep ?? "");
 
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error updating job {JobId} status", 
+            _logger.LogError(ex, "[{ServiceName}] Error updating job {JobId} status",
                 nameof(ExtendedAssessmentJobService), jobId);
             return false;
         }
@@ -142,7 +142,7 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
             var job = _cache.Get<ExtendedAssessmentJob>($"{JobKeyPrefix}{jobId}");
             if (job == null)
             {
-                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for completion", 
+                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for completion",
                     nameof(ExtendedAssessmentJobService), jobId);
                 return false;
             }
@@ -157,14 +157,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             _cache.Set($"{JobKeyPrefix}{jobId}", job);
 
-            _logger.LogInformation("[{ServiceName}] Completed job {JobId} in {ProcessingTime}ms using model {Model}", 
+            _logger.LogInformation("[{ServiceName}] Completed job {JobId} in {ProcessingTime}ms using model {Model}",
                 nameof(ExtendedAssessmentJobService), jobId, processingTimeMs, modelUsed ?? "unknown");
 
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error completing job {JobId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error completing job {JobId}",
                 nameof(ExtendedAssessmentJobService), jobId);
             return false;
         }
@@ -177,7 +177,7 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
             var job = _cache.Get<ExtendedAssessmentJob>($"{JobKeyPrefix}{jobId}");
             if (job == null)
             {
-                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for failure", 
+                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for failure",
                     nameof(ExtendedAssessmentJobService), jobId);
                 return false;
             }
@@ -190,14 +190,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             _cache.Set($"{JobKeyPrefix}{jobId}", job);
 
-            _logger.LogError("[{ServiceName}] Failed job {JobId}: {ErrorMessage}", 
+            _logger.LogError("[{ServiceName}] Failed job {JobId}: {ErrorMessage}",
                 nameof(ExtendedAssessmentJobService), jobId, errorMessage);
 
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error failing job {JobId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error failing job {JobId}",
                 nameof(ExtendedAssessmentJobService), jobId);
             return false;
         }
@@ -215,7 +215,7 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             if (job.IsCompleted)
             {
-                _logger.LogWarning("[{ServiceName}] Cannot cancel job {JobId} - already completed", 
+                _logger.LogWarning("[{ServiceName}] Cannot cancel job {JobId} - already completed",
                     nameof(ExtendedAssessmentJobService), jobId);
                 return false;
             }
@@ -226,14 +226,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             _cache.Set($"{JobKeyPrefix}{jobId}", job);
 
-            _logger.LogInformation("[{ServiceName}] Cancelled job {JobId}", 
+            _logger.LogInformation("[{ServiceName}] Cancelled job {JobId}",
                 nameof(ExtendedAssessmentJobService), jobId);
 
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error cancelling job {JobId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error cancelling job {JobId}",
                 nameof(ExtendedAssessmentJobService), jobId);
             return false;
         }
@@ -244,8 +244,8 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
         try
         {
             var sessionJobsKey = $"{SessionJobsKeyPrefix}{sessionId}";
-            var jobIds = _cache.Get<List<string>>(sessionJobsKey) ?? new List<string>();
-            
+            var jobIds = _cache.Get<List<string>>(sessionJobsKey) ?? [];
+
             var jobs = new List<ExtendedAssessmentJob>();
             foreach (var jobId in jobIds)
             {
@@ -260,9 +260,9 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error getting jobs for session {SessionId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error getting jobs for session {SessionId}",
                 nameof(ExtendedAssessmentJobService), sessionId);
-            return new List<ExtendedAssessmentJob>();
+            return [];
         }
     }
 
@@ -272,14 +272,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
         {
             // Note: In-memory cache auto-expires, so this is mainly for logging
             // In a persistent storage implementation, this would actually clean up old records
-            _logger.LogInformation("[{ServiceName}] Cleanup called - in-memory cache auto-expires jobs after 2 hours", 
+            _logger.LogInformation("[{ServiceName}] Cleanup called - in-memory cache auto-expires jobs after 2 hours",
                 nameof(ExtendedAssessmentJobService));
-            
+
             return await Task.FromResult(0);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error during cleanup", 
+            _logger.LogError(ex, "[{ServiceName}] Error during cleanup",
                 nameof(ExtendedAssessmentJobService));
             return 0;
         }
@@ -292,14 +292,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
             var job = _cache.Get<ExtendedAssessmentJob>($"{JobKeyPrefix}{jobId}");
             if (job == null)
             {
-                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for retry", 
+                _logger.LogWarning("[{ServiceName}] Job {JobId} not found for retry",
                     nameof(ExtendedAssessmentJobService), jobId);
                 return false;
             }
 
             if (!job.CanRetry)
             {
-                _logger.LogWarning("[{ServiceName}] Job {JobId} cannot be retried - status: {Status}, retry count: {RetryCount}/{MaxRetries}", 
+                _logger.LogWarning("[{ServiceName}] Job {JobId} cannot be retried - status: {Status}, retry count: {RetryCount}/{MaxRetries}",
                     nameof(ExtendedAssessmentJobService), jobId, job.Status, job.RetryCount, job.MaxRetries);
                 return false;
             }
@@ -315,14 +315,14 @@ public class ExtendedAssessmentJobService : IExtendedAssessmentJobService
 
             _cache.Set($"{JobKeyPrefix}{jobId}", job);
 
-            _logger.LogInformation("[{ServiceName}] Job {JobId} queued for retry (attempt {Attempt})", 
+            _logger.LogInformation("[{ServiceName}] Job {JobId} queued for retry (attempt {Attempt})",
                 nameof(ExtendedAssessmentJobService), jobId, job.RetryCount + 1);
 
             return await Task.FromResult(true);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{ServiceName}] Error retrying job {JobId}", 
+            _logger.LogError(ex, "[{ServiceName}] Error retrying job {JobId}",
                 nameof(ExtendedAssessmentJobService), jobId);
             return false;
         }

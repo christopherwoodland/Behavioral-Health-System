@@ -1,6 +1,8 @@
 # Behavioral Health System - Complete Mental Health Platform
 
-A **production-ready** full-stack behavioral health assessment platform featuring Azure Functions backend, React frontend, and Azure OpenAI Realtime API for natural voice conversations. Integrates with Kintsugi Health API for advanced mental health analysis, following Microsoft's best practices for enterprise-grade development.
+A **production-ready** full-stack behavioral health assessment platform featuring Azure Functions backend, React frontend, Azure OpenAI Realtime API for natural voice conversations, and optional Microsoft Band integration. Integrates with Kintsugi Health API for advanced mental health analysis, following Microsoft's best practices for enterprise-grade development.
+
+> 📚 **Complete Documentation**: This README contains comprehensive documentation consolidated from multiple sources. All features, deployment guides, and technical details are included below.
 
 ## 🚀 Key Features
 
@@ -140,15 +142,19 @@ BehavioralHealthSystem/
 │   │   ├── PredictionResultTests.cs
 │   │   └── UserMetadataTests.cs
 │   └── test-requests.http                       # HTTP test requests for local development
-├── � scripts/                                  # PowerShell automation scripts
-│   ├── deploy-solution.ps1                      # Complete solution deployment script
-│   ├── deploy-code-only.ps1                     # Code-only deployment script
-│   ├── deploy-ui.ps1                            # UI deployment script
-│   ├── local-run.ps1                            # Local development startup script
-│   ├── extract-dsm5-data.ps1                    # DSM-5 data extraction tool
-│   ├── load-dsm5-data.ps1                       # DSM-5 data loading script
-│   ├── DSM5_TEST_SCRIPT.ps1                     # DSM-5 API testing
-│   └── test-dsm5-extraction.ps1                 # DSM-5 extraction testing
+├── 📁 scripts/                                  # PowerShell automation scripts
+│   ├── 📄 README.md                            # **Comprehensive scripts documentation**
+│   ├── deploy-solution.ps1                      # Complete solution deployment (Quick Deploy + Custom)
+│   ├── deploy-code-only.ps1                     # Code-only deployment for rapid iterations
+│   ├── deploy-ui.ps1                            # UI deployment (App Service/Storage/Static Web Apps)
+│   ├── deploy-environment-variables.ps1         # Environment variables and app settings deployment
+│   ├── local-run.ps1                            # Local development startup (Functions + React)
+│   ├── extract-dsm5-data.ps1                    # DSM-5 data extraction using Azure Document Intelligence
+│   ├── load-dsm5-data.ps1                       # DSM-5 data loading and system integration
+│   ├── test-dsm5-extraction.ps1                 # DSM-5 extraction testing and validation
+│   ├── DSM5_TEST_SCRIPT.ps1                     # DSM-5 API endpoint testing
+│   ├── copy-storage-containers.ps1              # Azure Storage container management
+│   └── csp.ps1                                  # Development utility script
 └── 📄 BehavioralHealthSystem.sln                # Solution file
 ```
 └── 📄 BehavioralHealthSystem.sln              # Solution file
@@ -247,6 +253,86 @@ For the best development experience, install:
 - **📈 Application Insights** extension for monitoring
 - **⚛️ React DevTools** browser extension
 - **🎨 Tailwind CSS IntelliSense** VS Code extension
+
+## 🎙️ Jekyll Voice Recording Feature
+
+The Jekyll agent includes **automatic voice recording capabilities** that silently capture user speech during health conversations. Recordings are processed and saved to Azure Blob Storage for comprehensive assessment data.
+
+### **🎯 Recording Features**
+
+- **🔄 Automatic Recording** - Starts when Jekyll agent becomes active
+- **⏱️ Minimum Duration** - Requires 45 seconds of uninterrupted speech
+- **🎵 High Quality Audio** - 128kbps bitrate, 48000Hz → 44100Hz WAV conversion
+- **🔊 Audio Processing** - Echo cancellation, noise suppression, auto gain control
+- **☁️ Azure Storage** - Uploads to `audio-uploads` container as `${userId}_${sessionId}_${timestamp}.wav`
+- **👁️ UI Indicators** - Shows recording status, duration, and saving state
+- **⏹️ Auto-Stop** - Automatically stops and saves after minimum duration reached
+
+### **⚙️ Recording Configuration**
+
+```env
+# .env.local or .env.production
+VITE_JEKYLL_RECORDING_MIN_DURATION=45    # Minimum recording duration (seconds)
+VITE_ENABLE_JEKYLL_AGENT=true            # Must be enabled for recording
+VITE_API_BASE_URL=http://localhost:7071/api  # Azure Functions endpoint
+```
+
+### **📊 Recording Lifecycle**
+
+```
+Jekyll Agent Activation
+    ↓
+[Start Recording] (Red dot appears)
+    ↓
+Progress Updates (Every 1 second)
+    ↓
+Duration Counter (Shows "Recording: 30s / 45s")
+    ↓
+Minimum Duration Reached (45+ seconds)
+    ↓
+Auto-Stop & Convert to WAV (Yellow "Saving..." indicator)
+    ↓
+Upload to Azure Blob Storage
+    ↓
+[Recording Complete] (Indicator disappears)
+```
+
+### **🎤 Audio Processing Pipeline**
+
+1. **Capture**: WebRTC MediaRecorder with `audio/webm;codecs=opus`
+2. **Settings**: 128kbps bitrate, mono channel, 48000Hz sample rate
+3. **Enhancement**: Echo cancellation, noise suppression, auto gain control
+4. **Conversion**: Web Audio API converts to 44100Hz WAV format
+5. **Upload**: Azure Blob Storage at `audio-uploads/users/${userId}/audio/${fileName}`
+
+### **📱 User Interface Indicators**
+
+| State | Visual Indicator | Description |
+|-------|-----------------|-------------|
+| **Recording** | 🔴 Red dot + "Recording: 30s / 45s" | Active recording with progress |
+| **Minimum Reached** | 🟢 Green text + duration | 45+ seconds, ready for auto-stop |
+| **Saving** | 🟡 Spinner + "Saving..." | Converting to WAV and uploading |
+| **Error** | 🔺 Red triangle + message | Recording/upload failed |
+| **Complete** | No indicator | Recording successfully saved |
+
+### **🛠️ Implementation Details**
+
+**Core Service**: `jekyllVoiceRecordingService.ts`
+
+```typescript
+// Key methods
+startRecording(sessionId, userId, onProgress)  // Starts with progress callbacks
+stopRecording(uploadToBlob)                    // Converts and uploads
+getCurrentDuration()                           // Gets current duration
+hasMinimumDuration()                          // Checks if >= 45 seconds
+```
+
+**Integration**: `RealtimeAgentExperience.tsx`
+
+- Recording starts automatically when Jekyll agent activated
+- Progress updates every second with visual feedback
+- Auto-stops after minimum duration with upload to Azure
+- Graceful cleanup when switching agents or ending session
 
 ## 🏗️ Application Architecture
 
@@ -568,37 +654,144 @@ Add these settings to your Azure Function App configuration:
 
 ## 🚢 Deployment
 
+The Behavioral Health System provides comprehensive deployment automation with multiple strategies to fit different scenarios, from quick demos to full production deployments.
+
+### **🎯 Prerequisites for Deployment**
+
+#### Required Tools
+
+1. **Azure CLI** (version 2.50.0 or higher)
+   ```powershell
+   # Check if installed
+   az --version
+   
+   # Install: https://aka.ms/InstallAzureCLIDirect
+   ```
+
+2. **.NET 8 SDK** 
+   ```powershell
+   # Check version
+   dotnet --version  # Should show 8.0.x or higher
+   ```
+
+3. **Azure Functions Core Tools v4**
+   ```powershell
+   # Check version
+   func --version    # Should show 4.x or higher
+   
+   # Install if needed
+   npm install -g azure-functions-core-tools@4 --unsafe-perm true
+   ```
+
+4. **Node.js & npm** (version 18.x or higher)
+   ```powershell
+   node --version
+   npm --version
+   ```
+
+#### Azure Account Setup
+
+```powershell
+# 1. Login to Azure
+az login
+
+# 2. Set subscription (if multiple)
+az account list --output table
+az account set --subscription "Your-Subscription-Name"
+
+# 3. Verify authentication
+az account show
+```
+
+#### Required API Credentials
+
+Before deployment, gather these credentials:
+
+- ✅ **Kintsugi API Key** - From [Kintsugi Health Portal](https://api.kintsugihealth.com)
+- ✅ **Azure OpenAI Endpoint** - Your Azure OpenAI resource endpoint (optional)
+- ✅ **Azure OpenAI API Key** - For extended risk assessment features (optional)
+- ✅ **Azure AD Configuration** - For user authentication (optional)
+
+### 📋 **Comprehensive Scripts Documentation**
+
+For detailed documentation on all deployment scripts, configuration options, parameters, and troubleshooting:
+
+> **📖 [View Complete Scripts Documentation](scripts/README.md)**
+> 
+> The scripts directory contains comprehensive documentation for all PowerShell automation scripts, including:
+> - **Complete solution deployment** with Quick Deploy and custom configuration options
+> - **Code-only deployment** for rapid development iterations
+> - **Environment-specific deployment** (development, staging, production)
+> - **Local development startup** with one-command environment setup
+> - **DSM-5 data management** tools and utilities
+> - **Troubleshooting guides** and best practices
+
 ### **🚀 Quick Deploy (Recommended for Getting Started)**
 
 Perfect for demos, testing, and rapid prototyping with minimal configuration:
 
 ```powershell
 # From solution root directory
-.\scripts\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
+.\scripts\deploy-solution.ps1 `
+  -FunctionAppName "your-unique-app-name" `
+  -KintsugiApiKey "your-api-key" `
+  -QuickDeploy
 
-# Or from scripts directory
-cd scripts
-.\deploy-solution.ps1 -FunctionAppName "your-unique-app-name" -KintsugiApiKey "your-api-key" -QuickDeploy
+# Example with real values
+.\scripts\deploy-solution.ps1 `
+  -FunctionAppName "bhi-demo-func" `
+  -KintsugiApiKey "sk-abc123..." `
+  -QuickDeploy
 ```
 
-This creates:
-
+**What QuickDeploy Creates:**
 - ✅ Resource group: `rg-your-unique-app-name` (auto-generated)
 - ✅ Deploys to East US region (optimal for most scenarios)
-- ✅ Configures all Azure resources with secure defaults
-- ✅ Sets up monitoring and logging
+- ✅ Function App: `your-unique-app-name`
+- ✅ Web App: `your-unique-app-name-web`
+- ✅ Storage Account: Auto-generated name
+- ✅ Application Insights: `ai-your-unique-app-name`
+- ✅ All environment variables configured
+- ✅ Both backend and frontend deployed
+
+**Deployment Time:** ~10-15 minutes
 
 ### **🏭 Production Deploy (Custom Configuration)**
 
-For production deployments with custom resource group and region:
+For production deployments with custom resource group and advanced configuration:
 
 ```powershell
-# From solution root directory
-.\scripts\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
+.\scripts\deploy-solution.ps1 `
+  -ResourceGroupName "bhi-production" `
+  -FunctionAppName "bhi-prod-func" `
+  -WebAppName "bhi-prod-web" `
+  -KintsugiApiKey "your-api-key" `
+  -Location "East US" `
+  -AzureOpenAIEndpoint "https://your-openai.cognitiveservices.azure.com" `
+  -AzureOpenAIApiKey "your-openai-key"
+```
 
-# Or from scripts directory
-cd scripts
-.\deploy-solution.ps1 -ResourceGroupName "your-rg" -FunctionAppName "your-function-app" -KintsugiApiKey "your-api-key" -Location "East US"
+**Advanced Options:**
+```powershell
+# Deploy infrastructure only (no code)
+.\scripts\deploy-solution.ps1 `
+  -FunctionAppName "bhi-func" `
+  -KintsugiApiKey "key" `
+  -DeployCode $false
+
+# Skip web app deployment
+.\scripts\deploy-solution.ps1 `
+  -FunctionAppName "bhi-func" `
+  -KintsugiApiKey "key" `
+  -SkipWebApp
+
+# Custom location and names
+.\scripts\deploy-solution.ps1 `
+  -ResourceGroupName "custom-rg" `
+  -FunctionAppName "custom-func" `
+  -WebAppName "custom-web" `
+  -KintsugiApiKey "key" `
+  -Location "West US 2"
 ```
 
 ### **⚡ Code-Only Deploy (Rapid Updates)**

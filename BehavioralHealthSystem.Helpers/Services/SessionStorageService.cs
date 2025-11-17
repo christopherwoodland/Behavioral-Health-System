@@ -25,7 +25,7 @@ public class SessionStorageService : ISessionStorageService
     {
         try
         {
-            _logger.LogInformation("Saving session data for session: {SessionId}, user: {UserId}", 
+            _logger.LogInformation("Saving session data for session: {SessionId}, user: {UserId}",
                 sessionData.SessionId, sessionData.UserId);
 
             var containerClient = await GetContainerClientAsync(cancellationToken);
@@ -45,11 +45,11 @@ public class SessionStorageService : ISessionStorageService
                 ["updatedAt"] = sessionData.UpdatedAt
             };
 
-            var response = await blobClient.UploadAsync(content, 
-                new BlobUploadOptions 
-                { 
+            var response = await blobClient.UploadAsync(content,
+                new BlobUploadOptions
+                {
                     Metadata = metadata
-                }, 
+                },
                 cancellationToken);
 
             _logger.LogInformation("Successfully saved session data for session: {SessionId}", sessionData.SessionId);
@@ -69,20 +69,20 @@ public class SessionStorageService : ISessionStorageService
             _logger.LogInformation("Getting session data for session: {SessionId}", sessionId);
 
             var containerClient = await GetContainerClientAsync(cancellationToken);
-            
+
             // Search for blob by session ID across all user folders
             await foreach (var blobItem in containerClient.GetBlobsAsync(
                 traits: BlobTraits.Metadata,
                 prefix: null,
                 cancellationToken: cancellationToken))
             {
-                if (blobItem.Metadata?.TryGetValue("sessionId", out var metaSessionId) == true && 
+                if (blobItem.Metadata?.TryGetValue("sessionId", out var metaSessionId) == true &&
                     metaSessionId == sessionId)
                 {
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var response = await blobClient.DownloadContentAsync(cancellationToken);
                     var jsonData = response.Value.Content.ToString();
-                    
+
                     var sessionData = JsonSerializer.Deserialize<SessionData>(jsonData, _jsonOptions);
                     _logger.LogInformation("Successfully retrieved session data for session: {SessionId}", sessionId);
                     return sessionData;
@@ -119,7 +119,7 @@ public class SessionStorageService : ISessionStorageService
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var response = await blobClient.DownloadContentAsync(cancellationToken);
                     var jsonData = response.Value.Content.ToString();
-                    
+
                     var sessionData = JsonSerializer.Deserialize<SessionData>(jsonData, _jsonOptions);
                     if (sessionData != null)
                     {
@@ -141,7 +141,7 @@ public class SessionStorageService : ISessionStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting sessions for user: {UserId}", userId);
-            return new List<SessionData>();
+            return [];
         }
     }
 
@@ -163,13 +163,13 @@ public class SessionStorageService : ISessionStorageService
                 try
                 {
                     // Only process blobs that are session files (end with .json and contain sessionId metadata)
-                    if (blobItem.Name.EndsWith(".json") && 
+                    if (blobItem.Name.EndsWith(".json") &&
                         blobItem.Metadata?.ContainsKey("sessionId") == true)
                     {
                         var blobClient = containerClient.GetBlobClient(blobItem.Name);
                         var response = await blobClient.DownloadContentAsync(cancellationToken);
                         var jsonData = response.Value.Content.ToString();
-                        
+
                         var sessionData = JsonSerializer.Deserialize<SessionData>(jsonData, _jsonOptions);
                         if (sessionData != null)
                         {
@@ -192,7 +192,7 @@ public class SessionStorageService : ISessionStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting all sessions across all users");
-            return new List<SessionData>();
+            return [];
         }
     }
 
@@ -209,19 +209,19 @@ public class SessionStorageService : ISessionStorageService
             _logger.LogInformation("Deleting session data for session: {SessionId}", sessionId);
 
             var containerClient = await GetContainerClientAsync(cancellationToken);
-            
+
             // Find and delete the blob
             await foreach (var blobItem in containerClient.GetBlobsAsync(
                 traits: BlobTraits.Metadata,
                 prefix: null,
                 cancellationToken: cancellationToken))
             {
-                if (blobItem.Metadata?.TryGetValue("sessionId", out var metaSessionId) == true && 
+                if (blobItem.Metadata?.TryGetValue("sessionId", out var metaSessionId) == true &&
                     metaSessionId == sessionId)
                 {
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var response = await blobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken);
-                    
+
                     _logger.LogInformation("Successfully deleted session data for session: {SessionId}", sessionId);
                     return response.Value;
                 }

@@ -402,6 +402,6 @@ public class DSM5ExtractionRequest
 
 public class DSM5DataUploadRequest
 {
-    public List<DSM5ConditionData> Data { get; set; } = new();
+    public List<DSM5ConditionData> Data { get; set; } = [];
     public bool OverwriteExisting { get; set; } = false;
 }

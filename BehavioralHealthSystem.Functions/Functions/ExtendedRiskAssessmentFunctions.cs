@@ -39,7 +39,7 @@ public class ExtendedRiskAssessmentFunctions
     /// <remarks>
     /// This endpoint immediately returns a job ID for tracking the assessment progress.
     /// The actual processing happens asynchronously in the background to avoid timeout issues.
-    /// 
+    ///
     /// Use the returned job ID to poll for status using GET /api/jobs/{jobId}
     /// </remarks>
     [Function("StartExtendedRiskAssessmentJob")]
@@ -50,7 +50,7 @@ public class ExtendedRiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Starting extended risk assessment job for session: {SessionId}", 
+            _logger.LogInformation("[{FunctionName}] Starting extended risk assessment job for session: {SessionId}",
                 nameof(StartExtendedRiskAssessmentJob), sessionId);
 
             // Parse request body for selected DSM-5 conditions
@@ -65,7 +65,7 @@ public class ExtendedRiskAssessmentFunctions
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "[{FunctionName}] Error parsing request body, will use default schizophrenia assessment", 
+                _logger.LogWarning(ex, "[{FunctionName}] Error parsing request body, will use default schizophrenia assessment",
                     nameof(StartExtendedRiskAssessmentJob));
             }
 
@@ -73,9 +73,9 @@ public class ExtendedRiskAssessmentFunctions
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
             {
-                _logger.LogWarning("[{FunctionName}] Session not found: {SessionId}", 
+                _logger.LogWarning("[{FunctionName}] Session not found: {SessionId}",
                     nameof(StartExtendedRiskAssessmentJob), sessionId);
-                
+
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
                 {
@@ -90,20 +90,20 @@ public class ExtendedRiskAssessmentFunctions
             {
                 sessionData.DSM5Conditions = requestBody.SelectedConditions;
                 await _sessionStorageService.UpdateSessionDataAsync(sessionData);
-                _logger.LogInformation("[{FunctionName}] Updated session {SessionId} with {Count} selected DSM-5 conditions: {Conditions}", 
-                    nameof(StartExtendedRiskAssessmentJob), sessionId, 
-                    requestBody.SelectedConditions.Count, 
+                _logger.LogInformation("[{FunctionName}] Updated session {SessionId} with {Count} selected DSM-5 conditions: {Conditions}",
+                    nameof(StartExtendedRiskAssessmentJob), sessionId,
+                    requestBody.SelectedConditions.Count,
                     string.Join(", ", requestBody.SelectedConditions));
             }
             else
             {
-                _logger.LogInformation("[{FunctionName}] No DSM-5 conditions specified, will default to schizophrenia for backwards compatibility", 
+                _logger.LogInformation("[{FunctionName}] No DSM-5 conditions specified, will default to schizophrenia for backwards compatibility",
                     nameof(StartExtendedRiskAssessmentJob));
             }
 
             // Create a new job
             var jobId = await _jobService.CreateJobAsync(sessionId);
-            
+
             // Start the durable function orchestration
             var instanceId = await durableClient.ScheduleNewOrchestrationInstanceAsync(
                 "ExtendedAssessmentOrchestrator",
@@ -111,10 +111,10 @@ public class ExtendedRiskAssessmentFunctions
                 {
                     JobId = jobId,
                     SessionId = sessionId,
-                    SelectedConditions = requestBody?.SelectedConditions ?? new List<string>()
+                    SelectedConditions = requestBody?.SelectedConditions ?? []
                 });
 
-            _logger.LogInformation("[{FunctionName}] Started orchestration {InstanceId} for job {JobId}, session {SessionId}", 
+            _logger.LogInformation("[{FunctionName}] Started orchestration {InstanceId} for job {JobId}, session {SessionId}",
                 nameof(StartExtendedRiskAssessmentJob), instanceId, jobId, sessionId);
 
             var response = req.CreateResponse(HttpStatusCode.Accepted);
@@ -133,7 +133,7 @@ public class ExtendedRiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error starting extended risk assessment job for session: {SessionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error starting extended risk assessment job for session: {SessionId}",
                 nameof(StartExtendedRiskAssessmentJob), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -155,7 +155,7 @@ public class ExtendedRiskAssessmentFunctions
     /// Returns 200 OK regardless of whether assessment exists:
     /// - If assessment exists: Returns the full assessment data
     /// - If assessment doesn't exist: Returns informational response with hasExtendedAssessment=false
-    /// 
+    ///
     /// This is expected behavior for new sessions - use POST endpoint to generate assessment.
     /// For a simple availability check, consider using GET /api/sessions/{sessionId}/extended-risk-assessment/status
     /// </remarks>
@@ -166,15 +166,15 @@ public class ExtendedRiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Retrieving extended risk assessment for session: {SessionId}", 
+            _logger.LogInformation("[{FunctionName}] Retrieving extended risk assessment for session: {SessionId}",
                 nameof(GetExtendedRiskAssessment), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
             if (sessionData == null)
             {
-                _logger.LogWarning("[{FunctionName}] Session not found: {SessionId}", 
+                _logger.LogWarning("[{FunctionName}] Session not found: {SessionId}",
                     nameof(GetExtendedRiskAssessment), sessionId);
-                
+
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
                 {
@@ -186,9 +186,9 @@ public class ExtendedRiskAssessmentFunctions
 
             if (sessionData.ExtendedRiskAssessment != null)
             {
-                _logger.LogInformation("[{FunctionName}] Extended risk assessment found for session: {SessionId}", 
+                _logger.LogInformation("[{FunctionName}] Extended risk assessment found for session: {SessionId}",
                     nameof(GetExtendedRiskAssessment), sessionId);
-                
+
                 var response = req.CreateResponse(HttpStatusCode.OK);
                 await response.WriteStringAsync(JsonSerializer.Serialize(new
                 {
@@ -199,9 +199,9 @@ public class ExtendedRiskAssessmentFunctions
             }
             else
             {
-                _logger.LogInformation("[{FunctionName}] Extended risk assessment not yet generated for session: {SessionId}", 
+                _logger.LogInformation("[{FunctionName}] Extended risk assessment not yet generated for session: {SessionId}",
                     nameof(GetExtendedRiskAssessment), sessionId);
-                
+
                 // Return 200 OK with informational response - this is expected for new sessions
                 var response = req.CreateResponse(HttpStatusCode.OK);
                 await response.WriteStringAsync(JsonSerializer.Serialize(new
@@ -217,7 +217,7 @@ public class ExtendedRiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error getting extended risk assessment for session: {SessionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error getting extended risk assessment for session: {SessionId}",
                 nameof(GetExtendedRiskAssessment), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -245,7 +245,7 @@ public class ExtendedRiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Deleting extended risk assessment for session: {SessionId}", 
+            _logger.LogInformation("[{FunctionName}] Deleting extended risk assessment for session: {SessionId}",
                 nameof(DeleteExtendedRiskAssessment), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
@@ -264,14 +264,14 @@ public class ExtendedRiskAssessmentFunctions
             {
                 sessionData.ExtendedRiskAssessment = null;
                 sessionData.UpdatedAt = DateTime.UtcNow.ToString("O");
-                
+
                 var updateSuccess = await _sessionStorageService.UpdateSessionDataAsync(sessionData);
-                
+
                 if (updateSuccess)
                 {
-                    _logger.LogInformation("[{FunctionName}] Extended risk assessment deleted for session: {SessionId}", 
+                    _logger.LogInformation("[{FunctionName}] Extended risk assessment deleted for session: {SessionId}",
                         nameof(DeleteExtendedRiskAssessment), sessionId);
-                    
+
                     var response = req.CreateResponse(HttpStatusCode.OK);
                     await response.WriteStringAsync(JsonSerializer.Serialize(new
                     {
@@ -287,7 +287,7 @@ public class ExtendedRiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error deleting extended risk assessment for session: {SessionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error deleting extended risk assessment for session: {SessionId}",
                 nameof(DeleteExtendedRiskAssessment), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -315,15 +315,15 @@ public class ExtendedRiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Getting job status for: {JobId}", 
+            _logger.LogInformation("[{FunctionName}] Getting job status for: {JobId}",
                 nameof(GetExtendedAssessmentJobStatus), jobId);
 
             var job = await _jobService.GetJobAsync(jobId);
             if (job == null)
             {
-                _logger.LogWarning("[{FunctionName}] Job not found: {JobId}", 
+                _logger.LogWarning("[{FunctionName}] Job not found: {JobId}",
                     nameof(GetExtendedAssessmentJobStatus), jobId);
-                
+
                 var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
                 await notFoundResponse.WriteStringAsync(JsonSerializer.Serialize(new
                 {
@@ -361,7 +361,7 @@ public class ExtendedRiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error getting job status for: {JobId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error getting job status for: {JobId}",
                 nameof(GetExtendedAssessmentJobStatus), jobId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -389,7 +389,7 @@ public class ExtendedRiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Checking extended risk assessment status for session: {SessionId}", 
+            _logger.LogInformation("[{FunctionName}] Checking extended risk assessment status for session: {SessionId}",
                 nameof(GetExtendedRiskAssessmentStatus), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
@@ -427,7 +427,7 @@ public class ExtendedRiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error checking extended risk assessment status for session: {SessionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error checking extended risk assessment status for session: {SessionId}",
                 nameof(GetExtendedRiskAssessmentStatus), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -448,5 +448,5 @@ public class ExtendedRiskAssessmentFunctions
 public class ExtendedRiskAssessmentRequest
 {
     [JsonPropertyName("selectedConditions")]
-    public List<string> SelectedConditions { get; set; } = new();
+    public List<string> SelectedConditions { get; set; } = [];
 }

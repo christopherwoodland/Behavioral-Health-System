@@ -38,7 +38,7 @@ public class DSM5DataService : IDSM5DataService
         // Initialize Azure Document Intelligence client (only if endpoint is provided)
         // This is optional when using Content Understanding exclusively
         var documentEndpoint = _configuration["DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT"];
-        
+
         if (!string.IsNullOrWhiteSpace(documentEndpoint))
         {
             // Check for API key first (local development), then fall back to Managed Identity (production)
@@ -62,7 +62,7 @@ public class DSM5DataService : IDSM5DataService
         // Initialize Blob Storage client
         var storageAccountName = _configuration["DSM5_STORAGE_ACCOUNT_NAME"]
             ?? throw new InvalidOperationException("DSM5_STORAGE_ACCOUNT_NAME configuration missing");
-        
+
         // Check for connection string first (local development), then fall back to Managed Identity (production)
         var storageConnectionString = _configuration.GetConnectionString("AzureWebJobsStorage") ?? _configuration["AzureWebJobsStorage"];
         if (!string.IsNullOrWhiteSpace(storageConnectionString))
@@ -92,7 +92,7 @@ public class DSM5DataService : IDSM5DataService
     public async Task<DSM5ExtractionResult> ExtractDiagnosticCriteriaAsync(string? pdfUrl = null, string? pdfBase64 = null, string? pageRanges = null, bool autoUpload = false)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
+
         try
         {
             var sourceType = !string.IsNullOrEmpty(pdfUrl) ? "URL" : "Base64";
@@ -257,7 +257,7 @@ public class DSM5DataService : IDSM5DataService
                         if (!string.IsNullOrEmpty(category) && !conditionData.Category.Contains(category, StringComparison.OrdinalIgnoreCase))
                             continue;
 
-                        if (!string.IsNullOrEmpty(searchTerm) && 
+                        if (!string.IsNullOrEmpty(searchTerm) &&
                             !conditionData.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) &&
                             !conditionData.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                             continue;
@@ -265,7 +265,7 @@ public class DSM5DataService : IDSM5DataService
                         // Remove detailed criteria if not requested
                         if (!includeDetails)
                         {
-                            conditionData.DiagnosticCriteria = new List<DSM5DiagnosticCriterion>();
+                            conditionData.DiagnosticCriteria = [];
                         }
 
                         conditions.Add(conditionData);
@@ -287,7 +287,7 @@ public class DSM5DataService : IDSM5DataService
         {
             _logger.LogError(ex, "[{MethodName}] Error getting available DSM-5 conditions",
                 nameof(GetAvailableConditionsAsync));
-            return new List<DSM5ConditionData>();
+            return [];
         }
     }
 
@@ -306,16 +306,16 @@ public class DSM5DataService : IDSM5DataService
             {
                 var content = await blobClient.DownloadContentAsync();
                 var conditionData = JsonSerializer.Deserialize<DSM5ConditionData>(content.Value.Content.ToString(), _jsonOptions);
-                
+
                 _logger.LogInformation("[{MethodName}] Found condition details for: {ConditionId}",
                     nameof(GetConditionDetailsAsync), conditionId);
-                
+
                 return conditionData;
             }
 
             _logger.LogInformation("[{MethodName}] Condition not found: {ConditionId}",
                 nameof(GetConditionDetailsAsync), conditionId);
-            
+
             return null;
         }
         catch (Exception ex)
@@ -329,7 +329,7 @@ public class DSM5DataService : IDSM5DataService
     public async Task<DSM5UploadResult> UploadConditionsToStorageAsync(List<DSM5ConditionData> conditions, bool overwriteExisting = false)
     {
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        
+
         try
         {
             _logger.LogInformation("[{MethodName}] Uploading {ConditionCount} conditions to blob storage",
@@ -337,7 +337,7 @@ public class DSM5DataService : IDSM5DataService
 
             await EnsureContainerExistsAsync();
             var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            
+
             var uploadedCount = 0;
             var skippedCount = 0;
             var updatedCount = 0;
@@ -352,7 +352,7 @@ public class DSM5DataService : IDSM5DataService
 
                     // Check if blob exists
                     var exists = await blobClient.ExistsAsync();
-                    
+
                     if (exists && !overwriteExisting)
                     {
                         skippedCount++;
@@ -362,9 +362,9 @@ public class DSM5DataService : IDSM5DataService
                     // Upload the condition data
                     var jsonContent = JsonSerializer.Serialize(condition, _jsonOptions);
                     var binaryData = BinaryData.FromString(jsonContent);
-                    
+
                     await blobClient.UploadAsync(binaryData, overwrite: overwriteExisting);
-                    
+
                     // Set metadata
                     var metadata = new Dictionary<string, string>
                     {
@@ -376,7 +376,7 @@ public class DSM5DataService : IDSM5DataService
                     await blobClient.SetMetadataAsync(metadata);
 
                     blobPaths.Add(blobName);
-                    
+
                     if (exists)
                         updatedCount++;
                     else
@@ -462,14 +462,14 @@ public class DSM5DataService : IDSM5DataService
                 {
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var properties = await blobClient.GetPropertiesAsync();
-                    
+
                     if (properties.Value.Metadata.TryGetValue("category", out var category))
                     {
                         categories.Add(category);
                     }
 
                     totalConditions++;
-                    
+
                     // Assume all are available for now - could add more sophisticated logic
                     availableConditions++;
                 }
@@ -496,7 +496,7 @@ public class DSM5DataService : IDSM5DataService
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{MethodName}] Error getting DSM-5 data status", nameof(GetDataStatusAsync));
-            
+
             return new DSM5DataStatus
             {
                 IsInitialized = false,
@@ -533,7 +533,7 @@ public class DSM5DataService : IDSM5DataService
         {
             _logger.LogError(ex, "[{MethodName}] Error getting conditions for assessment",
                 nameof(GetConditionsForAssessmentAsync));
-            return new Dictionary<string, DSM5ConditionData>();
+            return [];
         }
     }
 
@@ -604,9 +604,9 @@ public class DSM5DataService : IDSM5DataService
         {
             // This is a simplified parsing logic - in a real implementation,
             // you would need sophisticated pattern matching to extract DSM-5 structure
-            
+
             var pageText = ExtractTextFromPage(page);
-            
+
             // Look for DSM-5 diagnostic code patterns (e.g., "295.90 (F20.9)")
             var codePattern = @"(\d{3}\.\d{2})\s*\(([F-Z]\d{2}\.\d+)\)";
             var codeMatches = Regex.Matches(pageText, codePattern);
@@ -633,7 +633,7 @@ public class DSM5DataService : IDSM5DataService
     {
         // Extract text from lines in the page
         var textLines = new List<string>();
-        
+
         foreach (var line in page.Lines ?? new List<DocumentLine>())
         {
             textLines.Add(line.Content ?? string.Empty);
@@ -648,7 +648,7 @@ public class DSM5DataService : IDSM5DataService
         {
             // This is a simplified extraction - real implementation would need
             // sophisticated NLP and pattern matching
-            
+
             var dsmCode = codeMatch.Groups[1].Value;
             var icdCode = codeMatch.Groups[2].Value;
             var fullCode = $"{dsmCode} ({icdCode})";
@@ -665,7 +665,7 @@ public class DSM5DataService : IDSM5DataService
                 Name = conditionName,
                 Code = fullCode,
                 Description = $"Mental health condition extracted from DSM-5 (page {pageNumber})",
-                PageNumbers = new List<int> { pageNumber },
+                PageNumbers = [pageNumber],
                 LastUpdated = DateTime.UtcNow,
                 ExtractionMetadata = new DSM5ExtractionMetadata
                 {
@@ -673,12 +673,12 @@ public class DSM5DataService : IDSM5DataService
                     PageRanges = pageNumber.ToString(),
                     ConfidenceScore = 0.8, // Placeholder - would be calculated in real implementation
                     ExtractionVersion = "1.0",
-                    Notes = new List<string> { "Extracted using basic pattern matching" }
+                    Notes = ["Extracted using basic pattern matching"]
                 }
             };
 
             // TODO: Extract diagnostic criteria, category, etc. using more sophisticated parsing
-            
+
             return condition;
         }
         catch (Exception ex)
@@ -699,14 +699,14 @@ public class DSM5DataService : IDSM5DataService
         }
 
         var ranges = pageRanges.Split(',', StringSplitOptions.RemoveEmptyEntries);
-        
+
         foreach (var range in ranges)
         {
             if (range.Contains('-'))
             {
                 var parts = range.Split('-');
-                if (parts.Length == 2 && 
-                    int.TryParse(parts[0].Trim(), out var start) && 
+                if (parts.Length == 2 &&
+                    int.TryParse(parts[0].Trim(), out var start) &&
                     int.TryParse(parts[1].Trim(), out var end))
                 {
                     for (int i = start; i <= end; i++)

@@ -42,7 +42,7 @@ public class DSM5ConditionData
     /// Section 1: Diagnostic Criteria - Official lettered list of symptoms and requirements
     /// </summary>
     [JsonPropertyName("diagnosticCriteria")]
-    public List<DSM5DiagnosticCriterion> DiagnosticCriteria { get; set; } = new();
+    public List<DSM5DiagnosticCriterion> DiagnosticCriteria { get; set; } = [];
 
     /// <summary>
     /// Section 2: Diagnostic Features - Narrative explanation of core symptoms and presentation
@@ -102,7 +102,7 @@ public class DSM5ConditionData
     /// Section 11: Differential Diagnosis - Other disorders to consider and rule out
     /// </summary>
     [JsonPropertyName("differentialDiagnosis")]
-    public List<string> DifferentialDiagnosis { get; set; } = new();
+    public List<string> DifferentialDiagnosis { get; set; } = [];
 
     /// <summary>
     /// Section 12: Comorbidity - Disorders commonly co-occurring
@@ -114,7 +114,7 @@ public class DSM5ConditionData
     /// Section 13: Specifiers and Subtypes (where applicable)
     /// </summary>
     [JsonPropertyName("specifiers")]
-    public List<DSM5Specifier> Specifiers { get; set; } = new();
+    public List<DSM5Specifier> Specifiers { get; set; } = [];
 
     // ==================== METADATA ====================
 
@@ -122,19 +122,19 @@ public class DSM5ConditionData
     /// Page numbers in the DSM-5 where this condition appears
     /// </summary>
     [JsonPropertyName("pageNumbers")]
-    public List<int> PageNumbers { get; set; } = new();
+    public List<int> PageNumbers { get; set; } = [];
 
     /// <summary>
     /// Which sections were present in the source document
     /// </summary>
     [JsonPropertyName("presentSections")]
-    public List<string> PresentSections { get; set; } = new();
+    public List<string> PresentSections { get; set; } = [];
 
     /// <summary>
     /// Which sections were missing or empty in the source
     /// </summary>
     [JsonPropertyName("missingSections")]
-    public List<string> MissingSections { get; set; } = new();
+    public List<string> MissingSections { get; set; } = [];
 
     /// <summary>
     /// Whether this condition is available for use in assessments
@@ -182,7 +182,7 @@ public class DSM5DiagnosticCriterion
     /// Sub-criteria or symptoms (numbered items under a criterion)
     /// </summary>
     [JsonPropertyName("subCriteria")]
-    public List<DSM5SubCriterion> SubCriteria { get; set; } = new();
+    public List<DSM5SubCriterion> SubCriteria { get; set; } = [];
 
     /// <summary>
     /// Whether this criterion is required for diagnosis
@@ -230,7 +230,7 @@ public class DSM5SubCriterion
     /// Examples or manifestations of this symptom
     /// </summary>
     [JsonPropertyName("examples")]
-    public List<string> Examples { get; set; } = new();
+    public List<string> Examples { get; set; } = [];
 
     /// <summary>
     /// Whether this sub-criterion is required vs optional
@@ -302,7 +302,7 @@ public class DSM5Specifier
     /// Criteria for applying this specifier
     /// </summary>
     [JsonPropertyName("criteria")]
-    public List<string> Criteria { get; set; } = new();
+    public List<string> Criteria { get; set; } = [];
 }
 
 /// <summary>
@@ -350,7 +350,7 @@ public class DSM5ExtractionMetadata
     /// Any notes about the extraction quality or issues
     /// </summary>
     [JsonPropertyName("notes")]
-    public List<string> Notes { get; set; } = new();
+    public List<string> Notes { get; set; } = [];
 }
 
 /// <summary>
@@ -440,7 +440,7 @@ public class DSM5UploadResult
     /// Blob paths where data was stored
     /// </summary>
     [JsonPropertyName("blobPaths")]
-    public List<string> BlobPaths { get; set; } = new();
+    public List<string> BlobPaths { get; set; } = [];
 
     /// <summary>
     /// Processing time in milliseconds
@@ -476,7 +476,7 @@ public class DSM5DataStatus
     /// Available categories
     /// </summary>
     [JsonPropertyName("categories")]
-    public List<string> Categories { get; set; } = new();
+    public List<string> Categories { get; set; } = [];
 
     /// <summary>
     /// When the data was last updated

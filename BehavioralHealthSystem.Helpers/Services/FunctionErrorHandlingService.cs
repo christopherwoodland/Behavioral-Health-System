@@ -25,11 +25,11 @@ public class GenericErrorHandlingService
     {
         var errorCode = GetErrorCode(ex);
         var userMessage = GetUserFriendlyMessage(ex);
-        
+
         // Log the error
         LogError(ex, operation, context, correlationId);
 
-        var errorContext = context ?? new Dictionary<string, object>();
+        var errorContext = context ?? [];
         if (correlationId != null)
             errorContext["CorrelationId"] = correlationId;
 
@@ -49,10 +49,10 @@ public class GenericErrorHandlingService
         Dictionary<string, object>? validationErrors = null,
         string? correlationId = null)
     {
-        _logger.LogWarning("[Validation] Validation failed: {Message}, Errors: {Errors}", 
+        _logger.LogWarning("[Validation] Validation failed: {Message}, Errors: {Errors}",
             message, validationErrors != null ? string.Join(", ", validationErrors.Select(kvp => $"{kvp.Key}: {kvp.Value}")) : "None");
 
-        var errorContext = validationErrors ?? new Dictionary<string, object>();
+        var errorContext = validationErrors ?? [];
         if (correlationId != null)
             errorContext["CorrelationId"] = correlationId;
 
@@ -72,8 +72,8 @@ public class GenericErrorHandlingService
         string? correlationId = null)
     {
         var message = $"{resourceType} not found: {resourceId}";
-        
-        _logger.LogWarning("[NotFound] Resource not found: {ResourceType} with ID {ResourceId}", 
+
+        _logger.LogWarning("[NotFound] Resource not found: {ResourceType} with ID {ResourceId}",
             resourceType, resourceId);
 
         var errorContext = new Dictionary<string, object>
@@ -101,7 +101,7 @@ public class GenericErrorHandlingService
         Dictionary<string, object>? metadata = null,
         string? correlationId = null)
     {
-        var responseMetadata = metadata ?? new Dictionary<string, object>();
+        var responseMetadata = metadata ?? [];
         if (correlationId != null)
             responseMetadata["CorrelationId"] = correlationId;
 

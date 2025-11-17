@@ -29,5 +29,12 @@ global using Polly;
 global using BehavioralHealthSystem.Configuration;
 global using BehavioralHealthSystem.Functions;
 global using BehavioralHealthSystem.Models;
+global using BehavioralHealthSystem.Services;
 global using BehavioralHealthSystem.Services.Interfaces;
 global using BehavioralHealthSystem.Validators;
+
+// BehavioralHealthSystem.Helpers namespaces (note: Configuration is directly BehavioralHealthSystem.Configuration)
+global using BehavioralHealthSystem.Helpers.Models;
+global using BehavioralHealthSystem.Helpers.Services;
+global using BehavioralHealthSystem.Helpers.Services.Interfaces;
+global using BehavioralHealthSystem.Helpers.Validators;

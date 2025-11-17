@@ -259,7 +259,7 @@ public class SavePhqSessionFunction
         public string LastUpdated { get; set; } = "";
         public string? CompletedAt { get; set; }
         public bool IsCompleted { get; set; }
-        public List<PhqQuestionResponse> Questions { get; set; } = new();
+        public List<PhqQuestionResponse> Questions { get; set; } = [];
         public int? TotalScore { get; set; }
         public string? Severity { get; set; }
         public PhqSessionMetadata? Metadata { get; set; }

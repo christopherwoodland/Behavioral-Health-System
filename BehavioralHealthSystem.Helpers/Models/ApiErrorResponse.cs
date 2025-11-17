@@ -18,7 +18,7 @@ public class ApiErrorResponse
     /// <summary>
     /// Gets or sets additional contextual data related to the error.
     /// </summary>
-    public Dictionary<string, object> AdditionalData { get; set; } = new();
+    public Dictionary<string, object> AdditionalData { get; set; } = [];
 
     /// <summary>
     /// Gets or sets optional detailed information about the error.

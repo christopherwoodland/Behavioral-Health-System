@@ -39,7 +39,7 @@ public class ExtendedAssessmentOrchestrator
 
         try
         {
-            _logger.LogInformation("[{OrchestratorName}] Starting orchestration for job {JobId}, session {SessionId}", 
+            _logger.LogInformation("[{OrchestratorName}] Starting orchestration for job {JobId}, session {SessionId}",
                 nameof(ExtendedAssessmentOrchestrator), input.JobId, input.SessionId);
 
             // Step 1: Update job status to processing
@@ -63,7 +63,7 @@ public class ExtendedAssessmentOrchestrator
                 result.Success = false;
                 result.ErrorMessage = "Session validation failed or extended assessment already exists";
                 result.EndTime = context.CurrentUtcDateTime;
-                
+
                 await context.CallActivityAsync("FailJob", new JobFailure
                 {
                     JobId = input.JobId,
@@ -93,7 +93,7 @@ public class ExtendedAssessmentOrchestrator
                 result.Success = false;
                 result.ErrorMessage = "Failed to generate extended assessment";
                 result.EndTime = context.CurrentUtcDateTime;
-                
+
                 await context.CallActivityAsync("FailJob", new JobFailure
                 {
                     JobId = input.JobId,
@@ -124,7 +124,7 @@ public class ExtendedAssessmentOrchestrator
                 result.Success = false;
                 result.ErrorMessage = "Failed to save assessment to session";
                 result.EndTime = context.CurrentUtcDateTime;
-                
+
                 await context.CallActivityAsync("FailJob", new JobFailure
                 {
                     JobId = input.JobId,
@@ -148,14 +148,14 @@ public class ExtendedAssessmentOrchestrator
                 ModelUsed = "GPT-5/O3" // Default model identifier for extended assessments
             });
 
-            _logger.LogInformation("[{OrchestratorName}] Orchestration completed successfully for job {JobId} in {ProcessingTime}ms", 
+            _logger.LogInformation("[{OrchestratorName}] Orchestration completed successfully for job {JobId} in {ProcessingTime}ms",
                 nameof(ExtendedAssessmentOrchestrator), input.JobId, result.ProcessingTimeMs);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{OrchestratorName}] Orchestration failed for job {JobId}", 
+            _logger.LogError(ex, "[{OrchestratorName}] Orchestration failed for job {JobId}",
                 nameof(ExtendedAssessmentOrchestrator), input.JobId);
 
             result.Success = false;
@@ -181,7 +181,7 @@ public class ExtendedAssessmentOrchestrationInput
 {
     public string JobId { get; set; } = string.Empty;
     public string SessionId { get; set; } = string.Empty;
-    public List<string> SelectedConditions { get; set; } = new();
+    public List<string> SelectedConditions { get; set; } = [];
 }
 
 /// <summary>

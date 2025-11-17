@@ -265,7 +265,7 @@ public class SavePhqAssessmentFunction
         public string StartTime { get; set; } = "";
         public string? CompletedTime { get; set; }
         public bool IsCompleted { get; set; }
-        public List<PhqQuestionData> Questions { get; set; } = new();
+        public List<PhqQuestionData> Questions { get; set; } = [];
         public int? TotalScore { get; set; }
         public string? Severity { get; set; }
         public string? Interpretation { get; set; }

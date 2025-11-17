@@ -101,7 +101,7 @@ public class GetPhqAssessmentSummaryFunction
             UserId = userId,
             SessionId = sessionId,
             RetrievedAt = DateTime.UtcNow.ToString("O"),
-            PhqMessages = new List<PhqMessageItem>()
+            PhqMessages = []
         };
 
         try
@@ -255,7 +255,7 @@ public class GetPhqAssessmentSummaryFunction
         public string UserId { get; set; } = "";
         public string? SessionId { get; set; }
         public string RetrievedAt { get; set; } = "";
-        public List<PhqMessageItem> PhqMessages { get; set; } = new();
+        public List<PhqMessageItem> PhqMessages { get; set; } = [];
         public SummaryInsights? SummaryInsights { get; set; }
     }
 

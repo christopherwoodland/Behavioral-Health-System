@@ -76,7 +76,7 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "", // Missing
                 SessionId = "session-123",
-                Messages = new List<ChatMessageData>()
+                Messages = []
             }
         };
 
@@ -99,7 +99,7 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "user-123",
                 SessionId = "", // Missing
-                Messages = new List<ChatMessageData>()
+                Messages = []
             }
         };
 
@@ -122,8 +122,8 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "user-123",
                 SessionId = "session-123",
-                Messages = new List<ChatMessageData>
-                {
+                Messages =
+                [
                     new ChatMessageData
                     {
                         Id = "msg-1",
@@ -131,7 +131,7 @@ public class SaveChatTranscriptFunctionTests
                         Content = "Test message",
                         Timestamp = DateTime.UtcNow.ToString("O")
                     }
-                }
+                ]
             }
         };
 
@@ -154,8 +154,8 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "user-123",
                 SessionId = "session-123",
-                Messages = new List<ChatMessageData>
-                {
+                Messages =
+                [
                     new ChatMessageData
                     {
                         Id = "msg-1",
@@ -163,7 +163,7 @@ public class SaveChatTranscriptFunctionTests
                         Content = "", // Missing
                         Timestamp = DateTime.UtcNow.ToString("O")
                     }
-                }
+                ]
             }
         };
 
@@ -190,8 +190,8 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "user-123",
                 SessionId = "session-456",
-                Messages = new List<ChatMessageData>
-                {
+                Messages =
+                [
                     new ChatMessageData
                     {
                         Id = "msg-1",
@@ -199,7 +199,7 @@ public class SaveChatTranscriptFunctionTests
                         Content = "Hello",
                         Timestamp = DateTime.UtcNow.ToString("O")
                     }
-                }
+                ]
             }
         };
 
@@ -235,8 +235,8 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = userId,
                 SessionId = sessionId,
-                Messages = new List<ChatMessageData>
-                {
+                Messages =
+                [
                     new ChatMessageData
                     {
                         Id = "msg-1",
@@ -244,7 +244,7 @@ public class SaveChatTranscriptFunctionTests
                         Content = "Hello",
                         Timestamp = DateTime.UtcNow.ToString("O")
                     }
-                }
+                ]
             }
         };
 
@@ -286,8 +286,8 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "user-123",
                 SessionId = "session-456",
-                Messages = new List<ChatMessageData>
-                {
+                Messages =
+                [
                     new ChatMessageData
                     {
                         Id = "msg-1",
@@ -295,7 +295,7 @@ public class SaveChatTranscriptFunctionTests
                         Content = "Hello",
                         Timestamp = DateTime.UtcNow.ToString("O")
                     }
-                }
+                ]
             }
         };
 
@@ -333,8 +333,8 @@ public class SaveChatTranscriptFunctionTests
             UserId = "user-123",
             SessionId = "session-456",
             CreatedAt = DateTime.UtcNow.AddHours(-1).ToString("O"),
-            Messages = new List<ChatMessageData>
-            {
+            Messages =
+            [
                 new ChatMessageData
                 {
                     Id = "msg-1",
@@ -342,15 +342,15 @@ public class SaveChatTranscriptFunctionTests
                     Content = "First message",
                     Timestamp = DateTime.UtcNow.AddHours(-1).ToString("O")
                 }
-            }
+            ]
         };
 
         var newTranscript = new ChatTranscriptData
         {
             UserId = "user-123",
             SessionId = "session-456",
-            Messages = new List<ChatMessageData>
-            {
+            Messages =
+            [
                 new ChatMessageData
                 {
                     Id = "msg-2",
@@ -358,7 +358,7 @@ public class SaveChatTranscriptFunctionTests
                     Content = "Second message",
                     Timestamp = DateTime.UtcNow.ToString("O")
                 }
-            }
+            ]
         };
 
         var requestData = new SaveChatTranscriptRequest
@@ -420,7 +420,7 @@ public class SaveChatTranscriptFunctionTests
         var response = new Mock<HttpResponseData>(MockBehavior.Loose, Mock.Of<FunctionContext>());
         response.SetupProperty(r => r.StatusCode, HttpStatusCode.BadRequest);
         response.Setup(r => r.Body).Returns(responseStream);
-        response.Setup(r => r.Headers).Returns(new HttpHeadersCollection());
+        response.Setup(r => r.Headers).Returns([]);
 
         request.Setup(r => r.CreateResponse()).Returns(response.Object);
 
@@ -441,8 +441,8 @@ public class SaveChatTranscriptFunctionTests
             {
                 UserId = "user-123",
                 SessionId = "session-456",
-                Messages = new List<ChatMessageData>
-                {
+                Messages =
+                [
                     new ChatMessageData
                     {
                         Id = "msg-1",
@@ -450,7 +450,7 @@ public class SaveChatTranscriptFunctionTests
                         Content = "Hello",
                         Timestamp = DateTime.UtcNow.ToString("O")
                     }
-                }
+                ]
             }
         };
 
@@ -491,7 +491,7 @@ public class SaveChatTranscriptFunctionTests
         var response = new Mock<HttpResponseData>(MockBehavior.Loose, Mock.Of<FunctionContext>());
         response.SetupProperty(r => r.StatusCode, HttpStatusCode.OK);
         response.Setup(r => r.Body).Returns(responseStream);
-        response.Setup(r => r.Headers).Returns(new HttpHeadersCollection());
+        response.Setup(r => r.Headers).Returns([]);
 
         request.Setup(r => r.CreateResponse()).Returns(response.Object);
 

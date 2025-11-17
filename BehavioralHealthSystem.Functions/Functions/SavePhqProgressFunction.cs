@@ -302,7 +302,7 @@ public class PhqProgressData
     public string? CompletedAt { get; set; }
     public bool IsCompleted { get; set; } = false;
     public int TotalQuestions { get; set; }
-    public List<PhqAnsweredQuestion> AnsweredQuestions { get; set; } = new();
+    public List<PhqAnsweredQuestion> AnsweredQuestions { get; set; } = [];
     public int? TotalScore { get; set; }
     public string? Severity { get; set; }
     public string? Interpretation { get; set; }

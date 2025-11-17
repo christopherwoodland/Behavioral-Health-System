@@ -12,7 +12,7 @@ public class FileGroupStorageService : IFileGroupStorageService
     private const string CONTAINER_NAME = "file-groups";
 
     public FileGroupStorageService(
-        BlobServiceClient blobServiceClient, 
+        BlobServiceClient blobServiceClient,
         ILogger<FileGroupStorageService> logger,
         ISessionStorageService sessionStorageService)
     {
@@ -69,11 +69,11 @@ public class FileGroupStorageService : IFileGroupStorageService
                 ["updatedAt"] = fileGroup.UpdatedAt
             };
 
-            var response = await blobClient.UploadAsync(content, 
-                new BlobUploadOptions 
-                { 
+            var response = await blobClient.UploadAsync(content,
+                new BlobUploadOptions
+                {
                     Metadata = metadata
-                }, 
+                },
                 cancellationToken);
 
             _logger.LogInformation("Successfully created file group: {GroupId} with name '{GroupName}'", fileGroup.GroupId, fileGroup.GroupName);
@@ -113,7 +113,7 @@ public class FileGroupStorageService : IFileGroupStorageService
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var response = await blobClient.DownloadContentAsync(cancellationToken);
                     var jsonData = response.Value.Content.ToString();
-                    
+
                     var fileGroup = JsonSerializer.Deserialize<FileGroup>(jsonData, _jsonOptions);
                     if (fileGroup != null)
                     {
@@ -137,7 +137,7 @@ public class FileGroupStorageService : IFileGroupStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting file groups for user: {UserId}", userId);
-            return new List<FileGroup>();
+            return [];
         }
     }
 
@@ -148,27 +148,27 @@ public class FileGroupStorageService : IFileGroupStorageService
             _logger.LogInformation("Getting file group: {GroupId}", groupId);
 
             var containerClient = await GetContainerClientAsync(cancellationToken);
-            
+
             // Search for blob by group ID across all user folders
             await foreach (var blobItem in containerClient.GetBlobsAsync(
                 traits: BlobTraits.Metadata,
                 prefix: null,
                 cancellationToken: cancellationToken))
             {
-                if (blobItem.Metadata?.TryGetValue("groupId", out var metaGroupId) == true && 
+                if (blobItem.Metadata?.TryGetValue("groupId", out var metaGroupId) == true &&
                     metaGroupId == groupId)
                 {
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var response = await blobClient.DownloadContentAsync(cancellationToken);
                     var jsonData = response.Value.Content.ToString();
-                    
+
                     var fileGroup = JsonSerializer.Deserialize<FileGroup>(jsonData, _jsonOptions);
                     if (fileGroup != null)
                     {
                         // Update session count dynamically
                         fileGroup.SessionCount = await GetGroupSessionCountAsync(fileGroup.GroupId, cancellationToken);
                     }
-                    
+
                     _logger.LogInformation("Successfully retrieved file group: {GroupId}", groupId);
                     return fileGroup;
                 }
@@ -208,11 +208,11 @@ public class FileGroupStorageService : IFileGroupStorageService
                 ["updatedAt"] = fileGroup.UpdatedAt
             };
 
-            var response = await blobClient.UploadAsync(content, 
-                new BlobUploadOptions 
-                { 
+            var response = await blobClient.UploadAsync(content,
+                new BlobUploadOptions
+                {
                     Metadata = metadata
-                }, 
+                },
                 cancellationToken);
 
             _logger.LogInformation("Successfully updated file group: {GroupId}", fileGroup.GroupId);
@@ -276,19 +276,19 @@ public class FileGroupStorageService : IFileGroupStorageService
 
             // Now delete the file group itself
             var containerClient = await GetContainerClientAsync(cancellationToken);
-            
+
             // Find and delete the group blob
             await foreach (var blobItem in containerClient.GetBlobsAsync(
                 traits: BlobTraits.Metadata,
                 prefix: null,
                 cancellationToken: cancellationToken))
             {
-                if (blobItem.Metadata?.TryGetValue("groupId", out var metaGroupId) == true && 
+                if (blobItem.Metadata?.TryGetValue("groupId", out var metaGroupId) == true &&
                     metaGroupId == groupId)
                 {
                     var blobClient = containerClient.GetBlobClient(blobItem.Name);
                     var response = await blobClient.DeleteIfExistsAsync(cancellationToken: cancellationToken);
-                    
+
                     if (response.Value)
                     {
                         _logger.LogInformation("Successfully deleted file group: {GroupId}", groupId);
@@ -319,14 +319,14 @@ public class FileGroupStorageService : IFileGroupStorageService
             _logger.LogInformation("Searching file groups for user: {UserId} with query: {Query}", userId, query);
 
             var allGroups = await GetUserFileGroupsAsync(userId, cancellationToken);
-            
+
             if (string.IsNullOrWhiteSpace(query))
             {
                 return allGroups;
             }
 
             var searchQuery = query.ToLowerInvariant();
-            var matchingGroups = allGroups.Where(g => 
+            var matchingGroups = allGroups.Where(g =>
                 g.GroupName.ToLowerInvariant().Contains(searchQuery) ||
                 (!string.IsNullOrEmpty(g.Description) && g.Description.ToLowerInvariant().Contains(searchQuery))
             ).ToList();
@@ -337,7 +337,7 @@ public class FileGroupStorageService : IFileGroupStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error searching file groups for user: {UserId} with query: {Query}", userId, query);
-            return new List<FileGroup>();
+            return [];
         }
     }
 
@@ -369,10 +369,10 @@ public class FileGroupStorageService : IFileGroupStorageService
 
             // Get all groups for the user
             var existingGroups = await GetUserFileGroupsAsync(userId, cancellationToken);
-            
+
             // Check if any group has the same name (case-insensitive comparison)
             var nameExists = existingGroups.Any(g => string.Equals(g.GroupName, groupName, StringComparison.OrdinalIgnoreCase));
-            
+
             _logger.LogInformation("Group name '{GroupName}' exists for user {UserId}: {Exists}", groupName, userId, nameExists);
             return nameExists;
         }

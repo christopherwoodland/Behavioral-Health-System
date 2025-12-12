@@ -1,3 +1,14 @@
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Azure.Storage.Blobs;
+using BehavioralHealthSystem.Functions.Services;
+using BehavioralHealthSystem.Helpers.Models;
+using BehavioralHealthSystem.Helpers.Services;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices((context, services) =>
@@ -7,6 +18,25 @@ var host = new HostBuilder()
         {
             var config = context.Configuration;
             var apiKey = config["KINTSUGI_API_KEY"];
+
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                var keyVaultUrl = config["KEY_VAULT_URL"];
+                if (!string.IsNullOrWhiteSpace(keyVaultUrl))
+                {
+                    try
+                    {
+                        var client = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
+                        var secret = client.GetSecret("KINTSUGI-API-KEY");
+                        apiKey = secret.Value?.Value;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Warning: Could not retrieve KINTSUGI_API_KEY from Key Vault: {ex.Message}");
+                    }
+                }
+            }
+
             var baseUrl = config["KINTSUGI_BASE_URL"];
             bool? autoProvideConsent = null;
             var rawConsent = config["KINTSUGI_AUTO_PROVIDE_CONSENT"];
@@ -100,10 +130,19 @@ var host = new HostBuilder()
             var config = serviceProvider.GetService<IConfiguration>();
             if (config == null)
             {
-                return new BlobServiceClient("UseDevelopmentStorage=true");
+                throw new InvalidOperationException("Configuration not available");
             }
-            var connectionString = config.GetConnectionString("AzureWebJobsStorage") ?? config["AzureWebJobsStorage"] ?? "UseDevelopmentStorage=true";
-            return new BlobServiceClient(connectionString);
+
+            // Check for storage account name (preferred for managed identity)
+            var storageAccountName = config["DSM5_STORAGE_ACCOUNT_NAME"] ?? config["AZURE_STORAGE_ACCOUNT_NAME"];
+            if (!string.IsNullOrEmpty(storageAccountName))
+            {
+                var blobServiceUri = $"https://{storageAccountName}.blob.core.windows.net";
+                return new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential());
+            }
+
+            // Fallback to local development storage emulator
+            return new BlobServiceClient("UseDevelopmentStorage=true");
         });
         services.AddScoped<ISessionStorageService, SessionStorageService>();
         services.AddScoped<IFileGroupStorageService, FileGroupStorageService>();

@@ -1,3 +1,5 @@
+import { config } from '@/config/constants';
+
 export interface TranscriptionResult {
   text: string;
   confidence: number;
@@ -13,66 +15,46 @@ export interface TranscriptionStatus {
 }
 
 class TranscriptionService {
-  private apiKey: string;
-  private endpoint: string;
-  private model: string;
-  private apiVersion: string;
+  private baseUrl: string;
 
   constructor() {
-    this.apiKey = import.meta.env.VITE_OPENAI_TRANSCRIPTION_API_KEY || '';
-    this.endpoint = import.meta.env.VITE_OPENAI_TRANSCRIPTION_ENDPOINT || '';
-    this.model = import.meta.env.VITE_OPENAI_TRANSCRIPTION_MODEL || 'gpt-4o-transcribe';
-    this.apiVersion = import.meta.env.VITE_OPENAI_TRANSCRIPTION_API_VERSION || '2025-03-01-preview';
+    this.baseUrl = config.api.baseUrl;
   }
 
   /**
-   * Transcribe audio using OpenAI gpt-4o-transcribe model
+   * Transcribe audio using backend API (which calls Azure OpenAI gpt-4o-transcribe)
    * @param audioBlob The audio blob to transcribe
    * @returns Promise<TranscriptionResult>
    */
   async transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
-    if (!this.apiKey || !this.endpoint) {
-      throw new Error('OpenAI Transcription Service credentials not configured');
-    }
-
     try {
-      const formData = new FormData();
-      // Ensure the file is named as .wav for the API
-      const file = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
-      formData.append('file', file);
-      formData.append('model', this.model);
-      formData.append('response_format', 'json');
-      formData.append('language', 'en');
-
-      const url = `${this.endpoint}?api-version=${this.apiVersion}`;
-      
-      const response = await fetch(url, {
+      const response = await fetch(`${this.baseUrl}/transcribe-audio`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': audioBlob.type || 'audio/wav',
         },
-        body: formData
+        body: audioBlob
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
+
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error?.message || errorMessage;
+          errorMessage = errorData.error || errorMessage;
         } catch {
           errorMessage = errorText || errorMessage;
         }
-        
+
         throw new Error(`Failed to transcribe audio: ${errorMessage}`);
       }
 
       const result = await response.json();
-      
+
       return {
         text: result.text || '',
-        confidence: 1.0, // OpenAI doesn't provide confidence scores, assume high confidence
+        confidence: result.confidence || 1.0,
         duration: result.duration || 0,
         language: result.language || 'en'
       };

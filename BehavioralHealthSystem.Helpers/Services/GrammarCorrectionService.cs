@@ -1,5 +1,6 @@
 using Azure;
 using Azure.AI.OpenAI;
+using Azure.Identity;
 
 namespace BehavioralHealthSystem.Services;
 
@@ -26,7 +27,7 @@ public class GrammarCorrectionService : IGrammarCorrectionService
                 return text; // Return original text if service is disabled
             }
 
-            if (string.IsNullOrEmpty(_openAIOptions.Endpoint) || string.IsNullOrEmpty(_openAIOptions.ApiKey))
+            if (string.IsNullOrEmpty(_openAIOptions.Endpoint))
             {
                 _logger.LogError("[{MethodName}] Azure OpenAI configuration is incomplete.", nameof(CorrectTextAsync));
                 return null;
@@ -34,7 +35,7 @@ public class GrammarCorrectionService : IGrammarCorrectionService
 
             var prompt = BuildGrammarCorrectionPrompt(text);
             var correctedText = await CallAzureOpenAIAsync(prompt);
-            
+
             if (correctedText != null)
             {
                 _logger.LogInformation("[{MethodName}] Grammar correction completed successfully", nameof(CorrectTextAsync));
@@ -55,7 +56,7 @@ public class GrammarCorrectionService : IGrammarCorrectionService
 
     private string BuildGrammarCorrectionPrompt(string text)
     {
-        return $@"Please correct the grammar, spelling, and punctuation in the following text while preserving the original meaning and tone. 
+        return $@"Please correct the grammar, spelling, and punctuation in the following text while preserving the original meaning and tone.
 Return only the corrected text without any explanations or additional comments.
 
 Text to correct:
@@ -69,12 +70,12 @@ Corrected text:";
         try
         {
             var endpoint = new Uri(_openAIOptions.Endpoint);
-            var apiKey = _openAIOptions.ApiKey;
             var deploymentName = _openAIOptions.DeploymentName;
 
-            OpenAIClient client = new OpenAIClient(
-                endpoint,
-                new AzureKeyCredential(apiKey));
+            // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
+            OpenAIClient client = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
+                ? new OpenAIClient(endpoint, new AzureKeyCredential(_openAIOptions.ApiKey))
+                : new OpenAIClient(endpoint, new DefaultAzureCredential());
 
             // Check if this is a GPT-5 model based on deployment name
             bool isGpt5Model = deploymentName.ToLowerInvariant().Contains("gpt-5");
@@ -108,24 +109,24 @@ Corrected text:";
 
             // Make the API call with timeout
             var response = await client.GetChatCompletionsAsync(requestOptions, cancellationTokenSource.Token);
-            
+
             if (response?.Value?.Choices?.Count > 0)
             {
                 var content = response.Value.Choices[0].Message.Content;
-                _logger.LogInformation("[{MethodName}] Azure OpenAI API call successful. Model: {Model}, Response length: {Length}", 
+                _logger.LogInformation("[{MethodName}] Azure OpenAI API call successful. Model: {Model}, Response length: {Length}",
                     nameof(CallAzureOpenAIAsync), isGpt5Model ? "GPT-5" : "Non-GPT-5", content?.Length ?? 0);
-                
+
                 if (string.IsNullOrWhiteSpace(content))
                 {
                     _logger.LogWarning("[{MethodName}] Azure OpenAI returned successful response but content is null or empty", nameof(CallAzureOpenAIAsync));
                     return null;
                 }
-                
+
                 return content.Trim();
             }
             else
             {
-                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Choices count: {Count}", 
+                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Choices count: {Count}",
                     nameof(CallAzureOpenAIAsync), response?.Value == null, response?.Value?.Choices?.Count ?? 0);
                 return null;
             }

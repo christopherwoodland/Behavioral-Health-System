@@ -33,8 +33,15 @@ Environment name (dev, staging, prod)
 .PARAMETER ParameterFile
 Path to JSON parameter file with deployment configuration
 
+.PARAMETER DeploymentClientIP
+Your public IP address in CIDR format (e.g., 1.2.3.4/32) for Key Vault firewall.
+If not provided, the script will auto-detect your public IP.
+
 .EXAMPLE
 .\Deploy-With-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json
+
+.EXAMPLE
+.\Deploy-With-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json -DeploymentClientIP "1.2.3.4/32"
 #>
 
 param(
@@ -45,6 +52,8 @@ param(
     [string]$ParameterFile,
 
     [string]$ResourceGroupName = "bhs-$Environment",
+    
+    [string]$DeploymentClientIP = "",
 
     [switch]$SkipWhatIf,
     [switch]$SkipValidation
@@ -79,6 +88,26 @@ if (-not (Test-Path $ParameterFile)) {
 }
 Write-Host "[OK] Parameter file found"
 
+# Auto-detect or validate deployment client IP
+if ([string]::IsNullOrEmpty($DeploymentClientIP)) {
+    Write-Host "`n[*] Auto-detecting your public IP address..."
+    try {
+        $ipResponse = Invoke-RestMethod -Uri 'https://api.ipify.org?format=json' -UseBasicParsing -TimeoutSec 10
+        $DeploymentClientIP = "$($ipResponse.ip)/32"
+        Write-Host "[OK] Detected IP: $DeploymentClientIP"
+    } catch {
+        Write-Host "[ERROR] Failed to auto-detect IP address. Please provide -DeploymentClientIP parameter."
+        Write-Host "        Example: -DeploymentClientIP '1.2.3.4/32'"
+        exit 1
+    }
+} else {
+    Write-Host "`n[*] Using provided deployment client IP: $DeploymentClientIP"
+    # Validate CIDR format
+    if ($DeploymentClientIP -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$') {
+        Write-Host "[ERROR] Invalid IP address format. Expected CIDR notation (e.g., 1.2.3.4/32)"
+        exit 1
+    }
+}
 
 # Register Microsoft.App provider
 Write-Host "`n[*] Registering Microsoft.App provider..."
@@ -117,7 +146,7 @@ $deploymentName = "bhs-$Environment-$(Get-Date -Format yyyyMMdd-HHmmss)"
 # Template validation (unless skipped)
 if (-not $SkipValidation) {
     Write-Host "`n[*] Validating template..."
-    $validateArgs = @('deployment', 'sub', 'validate', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName")
+    $validateArgs = @('deployment', 'sub', 'validate', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--parameters', "deploymentClientIP=$DeploymentClientIP")
     & az @validateArgs | Out-Null
 
     if ($LASTEXITCODE -eq 0) {
@@ -131,7 +160,7 @@ if (-not $SkipValidation) {
 if (-not $SkipWhatIf) {
     Write-Host "`n[*] Running what-if preview to show planned changes..."
     Write-Host "================================================================"
-    $whatIfArgs = @('deployment', 'sub', 'what-if', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--no-pretty-print')
+    $whatIfArgs = @('deployment', 'sub', 'what-if', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--parameters', "deploymentClientIP=$DeploymentClientIP", '--no-pretty-print')
     & az @whatIfArgs
     Write-Host "================================================================"
 
@@ -152,7 +181,8 @@ $createArgs = @(
     '--location', 'eastus2',
     '--template-file', $templatePath,
     '--parameters', "@$ParameterFile",
-    '--parameters', "resourceGroupName=$ResourceGroupName"
+    '--parameters', "resourceGroupName=$ResourceGroupName",
+    '--parameters', "deploymentClientIP=$DeploymentClientIP"
 )
 
 & az @createArgs
@@ -229,7 +259,7 @@ Write-Host "✗ Container Apps (GitHub runners) - commented out"
 Write-Host "  → Deploy after core infrastructure is stable"
 
 Write-Host "`n========== NEXT STEPS =========="
-Write-Host "1. Build & publish Function App code"
+Write-Host "1. Build and publish Function App code"
 Write-Host "2. Configure secrets in Key Vault"
 Write-Host "3. Test VNet integration and private endpoint access"
 Write-Host "4. Deploy Static Web App for React frontend (optional)"

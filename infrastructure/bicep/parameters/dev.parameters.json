@@ -11,9 +11,6 @@
     "appName": {
       "value": "bhs"
     },
-    "deploymentClientIP": {
-      "value": "AUTO_DETECT"
-    },
     "tags": {
       "value": {
         "Application": "Behavioral Health System",

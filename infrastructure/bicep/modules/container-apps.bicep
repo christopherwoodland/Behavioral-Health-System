@@ -13,9 +13,6 @@ param uniqueSuffix string
 @description('Resource tags')
 param tags object
 
-@description('VNet ID for integration')
-param vnetId string
-
 @description('Container Apps subnet ID')
 param containerAppsSubnetId string
 

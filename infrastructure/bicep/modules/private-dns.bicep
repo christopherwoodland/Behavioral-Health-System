@@ -13,6 +13,9 @@ param openaiAccountName string
 @description('Document Intelligence name')
 param documentIntelligenceName string
 
+@description('Function App name')
+param functionAppName string
+
 // Private DNS Zone for Key Vault
 resource keyVaultDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: 'privatelink.vaultcore.azure.net'
@@ -93,6 +96,26 @@ resource cognitiveDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks
   }
 }
 
+// Private DNS Zone for Function App
+resource functionAppDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: 'privatelink.azurewebsites.net'
+  location: 'global'
+  properties: {}
+}
+
+// Virtual Network Link for Function App DNS
+resource functionAppDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: functionAppDnsZone
+  name: '${functionAppDnsZone.name}-link'
+  location: 'global'
+  properties: {
+    registrationEnabled: false
+    virtualNetwork: {
+      id: vnetId
+    }
+  }
+}
+
 // DNS A Record for Key Vault
 resource keyVaultDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   parent: keyVaultDnsZone
@@ -149,7 +172,22 @@ resource documentDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   }
 }
 
+// DNS A Record for Function App
+resource functionAppDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
+  parent: functionAppDnsZone
+  name: functionAppName
+  properties: {
+    ttl: 3600
+    aRecords: [
+      {
+        ipv4Address: '10.0.1.4'
+      }
+    ]
+  }
+}
+
 output keyVaultDnsZoneId string = keyVaultDnsZone.id
 output storageDnsZoneId string = storageDnsZone.id
 output openaiDnsZoneId string = openaiDnsZone.id
 output cognitiveDnsZoneId string = cognitiveDnsZone.id
+output functionAppDnsZoneId string = functionAppDnsZone.id

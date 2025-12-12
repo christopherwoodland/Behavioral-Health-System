@@ -27,6 +27,61 @@ param tags object = {
   ManagedBy: 'Bicep'
 }
 
+/*
+================================================================================
+DEPLOYMENT ARCHITECTURE
+================================================================================
+
+This Bicep template deploys the complete Behavioral Health System infrastructure
+with the following services:
+
+ACTIVE SERVICES (Deployed):
+├─ Networking
+│  └─ VNet (10.0.0.0/16) with delegated subnets for Function App integration
+│
+├─ Security & Storage
+│  ├─ Key Vault (secrets/keys with private endpoint)
+│  └─ Storage Account (blob storage with private endpoint)
+│
+├─ Backend APIs
+│  └─ Flex Consumption Function App (FC1)
+│     ├─ .NET 8 isolated runtime
+│     ├─ VNet integration for secure network access
+│     ├─ Private endpoint for secure Function invocation
+│     ├─ System-assigned managed identity
+│     └─ Automatic RBAC setup for Network Contributor role
+│
+├─ AI & ML Services
+│  ├─ Azure OpenAI (GPT-4 models with private endpoint)
+│  ├─ Document Intelligence (form processing with private endpoint)
+│  └─ Content Understanding API (private endpoint)
+│
+├─ Monitoring & Logging
+│  ├─ Application Insights (performance monitoring)
+│  └─ Log Analytics Workspace
+│
+└─ Networking
+   └─ Private DNS Zones (for all private endpoint resolutions)
+
+DISABLED SERVICES (Not in this deployment):
+├─ Static Web App (React frontend - deploy separately)
+└─ Container Apps (GitHub runners - deploy separately)
+
+VNet SUBNETS:
+- app-subnet (10.0.1.0/24)
+  └─ Delegated to Microsoft.App/environments
+  └─ Used for Function App VNet integration
+
+- private-endpoint-subnet (10.0.2.0/24)
+  └─ Used for all service private endpoints
+  └─ Non-delegated (required for private endpoint creation)
+
+- container-apps-subnet (10.0.4.0/23)
+  └─ Reserved for future Container Apps deployment
+
+================================================================================
+*/
+
 // Generate unique suffix for globally unique names (includes deployment timestamp to avoid conflicts with soft-deleted resources)
 var uniqueSuffix = uniqueString(subscription().subscriptionId, appName, environment, deployment().name)
 var rgName = !empty(resourceGroupName) ? resourceGroupName : '${appName}-${environment}-rg'
@@ -60,7 +115,6 @@ module keyVault './modules/keyvault.bicep' = {
     environment: environment
     uniqueSuffix: uniqueSuffix
     tags: tags
-    vnetId: networking.outputs.vnetId
     privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
     deploymentClientIP: deploymentClientIP
   }
@@ -76,7 +130,6 @@ module storage './modules/storage.bicep' = {
     environment: environment
     uniqueSuffix: uniqueSuffix
     tags: tags
-    vnetId: networking.outputs.vnetId
     privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
   }
 }
@@ -103,7 +156,6 @@ module openai './modules/openai.bicep' = {
     environment: environment
     uniqueSuffix: uniqueSuffix
     tags: tags
-    vnetId: networking.outputs.vnetId
     privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
   }
 }
@@ -118,7 +170,6 @@ module cognitive './modules/cognitive.bicep' = {
     environment: environment
     uniqueSuffix: uniqueSuffix
     tags: tags
-    vnetId: networking.outputs.vnetId
     privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
   }
 }
@@ -133,10 +184,11 @@ module functionApp './modules/function-app.bicep' = {
     environment: environment
     uniqueSuffix: uniqueSuffix
     tags: tags
-    vnetId: networking.outputs.vnetId
     appSubnetId: networking.outputs.appSubnetId
+    privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
     storageAccountName: storage.outputs.storageAccountName
     appInsightsConnectionString: appInsights.outputs.connectionString
+    appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     keyVaultName: keyVault.outputs.keyVaultName
     openaiEndpoint: openai.outputs.endpoint
     documentIntelligenceEndpoint: cognitive.outputs.documentIntelligenceEndpoint
@@ -187,17 +239,20 @@ module privateDns './modules/private-dns.bicep' = {
     storageAccountName: storage.outputs.storageAccountName
     openaiAccountName: openai.outputs.openaiAccountName
     documentIntelligenceName: cognitive.outputs.documentIntelligenceName
+    functionAppName: functionApp.outputs.functionAppName
   }
 }
 
 // Outputs
 output resourceGroupName string = rgName
+output vnetId string = networking.outputs.vnetId
 output keyVaultName string = keyVault.outputs.keyVaultName
 output keyVaultUri string = keyVault.outputs.keyVaultUri
 output storageAccountName string = storage.outputs.storageAccountName
 output functionAppName string = functionApp.outputs.functionAppName
 output functionAppPrincipalId string = functionApp.outputs.principalId
 output functionAppUrl string = functionApp.outputs.functionAppUrl
+output functionAppPrivateEndpointId string = functionApp.outputs.privateEndpointId
 // output containerAppsEnvName string = containerApps.outputs.containerAppsEnvName
 // output githubRunnerAppName string = containerApps.outputs.githubRunnerAppName
 // output staticWebAppName string = staticWebApp.outputs.staticWebAppName

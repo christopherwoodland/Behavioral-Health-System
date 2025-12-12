@@ -1,0 +1,373 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "14602042861775809591"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for resources"
+      }
+    },
+    "appName": {
+      "type": "string",
+      "metadata": {
+        "description": "Application name prefix"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment name"
+      }
+    },
+    "uniqueSuffix": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique suffix for global names"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "metadata": {
+        "description": "Resource tags"
+      }
+    },
+    "appSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "App subnet ID for VNet integration"
+      }
+    },
+    "privateEndpointSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Private endpoint subnet ID"
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage account name"
+      }
+    },
+    "storageAccountId": {
+      "type": "string",
+      "metadata": {
+        "description": "Storage account ID"
+      }
+    },
+    "appInsightsConnectionString": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights connection string"
+      }
+    },
+    "appInsightsInstrumentationKey": {
+      "type": "string",
+      "metadata": {
+        "description": "Application Insights instrumentation key"
+      }
+    },
+    "keyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Key Vault name"
+      }
+    },
+    "openaiEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure OpenAI endpoint"
+      }
+    },
+    "documentIntelligenceEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Document Intelligence endpoint"
+      }
+    },
+    "contentUnderstandingEndpoint": {
+      "type": "string",
+      "metadata": {
+        "description": "Content Understanding endpoint"
+      }
+    }
+  },
+  "variables": {
+    "functionAppName": "[format('{0}-{1}-func-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
+    "appServicePlanName": "[format('{0}-{1}-asp-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
+    "deploymentStorageContainerName": "[format('app-package-{0}-{1}', take(variables('functionAppName'), 32), take(parameters('uniqueSuffix'), 7))]",
+    "privateEndpointName": "[format('{0}-pe', variables('functionAppName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('appServicePlanName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "functionapp",
+      "sku": {
+        "name": "FC1",
+        "tier": "FlexConsumption"
+      },
+      "properties": {
+        "reserved": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2024-04-01",
+      "name": "[variables('functionAppName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "functionapp,linux",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+        "httpsOnly": true,
+        "virtualNetworkSubnetId": "[parameters('appSubnetId')]",
+        "functionAppConfig": {
+          "deployment": {
+            "storage": {
+              "type": "blobContainer",
+              "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').primaryEndpoints.blob, variables('deploymentStorageContainerName'))]",
+              "authentication": {
+                "type": "StorageAccountConnectionString",
+                "storageAccountConnectionStringName": "AzureWebJobsStorage"
+              }
+            }
+          },
+          "runtime": {
+            "name": "dotnet-isolated",
+            "version": "8.0"
+          },
+          "scaleAndConcurrency": {
+            "maximumInstanceCount": 100,
+            "instanceMemoryMB": 2048
+          }
+        },
+        "siteConfig": {
+          "linuxFxVersion": "DOTNET-ISOLATED|8.0",
+          "alwaysOn": false,
+          "vnetRouteAllEnabled": true,
+          "ftpsState": "Disabled",
+          "minTlsVersion": "1.2",
+          "use32BitWorkerProcess": false,
+          "cors": {
+            "allowedOrigins": [
+              "https://portal.azure.com"
+            ],
+            "supportCredentials": true
+          },
+          "appSettings": [
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet-isolated"
+            },
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[toLower(variables('functionAppName'))]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[parameters('appInsightsConnectionString')]"
+            },
+            {
+              "name": "KEY_VAULT_URI",
+              "value": "[format('https://{0}.vault.azure.net/', parameters('keyVaultName'))]"
+            },
+            {
+              "name": "AZURE_TENANT_ID",
+              "value": "[subscription().tenantId]"
+            },
+            {
+              "name": "AZURE_CLIENT_ID",
+              "value": "63e9b3fd-de9d-4083-879c-9c13f3aac54d"
+            },
+            {
+              "name": "DSM5_STORAGE_ACCOUNT_NAME",
+              "value": "[parameters('storageAccountName')]"
+            },
+            {
+              "name": "DSM5_CONTAINER_NAME",
+              "value": "dsm5-data"
+            },
+            {
+              "name": "AZURE_OPENAI_ENDPOINT",
+              "value": "[parameters('openaiEndpoint')]"
+            },
+            {
+              "name": "AZURE_OPENAI_DEPLOYMENT",
+              "value": "gpt-4.1"
+            },
+            {
+              "name": "AZURE_OPENAI_API_VERSION",
+              "value": "2024-12-01-preview"
+            },
+            {
+              "name": "GPT_REALTIME_ENDPOINT",
+              "value": "[parameters('openaiEndpoint')]"
+            },
+            {
+              "name": "GPT_REALTIME_DEPLOYMENT",
+              "value": "gpt-realtime"
+            },
+            {
+              "name": "GPT_REALTIME_API_VERSION",
+              "value": "2025-04-01-preview"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT",
+              "value": "[parameters('openaiEndpoint')]"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT",
+              "value": "gpt-4.1"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_API_VERSION",
+              "value": "2024-12-01-preview"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS",
+              "value": "4000"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE",
+              "value": "0.2"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS",
+              "value": "120"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_USE_FALLBACK",
+              "value": "false"
+            },
+            {
+              "name": "DocumentIntelligenceEndpoint",
+              "value": "[parameters('documentIntelligenceEndpoint')]"
+            },
+            {
+              "name": "AZURE_CONTENT_UNDERSTANDING_ENDPOINT",
+              "value": "[parameters('contentUnderstandingEndpoint')]"
+            },
+            {
+              "name": "DSM5_EXTRACTION_METHOD",
+              "value": "CONTENT_UNDERSTANDING"
+            },
+            {
+              "name": "KINTSUGI_BASE_URL",
+              "value": "https://api.kintsugihealth.com/v2"
+            },
+            {
+              "name": "KINTSUGI_AUTO_PROVIDE_CONSENT",
+              "value": "false"
+            },
+            {
+              "name": "KINTSUGI_TIMEOUT_SECONDS",
+              "value": "300"
+            },
+            {
+              "name": "KINTSUGI_MAX_RETRY_ATTEMPTS",
+              "value": "3"
+            },
+            {
+              "name": "KINTSUGI_RETRY_DELAY_MS",
+              "value": "1000"
+            },
+            {
+              "name": "AGENT_MODE_ENABLED",
+              "value": "true"
+            },
+            {
+              "name": "AZURE_OPENAI_ENABLED",
+              "value": "true"
+            },
+            {
+              "name": "EXTENDED_ASSESSMENT_OPENAI_ENABLED",
+              "value": "true"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/privateEndpoints",
+      "apiVersion": "2023-05-01",
+      "name": "[variables('privateEndpointName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "subnet": {
+          "id": "[parameters('appSubnetId')]"
+        },
+        "privateLinkServiceConnections": [
+          {
+            "name": "[variables('privateEndpointName')]",
+            "properties": {
+              "privateLinkServiceId": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+              "groupIds": [
+                "sites"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "functionAppName": {
+      "type": "string",
+      "value": "[variables('functionAppName')]"
+    },
+    "functionAppId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-04-01').defaultHostName)]"
+    },
+    "principalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-04-01', 'full').identity.principalId]"
+    },
+    "privateEndpointName": {
+      "type": "string",
+      "value": "[variables('privateEndpointName')]"
+    },
+    "privateEndpointId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+    }
+  }
+}

@@ -13,17 +13,20 @@ param uniqueSuffix string
 @description('Resource tags')
 param tags object
 
-@description('VNet ID')
-param vnetId string
-
 @description('App subnet ID for VNet integration')
 param appSubnetId string
+
+@description('Private endpoint subnet ID')
+param privateEndpointSubnetId string
 
 @description('Storage account name')
 param storageAccountName string
 
 @description('Application Insights connection string')
 param appInsightsConnectionString string
+
+@description('Application Insights instrumentation key')
+param appInsightsInstrumentationKey string
 
 @description('Key Vault name')
 param keyVaultName string
@@ -40,23 +43,28 @@ param contentUnderstandingEndpoint string
 var functionAppName = '${appName}-${environment}-func-${uniqueSuffix}'
 var appServicePlanName = '${appName}-${environment}-asp-${uniqueSuffix}'
 
-// App Service Plan (Consumption Y1 - pay-per-use serverless, available in all regions)
-resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+// Get storage account key using resource ID
+resource storageAccountResource 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: storageAccountName
+}
+
+// App Service Plan (Flex Consumption - serverless with VNet integration, available in eastus)
+resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
   name: appServicePlanName
   location: location
   tags: tags
-  sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
-  }
   kind: 'functionapp'
+  sku: {
+    name: 'FC1'
+    tier: 'FlexConsumption'
+  }
   properties: {
-    maximumElasticWorkerCount: 20
+    reserved: true
   }
 }
 
 // Function App
-resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
+resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
   name: functionAppName
   location: location
   tags: tags
@@ -67,9 +75,29 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    virtualNetworkSubnetId: appSubnetId
+    functionAppConfig: {
+      deployment: {
+        storage: {
+          type: 'blobContainer'
+          value: '${storageAccountResource.properties.primaryEndpoints.blob}function-app-deployment'
+          authentication: {
+            type: 'SystemAssignedIdentity'
+          }
+        }
+      }
+      scaleAndConcurrency: {
+        maximumInstanceCount: 100
+        instanceMemoryMB: 2048
+      }
+      runtime: {
+        name: 'dotnet-isolated'
+        version: '8.0'
+      }
+    }
     siteConfig: {
-      linuxFxVersion: 'DOTNET-ISOLATED|8.0'
       alwaysOn: false
+      vnetRouteAllEnabled: true
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       use32BitWorkerProcess: false
@@ -85,20 +113,8 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
           value: '~4'
         }
         {
-          name: 'FUNCTIONS_WORKER_RUNTIME'
-          value: 'dotnet-isolated'
-        }
-        {
           name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=listKeys(resourceId(\'Microsoft.Storage/storageAccounts\', storageAccountName), \'2021-09-01\').keys[0].value;EndpointSuffix=core.windows.net'
-        }
-        {
-          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=listKeys(resourceId(\'Microsoft.Storage/storageAccounts\', storageAccountName), \'2021-09-01\').keys[0].value;EndpointSuffix=core.windows.net'
-        }
-        {
-          name: 'WEBSITE_CONTENTSHARE'
-          value: toLower(functionAppName)
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountResource.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -106,6 +122,7 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'KEY_VAULT_URI'
+          #disable-next-line no-hardcoded-env-urls
           value: 'https://${keyVaultName}.vault.azure.net/'
         }
         {
@@ -225,7 +242,33 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
   }
 }
 
+// Private Endpoint for Function App
+var privateEndpointName = '${functionAppName}-pe'
+resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
+  name: privateEndpointName
+  location: location
+  tags: tags
+  properties: {
+    subnet: {
+      id: privateEndpointSubnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: privateEndpointName
+        properties: {
+          privateLinkServiceId: functionApp.id
+          groupIds: [
+            'sites'
+          ]
+        }
+      }
+    ]
+  }
+}
+
 output functionAppName string = functionApp.name
 output functionAppId string = functionApp.id
 output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
 output principalId string = functionApp.identity.principalId
+output privateEndpointName string = privateEndpoint.name
+output privateEndpointId string = privateEndpoint.id

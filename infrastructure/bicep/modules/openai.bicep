@@ -13,9 +13,6 @@ param uniqueSuffix string
 @description('Resource tags')
 param tags object
 
-@description('VNet ID for private endpoint')
-param vnetId string
-
 @description('Private endpoint subnet ID')
 param privateEndpointSubnetId string
 

@@ -12,7 +12,7 @@
       "value": "bhs"
     },
     "deploymentClientIP": {
-      "value": "71.244.164.53/32"
+      "value": "AUTO_DETECT"
     },
     "tags": {
       "value": {

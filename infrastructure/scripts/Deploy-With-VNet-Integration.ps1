@@ -19,13 +19,19 @@ SERVICES DEPLOYED:
 
 SERVICES NOT DEPLOYED (deploy separately):
 - Static Web App (React frontend UI) - temporarily disabled due to JSON parsing issues
-- Container Apps (GitHub runners) - deploy after infrastructure is stable
+- Container Apps (GitHub runners) - can be deployed with script flag
 
 UI DEPLOYMENT:
 The Static Web App module is currently commented out in main.bicep. To deploy the React UI:
 1. Uncomment the staticWebApp module in infrastructure/bicep/main.bicep (around line 156)
 2. The Static Web App will NOT use VNet - it's a fully managed SaaS service
 3. Authentication will use MSAL (managed by Static Web App auth provider)
+
+CONTAINER APP DEPLOYMENT:
+Container Apps can be deployed alongside the core infrastructure:
+1. Use -DeployContainerApps flag when running the script
+2. Container Apps will be deployed to container-apps-subnet (10.0.4.0/23)
+3. Suitable for self-hosted GitHub Actions runners
 
 .PARAMETER Environment
 Environment name (dev, staging, prod)
@@ -37,11 +43,18 @@ Path to JSON parameter file with deployment configuration
 Your public IP address in CIDR format (e.g., 1.2.3.4/32) for Key Vault firewall.
 If not provided, the script will auto-detect your public IP.
 
+.PARAMETER DeployContainerApps
+Deploy Container Apps alongside the core infrastructure (for GitHub runners).
+Default is $false. Set to $true to enable Container Apps deployment.
+
 .EXAMPLE
 .\Deploy-With-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json
 
 .EXAMPLE
 .\Deploy-With-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json -DeploymentClientIP "1.2.3.4/32"
+
+.EXAMPLE
+.\Deploy-With-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json -DeployContainerApps $true
 #>
 
 param(
@@ -52,8 +65,10 @@ param(
     [string]$ParameterFile,
 
     [string]$ResourceGroupName = "bhs-$Environment",
-    
+
     [string]$DeploymentClientIP = "",
+
+    [bool]$DeployContainerApps = $false,
 
     [switch]$SkipWhatIf,
     [switch]$SkipValidation
@@ -65,9 +80,17 @@ Write-Host ""
 Write-Host "=========================================================="
 Write-Host "  BHS Infrastructure Deployment with VNet Integration"
 Write-Host "=========================================================="
+Write-Host ""
+Write-Host "Deployment Configuration:"
+Write-Host "  Environment:           $Environment"
+Write-Host "  Resource Group:        $ResourceGroupName"
+Write-Host "  Region:                eastus2"
+Write-Host "  Parameter File:        $ParameterFile"
+Write-Host "  Container Apps:        $(if ($DeployContainerApps) { 'ENABLED' } else { 'DISABLED' })"
+Write-Host ""
 
 # Check prerequisites
-Write-Host "`n[*] Checking prerequisites..."
+Write-Host "[*] Checking prerequisites..."
 $oldErrorActionPreference = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
 az --version 2>&1 | Out-Null
@@ -97,14 +120,19 @@ if ([string]::IsNullOrEmpty($DeploymentClientIP)) {
         Write-Host "[OK] Detected IP: $DeploymentClientIP"
     } catch {
         Write-Host "[ERROR] Failed to auto-detect IP address. Please provide -DeploymentClientIP parameter."
-        Write-Host "        Example: -DeploymentClientIP '1.2.3.4/32'"
+        Write-Host "        Example: -DeploymentClientIP '1.2.3.4' or -DeploymentClientIP '1.2.3.4/32'"
         exit 1
     }
 } else {
     Write-Host "`n[*] Using provided deployment client IP: $DeploymentClientIP"
+    # Add /32 suffix if only IP address was provided
+    if ($DeploymentClientIP -notmatch '/') {
+        $DeploymentClientIP = "$DeploymentClientIP/32"
+        Write-Host "[OK] Added /32 CIDR suffix: $DeploymentClientIP"
+    }
     # Validate CIDR format
     if ($DeploymentClientIP -notmatch '^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}$') {
-        Write-Host "[ERROR] Invalid IP address format. Expected CIDR notation (e.g., 1.2.3.4/32)"
+        Write-Host "[ERROR] Invalid IP address format. Expected format: 1.2.3.4 or 1.2.3.4/32"
         exit 1
     }
 }
@@ -146,7 +174,7 @@ $deploymentName = "bhs-$Environment-$(Get-Date -Format yyyyMMdd-HHmmss)"
 # Template validation (unless skipped)
 if (-not $SkipValidation) {
     Write-Host "`n[*] Validating template..."
-    $validateArgs = @('deployment', 'sub', 'validate', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--parameters', "deploymentClientIP=$DeploymentClientIP")
+    $validateArgs = @('deployment', 'sub', 'validate', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--parameters', "deploymentClientIP=$DeploymentClientIP", '--parameters', "deployContainerApps=$DeployContainerApps")
     & az @validateArgs | Out-Null
 
     if ($LASTEXITCODE -eq 0) {
@@ -156,25 +184,23 @@ if (-not $SkipValidation) {
     }
 }
 
-# What-If Preview (unless skipped)
-if (-not $SkipWhatIf) {
-    Write-Host "`n[*] Running what-if preview to show planned changes..."
-    Write-Host "================================================================"
-    $whatIfArgs = @('deployment', 'sub', 'what-if', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--parameters', "deploymentClientIP=$DeploymentClientIP", '--no-pretty-print')
-    & az @whatIfArgs
-    Write-Host "================================================================"
+# What-If Preview (always run unless explicitly skipped)
+Write-Host "`n[*] Running what-if preview to show planned changes for resource group: $ResourceGroupName"
+Write-Host "================================================================"
+$whatIfArgs = @('deployment', 'sub', 'what-if', '--location', 'eastus2', '--template-file', $templatePath, '--parameters', "@$ParameterFile", '--parameters', "resourceGroupName=$ResourceGroupName", '--parameters', "deploymentClientIP=$DeploymentClientIP", '--parameters', "deployContainerApps=$DeployContainerApps", '--no-pretty-print')
+& az @whatIfArgs
+Write-Host "================================================================"
 
-    # Ask for approval
-    Write-Host "`n[*] Review the changes above."
-    $approval = Read-Host "Do you want to proceed with the deployment? (yes/no)"
-    if ($approval -ne "yes") {
-        Write-Host "[INFO] Deployment cancelled by user"
-        exit 0
-    }
+# Ask for approval before proceeding
+Write-Host "`n[*] Review the changes above for resource group: $ResourceGroupName"
+$approval = Read-Host "Do you want to proceed with the deployment to $ResourceGroupName in eastus2? (yes/no)"
+if ($approval -ne "yes") {
+    Write-Host "[INFO] Deployment cancelled by user"
+    exit 0
 }
 
 # Run the main deployment
-Write-Host "`n[*] Starting main infrastructure deployment..."
+Write-Host "`n[*] Starting main infrastructure deployment to resource group: $ResourceGroupName..."
 $createArgs = @(
     'deployment', 'sub', 'create',
     '--name', $deploymentName,
@@ -182,7 +208,8 @@ $createArgs = @(
     '--template-file', $templatePath,
     '--parameters', "@$ParameterFile",
     '--parameters', "resourceGroupName=$ResourceGroupName",
-    '--parameters', "deploymentClientIP=$DeploymentClientIP"
+    '--parameters', "deploymentClientIP=$DeploymentClientIP",
+    '--parameters', "deployContainerApps=$DeployContainerApps"
 )
 
 & az @createArgs
@@ -235,33 +262,47 @@ Write-Host "Resource Group: $ResourceGroupName"
 Write-Host "Region: eastus2"
 
 Write-Host "`n========== DEPLOYED SERVICES =========="
-Write-Host "✓ Networking (VNet with delegated subnets)"
-Write-Host "✓ Key Vault (with private endpoint)"
-Write-Host "✓ Storage Account (with private endpoint)"
-Write-Host "✓ Function App - Flex Consumption (FC1) with:"
-Write-Host "  • .NET 8 isolated runtime"
-Write-Host "  • VNet integration enabled"
-Write-Host "  • Private endpoint"
-Write-Host "  • System-assigned managed identity"
-Write-Host "  • Network Contributor RBAC role"
-Write-Host "✓ Azure OpenAI (with private endpoint)"
-Write-Host "✓ Document Intelligence (with private endpoint)"
-Write-Host "✓ Content Understanding API (with private endpoint)"
-Write-Host "✓ Application Insights & Log Analytics"
-Write-Host "✓ Private DNS Zones"
+Write-Host "OK - Networking (VNet with delegated subnets)"
+Write-Host "OK - Key Vault (with private endpoint)"
+Write-Host "OK - Storage Account (with private endpoint)"
+Write-Host "OK - Function App - Flex Consumption (FC1) with:"
+Write-Host "     - .NET 8 isolated runtime"
+Write-Host "     - VNet integration enabled"
+Write-Host "     - Private endpoint"
+Write-Host "     - System-assigned managed identity"
+Write-Host "     - Network Contributor RBAC role"
+Write-Host "OK - Azure OpenAI (with private endpoint)"
+Write-Host "OK - Document Intelligence (with private endpoint)"
+Write-Host "OK - Content Understanding API (with private endpoint)"
+Write-Host "OK - Application Insights `& Log Analytics"
+Write-Host "OK - Private DNS Zones"
 
 Write-Host "`n========== NOT DEPLOYED =========="
-Write-Host "✗ Static Web App (React UI) - commented out in main.bicep"
-Write-Host "  → To deploy: uncomment staticWebApp module in infrastructure/bicep/main.bicep"
-Write-Host "  → Static Web App is NOT VNet-integrated (fully managed SaaS)"
-Write-Host "  → Authentication via MSAL"
-Write-Host "✗ Container Apps (GitHub runners) - commented out"
-Write-Host "  → Deploy after core infrastructure is stable"
+Write-Host "SKIP - Static Web App (React UI) - commented out in main.bicep"
+Write-Host "       To deploy: uncomment staticWebApp module in infrastructure/bicep/main.bicep"
+Write-Host "       Static Web App is NOT VNet-integrated (fully managed SaaS)"
+Write-Host "       Authentication via MSAL"
+
+if ($DeployContainerApps) {
+    Write-Host "OK - Container Apps (GitHub runners) - deployed"
+    Write-Host "     Location: container-apps-subnet (10.0.4.0/23)"
+    Write-Host "     Purpose: Self-hosted GitHub Actions runners"
+} else {
+    Write-Host "SKIP - Container Apps (GitHub runners) - commented out"
+    Write-Host "       To deploy: use -DeployContainerApps `$true flag"
+    Write-Host "       Suitable for self-hosted GitHub Actions runners"
+}
 
 Write-Host "`n========== NEXT STEPS =========="
-Write-Host "1. Build and publish Function App code"
+Write-Host "1. Build & publish Function App code"
 Write-Host "2. Configure secrets in Key Vault"
 Write-Host "3. Test VNet integration and private endpoint access"
 Write-Host "4. Deploy Static Web App for React frontend (optional)"
-Write-Host "5. Set up CI/CD pipeline for deployments"
+if (-not $DeployContainerApps) {
+    Write-Host "5. Deploy Container Apps for GitHub runners (optional): -DeployContainerApps `$true"
+    Write-Host "6. Set up CI/CD pipeline for deployments"
+} else {
+    Write-Host "5. Configure Container Apps for GitHub Actions runners"
+    Write-Host "6. Set up CI/CD pipeline for deployments"
+}
 Write-Host ""

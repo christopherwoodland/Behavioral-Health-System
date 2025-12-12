@@ -121,4 +121,5 @@ output containerAppsEnvId string = containerAppsEnv.id
 output containerAppsEnvName string = containerAppsEnv.name
 output githubRunnerAppId string = githubRunnerApp.id
 output githubRunnerAppName string = githubRunnerApp.name
-output githubRunnerAppUrl string = githubRunnerApp.properties.configuration.ingress.fqdn
+// Runners do not expose HTTP ingress; remove URL output to avoid null dereference
+// output githubRunnerAppUrl string = githubRunnerApp.properties.configuration.ingress.fqdn

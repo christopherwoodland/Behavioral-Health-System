@@ -27,6 +27,9 @@ param tags object = {
   ManagedBy: 'Bicep'
 }
 
+@description('Optional: deploy Container Apps resources (e.g., GitHub runners). Default false; core template does not deploy them when false or when module is disabled.')
+param deployContainerApps bool = false
+
 /*
 ================================================================================
 DEPLOYMENT ARCHITECTURE
@@ -213,21 +216,20 @@ module staticWebApp './modules/static-web-app.bicep' = {
 }
 */
 
-// Deploy Container Apps Environment for GitHub Runners (Temporarily disabled - deploy separately after main infrastructure)
-// module containerApps './modules/container-apps.bicep' = {
-//   scope: rg
-//   name: 'containerapps-deployment'
-//   params: {
-//     location: location
-//     appName: appName
-//     environment: environment
-//     uniqueSuffix: uniqueSuffix
-//     tags: tags
-//     vnetId: networking.outputs.vnetId
-//     containerAppsSubnetId: networking.outputs.containerAppsSubnetId
-//     logAnalyticsWorkspaceId: appInsights.outputs.logAnalyticsWorkspaceId
-//   }
-// }
+// Deploy Container Apps Environment for GitHub Runners when enabled
+module containerApps './modules/container-apps.bicep' = if (deployContainerApps) {
+  scope: rg
+  name: 'containerapps-deployment'
+  params: {
+    location: location
+    appName: appName
+    environment: environment
+    uniqueSuffix: uniqueSuffix
+    tags: tags
+    containerAppsSubnetId: networking.outputs.containerAppsSubnetId
+    logAnalyticsWorkspaceId: appInsights.outputs.logAnalyticsWorkspaceId
+  }
+}
 
 // Deploy Private DNS Zones
 module privateDns './modules/private-dns.bicep' = {
@@ -253,8 +255,9 @@ output functionAppName string = functionApp.outputs.functionAppName
 output functionAppPrincipalId string = functionApp.outputs.principalId
 output functionAppUrl string = functionApp.outputs.functionAppUrl
 output functionAppPrivateEndpointId string = functionApp.outputs.privateEndpointId
-// output containerAppsEnvName string = containerApps.outputs.containerAppsEnvName
-// output githubRunnerAppName string = containerApps.outputs.githubRunnerAppName
+// Container Apps optional outputs (empty when not deployed)
+output containerAppsEnvName string = deployContainerApps ? '${appName}-${environment}-cae-${uniqueSuffix}' : ''
+output githubRunnerAppName string = deployContainerApps ? '${appName}-${environment}-runner-${uniqueSuffix}' : ''
 // output staticWebAppName string = staticWebApp.outputs.staticWebAppName
 // output staticWebAppUrl string = staticWebApp.outputs.defaultHostname
 output openaiEndpoint string = openai.outputs.endpoint

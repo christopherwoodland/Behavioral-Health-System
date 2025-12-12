@@ -15,13 +15,12 @@ namespace BehavioralHealthSystem.Functions.Functions;
 public class SaveSmartBandDataFunction
 {
     private readonly ILogger<SaveSmartBandDataFunction> _logger;
-    private readonly string _connectionString;
+    private readonly BlobServiceClient _blobServiceClient;
 
-    public SaveSmartBandDataFunction(ILogger<SaveSmartBandDataFunction> logger)
+    public SaveSmartBandDataFunction(ILogger<SaveSmartBandDataFunction> logger, BlobServiceClient blobServiceClient)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage")
-            ?? throw new InvalidOperationException("AzureWebJobsStorage connection string not found");
+        _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
     }
 
     /// <summary>
@@ -87,9 +86,8 @@ public class SaveSmartBandDataFunction
 
             _logger.LogInformation("Saving to blob: bio/{BlobName}", blobName);
 
-            // Get blob client
-            var blobServiceClient = new BlobServiceClient(_connectionString);
-            var containerClient = blobServiceClient.GetBlobContainerClient("bio");
+            // Get blob container client
+            var containerClient = _blobServiceClient.GetBlobContainerClient("bio");
 
             // Ensure container exists
             await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);

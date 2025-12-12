@@ -245,6 +245,26 @@ module privateDns './modules/private-dns.bicep' = {
   }
 }
 
+// Assign RBAC roles for managed identity authentication
+module rbacAssignments './modules/rbac-assignments.bicep' = {
+  scope: rg
+  name: 'rbac-assignments'
+  params: {
+    functionAppPrincipalId: functionApp.outputs.principalId
+    openaiAccountName: openai.outputs.openaiAccountName
+    documentIntelligenceName: cognitive.outputs.documentIntelligenceName
+    storageAccountName: storage.outputs.storageAccountName
+    keyVaultName: keyVault.outputs.keyVaultName
+  }
+  dependsOn: [
+    functionApp
+    openai
+    cognitive
+    storage
+    keyVault
+  ]
+}
+
 // Outputs
 output resourceGroupName string = rgName
 output vnetId string = networking.outputs.vnetId

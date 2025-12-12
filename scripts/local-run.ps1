@@ -59,7 +59,7 @@ try {
 
     # Kill processes by common ports used by these services
     Write-Host "Killing processes using common development ports..."
-    $commonPorts = @(3000, 5173, 7071, 7072, 4200, 8080)
+    $commonPorts = @(3000, 5173, 7071, 7072, 4200, 8080, 10000, 10001, 10002)
     foreach ($port in $commonPorts) {
         try {
             $connections = netstat -ano | Select-String ":$port\s"
@@ -76,6 +76,21 @@ try {
         }
     }
 
+    # Kill existing Azurite processes
+    Write-Host "Killing existing Azurite processes..."
+    Get-Process | Where-Object { $_.ProcessName -eq "node" } | ForEach-Object {
+        try {
+            $cmdLine = (Get-WmiObject Win32_Process -Filter "ProcessId = $($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+            if ($cmdLine -and $cmdLine -like "*azurite*") {
+                Write-Host "Stopping Azurite process: $($_.Id)"
+                Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+        catch {
+            # Ignore errors when checking command line
+        }
+    }
+
     Write-Host "Process cleanup completed."
 
     # Wait a moment for processes to fully terminate
@@ -89,6 +104,17 @@ try {
         exit $LASTEXITCODE
     }
 
+    # Start Azurite storage emulator
+    Write-Host "Starting Azurite storage emulator..."
+    $azuriteDataPath = "c:\azurite"
+    if (-not (Test-Path $azuriteDataPath)) {
+        New-Item -ItemType Directory -Path $azuriteDataPath -Force | Out-Null
+    }
+    # --loose allows anonymous access to blobs (needed for Kintsugi API to download audio)
+    Start-Process "cmd.exe" -ArgumentList "/c azurite --silent --loose --location $azuriteDataPath --debug $azuriteDataPath\debug.log"
+    # Wait for Azurite to start
+    Start-Sleep -Seconds 2
+    Write-Host "Azurite started on ports 10000 (blob), 10001 (queue), 10002 (table) with --loose mode"
 
     Write-Host "Starting Azure Functions host..."
     Push-Location $functionsPath

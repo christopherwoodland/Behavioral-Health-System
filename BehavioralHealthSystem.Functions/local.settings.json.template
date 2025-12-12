@@ -58,6 +58,14 @@
     "EXTENDED_ASSESSMENT_USE_FALLBACK": "true",  // Fall back to GPT-4 if GPT-5 unavailable
 
     // ========================================================================
+    // AZURE BLOB STORAGE (For DSM-5 data and smart band device data)
+    // ========================================================================
+    // Uses Managed Identity in production; storage account name is required
+    "DSM5_STORAGE_ACCOUNT_NAME": "your-storage-account-name",  // Storage account for DSM-5 documents
+    "DSM5_CONTAINER_NAME": "dsm5-data",  // Blob container name
+    "AZURE_STORAGE_ACCOUNT_NAME": "your-storage-account-name",  // Alternative storage account name (optional)
+
+    // ========================================================================
     // OPTIONAL: AZURE SIGNALR (For real-time features)
     // ========================================================================
     // Leave blank if not using real-time features

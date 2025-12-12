@@ -49,6 +49,13 @@
     "EXTENDED_ASSESSMENT_USE_FALLBACK": "true",  // Fall back to GPT-4 if GPT-5 unavailable
 
     // ========================================================================
+    // AZURE BLOB STORAGE (For DSM-5 data and smart band device data)
+    // ========================================================================
+    // Uses Managed Identity in production; storage account name is required
+    "DSM5_STORAGE_ACCOUNT_NAME": "bhsdevstgjdl4r7ft2nfec",  // Storage account for DSM-5 documents
+    "DSM5_CONTAINER_NAME": "dsm5-data",  // Blob container name for DSM-5 extraction
+
+    // ========================================================================
     // FEATURE FLAGS
     // ========================================================================
     // Control which features are available in the application

@@ -1,7 +1,7 @@
 // Enhanced Batch Processing with CSV Support - Updated: Sept 23, 2025
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Edit } from 'lucide-react';
+import { Upload, Play, Pause, X, AlertCircle, CheckCircle, Loader2, Volume2, Plus, Trash2, Edit, Download } from 'lucide-react';
 import { convertAudioToWav } from '../services/audio';
 import { uploadToAzureBlob } from '../services/azure';
 import { apiService, PredictionPoller } from '../services/api';
@@ -83,13 +83,24 @@ interface CsvBatchRow {
   weight?: string;
   zipcode?: string;
   sessionNotes?: string;
-  fileUrl: string; // URL to file in blob storage
-  fileName?: string; // Optional friendly name
+  fileName: string; // Name of the audio file (local filename to match in selected folder)
 }
 
 interface CsvBatchData {
   rows: CsvBatchRow[];
   fileName: string;
+}
+
+// CSV row processing result
+interface CsvRowResult {
+  rowIndex: number;
+  fileName: string;
+  userId: string;
+  status: 'pending' | 'processing' | 'success' | 'error';
+  sessionId?: string;
+  error?: string;
+  depressionScore?: number;
+  anxietyScore?: number;
 }
 
 // Processing modes
@@ -133,20 +144,20 @@ const UploadAnalyze: React.FC = () => {
   // Auth context for user identification
   const { user } = useAuth();
   const location = useLocation();
-  
+
   const [audioFiles, setAudioFiles] = useState<AudioFile[]>([]);
   const [processingMode, setProcessingMode] = useState<ProcessingMode>(() => {
     const stored = getStoredProcessingMode();
     return stored as ProcessingMode;
   });
   const [isMultiMode, setIsMultiMode] = useState(() => getStoredProcessingModeBoolean()); // Keep for backward compatibility
-  
+
   // Update isMultiMode based on processing mode
   const [processingProgress, setProcessingProgress] = useState<ProcessingProgress>({});
   const [results, setResults] = useState<FileResults>({});
   const [fileStates, setFileStates] = useState<FileProcessingState>({});
   const [isProcessing, setIsProcessing] = useState(false);
-  
+
   // CSV batch processing state
   const [csvBatchData, setCsvBatchData] = useState<CsvBatchData | null>(null);
   const [csvValidationErrors, setCsvValidationErrors] = useState<string[]>([]);
@@ -157,6 +168,8 @@ const UploadAnalyze: React.FC = () => {
     currentFileName: '',
     message: ''
   });
+  const [csvRowResults, setCsvRowResults] = useState<CsvRowResult[]>([]);
+  const [csvFolderFiles, setCsvFolderFiles] = useState<File[]>([]); // Files from selected folder
 
   // Batch files processing progress state
   const [batchProcessingProgress, setBatchProcessingProgress] = useState({
@@ -166,7 +179,7 @@ const UploadAnalyze: React.FC = () => {
     currentFileName: '',
     message: ''
   });
-  
+
   // Legacy single file state for backward compatibility
   const [audioFile, setAudioFile] = useState<AudioFile | null>(null);
   const [progress, setProgress] = useState<UploadProgress>({
@@ -178,10 +191,10 @@ const UploadAnalyze: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playingFileId, setPlayingFileId] = useState<string | null>(null);
-  
+
   // Get pre-filled data from location state (for re-run functionality)
   const prefilledData = location.state as PrefilledSessionData | undefined;
-  
+
   const [userMetadata, setUserMetadata] = useState({
     userId: '', // Will be auto-generated on component mount
     age: prefilledData?.userMetadata?.age?.toString() || '',
@@ -222,20 +235,20 @@ const UploadAnalyze: React.FC = () => {
   // Processing options state
   const [runKintsugiAssessment, setRunKintsugiAssessment] = useState(true); // Default checked
   const [transcribeAudio, setTranscribeAudio] = useState(false); // Default unchecked
-  
+
   // Group selection state
   const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
-  
+
   // Check if transcription is enabled via feature flag
   const isTranscriptionEnabled = transcriptionService.isTranscriptionEnabled();
-  
+
   // Check if Kintsugi assessment is enabled via feature flag
   const isKintsugiEnabled = transcriptionService.isKintsugiEnabled();
 
   // Individual file metadata editing state
   const [editingFileMetadata, setEditingFileMetadata] = useState<string | null>(null);
   const [tempMetadata, setTempMetadata] = useState<UserMetadata>(defaultUserMetadata);
-  
+
   // Validation state for individual file metadata editing
   const [tempValidationErrors, setTempValidationErrors] = useState<{
     age?: string;
@@ -245,7 +258,7 @@ const UploadAnalyze: React.FC = () => {
   }>({});
 
   // User ID management state - REMOVED (now part of metadata)
-  
+
   // Auto-generate user ID when component loads (for form metadata)
   useEffect(() => {
     if (!userMetadata.userId) {
@@ -267,6 +280,7 @@ const UploadAnalyze: React.FC = () => {
 
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null); // For CSV batch folder selection
   const { announceToScreenReader } = useAccessibility();
 
   // Toast utility functions
@@ -280,7 +294,7 @@ const UploadAnalyze: React.FC = () => {
       timestamp: Date.now()
     };
     setToasts(prev => [...prev, newToast]);
-    
+
     // Auto-remove toast after 8 seconds for errors, 5 seconds for others
     const duration = type === 'error' ? 8000 : 5000;
     setTimeout(() => {
@@ -296,9 +310,9 @@ const UploadAnalyze: React.FC = () => {
   useEffect(() => {
     if (prefilledData) {
       // Show a toast to inform user that data has been pre-filled
-      addToast('info', 'Session Data Pre-filled', 
+      addToast('info', 'Session Data Pre-filled',
         `Metadata and audio file from session ${prefilledData.originalSessionId ? prefilledData.originalSessionId.slice(0, 8) + '...' : ''} have been loaded. Click "Start Analysis" to begin processing.`);
-      
+
       // If there's an audio URL, create a virtual audio file entry
       if (prefilledData.audioUrl && prefilledData.audioFileName) {
         // Create a mock file object since we already have the URL
@@ -319,7 +333,7 @@ const UploadAnalyze: React.FC = () => {
           url: prefilledData.audioUrl,
           duration: undefined
         };
-        
+
         if (isMultiMode) {
           setAudioFiles([virtualAudioFile]);
         } else {
@@ -335,7 +349,7 @@ const UploadAnalyze: React.FC = () => {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    
+
     // Clean up any URL object references to prevent memory leaks
     audioFiles.forEach(file => {
       if (file.url) {
@@ -345,27 +359,27 @@ const UploadAnalyze: React.FC = () => {
     if (audioFile?.url) {
       URL.revokeObjectURL(audioFile.url);
     }
-    
+
     // Clear file input value
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
+
     // Clear all file-related state
     setAudioFiles([]);
     setAudioFile(null);
     setResults({});
     setProcessingProgress({});
     setFileStates({});
-    
+
     // Clear single file progress and results
     setProgress({ stage: 'idle', progress: 0, message: '' });
     setResult(null);
     setError(null);
-    
+
     // Clear processing states
     setIsProcessing(false);
-    
+
     // Clear CSV batch state
     setCsvBatchData(null);
     setCsvValidationErrors([]);
@@ -376,7 +390,7 @@ const UploadAnalyze: React.FC = () => {
       currentFileName: '',
       message: ''
     });
-    
+
     // Clear batch processing state
     setBatchProcessingProgress({
       isProcessing: false,
@@ -385,23 +399,23 @@ const UploadAnalyze: React.FC = () => {
       currentFileName: '',
       message: ''
     });
-    
+
     // Clear audio player state
     setIsPlaying(false);
     setCurrentTime(0);
     setPlayingFileId(null);
-    
+
     // Clear validation errors
     setValidationErrors({});
     setTempValidationErrors({});
-    
+
     // Clear modal and editing state
     setEditingFileMetadata(null);
     setTempMetadata(defaultUserMetadata);
-    
+
     // Clear grammar correction state
     setIsCorrectingGrammar(false);
-    
+
     // Clear any toast messages
     setToasts([]);
   }, [audioFiles, audioFile]);
@@ -438,7 +452,7 @@ const UploadAnalyze: React.FC = () => {
   const addAudioFile = useCallback((file: File, metadata?: UserMetadata) => {
     const id = generateFileId();
     const url = URL.createObjectURL(file);
-    
+
     // Create individual userMetadata for this file
     let fileUserMetadata: UserMetadata;
     if (processingMode === 'batch-csv' && metadata) {
@@ -461,9 +475,9 @@ const UploadAnalyze: React.FC = () => {
       // For single mode, use the existing userMetadata structure
       fileUserMetadata = userMetadata;
     }
-    
+
     const audioFile: AudioFile = { id, file, url, userMetadata: fileUserMetadata };
-    
+
     if (isMultiMode) {
       setAudioFiles(prev => [...prev, audioFile]);
       setFileStates(prev => ({ ...prev, [id]: 'ready' }));
@@ -471,14 +485,14 @@ const UploadAnalyze: React.FC = () => {
     } else {
       setAudioFile(audioFile);
     }
-    
+
     announceToScreenReader(`Audio file selected: ${file.name}`);
 
     // Get audio duration
     const audio = new Audio(url);
     audio.addEventListener('loadedmetadata', () => {
       if (isMultiMode) {
-        setAudioFiles(prev => prev.map(af => 
+        setAudioFiles(prev => prev.map(af =>
           af.id === id ? { ...af, duration: audio.duration } : af
         ));
       } else {
@@ -515,7 +529,7 @@ const UploadAnalyze: React.FC = () => {
   // Individual file metadata editing
   const updateFileMetadata = useCallback((fileId: string, newMetadata: UserMetadata) => {
     if (processingMode !== 'single') {
-      setAudioFiles(prev => prev.map(file => 
+      setAudioFiles(prev => prev.map(file =>
         file.id === fileId ? { ...file, userMetadata: newMetadata } : file
       ));
     } else if (audioFile && audioFile.id === fileId) {
@@ -625,7 +639,7 @@ const UploadAnalyze: React.FC = () => {
   // Real-time field validation handler for temp metadata
   const handleTempFieldValidation = useCallback((field: string, value: string) => {
     let error: string | undefined;
-    
+
     switch (field) {
       case 'age':
         error = validateAge(value);
@@ -670,7 +684,7 @@ const UploadAnalyze: React.FC = () => {
     if (editingFileMetadata) {
       // Validate temp metadata before saving
       const validationErrors = validateTempMetadata();
-      
+
       if (validationErrors.length > 0) {
         // Show validation errors as toast messages
         validationErrors.forEach(error => {
@@ -678,7 +692,7 @@ const UploadAnalyze: React.FC = () => {
         });
         return; // Don't save if there are validation errors
       }
-      
+
       updateFileMetadata(editingFileMetadata, tempMetadata);
       setEditingFileMetadata(null);
       setTempMetadata(defaultUserMetadata);
@@ -707,7 +721,7 @@ const UploadAnalyze: React.FC = () => {
       try {
         const csvText = e.target?.result as string;
         const rows = csvText.split('\n').filter(row => row.trim());
-        
+
         if (rows.length < 2) {
           setCsvValidationErrors(['CSV must contain at least a header row and one data row']);
           return;
@@ -719,11 +733,11 @@ const UploadAnalyze: React.FC = () => {
           let current = '';
           let inQuotes = false;
           let i = 0;
-          
+
           while (i < row.length) {
             const char = row[i];
             const nextChar = row[i + 1];
-            
+
             if (char === '"' && !inQuotes) {
               // Start of quoted field
               inQuotes = true;
@@ -746,16 +760,16 @@ const UploadAnalyze: React.FC = () => {
             }
             i++;
           }
-          
+
           // Add the last field
           result.push(current.trim());
           return result;
         };
 
         const headers = parseCsvRow(rows[0]).map(h => h.replace(/^"|"$/g, '').trim());
-        const requiredHeaders = ['userId', 'fileUrl'];
-        const optionalHeaders = ['age', 'gender', 'race', 'ethnicity', 'language', 'weight', 'zipcode', 'sessionNotes', 'fileName'];
-        
+        const requiredHeaders = ['userId', 'fileName'];
+        const optionalHeaders = ['age', 'gender', 'race', 'ethnicity', 'language', 'weight', 'zipcode', 'sessionNotes'];
+
         const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
         if (missingHeaders.length > 0) {
           setCsvValidationErrors([`Missing required columns: ${missingHeaders.join(', ')}`]);
@@ -767,11 +781,11 @@ const UploadAnalyze: React.FC = () => {
 
         for (let i = 1; i < rows.length; i++) {
           const values = parseCsvRow(rows[i]).map(v => v.replace(/^"|"$/g, '').trim());
-          const row: CsvBatchRow = { userId: '', fileUrl: '' };
+          const row: CsvBatchRow = { userId: '', fileName: '' };
 
           headers.forEach((header, index) => {
             const value = values[index] || '';
-            if (header === 'userId' || header === 'fileUrl') {
+            if (header === 'userId' || header === 'fileName') {
               (row as any)[header] = value;
             } else if (optionalHeaders.includes(header)) {
               (row as any)[header] = value;
@@ -779,10 +793,8 @@ const UploadAnalyze: React.FC = () => {
           });
 
           // Basic required field validation
-          if (!row.userId || !row.fileUrl) {
-            errors.push(`Row ${i + 1}: Missing required values for userId or fileUrl`);
-          } else if (!row.fileUrl.startsWith('http')) {
-            errors.push(`Row ${i + 1}: fileUrl must be a valid URL`);
+          if (!row.userId || !row.fileName) {
+            errors.push(`Row ${i + 1}: Missing required values for userId or fileName`);
           } else {
             // Validate optional fields that have specific requirements
             let hasFieldErrors = false;
@@ -790,7 +802,7 @@ const UploadAnalyze: React.FC = () => {
             // Validate ethnicity format
             if (row.ethnicity && row.ethnicity.trim()) {
               const validEthnicities = [
-                "hispanic, latino, or spanish origin", 
+                "hispanic, latino, or spanish origin",
                 "not hispanic, latino, or spanish origin"
               ];
               const normalizedEthnicity = row.ethnicity.toLowerCase().trim();
@@ -830,20 +842,16 @@ const UploadAnalyze: React.FC = () => {
             // Validate race options
             if (row.race && row.race.trim()) {
               const validRaces = [
-                "white", 
-                "black or african-american", 
-                "asian", 
-                "american indian or alaskan native", 
-                "native Hawaiian or Pacific Islander", 
-                "two or more races", 
-                "other", 
+                "white",
+                "black or african-american",
+                "asian",
+                "american indian or alaskan native",
+                "native hawaiian or pacific islander",
+                "two or more races",
+                "other",
                 "prefer not to specify"
               ];
-              // Special case: preserve capital H in "Hawaiian"
-              let normalizedInputRace = row.race.toLowerCase().trim();
-              if (normalizedInputRace === 'native hawaiian or pacific islander') {
-                normalizedInputRace = 'native Hawaiian or pacific islander';
-              }
+              const normalizedInputRace = row.race.toLowerCase().trim();
               if (!validRaces.includes(normalizedInputRace)) {
                 errors.push(`Row ${i + 1}: Invalid race "${row.race}". Must be one of: ${validRaces.join(', ')}`);
                 hasFieldErrors = true;
@@ -918,89 +926,311 @@ const UploadAnalyze: React.FC = () => {
     reader.readAsText(file);
   }, [announceToScreenReader]);
 
+  // Handle folder selection for CSV batch mode
+  const handleFolderSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) {
+      setCsvFolderFiles([]);
+      return;
+    }
+
+    // Filter for audio files only
+    const audioExtensions = ['.wav', '.mp3', '.m4a', '.aac', '.flac'];
+    const audioFiles = Array.from(files).filter(file => {
+      const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+      return audioExtensions.includes(ext);
+    });
+
+    setCsvFolderFiles(audioFiles);
+    addToast('success', 'Folder Selected', `Found ${audioFiles.length} audio file(s) in selected folder`);
+    announceToScreenReader(`Selected folder contains ${audioFiles.length} audio files`);
+  }, [addToast, announceToScreenReader]);
+
   const processCsvBatch = useCallback(async () => {
     if (!csvBatchData) return;
+    if (csvFolderFiles.length === 0) {
+      addToast('error', 'No Folder Selected', 'Please select a folder containing audio files first.');
+      return;
+    }
 
-    const totalFiles = csvBatchData.rows.length;
+    const totalRows = csvBatchData.rows.length;
+
+    // Initialize row results
+    const initialResults: CsvRowResult[] = csvBatchData.rows.map((row, index) => ({
+      rowIndex: index,
+      fileName: row.fileName,
+      userId: row.userId,
+      status: 'pending' as const
+    }));
+    setCsvRowResults(initialResults);
+
     setCsvProcessingProgress({
       isProcessing: true,
       currentFile: 0,
-      totalFiles,
+      totalFiles: totalRows,
       currentFileName: '',
       message: 'Starting CSV batch processing...'
     });
 
-    try {
-      for (let i = 0; i < csvBatchData.rows.length; i++) {
-        const row = csvBatchData.rows[i];
-        const filename = row.fileName || row.fileUrl.split('/').pop() || 'audio-file.wav';
-        
-        setCsvProcessingProgress(prev => ({
-          ...prev,
-          currentFile: i + 1,
-          currentFileName: filename,
-          message: `Processing file ${i + 1} of ${totalFiles}: ${filename}`
-        }));
+    // Build a map of folder files by name for quick lookup
+    const folderFilesMap = new Map<string, File>();
+    csvFolderFiles.forEach(file => {
+      folderFilesMap.set(file.name.toLowerCase(), file);
+    });
 
-        try {
-          // Fetch audio file from URL
-          const response = await fetch(row.fileUrl);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch audio file: ${response.statusText}`);
-          }
+    let successCount = 0;
+    let errorCount = 0;
 
-          const blob = await response.blob();
-          const file = new (window as any).File([blob], filename, { type: blob.type || 'audio/wav' }) as File;
+    for (let i = 0; i < csvBatchData.rows.length; i++) {
+      const row = csvBatchData.rows[i];
+      const filename = row.fileName;
 
-          // Create metadata from CSV row
-          const metadata: UserMetadata = {
-            userId: row.userId,
-            age: row.age,
-            gender: row.gender,
-            race: row.race,
-            ethnicity: row.ethnicity ? normalizeEthnicityForBackend(row.ethnicity) : row.ethnicity,
-            language: row.language,
-            weight: row.weight,
-            zipcode: row.zipcode,
-            sessionNotes: row.sessionNotes
-          };
-
-          // Add the file with its metadata
-          addAudioFile(file, metadata);
-        } catch (error) {
-          console.error(`Error processing CSV row for ${row.userId}:`, error);
-          addToast('error', 'File Processing Error', `Failed to process ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          // Continue with other files even if one fails
-        }
-
-        // Small delay to allow UI updates
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-
+      // Update progress
       setCsvProcessingProgress(prev => ({
         ...prev,
-        message: `Successfully processed ${totalFiles} files from CSV`
+        currentFile: i + 1,
+        currentFileName: filename,
+        message: `Processing ${i + 1} of ${totalRows}: ${filename}`
       }));
 
-      addToast('success', 'CSV Processing Complete', `Successfully loaded ${totalFiles} files from CSV for batch processing`);
-      announceToScreenReader(`CSV batch processing complete. ${totalFiles} files loaded successfully.`);
+      // Update row status to processing
+      setCsvRowResults(prev => prev.map((r, idx) =>
+        idx === i ? { ...r, status: 'processing' as const } : r
+      ));
 
-    } catch (error) {
-      console.error('CSV batch processing error:', error);
-      addToast('error', 'CSV Processing Failed', 'An error occurred during CSV batch processing');
-    } finally {
-      // Reset progress after a short delay to show completion
-      setTimeout(() => {
-        setCsvProcessingProgress({
-          isProcessing: false,
-          currentFile: 0,
-          totalFiles: 0,
-          currentFileName: '',
-          message: ''
-        });
-      }, 2000);
+      try {
+        // Find matching file in folder (case-insensitive)
+        const matchedFile = folderFilesMap.get(filename.toLowerCase());
+
+        if (!matchedFile) {
+          throw new Error(`File "${filename}" not found in selected folder`);
+        }
+
+        // Create metadata from CSV row
+        const metadata: UserMetadata = {
+          userId: row.userId,
+          age: row.age,
+          gender: row.gender,
+          race: row.race,
+          ethnicity: row.ethnicity ? normalizeEthnicityForBackend(row.ethnicity) : row.ethnicity,
+          language: row.language,
+          weight: row.weight,
+          zipcode: row.zipcode,
+          sessionNotes: row.sessionNotes
+        };
+
+        // Step 1: Initiate session
+        setCsvProcessingProgress(prev => ({
+          ...prev,
+          message: `Row ${i + 1}: Initiating session...`
+        }));
+
+        const sessionRequest: any = {
+          userid: row.userId.trim(),
+          is_initiated: true
+        };
+
+        const builtMetadata = buildMetadataFromUserData(metadata);
+        if (builtMetadata) {
+          sessionRequest.metadata = builtMetadata;
+        }
+
+        const sessionResponse = await apiService.initiateSession(sessionRequest);
+        const sessionId = sessionResponse.sessionId;
+
+        // Save initial session data
+        const initialSessionData = {
+          sessionId: sessionId,
+          userId: getAuthenticatedUserId(),
+          metadata_user_id: row.userId.trim(),
+          groupId: selectedGroupId,
+          ...(builtMetadata && { userMetadata: builtMetadata }),
+          audioFileName: matchedFile.name,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          status: 'initiated'
+        };
+
+        try {
+          await apiService.saveSessionData(initialSessionData);
+        } catch (saveError) {
+          console.warn('Failed to save initial session data:', saveError);
+        }
+
+        // Step 2: Convert audio
+        setCsvProcessingProgress(prev => ({
+          ...prev,
+          message: `Row ${i + 1}: Converting audio...`
+        }));
+
+        const convertedBlob = await convertAudioToWav(matchedFile);
+
+        // Step 3: Upload to Azure Blob Storage
+        setCsvProcessingProgress(prev => ({
+          ...prev,
+          message: `Row ${i + 1}: Uploading audio...`
+        }));
+
+        const blobFileName = `${row.userId}_${sessionId}_${Date.now()}.wav`;
+        const audioUrl = await uploadToAzureBlob(
+          convertedBlob,
+          blobFileName,
+          undefined,
+          getAuthenticatedUserId()
+        );
+
+        // Update session with audio URL
+        try {
+          await apiService.updateSessionData(sessionId, {
+            ...initialSessionData,
+            audioUrl: audioUrl,
+            audioFileName: blobFileName,
+            status: 'processing',
+            updatedAt: new Date().toISOString()
+          });
+        } catch (updateError) {
+          console.warn('Failed to update session with audio URL:', updateError);
+        }
+
+        // Step 4: Submit for Kintsugi analysis (if enabled)
+        let kintsugiResult: PredictionResult | null = null;
+
+        if (runKintsugiAssessment) {
+          setCsvProcessingProgress(prev => ({
+            ...prev,
+            message: `Row ${i + 1}: Analyzing with Kintsugi...`
+          }));
+
+          await apiService.submitPrediction({
+            userId: row.userId.trim(),
+            sessionid: sessionId,
+            audioFileUrl: audioUrl,
+            audioFileName: blobFileName
+          });
+
+          // Poll for results
+          const poller = new PredictionPoller(sessionId);
+          kintsugiResult = await new Promise<PredictionResult>((resolve, reject) => {
+            poller.start(
+              () => {}, // progress callback
+              (result: PredictionResult) => {
+                if (result.predictError) {
+                  reject(new Error(`Prediction error: ${result.predictError.error}`));
+                  return;
+                }
+                resolve(result);
+              },
+              (error: AppError) => reject(error)
+            );
+          });
+        }
+
+        // Step 5: Transcribe audio (if enabled)
+        let transcriptionText: string | null = null;
+        const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
+
+        if (effectiveTranscribeAudio) {
+          setCsvProcessingProgress(prev => ({
+            ...prev,
+            message: `Row ${i + 1}: Transcribing audio...`
+          }));
+
+          try {
+            const transcriptionResult = await transcriptionService.transcribeAudio(convertedBlob);
+            if (!transcriptionResult.error) {
+              transcriptionText = transcriptionResult.text;
+              await apiService.saveTranscription(sessionId, transcriptionText);
+            }
+          } catch (transcriptionError) {
+            console.warn('Transcription failed for row', i + 1, transcriptionError);
+          }
+        }
+
+        // Step 6: Save final results
+        const finalSessionData = {
+          ...initialSessionData,
+          audioUrl: audioUrl,
+          prediction: kintsugiResult || undefined,
+          transcription: transcriptionText || undefined,
+          analysisResults: {
+            depressionScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreDepression) : undefined,
+            anxietyScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreAnxiety) : undefined,
+            riskLevel: kintsugiResult ? (() => {
+              const score = safeParseFloat(kintsugiResult.predictedScoreDepression, 0);
+              return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+            })() : 'unknown',
+            insights: kintsugiResult ? [
+              'Analysis completed using Kintsugi Health API',
+              kintsugiResult.predictedScoreDepression ? `Depression score: ${kintsugiResult.predictedScoreDepression}` : '',
+              kintsugiResult.predictedScoreAnxiety ? `Anxiety score: ${kintsugiResult.predictedScoreAnxiety}` : '',
+              'Results should be reviewed by a qualified healthcare professional'
+            ].filter(insight => insight.trim() !== '') : ['Batch processing completed'],
+            transcriptionText: transcriptionText || undefined,
+            completedAt: new Date().toISOString()
+          },
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        await apiService.saveSessionData(finalSessionData);
+
+        // Update row result as success
+        setCsvRowResults(prev => prev.map((r, idx) =>
+          idx === i ? {
+            ...r,
+            status: 'success' as const,
+            sessionId: sessionId,
+            depressionScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreDepression) : undefined,
+            anxietyScore: kintsugiResult ? safeParseFloat(kintsugiResult.predictedScoreAnxiety) : undefined
+          } : r
+        ));
+
+        successCount++;
+        addToast('success', 'Row Processed', `Successfully processed ${filename}`);
+
+      } catch (error) {
+        console.error(`Error processing CSV row ${i + 1}:`, error);
+
+        // Update row result as error
+        setCsvRowResults(prev => prev.map((r, idx) =>
+          idx === i ? {
+            ...r,
+            status: 'error' as const,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          } : r
+        ));
+
+        errorCount++;
+        addToast('error', 'Row Failed', `Failed to process ${filename}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        // Continue with next row
+      }
+
+      // Small delay between rows to prevent overwhelming the system
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
-  }, [csvBatchData, addAudioFile, addToast, announceToScreenReader, audioFiles]);
+
+    // Final summary
+    setCsvProcessingProgress(prev => ({
+      ...prev,
+      message: `Complete: ${successCount} succeeded, ${errorCount} failed`
+    }));
+
+    if (successCount > 0) {
+      addToast('success', 'CSV Batch Complete', `Successfully processed ${successCount} of ${totalRows} files`);
+    }
+    if (errorCount > 0) {
+      addToast('warning', 'Some Rows Failed', `${errorCount} of ${totalRows} files failed to process. Check results below.`);
+    }
+
+    announceToScreenReader(`CSV batch processing complete. ${successCount} succeeded, ${errorCount} failed.`);
+
+    // Keep progress visible (don't auto-hide)
+    setCsvProcessingProgress(prev => ({
+      ...prev,
+      isProcessing: false
+    }));
+  }, [csvBatchData, csvFolderFiles, addToast, announceToScreenReader, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, selectedGroupId]);
 
   const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -1016,12 +1246,12 @@ const UploadAnalyze: React.FC = () => {
         'audio/aac', 'audio/x-aac',
         'audio/flac', 'audio/x-flac'
       ];
-      
+
       const fileName = file.name.toLowerCase();
       const supportedExtensions = ['.wav', '.mp3', '.m4a', '.aac', '.flac'];
       const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
       const hasValidMimeType = supportedMimeTypes.includes(file.type);
-      
+
       // Accept file if either MIME type OR extension is valid (some browsers don't set MIME types correctly)
       if (!hasValidMimeType && !hasValidExtension) {
         setError(`Unsupported file type for ${file.name}. Please select supported audio files (WAV, MP3, M4A, AAC, or FLAC)`);
@@ -1160,7 +1390,7 @@ const UploadAnalyze: React.FC = () => {
   // Real-time field validation handler
   const handleFieldValidation = useCallback((field: string, value: string) => {
     let error: string | undefined;
-    
+
     switch (field) {
       case 'age':
         error = validateAge(value);
@@ -1192,10 +1422,10 @@ const UploadAnalyze: React.FC = () => {
         ...prev,
         [field]: error
       };
-      
+
       // Check if all validation errors are cleared
       const hasAnyErrors = Object.values(newErrors).some(err => err !== undefined);
-      
+
       // Clear global error if no field validation errors exist, or if this specific field error was cleared
       // and the global error contains validation messages
       if (!hasAnyErrors) {
@@ -1209,7 +1439,7 @@ const UploadAnalyze: React.FC = () => {
           return prevError;
         });
       }
-      
+
       return newErrors;
     });
   }, [validateAge, validateWeight, validateZipcode, validateSessionNotes, validateGender, validateRace, validateEthnicity]);
@@ -1222,20 +1452,20 @@ const UploadAnalyze: React.FC = () => {
     setIsCorrectingGrammar(true);
     try {
       const response = await apiService.correctGrammar(userMetadata.sessionNotes);
-      
+
       // Update the session notes with the corrected text
       setUserMetadata(prev => ({
         ...prev,
         sessionNotes: response.correctedText
       }));
-      
+
       // Show success toast
       addToast('success', 'Grammar Corrected', 'Grammar and spelling corrected successfully');
-      
+
     } catch (error) {
       console.error('Grammar correction failed:', error);
       const appError = error as AppError;
-      
+
       // Show error toast
       addToast('error', 'Grammar Correction Failed', appError.message || 'Failed to correct grammar. Please try again.');
     } finally {
@@ -1275,7 +1505,7 @@ const UploadAnalyze: React.FC = () => {
       metadata.zipcode = userMetadata.zipcode;
       hasMetadata = true;
     }
-    
+
     // Optional fields
     if (userMetadata.language !== undefined) {
       metadata.language = userMetadata.language;
@@ -1326,7 +1556,7 @@ const UploadAnalyze: React.FC = () => {
         }
       }
     }
-    
+
     // Required fields - always include these if provided
     if (userData.gender) {
       metadata.gender = userData.gender.toLowerCase().trim() as SessionMetadata['gender'];
@@ -1360,7 +1590,7 @@ const UploadAnalyze: React.FC = () => {
     }
 
     // Apply the current userMetadata (from the main form) to all files' userMetadata
-    setAudioFiles(prevFiles => 
+    setAudioFiles(prevFiles =>
       prevFiles.map(file => ({
         ...file,
         userMetadata: {
@@ -1387,7 +1617,7 @@ const UploadAnalyze: React.FC = () => {
     // Define all CSV columns
     const headers = [
       'userId',
-      'fileUrl',
+      'fileName',
       'age',
       'gender',
       'race',
@@ -1395,44 +1625,71 @@ const UploadAnalyze: React.FC = () => {
       'language',
       'weight',
       'zipcode',
-      'sessionNotes',
-      'fileName'
+      'sessionNotes'
     ];
 
-    // Create sample rows with default patient information if available
-    const sampleRows = [
-      {
-        userId: userMetadata.userId || 'user-sample-1',
-        fileUrl: 'https://yourstorageaccount.blob.core.windows.net/audio/sample1.wav',
-        age: userMetadata.age || '30',
-        gender: userMetadata.gender || 'male',
-        race: userMetadata.race || 'white',
-        ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
+    // If folder files are selected, use them; otherwise use sample data
+    let dataRows: Array<{
+      userId: string;
+      fileName: string;
+      age: string;
+      gender: string;
+      race: string;
+      ethnicity: string;
+      language: boolean;
+      weight: string;
+      zipcode: string;
+      sessionNotes: string;
+    }>;
+
+    if (csvFolderFiles.length > 0) {
+      // Generate rows from selected folder files
+      dataRows = csvFolderFiles.map((file, index) => ({
+        userId: userMetadata.userId ? `${userMetadata.userId}-${index + 1}` : `user-${index + 1}`,
+        fileName: file.name,
+        age: userMetadata.age || '',
+        gender: userMetadata.gender || '',
+        race: userMetadata.race || '',
+        ethnicity: userMetadata.ethnicity || '',
         language: userMetadata.language !== undefined ? userMetadata.language : true,
-        weight: userMetadata.weight || '150',
-        zipcode: userMetadata.zipcode || '12345',
-        sessionNotes: userMetadata.sessionNotes || 'Sample session notes',
-        fileName: 'sample1.wav'
-      },
-      {
-        userId: userMetadata.userId ? `${userMetadata.userId}-2` : 'user-sample-2',
-        fileUrl: 'https://yourstorageaccount.blob.core.windows.net/audio/sample2.wav',
-        age: userMetadata.age || '25',
-        gender: userMetadata.gender || 'female',
-        race: userMetadata.race || 'asian',
-        ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
-        language: userMetadata.language !== undefined ? userMetadata.language : false,
-        weight: userMetadata.weight || '120',
-        zipcode: userMetadata.zipcode || '54321',
-        sessionNotes: userMetadata.sessionNotes || 'Another sample session',
-        fileName: 'sample2.wav'
-      }
-    ];
+        weight: userMetadata.weight || '',
+        zipcode: userMetadata.zipcode || '',
+        sessionNotes: userMetadata.sessionNotes || ''
+      }));
+    } else {
+      // Use sample data if no folder selected
+      dataRows = [
+        {
+          userId: userMetadata.userId || 'user-sample-1',
+          fileName: 'sample1.wav',
+          age: userMetadata.age || '30',
+          gender: userMetadata.gender || 'male',
+          race: userMetadata.race || 'white',
+          ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
+          language: userMetadata.language !== undefined ? userMetadata.language : true,
+          weight: userMetadata.weight || '150',
+          zipcode: userMetadata.zipcode || '12345',
+          sessionNotes: userMetadata.sessionNotes || 'Sample session notes'
+        },
+        {
+          userId: userMetadata.userId ? `${userMetadata.userId}-2` : 'user-sample-2',
+          fileName: 'sample2.wav',
+          age: userMetadata.age || '25',
+          gender: userMetadata.gender || 'female',
+          race: userMetadata.race || 'asian',
+          ethnicity: userMetadata.ethnicity || 'Not Hispanic, Latino, or Spanish Origin',
+          language: userMetadata.language !== undefined ? userMetadata.language : false,
+          weight: userMetadata.weight || '120',
+          zipcode: userMetadata.zipcode || '54321',
+          sessionNotes: userMetadata.sessionNotes || 'Another sample session'
+        }
+      ];
+    }
 
     // Convert to CSV format
     const csvContent = [
       headers.join(','),
-      ...sampleRows.map(row => 
+      ...dataRows.map(row =>
         headers.map(header => {
           const rawValue = row[header as keyof typeof row];
           const value = rawValue === undefined || rawValue === null ? '' : String(rawValue);
@@ -1455,9 +1712,12 @@ const UploadAnalyze: React.FC = () => {
     URL.revokeObjectURL(url);
 
     // Show success message
-    addToast('success', 'CSV Template Downloaded', 'CSV template file has been downloaded with sample data');
+    const message = csvFolderFiles.length > 0
+      ? `CSV template downloaded with ${csvFolderFiles.length} file(s) from selected folder`
+      : 'CSV template downloaded with sample data. Select a folder first to include actual filenames.';
+    addToast('success', 'CSV Template Downloaded', message);
     announceToScreenReader('CSV template file downloaded successfully');
-  }, [userMetadata, addToast, announceToScreenReader]);
+  }, [userMetadata, csvFolderFiles, addToast, announceToScreenReader]);
 
   const processAndAnalyze = useCallback(async () => {
     // Validate processing options (account for disabled transcription)
@@ -1466,11 +1726,11 @@ const UploadAnalyze: React.FC = () => {
       const availableOptions = [];
       if (true) availableOptions.push('Kintsugi Assessment'); // Always available
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
-      
-      const optionsText = availableOptions.length > 1 
+
+      const optionsText = availableOptions.length > 1
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
         : `Please select the ${availableOptions[0]} processing option.`;
-      
+
       setError(optionsText);
       addToast('error', 'Missing Processing Options', optionsText);
       return;
@@ -1505,7 +1765,7 @@ const UploadAnalyze: React.FC = () => {
       // Use individual file metadata or fall back to shared metadata
       const fileMetadata = audioFile.userMetadata || userMetadata;
       const metadata = audioFile.userMetadata ? buildMetadataFromUserData(audioFile.userMetadata) : buildMetadata();
-      
+
       const sessionRequest: any = {
         userid: fileMetadata.userId.trim(),
         is_initiated: true
@@ -1565,10 +1825,10 @@ const UploadAnalyze: React.FC = () => {
           ...prev,
           [fileId]: { stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' }
         }));
-        
+
         audioUrl = audioFile.url;
         fileName = audioFile.file.name;
-        
+
         // Skip to 65% progress since conversion and upload are not needed
         setProcessingProgress(prev => ({
           ...prev,
@@ -1636,7 +1896,7 @@ const UploadAnalyze: React.FC = () => {
       // Step 4: Execute selected processing options
       let kintsugiResult: PredictionResult | null = null;
       let transcriptionText: string | null = null;
-      
+
       // Process Kintsugi Assessment if selected
       if (options.runKintsugiAssessment) {
         setProcessingProgress(prev => ({
@@ -1654,32 +1914,32 @@ const UploadAnalyze: React.FC = () => {
 
         // Poll for Kintsugi results
         const poller = new PredictionPoller(sessionData.sessionId);
-        
+
         kintsugiResult = await new Promise<PredictionResult>((resolve, reject) => {
           poller.start(
             (result: PredictionResult) => {
               // Update progress during polling
-              const progressPercent = result.status === 'processing' ? 80 : 
+              const progressPercent = result.status === 'processing' ? 80 :
                                     result.status === 'success' ? 95 : 70;
               setProcessingProgress(prev => ({
                 ...prev,
-                [fileId]: { 
-                  stage: 'analyzing', 
-                  progress: progressPercent, 
-                  message: `Kintsugi analysis ${result.status}...` 
+                [fileId]: {
+                  stage: 'analyzing',
+                  progress: progressPercent,
+                  message: `Kintsugi analysis ${result.status}...`
                 }
               }));
 
               // Check for predict_error and show toast
               if (result.predictError) {
-                addToast('error', 'Prediction Error', 
+                addToast('error', 'Prediction Error',
                   `${result.predictError.error}: ${result.predictError.message}`);
               }
             },
             (result: PredictionResult) => {
               // Check for final errors before completing
               if (result.predictError) {
-                addToast('error', 'Analysis Failed', 
+                addToast('error', 'Analysis Failed',
                   `The Kintsugi analysis completed with an error: ${result.predictError.error} - ${result.predictError.message}`);
                 setProcessingProgress(prev => ({
                   ...prev,
@@ -1711,17 +1971,17 @@ const UploadAnalyze: React.FC = () => {
         try {
           // Check if transcription service is enabled (with fallback)
           const isEnabled = transcriptionService.isTranscriptionEnabled();
-          
+
           if (!isEnabled) {
             console.warn('Transcription service is disabled via VITE_ENABLE_TRANSCRIPTION flag');
             addToast('warning', 'Transcription Disabled', 'Transcription service is not enabled in configuration. Set VITE_ENABLE_TRANSCRIPTION=true to enable.');
             transcriptionText = null;
           } else {
             console.log('Transcription service is enabled, proceeding with transcription...');
-            
+
             // Get audio blob for transcription
             let audioBlob: Blob;
-            
+
             if (audioFile.url && !audioFile.url.startsWith('blob:')) {
               // Re-run scenario: fetch audio from existing URL
               const audioResponse = await fetch(audioUrl);
@@ -1736,33 +1996,33 @@ const UploadAnalyze: React.FC = () => {
               }
               audioBlob = convertedBlob;
             }
-            
+
             // Call the actual transcription service
             console.log('Calling transcription service with audio blob of size:', audioBlob.size);
             const transcriptionResult: TranscriptionResult = await transcriptionService.transcribeAudio(audioBlob);
-            
+
             console.log('Transcription result:', transcriptionResult);
-            
+
             if (transcriptionResult.error) {
               throw new Error(transcriptionResult.error);
             }
-            
+
             if (!transcriptionResult.text || transcriptionResult.text.trim() === '') {
               console.warn('Transcription returned empty text');
             }
-            
+
             transcriptionText = transcriptionResult.text;
-            
+
             // Save transcription to session storage
             console.log('Saving transcription to session storage...');
             await apiService.saveTranscription(sessionData.sessionId, transcriptionText);
-            
-            addToast('success', 'Transcription Complete', 
+
+            addToast('success', 'Transcription Complete',
               `Audio transcription completed with ${Math.round(transcriptionResult.confidence * 100)}% confidence.`);
           }
         } catch (transcriptionError) {
           console.error('Transcription failed:', transcriptionError);
-          addToast('warning', 'Transcription Failed', 
+          addToast('warning', 'Transcription Failed',
             `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Other processing will continue.`);
           transcriptionText = null;
         }
@@ -1796,7 +2056,7 @@ const UploadAnalyze: React.FC = () => {
         rawApiResponse: kintsugiResult, // Store the complete API response
         transcriptionText: transcriptionText || undefined
       };
-      
+
       // Update session data with final analysis results (fire-and-forget)
       const finalSessionData = {
         ...initialSessionData,
@@ -1824,7 +2084,7 @@ const UploadAnalyze: React.FC = () => {
         completedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      
+
       // Save analysis results to session storage (async, non-blocking)
       try {
         const result = await apiService.saveSessionData(finalSessionData);
@@ -1836,7 +2096,7 @@ const UploadAnalyze: React.FC = () => {
         console.error('Session data that failed to save:', finalSessionData);
         addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
       }
-      
+
       setResults(prev => ({
         ...prev,
         [fileId]: analysisResult
@@ -1844,7 +2104,7 @@ const UploadAnalyze: React.FC = () => {
 
     } catch (err) {
       console.error(`Error processing file ${fileId}:`, err);
-      
+
       // Extract error details for enhanced error display
       let errorCode = 'UNKNOWN_ERROR';
       let errorMessage = 'An unexpected error occurred';
@@ -1886,7 +2146,7 @@ const UploadAnalyze: React.FC = () => {
               details: errorDetails
             }
           };
-          
+
           await apiService.updateSessionData(currentProgress.sessionId, failedSessionData);
           console.log(`Updated session ${currentProgress.sessionId} status to failed`);
         }
@@ -1899,8 +2159,8 @@ const UploadAnalyze: React.FC = () => {
       try {
         // Try to extract session ID from error context or generate cleanup pattern
         const currentProgress = processingProgress[fileId];
-        if (currentProgress && (currentProgress.stage === 'uploading' || 
-                              currentProgress.stage === 'submitting' || 
+        if (currentProgress && (currentProgress.stage === 'uploading' ||
+                              currentProgress.stage === 'submitting' ||
                               currentProgress.stage === 'analyzing')) {
           // File was likely uploaded, attempt cleanup with pattern matching
           const fileName = `${userMetadata.userId}_*_*.wav`; // Pattern for potential cleanup
@@ -1914,9 +2174,9 @@ const UploadAnalyze: React.FC = () => {
 
       setProcessingProgress(prev => ({
         ...prev,
-        [fileId]: { 
-          stage: 'error', 
-          progress: 0, 
+        [fileId]: {
+          stage: 'error',
+          progress: 0,
           message: 'Processing failed',
           error: {
             code: errorCode,
@@ -1932,33 +2192,33 @@ const UploadAnalyze: React.FC = () => {
   const processMultipleFiles = useCallback(async () => {
     setIsProcessing(true);
     setError(null);
-    
+
     // Validate processing options (account for disabled services)
     const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    
+
     if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
-      
+
       if (availableOptions.length === 0) {
         setError('No processing options are currently enabled. Please check your configuration.');
         addToast('error', 'No Services Available', 'All processing services are disabled in configuration.');
         setIsProcessing(false);
         return;
       }
-      
-      const optionsText = availableOptions.length > 1 
+
+      const optionsText = availableOptions.length > 1
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
         : `Please select the ${availableOptions[0]} processing option.`;
-      
+
       setError(optionsText);
       addToast('error', 'Missing Processing Options', optionsText);
       setIsProcessing(false);
       return;
     }
-    
+
     // For batch processing modes, validate individual file metadata if needed
     if (processingMode === 'batch-files' || processingMode === 'batch-csv') {
       // Check that all files have userMetadata
@@ -1982,7 +2242,7 @@ const UploadAnalyze: React.FC = () => {
 
     // Only process files that are in 'ready' state
     const filesToProcess = audioFiles.filter(file => fileStates[file.id] === 'ready');
-    
+
     if (filesToProcess.length === 0) {
       addToast('info', 'No Files Ready', 'No files are ready to process');
       setIsProcessing(false);
@@ -2005,7 +2265,7 @@ const UploadAnalyze: React.FC = () => {
       for (const audioFile of filesToProcess) {
         completedFiles++;
         const fileName = audioFile.file.name;
-        
+
         // Update progress
         setBatchProcessingProgress(prev => ({
           ...prev,
@@ -2015,14 +2275,14 @@ const UploadAnalyze: React.FC = () => {
         }));
 
         addToast('info', 'Processing File', `Processing ${fileName} (${completedFiles}/${totalFiles})`);
-        
+
         // Set file state to processing
         setFileStates(prev => ({ ...prev, [audioFile.id]: 'processing' }));
-        
+
         try {
-          const optionsToPass = { 
-            runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled, 
-            transcribeAudio: transcribeAudio && isTranscriptionEnabled 
+          const optionsToPass = {
+            runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled,
+            transcribeAudio: transcribeAudio && isTranscriptionEnabled
           };
           console.log('DEBUG: Calling processSingleFileById with options:', optionsToPass);
           console.log('DEBUG: transcribeAudio checkbox state:', transcribeAudio);
@@ -2030,7 +2290,7 @@ const UploadAnalyze: React.FC = () => {
           await processSingleFileById(audioFile.id, audioFile, optionsToPass);
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'complete' }));
           addToast('success', 'File Complete', `${fileName} processed successfully`);
-          
+
           // Small delay to allow UI updates and make progress visible
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
@@ -2055,14 +2315,14 @@ const UploadAnalyze: React.FC = () => {
           }
 
           addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
-          
+
           // Set error state for this file with detailed error information
           setFileStates(prev => ({ ...prev, [audioFile.id]: 'error' }));
           setProcessingProgress(prev => ({
             ...prev,
-            [audioFile.id]: { 
-              stage: 'error', 
-              progress: 0, 
+            [audioFile.id]: {
+              stage: 'error',
+              progress: 0,
               message: `Failed: ${errorMessage}`,
               error: {
                 code: errorCode,
@@ -2073,16 +2333,16 @@ const UploadAnalyze: React.FC = () => {
           }));
         }
       }
-      
+
       addToast('success', 'Batch Complete', `Processed ${completedFiles} file${completedFiles !== 1 ? 's' : ''}`);
       announceToScreenReader(`Batch processing complete. ${completedFiles} files processed.`);
-      
+
       // Update progress with completion message
       setBatchProcessingProgress(prev => ({
         ...prev,
         message: `Successfully processed ${completedFiles} files`
       }));
-      
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
@@ -2090,7 +2350,7 @@ const UploadAnalyze: React.FC = () => {
       announceToScreenReader(`Error: ${errorMessage}`);
     } finally {
       setIsProcessing(false);
-      
+
       // Reset batch processing progress after a short delay to show completion
       setTimeout(() => {
         setBatchProcessingProgress({
@@ -2111,22 +2371,22 @@ const UploadAnalyze: React.FC = () => {
     // Validate processing options (account for disabled services)
     const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    
+
     if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
-      
+
       if (availableOptions.length === 0) {
         setError('No processing options are currently enabled. Please check your configuration.');
         addToast('error', 'No Services Available', 'All processing services are disabled in configuration.');
         return;
       }
-      
-      const optionsText = availableOptions.length > 1 
+
+      const optionsText = availableOptions.length > 1
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
         : `Please select the ${availableOptions[0]} processing option.`;
-      
+
       setError(optionsText);
       addToast('error', 'Missing Processing Options', optionsText);
       return;
@@ -2141,11 +2401,11 @@ const UploadAnalyze: React.FC = () => {
     }
 
     setFileStates(prev => ({ ...prev, [fileId]: 'processing' }));
-    
+
     try {
-      const optionsToPass = { 
-        runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled, 
-        transcribeAudio: transcribeAudio && isTranscriptionEnabled 
+      const optionsToPass = {
+        runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled,
+        transcribeAudio: transcribeAudio && isTranscriptionEnabled
       };
       console.log('DEBUG: Calling processSingleFileById with options:', optionsToPass);
       console.log('DEBUG: transcribeAudio checkbox state:', transcribeAudio);
@@ -2156,7 +2416,7 @@ const UploadAnalyze: React.FC = () => {
     } catch (error) {
       console.error(`Error processing ${audioFile.file.name}:`, error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      
+
       addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
       setFileStates(prev => ({ ...prev, [fileId]: 'error' }));
       setProcessingProgress(prev => ({
@@ -2176,22 +2436,22 @@ const UploadAnalyze: React.FC = () => {
     // Validate processing options (account for disabled services)
     const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    
+
     if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
-      
+
       if (availableOptions.length === 0) {
         setError('No processing options are currently enabled. Please check your configuration.');
         addToast('error', 'No Services Available', 'All processing services are disabled in configuration.');
         return;
       }
-      
-      const optionsText = availableOptions.length > 1 
+
+      const optionsText = availableOptions.length > 1
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
         : `Please select the ${availableOptions[0]} processing option.`;
-      
+
       setError(optionsText);
       addToast('error', 'Missing Processing Options', optionsText);
       return;
@@ -2207,7 +2467,7 @@ const UploadAnalyze: React.FC = () => {
 
     try {
       setError(null);
-      
+
       // Step 1: Initiate session
       setProgress({ stage: 'initiating', progress: 5, message: 'Initiating session...' });
       announceToScreenReader('Starting analysis process - initiating session');
@@ -2267,10 +2527,10 @@ const UploadAnalyze: React.FC = () => {
         // Skip conversion and upload for re-run - audio is already processed and stored
         setProgress({ stage: 'uploading', progress: 40, message: 'Using existing audio file from previous session...' });
         announceToScreenReader('Session created successfully, reusing previously processed audio file');
-        
+
         audioUrl = audioFile.url;
         fileName = audioFile.file.name;
-        
+
         // Skip to 65% progress since conversion and upload are not needed
         setProgress({ stage: 'submitting', progress: 65, message: 'Submitting for analysis...' });
       } else {
@@ -2331,17 +2591,17 @@ const UploadAnalyze: React.FC = () => {
         try {
           // Check if transcription service is enabled (with fallback)
           const isEnabled = transcriptionService.isTranscriptionEnabled();
-          
+
           if (!isEnabled) {
             console.warn('🎵 processSingleFile: Transcription service is disabled via VITE_ENABLE_TRANSCRIPTION flag');
             addToast('warning', 'Transcription Disabled', 'Transcription service is not enabled in configuration. Set VITE_ENABLE_TRANSCRIPTION=true to enable.');
             transcriptionText = null;
           } else {
             console.log('🎵 processSingleFile: Transcription service is enabled, proceeding with transcription...');
-            
+
             // Get audio blob for transcription
             let audioBlob: Blob;
-            
+
             if (audioFile.url && !audioFile.url.startsWith('blob:')) {
               // Re-run scenario: fetch audio from existing URL
               console.log('🎵 processSingleFile: Fetching audio from existing URL for transcription...');
@@ -2358,33 +2618,33 @@ const UploadAnalyze: React.FC = () => {
               }
               audioBlob = convertedBlob;
             }
-            
+
             // Call the actual transcription service
             console.log('🎵 processSingleFile: Calling transcription service with audio blob of size:', audioBlob.size);
             const transcriptionResult: TranscriptionResult = await transcriptionService.transcribeAudio(audioBlob);
-            
+
             console.log('🎵 processSingleFile: Transcription result:', transcriptionResult);
-            
+
             if (transcriptionResult.error) {
               throw new Error(transcriptionResult.error);
             }
-            
+
             if (!transcriptionResult.text || transcriptionResult.text.trim() === '') {
               console.warn('🎵 processSingleFile: Transcription returned empty text');
             }
-            
+
             transcriptionText = transcriptionResult.text;
-            
+
             // Save transcription to session storage
             console.log('🎵 processSingleFile: Saving transcription to session storage...');
             await apiService.saveTranscription(sessionData.sessionId, transcriptionText);
-            
-            addToast('success', 'Transcription Complete', 
+
+            addToast('success', 'Transcription Complete',
               `Audio transcription completed with ${Math.round(transcriptionResult.confidence * 100)}% confidence.`);
           }
         } catch (transcriptionError) {
           console.error('🎵 processSingleFile: Transcription failed:', transcriptionError);
-          addToast('warning', 'Transcription Failed', 
+          addToast('warning', 'Transcription Failed',
             `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. Other processing will continue.`);
           transcriptionText = null;
         }
@@ -2395,7 +2655,7 @@ const UploadAnalyze: React.FC = () => {
       // Handle Kintsugi processing if requested, otherwise create transcription-only result
       if (effectiveKintsugiAssessment) {
         console.log('🎵 processSingleFile: KINTSUGI SECTION - Starting Kintsugi assessment');
-        
+
         // Step 5: Submit prediction with URL to /predictions/submit endpoint
         await apiService.submitPrediction({
           userId: userMetadata.userId.trim(),
@@ -2409,29 +2669,29 @@ const UploadAnalyze: React.FC = () => {
 
         // Step 6: Poll for results
         const poller = new PredictionPoller(sessionData.sessionId);
-        
+
         await new Promise<void>((resolve, reject) => {
           poller.start(
             (result: PredictionResult) => {
               // Update progress during polling
-              const progressPercent = result.status === 'processing' ? 80 : 
+              const progressPercent = result.status === 'processing' ? 80 :
                                     result.status === 'success' ? 95 : 70;
-              setProgress({ 
-                stage: 'analyzing', 
-                progress: progressPercent, 
-                message: `Analysis ${result.status}...` 
+              setProgress({
+                stage: 'analyzing',
+                progress: progressPercent,
+                message: `Analysis ${result.status}...`
               });
 
               // Check for predict_error and show toast
               if (result.predictError) {
-                addToast('error', 'Prediction Error', 
+                addToast('error', 'Prediction Error',
                   `${result.predictError.error}: ${result.predictError.message}`);
               }
             },
             (result: PredictionResult) => {
               // Check for final errors before completing
               if (result.predictError) {
-                addToast('error', 'Analysis Failed', 
+                addToast('error', 'Analysis Failed',
                   `The analysis completed with an error: ${result.predictError.error} - ${result.predictError.message}`);
                 setProgress({ stage: 'error', progress: 0, message: 'Analysis failed with errors' });
                 reject(new Error(`Prediction error: ${result.predictError.error}`));
@@ -2459,7 +2719,7 @@ const UploadAnalyze: React.FC = () => {
             rawApiResponse: result, // Store the complete API response
             transcriptionText: transcriptionText || undefined
           };
-          
+
           // Update session data with final analysis results (fire-and-forget)
           const finalSessionData = {
             ...initialSessionData,
@@ -2487,7 +2747,7 @@ const UploadAnalyze: React.FC = () => {
             completedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };
-          
+
           // Save analysis results to session storage (async, non-blocking)
           apiService.saveSessionData(finalSessionData)
             .then((result) => {
@@ -2500,7 +2760,7 @@ const UploadAnalyze: React.FC = () => {
               console.error('Session data that failed to save:', finalSessionData);
               addToast('warning', 'Save Warning', 'Analysis completed but failed to save to session storage. Results are still available.');
             });
-            
+
           setProgress({ stage: 'complete', progress: 100, message: 'Analysis complete!' });
           setResult(analysisResult);
           addToast('success', 'Analysis Complete', 'Your behavioral health analysis has been completed successfully.');
@@ -2513,11 +2773,11 @@ const UploadAnalyze: React.FC = () => {
           }
         );
       });
-      
+
       } else {
         // Transcription-only processing (no Kintsugi assessment)
         console.log('🎵 processSingleFile: TRANSCRIPTION-ONLY SECTION - Creating transcription-only result');
-        
+
         const analysisResult: AnalysisResult = {
           sessionId: sessionData.sessionId,
           depressionScore: undefined,
@@ -2532,7 +2792,7 @@ const UploadAnalyze: React.FC = () => {
           audioUrl: audioUrl,
           transcriptionText: transcriptionText || undefined
         };
-        
+
         // Update session data with transcription results (fire-and-forget)
         const finalSessionData = {
           ...initialSessionData,
@@ -2542,7 +2802,7 @@ const UploadAnalyze: React.FC = () => {
           completedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
-        
+
         // Save transcription results to session storage (async, non-blocking)
         apiService.saveSessionData(finalSessionData)
           .then((result) => {
@@ -2555,7 +2815,7 @@ const UploadAnalyze: React.FC = () => {
             console.error('Session data that failed to save:', finalSessionData);
             addToast('warning', 'Save Warning', 'Transcription completed but failed to save to session storage. Results are still available.');
           });
-          
+
         setProgress({ stage: 'complete', progress: 100, message: 'Transcription complete!' });
         setResult(analysisResult);
         addToast('success', 'Transcription Complete', 'Your audio transcription has been completed successfully.');
@@ -2597,10 +2857,10 @@ const UploadAnalyze: React.FC = () => {
                     onClick={() => {
                       setProcessingMode(mode as ProcessingMode);
                       setStoredProcessingMode(mode); // Save the actual mode string
-                      
+
                       // Completely reset all state when switching modes
                       resetState();
-                      
+
                       // Announce the mode change to screen readers
                       announceToScreenReader(`Switched to ${mode === 'single' ? 'Single File' : mode === 'batch-files' ? 'Batch Files' : 'CSV Batch'} mode`);
                     }}
@@ -2617,13 +2877,13 @@ const UploadAnalyze: React.FC = () => {
                 ))}
               </div>
             </div>
-            
+
             {/* Status Badge */}
             <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
               processingMode === 'single'
                 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                 : processingMode === 'batch-files'
-                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
                 : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
             }`}>
               {processingMode === 'single' ? (
@@ -2651,20 +2911,20 @@ const UploadAnalyze: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           Upload & Analyze Audio
         </h1>
         <p className="text-gray-600 dark:text-gray-300 mb-4">
-          Upload {processingMode === 'single' ? 'an audio file' : processingMode === 'batch-files' ? 'multiple audio files' : 'audio files via CSV'} for behavioral health analysis using AI-powered speech pattern recognition
+          Upload {processingMode === 'single' ? 'an audio file' : processingMode === 'batch-files' ? 'multiple audio files' : 'a folder of audio files with CSV metadata'} for behavioral health analysis using AI-powered speech pattern recognition
         </p>
-        
+
         {/* Mode Description */}
         <div className={`inline-flex items-center px-4 py-2 rounded-lg text-sm ${
           processingMode === 'single'
             ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-300'
             : processingMode === 'batch-files'
-            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' 
+            ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
             : 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-300'
         }`}>
           {processingMode === 'single' ? (
@@ -2687,7 +2947,7 @@ const UploadAnalyze: React.FC = () => {
               <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
-              Upload CSV file with patient data and blob storage URLs for batch processing
+              Select a folder and CSV file for automated batch processing
             </>
           )}
         </div>
@@ -2695,33 +2955,33 @@ const UploadAnalyze: React.FC = () => {
 
       {/* Processing Options */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div 
-          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" 
+        <div
+          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           onClick={() => toggleSectionCollapse('processingOptions')}
         >
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
               Processing Options
             </h2>
-            <svg 
+            <svg
               className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
                 collapsedSections.processingOptions ? 'rotate-180' : ''
-              }`} 
-              fill="none" 
-              stroke="currentColor" 
+              }`}
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </div>
-        
+
         {!collapsedSections.processingOptions && (
           <div className="px-6 pb-6">
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Choose which analysis options to run on your audio files.
             </p>
-        
+
         <div className="space-y-4">
           <div className="flex items-start">
             <input
@@ -2736,8 +2996,8 @@ const UploadAnalyze: React.FC = () => {
             />
             <div className="ml-3">
               <label htmlFor="kintsugiAssessment" className={`text-sm font-medium ${
-                !isKintsugiEnabled 
-                  ? 'text-gray-400 dark:text-gray-500' 
+                !isKintsugiEnabled
+                  ? 'text-gray-400 dark:text-gray-500'
                   : 'text-gray-900 dark:text-white'
               }`}>
                 Run Kintsugi Assessment
@@ -2748,12 +3008,12 @@ const UploadAnalyze: React.FC = () => {
                 )}
               </label>
               <p className={`text-sm ${
-                !isKintsugiEnabled 
-                  ? 'text-gray-400 dark:text-gray-500' 
+                !isKintsugiEnabled
+                  ? 'text-gray-400 dark:text-gray-500'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
-                {!isKintsugiEnabled 
-                  ? 'Kintsugi assessment service is disabled in configuration' 
+                {!isKintsugiEnabled
+                  ? 'Kintsugi assessment service is disabled in configuration'
                   : 'Analyze audio for depression and anxiety indicators using Kintsugi Health\'s AI model'
                 }
               </p>
@@ -2776,8 +3036,8 @@ const UploadAnalyze: React.FC = () => {
             />
             <div className="ml-3">
               <label htmlFor="transcribeAudio" className={`text-sm font-medium ${
-                !isTranscriptionEnabled 
-                  ? 'text-gray-400 dark:text-gray-500' 
+                !isTranscriptionEnabled
+                  ? 'text-gray-400 dark:text-gray-500'
                   : 'text-gray-900 dark:text-white'
               }`}>
                 Transcribe Audio
@@ -2788,12 +3048,12 @@ const UploadAnalyze: React.FC = () => {
                 )}
               </label>
               <p className={`text-sm ${
-                !isTranscriptionEnabled 
-                  ? 'text-gray-400 dark:text-gray-500' 
+                !isTranscriptionEnabled
+                  ? 'text-gray-400 dark:text-gray-500'
                   : 'text-gray-600 dark:text-gray-400'
               }`}>
-                {!isTranscriptionEnabled 
-                  ? 'Transcription service is disabled in configuration' 
+                {!isTranscriptionEnabled
+                  ? 'Transcription service is disabled in configuration'
                   : 'Convert audio to text using speech recognition technology'
                 }
               </p>
@@ -2811,7 +3071,7 @@ const UploadAnalyze: React.FC = () => {
                   const availableOptions = [];
                   if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
                   if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
-                  
+
                   if (availableOptions.length === 0) {
                     return 'No processing options are currently enabled. Please check your configuration.';
                   } else if (availableOptions.length === 1) {
@@ -2837,7 +3097,7 @@ const UploadAnalyze: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Organize your processed files by assigning them to a group. Groups help you track and analyze related sessions together.
           </p>
-          
+
           <GroupSelector
             selectedGroupId={selectedGroupId}
             onGroupChange={setSelectedGroupId}
@@ -2848,7 +3108,7 @@ const UploadAnalyze: React.FC = () => {
                 description,
                 createdBy: userId
               }, userId);
-              
+
               if (response.success && response.fileGroup) {
                 addToast('success', 'Group Created', `Group "${groupName}" has been created successfully.`);
                 return response.fileGroup.groupId;
@@ -2859,7 +3119,7 @@ const UploadAnalyze: React.FC = () => {
             }}
             onDeleteGroup={async (groupId, groupName) => {
               const response = await fileGroupService.deleteFileGroup(groupId);
-              
+
               if (response.success) {
                 addToast('success', 'Group Deleted', `Group "${groupName}" and all associated sessions have been deleted successfully.`);
               } else {
@@ -2873,28 +3133,86 @@ const UploadAnalyze: React.FC = () => {
         </div>
       </div>
 
+      {/* Folder Selection for CSV Batch Mode - Must come before Patient Info */}
+      {processingMode === 'batch-csv' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 text-sm font-bold mr-3">1</span>
+            Select Folder Containing Audio Files
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Select the folder that contains your audio files. The filenames will be used to generate the CSV template.
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => folderInputRef.current?.click()}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Select Folder
+            </button>
+            <input
+              ref={folderInputRef}
+              type="file"
+              className="hidden"
+              onChange={handleFolderSelect}
+              {...{ webkitdirectory: '', directory: '' } as any}
+              aria-label="Select folder containing audio files"
+            />
+            {csvFolderFiles.length > 0 ? (
+              <div className="flex items-center text-sm text-green-600 dark:text-green-400">
+                <CheckCircle className="h-4 w-4 mr-1" />
+                {csvFolderFiles.length} audio file(s) found
+              </div>
+            ) : (
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                No folder selected
+              </span>
+            )}
+          </div>
+          {csvFolderFiles.length > 0 && (
+            <div className="mt-4 max-h-32 overflow-y-auto">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Files in folder:</p>
+              <div className="flex flex-wrap gap-1">
+                {csvFolderFiles.slice(0, 10).map((file, idx) => (
+                  <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
+                    {file.name}
+                  </span>
+                ))}
+                {csvFolderFiles.length > 10 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    +{csvFolderFiles.length - 10} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* User Metadata Form */}
       {!shouldHidePatientInfo() && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-            {processingMode === 'batch-files' 
-              ? 'Patient Information (Optional, Apply to All Files)' 
+            {processingMode === 'batch-files'
+              ? 'Patient Information (Optional, Apply to All Files)'
               : processingMode === 'batch-csv'
               ? 'Default Patient Information (Optional, Override with CSV Data)'
               : 'Patient Information (Optional)'
             }
           </h2>
-        
+
         {/* Explanatory text for batch modes */}
         {processingMode === 'batch-files' && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
             <p className="text-sm text-blue-800 dark:text-blue-200">
-              <strong>Note:</strong> Information entered here will be applied to all uploaded files. 
+              <strong>Note:</strong> Information entered here will be applied to all uploaded files.
               After uploading, you can click "Edit Info" on individual files to customize their metadata.
             </p>
           </div>
         )}
-        
+
         {processingMode === 'batch-csv' && (
           <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
             <p className="text-sm text-amber-800 dark:text-amber-200">
@@ -2941,8 +3259,8 @@ const UploadAnalyze: React.FC = () => {
                 }
               }}
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                validationErrors.age 
-                  ? 'border-red-300 dark:border-red-600' 
+                validationErrors.age
+                  ? 'border-red-300 dark:border-red-600'
                   : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Age in years"
@@ -2978,8 +3296,8 @@ const UploadAnalyze: React.FC = () => {
                 }
               }}
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                validationErrors.weight 
-                  ? 'border-red-300 dark:border-red-600' 
+                validationErrors.weight
+                  ? 'border-red-300 dark:border-red-600'
                   : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Weight in lbs"
@@ -3060,8 +3378,8 @@ const UploadAnalyze: React.FC = () => {
             <select
               id="language"
               value={userMetadata.language === undefined ? '' : userMetadata.language.toString()}
-              onChange={(e) => setUserMetadata(prev => ({ 
-                ...prev, 
+              onChange={(e) => setUserMetadata(prev => ({
+                ...prev,
                 language: e.target.value === '' ? undefined : e.target.value === 'true'
               }))}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -3093,8 +3411,8 @@ const UploadAnalyze: React.FC = () => {
                 }
               }}
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                validationErrors.zipcode 
-                  ? 'border-red-300 dark:border-red-600' 
+                validationErrors.zipcode
+                  ? 'border-red-300 dark:border-red-600'
                   : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Enter ZIP code"
@@ -3124,8 +3442,8 @@ const UploadAnalyze: React.FC = () => {
                 }
               }}
               className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                validationErrors.sessionNotes 
-                  ? 'border-red-300 dark:border-red-600' 
+                validationErrors.sessionNotes
+                  ? 'border-red-300 dark:border-red-600'
                   : 'border-gray-300 dark:border-gray-600'
               }`}
               rows={3}
@@ -3141,7 +3459,7 @@ const UploadAnalyze: React.FC = () => {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {userMetadata.sessionNotes.length}/500 characters
               </p>
-              
+
               {/* Grammar Correction Button - Next to character count */}
               <button
                 type="button"
@@ -3154,18 +3472,18 @@ const UploadAnalyze: React.FC = () => {
                 {isCorrectingGrammar ? (
                   <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden="true" />
                 ) : (
-                  <svg 
-                    className="w-3.5 h-3.5 mr-1.5" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className="w-3.5 h-3.5 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     aria-hidden="true"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                     />
                   </svg>
                 )}
@@ -3181,18 +3499,18 @@ const UploadAnalyze: React.FC = () => {
                   aria-label="Download CSV template file with sample data"
                   title="Download CSV template"
                 >
-                  <svg 
-                    className="w-3.5 h-3.5 mr-1.5" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className="w-3.5 h-3.5 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     aria-hidden="true"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                     />
                   </svg>
                   Download CSV Template
@@ -3208,18 +3526,18 @@ const UploadAnalyze: React.FC = () => {
                   aria-label="Apply patient information to all uploaded files"
                   title="Apply to all files"
                 >
-                  <svg 
-                    className="w-3.5 h-3.5 mr-1.5" 
-                    fill="none" 
-                    stroke="currentColor" 
+                  <svg
+                    className="w-3.5 h-3.5 mr-1.5"
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                     aria-hidden="true"
                   >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      strokeWidth={2} 
-                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" 
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
                     />
                   </svg>
                   Apply to All Files
@@ -3233,133 +3551,215 @@ const UploadAnalyze: React.FC = () => {
 
       {/* File Upload Area */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div 
-          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors" 
+        <div
+          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
           onClick={() => toggleSectionCollapse('fileUpload')}
         >
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {processingMode === 'batch-csv' ? 'CSV File Upload' : 'Audio File Upload'} 
+              {processingMode === 'batch-csv' ? 'CSV File Upload' : 'Audio File Upload'}
               {processingMode === 'batch-files' && <span className="text-sm font-normal text-gray-500 dark:text-gray-400"> (Batch Files Mode)</span>}
             </h2>
-            <svg 
+            <svg
               className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
                 collapsedSections.fileUpload ? 'rotate-180' : ''
-              }`} 
-              fill="none" 
-              stroke="currentColor" 
+              }`}
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </div>
-        
+
         {!collapsedSections.fileUpload && (
           <div className="px-6 pb-6">
 
         {/* CSV Upload Section */}
         {processingMode === 'batch-csv' && (
-          <div className="space-y-4">
-            {!csvBatchData ? (
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" aria-hidden="true" />
-                <div className="mb-4">
-                  <button type="button"
-                    onClick={() => {
-                      const input = document.createElement('input');
-                      input.type = 'file';
-                      input.accept = '.csv';
-                      input.onchange = (e) => handleCsvFileSelect(e as any);
-                      input.click();
-                    }}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Select CSV File
-                  </button>
-                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Upload a CSV file with patient data and file URLs
-                  </p>
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-2">
-                  <p>Required columns: userId, fileUrl</p>
-                  <p>Optional columns: age, gender, race, ethnicity, language, weight, zipcode, sessionNotes, fileName</p>
-                  <p>Example: userId,fileUrl,age,gender,zipcode</p>
-                </div>
-              </div>
-            ) : (
-              <div className="border border-green-200 dark:border-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <span className="font-medium text-green-800 dark:text-green-200">CSV Loaded Successfully</span>
+          <div className="space-y-6">
+            {/* Step 2: Upload CSV */}
+            <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-400 text-xs font-bold mr-2">2</span>
+                Upload CSV with Patient Data
+              </h4>
+
+              {!csvBatchData ? (
+                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center hover:border-purple-400 dark:hover:border-purple-500 transition-colors">
+                  <div className="flex items-center justify-center gap-4">
+                    <button type="button"
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.csv';
+                        input.onchange = (e) => handleCsvFileSelect(e as any);
+                        input.click();
+                      }}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Select CSV File
+                    </button>
+                    <button
+                      onClick={downloadCsvTemplate}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:focus:ring-offset-gray-800"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download Template
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      setCsvBatchData(null);
-                      setCsvValidationErrors([]);
-                    }}
-                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
+                  <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    <p><strong>Required columns:</strong> userId, fileName</p>
+                    <p><strong>Optional:</strong> age, gender, race, ethnicity, language, weight, zipcode, sessionNotes</p>
+                    {csvFolderFiles.length > 0 ? (
+                      <p className="text-green-600 dark:text-green-400">
+                        <strong>✓ Tip:</strong> Download template to get CSV pre-filled with {csvFolderFiles.length} file(s) from your folder
+                      </p>
+                    ) : (
+                      <p className="text-amber-600 dark:text-amber-400">
+                        <strong>Tip:</strong> Select folder above to auto-populate filenames in the template
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="text-sm text-green-700 dark:text-green-300 mb-3">
-                  {csvBatchData.rows.length} valid records found in {csvBatchData.fileName}
-                </p>
-                
-                {/* CSV Processing Status Bar */}
+              ) : (
+                <div className="border border-green-200 dark:border-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <span className="font-medium text-green-800 dark:text-green-200">CSV Loaded: {csvBatchData.rows.length} rows</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setCsvBatchData(null);
+                        setCsvValidationErrors([]);
+                        setCsvRowResults([]);
+                      }}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                      title="Remove CSV"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step 3: Process Button */}
+            {csvBatchData && csvFolderFiles.length > 0 && (
+              <div className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 text-xs font-bold mr-2">3</span>
+                  Process Batch
+                </h4>
+
+                {/* Processing Progress */}
                 {csvProcessingProgress.isProcessing && (
                   <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                        Processing CSV Files
+                        Processing Batch
                       </span>
                       <span className="text-sm text-blue-700 dark:text-blue-300">
                         {csvProcessingProgress.currentFile} of {csvProcessingProgress.totalFiles}
                       </span>
                     </div>
                     <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2">
-                      <div 
-                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300 progress--dynamic"
-                        style={{ '--progress-width': `${csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0}%` } as React.CSSProperties}
+                      <div
+                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0}%` }}
                         role="progressbar"
                         aria-valuenow={csvProcessingProgress.currentFile}
                         aria-valuemin={0}
                         aria-valuemax={csvProcessingProgress.totalFiles}
-                        aria-label="CSV processing progress"
                       ></div>
                     </div>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                      {csvProcessingProgress.message}
-                    </p>
-                    {csvProcessingProgress.currentFileName && (
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        Current file: {csvProcessingProgress.currentFileName}
-                      </p>
-                    )}
+                    <p className="text-sm text-blue-700 dark:text-blue-300">{csvProcessingProgress.message}</p>
                   </div>
                 )}
+
                 <button
                   onClick={processCsvBatch}
-                  disabled={csvProcessingProgress.isProcessing || (csvBatchData && audioFiles.length >= csvBatchData.rows.length)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
-                  title={
-                    csvProcessingProgress.isProcessing 
-                      ? "CSV processing in progress..." 
-                      : (csvBatchData && audioFiles.length >= csvBatchData.rows.length) 
-                        ? "Files already loaded from CSV. Clear the session to load different files." 
-                        : "Load audio files from the uploaded CSV"
-                  }
+                  disabled={csvProcessingProgress.isProcessing}
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
                 >
-                  {csvProcessingProgress.isProcessing 
-                    ? "Processing..." 
-                    : (csvBatchData && audioFiles.length >= csvBatchData.rows.length) 
-                      ? "Files Already Loaded" 
-                      : "Load Audio Files from CSV"
-                  }
+                  {csvProcessingProgress.isProcessing ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5 mr-2" />
+                      Start Batch Processing ({csvBatchData.rows.length} files)
+                    </>
+                  )}
                 </button>
+              </div>
+            )}
+
+            {/* CSV Row Results Table */}
+            {csvRowResults.length > 0 && (
+              <div className="border border-gray-200 dark:border-gray-600 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 border-b border-gray-200 dark:border-gray-600">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">Processing Results</h4>
+                </div>
+                <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                    <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Row</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">File</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">User ID</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Depression</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Anxiety</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
+                      {csvRowResults.map((row) => (
+                        <tr key={row.rowIndex} className={row.status === 'processing' ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
+                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{row.rowIndex + 1}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900 dark:text-white truncate max-w-xs" title={row.fileName}>{row.fileName}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{row.userId}</td>
+                          <td className="px-4 py-2">
+                            {row.status === 'pending' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                Pending
+                              </span>
+                            )}
+                            {row.status === 'processing' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                Processing
+                              </span>
+                            )}
+                            {row.status === 'success' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Success
+                              </span>
+                            )}
+                            {row.status === 'error' && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" title={row.error}>
+                                <X className="h-3 w-3 mr-1" />
+                                Error
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                            {row.depressionScore !== undefined ? row.depressionScore.toFixed(2) : '-'}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                            {row.anxietyScore !== undefined ? row.anxietyScore.toFixed(2) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
@@ -3466,7 +3866,7 @@ const UploadAnalyze: React.FC = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {audioFile.duration && (
                     <div className="audio-progress">
                       <div
@@ -3509,12 +3909,12 @@ const UploadAnalyze: React.FC = () => {
                     Add More Files
                   </button>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {audioFiles.map((file) => {
                     const fileState = fileStates[file.id] || 'ready';
                     const progress = processingProgress[file.id];
-                    
+
                     return (
                       <div key={file.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -3530,7 +3930,7 @@ const UploadAnalyze: React.FC = () => {
                               </p>
                             </div>
                           </div>
-                          
+
                           {/* Action buttons with equal spacing */}
                           <div className="flex items-center justify-end space-x-2 flex-shrink-0">
                             {!shouldHidePatientInfo() && (
@@ -3543,7 +3943,7 @@ const UploadAnalyze: React.FC = () => {
                                 Edit Info
                               </button>
                             )}
-                            
+
                             {/* Start button for individual file */}
                             {fileState === 'ready' && (
                               <button type="button"
@@ -3581,7 +3981,7 @@ const UploadAnalyze: React.FC = () => {
                             </button>
                           </div>
                         </div>
-                        
+
                         {/* Processing status for this file */}
                         {progress && (
                           <div className="mt-2">
@@ -3677,7 +4077,7 @@ const UploadAnalyze: React.FC = () => {
               Analysis Results
             </h3>
           </div>
-          
+
           {/* Raw API Response */}
           {result.rawApiResponse && (
             <div className="mb-6">
@@ -3868,10 +4268,10 @@ const UploadAnalyze: React.FC = () => {
       {(() => {
         const hasFiles = (processingMode !== 'single' && audioFiles.length > 0) || (processingMode === 'single' && audioFile);
         const csvMode = processingMode === 'batch-csv' && csvBatchData && !csvProcessingProgress.isProcessing;
-        const shouldShowButton = (hasFiles || csvMode) && 
-               !result && Object.keys(results).length === 0 && 
+        const shouldShowButton = (hasFiles || csvMode) &&
+               !result && Object.keys(results).length === 0 &&
                progress.stage === 'idle' && !isProcessing;
-        
+
         return shouldShowButton;
       })() && (
         <div className="text-center">
@@ -3890,7 +4290,7 @@ const UploadAnalyze: React.FC = () => {
                     </span>
                   </div>
                   <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mb-2">
-                    <div 
+                    <div
                       className="bg-green-600 dark:bg-green-400 h-2 rounded-full transition-all duration-300 progress--dynamic"
                       style={{ '--progress-width': `${batchProcessingProgress.totalFiles > 0 ? (batchProcessingProgress.currentFile / batchProcessingProgress.totalFiles) * 100 : 0}%` } as React.CSSProperties}
                       role="progressbar"
@@ -3911,10 +4311,12 @@ const UploadAnalyze: React.FC = () => {
                 </div>
               )}
 
+              {/* Hide Start All Ready Files button for CSV batch mode - it has its own processing button */}
+              {processingMode !== 'batch-csv' && (
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button type="button"
                   onClick={processMultipleFiles}
-                  disabled={audioFiles.length === 0 || !userMetadata.userId.trim() || 
+                  disabled={audioFiles.length === 0 || !userMetadata.userId.trim() ||
                            !audioFiles.some(file => fileStates[file.id] === 'ready') ||
                            !!error || Object.values(validationErrors).some(err => err !== undefined) ||
                            (!runKintsugiAssessment && !transcribeAudio)}
@@ -3922,20 +4324,23 @@ const UploadAnalyze: React.FC = () => {
                 >
                   <Play className="h-5 w-5 mr-2" aria-hidden="true" />
                   Start All Ready Files
-                  {audioFiles.filter(file => fileStates[file.id] === 'ready').length > 0 && 
+                  {audioFiles.filter(file => fileStates[file.id] === 'ready').length > 0 &&
                    ` (${audioFiles.filter(file => fileStates[file.id] === 'ready').length})`}
                 </button>
               </div>
+              )}
+              {processingMode !== 'batch-csv' && (
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Use individual "Start" buttons on each file for selective processing, or "Start All" to process all ready files sequentially
               </p>
+              )}
             </div>
           ) : (
             // Single-file mode controls
             <div>
               <button type="button"
                 onClick={processAndAnalyze}
-                disabled={!audioFile || !userMetadata.userId.trim() || 
+                disabled={!audioFile || !userMetadata.userId.trim() ||
                          !!error || Object.values(validationErrors).some(err => err !== undefined) ||
                          (!runKintsugiAssessment && !transcribeAudio)}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
@@ -3965,7 +4370,7 @@ const UploadAnalyze: React.FC = () => {
             {Object.entries(results).map(([fileId, result]) => {
               const audioFile = audioFiles.find(f => f.id === fileId);
               const progress = processingProgress[fileId];
-              
+
               return (
                 <div key={fileId} className="border dark:border-gray-700 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -4044,7 +4449,7 @@ const UploadAnalyze: React.FC = () => {
                           </span>
                         </div>
                       </div>
-                      
+
                       {/* Session Info */}
                       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -4173,7 +4578,7 @@ const UploadAnalyze: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       {/* Metadata Editing Modal */}
       {editingFileMetadata && !shouldHidePatientInfo() && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
@@ -4192,7 +4597,7 @@ const UploadAnalyze: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="px-6 py-4 space-y-4">
               <div>
                 <label htmlFor="temp-userId" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -4207,7 +4612,7 @@ const UploadAnalyze: React.FC = () => {
                   placeholder="Enter user ID"
                 />
               </div>
-              
+
               <div>
                 <label htmlFor="temp-age" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Age
@@ -4221,8 +4626,8 @@ const UploadAnalyze: React.FC = () => {
                     handleTempFieldValidation('age', e.target.value);
                   }}
                   className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                    tempValidationErrors.age 
-                      ? 'border-red-500 dark:border-red-400' 
+                    tempValidationErrors.age
+                      ? 'border-red-500 dark:border-red-400'
                       : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="Enter age"
@@ -4235,7 +4640,7 @@ const UploadAnalyze: React.FC = () => {
                   </p>
                 )}
               </div>
-              
+
               <div>
                 <label htmlFor="temp-gender" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Gender
@@ -4256,7 +4661,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="transgender male">Transgender Male</option>
                 </select>
               </div>
-              
+
               <div>
                 <label htmlFor="temp-race" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Race
@@ -4278,7 +4683,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="white">White</option>
                 </select>
               </div>
-              
+
               <div>
                 <label htmlFor="temp-ethnicity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Ethnicity
@@ -4294,7 +4699,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="Not Hispanic, Latino, or Spanish Origin">Not Hispanic, Latino, or Spanish Origin</option>
                 </select>
               </div>
-              
+
               <div>
                 <label htmlFor="temp-language" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   English as Primary Language?
@@ -4302,8 +4707,8 @@ const UploadAnalyze: React.FC = () => {
                 <select
                   id="temp-language"
                   value={tempMetadata.language === undefined ? '' : tempMetadata.language.toString()}
-                  onChange={(e) => setTempMetadata(prev => ({ 
-                    ...prev, 
+                  onChange={(e) => setTempMetadata(prev => ({
+                    ...prev,
                     language: e.target.value === '' ? undefined : e.target.value === 'true'
                   }))}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
@@ -4313,7 +4718,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="false">No</option>
                 </select>
               </div>
-              
+
               <div>
                 <label htmlFor="temp-weight" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Weight (lbs)
@@ -4327,8 +4732,8 @@ const UploadAnalyze: React.FC = () => {
                     handleTempFieldValidation('weight', e.target.value);
                   }}
                   className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                    tempValidationErrors.weight 
-                      ? 'border-red-500 dark:border-red-400' 
+                    tempValidationErrors.weight
+                      ? 'border-red-500 dark:border-red-400'
                       : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="Weight in pounds"
@@ -4341,7 +4746,7 @@ const UploadAnalyze: React.FC = () => {
                   </p>
                 )}
               </div>
-              
+
               <div>
                 <label htmlFor="temp-zipcode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   ZIP Code
@@ -4355,8 +4760,8 @@ const UploadAnalyze: React.FC = () => {
                     handleTempFieldValidation('zipcode', e.target.value);
                   }}
                   className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                    tempValidationErrors.zipcode 
-                      ? 'border-red-500 dark:border-red-400' 
+                    tempValidationErrors.zipcode
+                      ? 'border-red-500 dark:border-red-400'
                       : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="ZIP code"
@@ -4368,7 +4773,7 @@ const UploadAnalyze: React.FC = () => {
                   </p>
                 )}
               </div>
-              
+
               <div>
                 <label htmlFor="temp-sessionNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Session Notes
@@ -4381,8 +4786,8 @@ const UploadAnalyze: React.FC = () => {
                     handleTempFieldValidation('sessionNotes', e.target.value);
                   }}
                   className={`w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white ${
-                    tempValidationErrors.sessionNotes 
-                      ? 'border-red-500 dark:border-red-400' 
+                    tempValidationErrors.sessionNotes
+                      ? 'border-red-500 dark:border-red-400'
                       : 'border-gray-300 dark:border-gray-600'
                   }`}
                   placeholder="Session notes or comments"
@@ -4396,7 +4801,7 @@ const UploadAnalyze: React.FC = () => {
                 )}
               </div>
             </div>
-            
+
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-600 flex justify-end space-x-3">
               <button
                 onClick={cancelMetadataEdit}

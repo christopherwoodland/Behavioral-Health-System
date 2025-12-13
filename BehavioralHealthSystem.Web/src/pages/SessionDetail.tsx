@@ -23,7 +23,8 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
@@ -61,6 +62,7 @@ const SessionDetail: React.FC = () => {
   const [showRawJson, setShowRawJson] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Feature flags
@@ -161,6 +163,32 @@ const SessionDetail: React.FC = () => {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
+  // Delete session
+  const handleDeleteSession = useCallback(async () => {
+    if (!sessionId || !session) return;
+
+    const confirmed = window.confirm('Are you sure you want to delete this session? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      await apiService.deleteSessionData(sessionId);
+      addToast('success', 'Session Deleted', 'The session has been successfully deleted.');
+      announceToScreenReader('Session deleted successfully');
+
+      // Navigate back to sessions list after successful deletion
+      setTimeout(() => {
+        navigate('/sessions');
+      }, 1000);
+    } catch (err) {
+      const appError = err as AppError;
+      addToast('error', 'Delete Failed', appError.message || 'Failed to delete session');
+      announceToScreenReader(`Error deleting session: ${appError.message}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [sessionId, session, navigate, addToast, announceToScreenReader]);
 
   // Handle JSON view toggle
   const toggleRawJson = useCallback(() => {
@@ -368,42 +396,52 @@ const SessionDetail: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button type="button"
             onClick={toggleRawJson}
-            className="btn btn--secondary"
+            className="btn btn--secondary min-w-[100px] h-10 justify-center"
             aria-label={`${showRawJson ? 'Hide' : 'Show'} raw JSON data`}
           >
-            {showRawJson ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-            {showRawJson ? 'Hide JSON' : 'Show JSON'}
+            {showRawJson ? <EyeOff className="w-4 h-4 mr-1.5" /> : <Eye className="w-4 h-4 mr-1.5" />}
+            {showRawJson ? 'Hide' : 'Show'}
           </button>
 
           <button type="button"
             onClick={refreshSession}
             disabled={isRefreshing}
-            className="btn btn--secondary"
+            className="btn btn--secondary min-w-[100px] h-10 justify-center"
             aria-label="Refresh session data"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </button>
 
           <button type="button"
             onClick={handleRerunSession}
-            className="btn btn--secondary"
+            className="btn btn--secondary min-w-[100px] h-10 justify-center"
             aria-label="Re-run analysis for this session"
           >
-            <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
+            <RefreshCw className="w-4 h-4 mr-1.5" aria-hidden="true" />
             Re-run
           </button>
 
           <button type="button"
             onClick={downloadSessionData}
-            className="btn btn--primary"
+            className="btn btn--primary min-w-[100px] h-10 justify-center"
             aria-label="Download session data as JSON"
           >
-            <Download className="w-4 h-4 mr-2" aria-hidden="true" />
+            <Download className="w-4 h-4 mr-1.5" aria-hidden="true" />
             Download
+          </button>
+
+          <button type="button"
+            onClick={handleDeleteSession}
+            disabled={isDeleting}
+            className="btn btn--danger min-w-[100px] h-10 justify-center"
+            aria-label="Delete this session"
+          >
+            <Trash2 className={`w-4 h-4 mr-1.5 ${isDeleting ? 'animate-pulse' : ''}`} aria-hidden="true" />
+            {isDeleting ? 'Deleting...' : 'Delete'}
           </button>
         </div>
       </div>

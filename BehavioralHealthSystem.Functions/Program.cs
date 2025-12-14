@@ -1,6 +1,7 @@
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
+using BehavioralHealthSystem.Configuration;
 using BehavioralHealthSystem.Functions.Services;
 using BehavioralHealthSystem.Helpers.Models;
 using BehavioralHealthSystem.Helpers.Services;
@@ -116,6 +117,15 @@ var host = new HostBuilder()
             options.UseFallbackToStandardConfig = config.GetValue<bool>("EXTENDED_ASSESSMENT_USE_FALLBACK", true);
         });
 
+        // Azure AI Foundry Agent Configuration
+        services.Configure<FoundryAgentOptions>(options =>
+        {
+            var config = context.Configuration;
+            options.Enabled = config.GetValue<bool>("FOUNDRY_AGENT_ENABLED", false);
+            options.ProjectEndpoint = config["FOUNDRY_PROJECT_ENDPOINT"] ?? string.Empty;
+            options.GrammarAgentName = config["FOUNDRY_GRAMMAR_AGENT_NAME"] ?? "agent-grammar";
+        });
+
         // HTTP Client with policies - Simplified configuration
         services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
             .ConfigureHttpClient((serviceProvider, client) =>
@@ -154,6 +164,7 @@ var host = new HostBuilder()
         services.AddMemoryCache();
         services.AddScoped<IExtendedAssessmentJobService, ExtendedAssessmentJobService>();
         services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();
+        services.AddScoped<IFoundryGrammarService, FoundryGrammarService>();
         services.AddScoped<GenericErrorHandlingService>();
         services.AddScoped<ExceptionHandlingService>();
         services.AddScoped<BehavioralHealthSystem.Functions.Services.FunctionErrorHandlingService>();

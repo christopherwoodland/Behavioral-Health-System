@@ -58,12 +58,11 @@ export default defineConfig({
       output: {
         // Improved manual chunks for better code splitting
         manualChunks: (id) => {
-          // Core React dependencies
-          if (id.includes('node_modules/react-dom')) {
-            return 'react-dom';
-          }
-          if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) {
-            return 'react-core';
+          // Keep all React together to avoid version mismatches
+          if (id.includes('node_modules/react') || 
+              id.includes('node_modules/react-dom') || 
+              id.includes('node_modules/scheduler')) {
+            return 'react';
           }
           if (id.includes('node_modules/react-router')) {
             return 'router';

@@ -255,7 +255,7 @@ export const apiService = {
   // Download audio from blob storage through backend (avoids CORS issues)
   async downloadAudioBlob(blobUrl: string): Promise<Blob> {
     const encodedUrl = encodeURIComponent(blobUrl);
-    const response = await fetch(`${config.apiBaseUrl}/audio/download?url=${encodedUrl}`);
+    const response = await fetch(`${config.api.baseUrl}/audio/download?url=${encodedUrl}`);
     if (!response.ok) {
       throw new Error(`Failed to download audio: ${response.statusText}`);
     }

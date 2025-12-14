@@ -1,4 +1,5 @@
 import { config } from '@/config/constants';
+import { convertAudioToWav } from './audio';
 
 export interface TranscriptionResult {
   text: string;
@@ -22,21 +23,49 @@ class TranscriptionService {
   }
 
   /**
-   * Transcribe audio using backend API (which calls Azure OpenAI gpt-4o-transcribe)
+   * Transcribe audio using backend API (which calls Azure Speech Fast Transcription)
+   * Audio is automatically converted to WAV format for Azure Speech API compatibility.
    * @param audioBlob The audio blob to transcribe
    * @returns Promise<TranscriptionResult>
    */
   async transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
     try {
-      const contentType = audioBlob.type || 'audio/wav';
-      console.log('🎤 Transcribing audio - size:', audioBlob.size, 'type:', contentType);
+      let blobToSend = audioBlob;
+      let contentType = audioBlob.type || 'audio/wav';
+
+      console.log('🎤 Transcribing audio - original size:', audioBlob.size, 'type:', contentType);
+
+      // If the audio is not WAV, convert it to WAV for Azure Speech API compatibility
+      // Azure Speech Fast Transcription API does NOT support WebM/Opus format
+      if (contentType !== 'audio/wav' && contentType !== 'audio/wave' && contentType !== 'audio/x-wav') {
+        console.log('🎤 Converting audio to WAV for Azure Speech API compatibility...');
+        try {
+          const wavBlob = await convertAudioToWav(
+            new File([audioBlob], 'audio.tmp', { type: contentType }),
+            (progress) => console.log(`🎤 WAV conversion: ${progress.toFixed(0)}%`)
+          );
+          blobToSend = wavBlob;
+          contentType = 'audio/wav';
+          console.log('🎤 Converted to WAV - new size:', wavBlob.size);
+        } catch (conversionError) {
+          console.error('🎤 WAV conversion failed:', conversionError);
+          // If conversion fails for WAV types that are mislabeled, try anyway
+          if (contentType.includes('wav')) {
+            console.log('🎤 Proceeding with original blob (appears to be WAV despite error)');
+          } else {
+            throw new Error(`Audio format not supported. Please use WAV, MP3, or OGG format. (Original type: ${contentType})`);
+          }
+        }
+      }
+
+      console.log('🎤 Sending to transcription API - size:', blobToSend.size, 'type:', contentType);
 
       const response = await fetch(`${this.baseUrl}/transcribe-audio`, {
         method: 'POST',
         headers: {
           'Content-Type': contentType,
         },
-        body: audioBlob
+        body: blobToSend
       });
 
       if (!response.ok) {

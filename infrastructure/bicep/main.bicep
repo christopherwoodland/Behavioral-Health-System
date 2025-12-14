@@ -30,6 +30,9 @@ param tags object = {
 @description('Optional: deploy Container Apps resources (e.g., GitHub runners). Default false; core template does not deploy them when false or when module is disabled.')
 param deployContainerApps bool = false
 
+@description('Azure OpenAI endpoint (optional - configure manually after deployment)')
+param openaiEndpoint string = ''
+
 /*
 ================================================================================
 DEPLOYMENT ARCHITECTURE
@@ -159,19 +162,8 @@ module appInsights './modules/app-insights.bicep' = {
   }
 }
 
-// Deploy Azure OpenAI with Private Endpoint
-module openai './modules/openai.bicep' = {
-  scope: rg
-  name: 'openai-deployment'
-  params: {
-    location: location
-    appName: appName
-    environment: environment
-    uniqueSuffix: uniqueSuffix
-    tags: tags
-    privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
-  }
-}
+// NOTE: Azure OpenAI is NOT deployed by this template.
+// Deploy OpenAI/AI Foundry Hub manually and provide the endpoint via parameter.
 
 // Deploy Cognitive Services (Document Intelligence)
 module cognitive './modules/cognitive.bicep' = {
@@ -203,7 +195,7 @@ module functionApp './modules/function-app.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     keyVaultName: keyVault.outputs.keyVaultName
-    openaiEndpoint: openai.outputs.endpoint
+    openaiEndpoint: openaiEndpoint
     documentIntelligenceEndpoint: cognitive.outputs.documentIntelligenceEndpoint
     contentUnderstandingEndpoint: cognitive.outputs.contentUnderstandingEndpoint
   }
@@ -265,7 +257,6 @@ module privateDns './modules/private-dns.bicep' = {
     vnetId: networking.outputs.vnetId
     keyVaultName: keyVault.outputs.keyVaultName
     storageAccountName: storage.outputs.storageAccountName
-    openaiAccountName: openai.outputs.openaiAccountName
     documentIntelligenceName: cognitive.outputs.documentIntelligenceName
     functionAppName: functionApp.outputs.functionAppName
   }
@@ -278,7 +269,6 @@ module rbacAssignments './modules/rbac-assignments.bicep' = {
   params: {
     functionAppPrincipalId: functionApp.outputs.principalId
     webAppPrincipalId: webApp.outputs.webAppPrincipalId
-    openaiAccountName: openai.outputs.openaiAccountName
     documentIntelligenceName: cognitive.outputs.documentIntelligenceName
     storageAccountName: storage.outputs.storageAccountName
     keyVaultName: keyVault.outputs.keyVaultName
@@ -286,7 +276,6 @@ module rbacAssignments './modules/rbac-assignments.bicep' = {
   dependsOn: [
     functionApp
     webApp
-    openai
     cognitive
     storage
     keyVault
@@ -309,8 +298,6 @@ output webAppPrincipalId string = webApp.outputs.webAppPrincipalId
 // Container Apps optional outputs (empty when not deployed)
 output containerAppsEnvName string = deployContainerApps ? '${appName}-${environment}-cae-${uniqueSuffix}' : ''
 output githubRunnerAppName string = deployContainerApps ? '${appName}-${environment}-runner-${uniqueSuffix}' : ''
-output openaiEndpoint string = openai.outputs.endpoint
-output openaiAccountName string = openai.outputs.openaiAccountName
 output documentIntelligenceEndpoint string = cognitive.outputs.documentIntelligenceEndpoint
 output documentIntelligenceName string = cognitive.outputs.documentIntelligenceName
 output contentUnderstandingEndpoint string = cognitive.outputs.contentUnderstandingEndpoint

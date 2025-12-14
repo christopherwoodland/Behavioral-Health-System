@@ -7,9 +7,6 @@ param keyVaultName string
 @description('Storage account name')
 param storageAccountName string
 
-@description('OpenAI account name')
-param openaiAccountName string
-
 @description('Document Intelligence name')
 param documentIntelligenceName string
 
@@ -47,26 +44,6 @@ resource storageDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
 resource storageDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
   parent: storageDnsZone
   name: '${storageDnsZone.name}-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: vnetId
-    }
-  }
-}
-
-// Private DNS Zone for OpenAI
-resource openaiDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink.openai.azure.com'
-  location: 'global'
-  properties: {}
-}
-
-// Virtual Network Link for OpenAI DNS
-resource openaiDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: openaiDnsZone
-  name: '${openaiDnsZone.name}-link'
   location: 'global'
   properties: {
     registrationEnabled: false
@@ -144,20 +121,6 @@ resource storageDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   }
 }
 
-// DNS A Record for OpenAI
-resource openaiDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
-  parent: openaiDnsZone
-  name: openaiAccountName
-  properties: {
-    ttl: 3600
-    aRecords: [
-      {
-        ipv4Address: '10.0.2.6'
-      }
-    ]
-  }
-}
-
 // DNS A Record for Document Intelligence
 resource documentDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' = {
   parent: cognitiveDnsZone
@@ -188,6 +151,5 @@ resource functionAppDnsRecord 'Microsoft.Network/privateDnsZones/A@2020-06-01' =
 
 output keyVaultDnsZoneId string = keyVaultDnsZone.id
 output storageDnsZoneId string = storageDnsZone.id
-output openaiDnsZoneId string = openaiDnsZone.id
 output cognitiveDnsZoneId string = cognitiveDnsZone.id
 output functionAppDnsZoneId string = functionAppDnsZone.id

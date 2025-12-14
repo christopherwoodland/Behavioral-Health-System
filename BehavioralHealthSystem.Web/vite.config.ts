@@ -52,69 +52,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
-    // Set chunk size warning limit (in KB)
-    chunkSizeWarningLimit: 600,
-    rollupOptions: {
-      output: {
-        // Improved manual chunks for better code splitting
-        manualChunks: (id) => {
-          // Keep all React together to avoid version mismatches
-          if (id.includes('node_modules/react') || 
-              id.includes('node_modules/react-dom') || 
-              id.includes('node_modules/scheduler')) {
-            return 'react';
-          }
-          if (id.includes('node_modules/react-router')) {
-            return 'router';
-          }
-
-          // Query and state management
-          if (id.includes('@tanstack/react-query')) {
-            return 'query';
-          }
-
-          // Azure SDK - split by service
-          if (id.includes('@azure/storage-blob')) {
-            return 'azure-storage';
-          }
-          if (id.includes('@azure/core') || id.includes('@azure/abort-controller') || id.includes('@azure/logger')) {
-            return 'azure-core';
-          }
-          if (id.includes('@azure/msal')) {
-            return 'azure-msal';
-          }
-
-          // FFmpeg (audio processing)
-          if (id.includes('@ffmpeg/ffmpeg') || id.includes('@ffmpeg/util')) {
-            return 'ffmpeg';
-          }
-
-          // UI Components - Material UI or similar
-          if (id.includes('@mui') || id.includes('@emotion')) {
-            return 'ui-components';
-          }
-
-          // Utilities and common libraries
-          if (id.includes('node_modules/lodash') || id.includes('node_modules/date-fns')) {
-            return 'utils';
-          }
-
-          // Markdown and syntax highlighting
-          if (id.includes('react-markdown') || id.includes('remark') || id.includes('rehype')) {
-            return 'markdown';
-          }
-          if (id.includes('prism') || id.includes('highlight')) {
-            return 'syntax-highlight';
-          }
-
-          // Split remaining large node_modules
-          if (id.includes('node_modules')) {
-            // Group smaller packages together
-            return 'vendor';
-          }
-        },
-      },
-    },
+    // Increase chunk size warning limit to allow larger bundles (2MB)
+    chunkSizeWarningLimit: 2000,
+    // No manual chunking - let Vite handle it to avoid React load order issues
   },
   optimizeDeps: {
     exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],

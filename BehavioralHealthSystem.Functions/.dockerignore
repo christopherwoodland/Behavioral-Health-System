@@ -1,0 +1,25 @@
+# Build artifacts
+bin/
+obj/
+publish/
+
+# IDE
+.vs/
+.vscode/
+*.user
+
+# Test results
+TestResults/
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+
+# Local settings (secrets - handled at runtime)
+local.settings.json
+
+# Azure Functions tools
+.azure/

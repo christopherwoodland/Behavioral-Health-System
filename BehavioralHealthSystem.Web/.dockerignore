@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+
+# Build output (we rebuild in container)
+dist
+
+# Development files
+.git
+.gitignore
+.vscode
+*.md
+!README.md
+
+# Test files
+coverage
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+src/test
+playwright.config.ts
+playwright-report
+
+# Environment files (handled at runtime)
+.env
+.env.*
+
+# IDE
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

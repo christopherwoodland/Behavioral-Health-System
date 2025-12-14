@@ -162,32 +162,57 @@ public class TranscriptionFunction
 
             // Get configuration from environment - Azure Speech Service settings
             var speechEndpoint = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENDPOINT");
+            var speechKey = Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
+            var speechRegion = Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION") ?? "eastus2";
             var speechLocale = Environment.GetEnvironmentVariable("AZURE_SPEECH_LOCALE") ?? "en-US";
             var apiVersion = Environment.GetEnvironmentVariable("AZURE_SPEECH_API_VERSION") ?? "2024-11-15";
+            var useEnhancedMode = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENHANCED_MODE") ?? "false";
 
-            if (string.IsNullOrEmpty(speechEndpoint))
+            if (string.IsNullOrEmpty(speechEndpoint) && string.IsNullOrEmpty(speechKey))
             {
-                _logger.LogError("[{FunctionName}] Speech service endpoint not configured (AZURE_SPEECH_ENDPOINT)", nameof(TranscribeAudio));
+                _logger.LogError("[{FunctionName}] Speech service not configured (need AZURE_SPEECH_ENDPOINT or AZURE_SPEECH_KEY)", nameof(TranscribeAudio));
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
                 await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Speech transcription service not configured" }));
                 return errorResponse;
             }
 
             // Build the Fast Transcription API URL
-            // Format: https://{resource}.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version={version}
-            var transcriptionUrl = $"{speechEndpoint.TrimEnd('/')}/speechtotext/transcriptions:transcribe?api-version={apiVersion}";
+            // Format: https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version={version}
+            string transcriptionUrl;
+            bool useKeyAuth = !string.IsNullOrEmpty(speechKey);
 
-            _logger.LogInformation("[{FunctionName}] Calling Azure Speech Fast Transcription API at endpoint: {Endpoint}",
-                nameof(TranscribeAudio), speechEndpoint);
+            if (!string.IsNullOrEmpty(speechEndpoint))
+            {
+                // Use the configured endpoint directly
+                transcriptionUrl = $"{speechEndpoint.TrimEnd('/')}/speechtotext/transcriptions:transcribe?api-version={apiVersion}";
+            }
+            else
+            {
+                // Fallback: build URL from region
+                transcriptionUrl = $"https://{speechRegion}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version={apiVersion}";
+            }
 
-            // Get access token using managed identity (key auth is disabled on this resource)
-            var credential = new DefaultAzureCredential();
-            var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" });
-            var accessToken = await credential.GetTokenAsync(tokenRequestContext);
-
-            _logger.LogInformation("[{FunctionName}] Acquired access token via managed identity", nameof(TranscribeAudio));
+            _logger.LogInformation("[{FunctionName}] Calling Azure Speech Fast Transcription API: {Url}, KeyAuth: {UseKeyAuth}",
+                nameof(TranscribeAudio), transcriptionUrl, useKeyAuth);
 
             using var httpClient = new HttpClient();
+
+            if (useKeyAuth)
+            {
+                // Use subscription key authentication
+                httpClient.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", speechKey);
+                _logger.LogInformation("[{FunctionName}] Using subscription key authentication", nameof(TranscribeAudio));
+            }
+            else
+            {
+                // Get access token using managed identity
+                var credential = new DefaultAzureCredential();
+                var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" });
+                var accessToken = await credential.GetTokenAsync(tokenRequestContext);
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Token);
+                _logger.LogInformation("[{FunctionName}] Acquired access token via managed identity", nameof(TranscribeAudio));
+            }
+
             using var formContent = new MultipartFormDataContent();
 
             // Add the audio file (use processed audio data which may have been converted to WAV)
@@ -195,15 +220,34 @@ public class TranscriptionFunction
             audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
             formContent.Add(audioContent, "audio", $"audio.{fileExtension}");
 
-            // Add the definition JSON with locale (mono channel audio)
-            var definition = JsonSerializer.Serialize(new
+            // Add the definition JSON - support enhanced mode for newer API versions
+            object definitionObj;
+            if (bool.TryParse(useEnhancedMode, out var enhanced) && enhanced)
             {
-                locales = new[] { speechLocale }
-            });
+                // Enhanced mode definition (API version 2025-10-15+)
+                definitionObj = new
+                {
+                    locales = new[] { speechLocale },
+                    enhancedMode = new
+                    {
+                        enabled = true,
+                        task = "transcribe"
+                    }
+                };
+                _logger.LogInformation("[{FunctionName}] Using enhanced transcription mode", nameof(TranscribeAudio));
+            }
+            else
+            {
+                // Standard definition
+                definitionObj = new
+                {
+                    locales = new[] { speechLocale }
+                };
+            }
+
+            var definition = JsonSerializer.Serialize(definitionObj);
             formContent.Add(new StringContent(definition), "definition");
 
-            // Use Bearer token authentication (managed identity)
-            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Token);
             httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
 
             var transcriptionResponse = await httpClient.PostAsync(transcriptionUrl, formContent);

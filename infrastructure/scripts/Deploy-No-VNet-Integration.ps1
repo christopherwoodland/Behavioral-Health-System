@@ -11,8 +11,8 @@ uses simpler networking (no VNet, private endpoints, or private DNS zones).
 SERVICES DEPLOYED:
 - Security: Key Vault (public access, RBAC-enabled)
 - Storage: Blob storage account (public access)
-- Backend APIs: Consumption Plan Function App (.NET 8 isolated)
-- Frontend UI: App Service (Linux Node.js 20 for React)
+- Backend APIs: Consumption Plan Function App (.NET 8 isolated) OR Container App
+- Frontend UI: App Service (Linux Node.js 20 for React) OR Container App
 - AI Services: Azure OpenAI, Document Intelligence, Content Understanding (all public)
 - Monitoring: Application Insights & Log Analytics Workspace
 
@@ -20,13 +20,13 @@ SERVICES NOT DEPLOYED (vs VNet version):
 - VNet / Subnets
 - Private Endpoints
 - Private DNS Zones
-- Container Apps (not needed for public deployment)
 
 USE CASES:
 - Development and testing environments
 - Proof of concept deployments
 - Scenarios where VNet complexity is not required
 - Cost-sensitive deployments
+- Container-based deployments (with -UseContainerApps flag)
 
 .PARAMETER Environment
 Environment name (dev, staging, prod)
@@ -40,6 +40,19 @@ Azure region for deployment (default: eastus2)
 .PARAMETER WebAppSku
 App Service Plan SKU for the Web App (default: P0v3)
 Common values: F1 (Free), B1 (Basic), S1 (Standard), P0v3/P1v3 (PremiumV3)
+Ignored when -UseContainerApps is specified.
+
+.PARAMETER UseContainerApps
+Deploy using Container Apps instead of App Service for both UI and API.
+Requires containers to be built and pushed to ACR first.
+
+.PARAMETER ContainerImageTag
+The container image tag to deploy (default: latest).
+Only used when -UseContainerApps is specified.
+
+.PARAMETER BuildContainers
+Build and push containers before deploying.
+Only used when -UseContainerApps is specified.
 
 .EXAMPLE
 .\Deploy-No-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json
@@ -49,6 +62,12 @@ Common values: F1 (Free), B1 (Basic), S1 (Standard), P0v3/P1v3 (PremiumV3)
 
 .EXAMPLE
 .\Deploy-No-VNet-Integration.ps1 -Environment staging -ParameterFile ./parameters/staging.parameters.json -Location westus2 -WebAppSku S1
+
+.EXAMPLE
+.\Deploy-No-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json -UseContainerApps -BuildContainers
+
+.EXAMPLE
+.\Deploy-No-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json -UseContainerApps -ContainerImageTag v1.0.0
 #>
 
 param(
@@ -64,11 +83,19 @@ param(
 
     [string]$WebAppSku = "P0v3",
 
+    [switch]$UseContainerApps,
+
+    [string]$ContainerImageTag = "latest",
+
+    [switch]$BuildContainers,
+
     [switch]$SkipWhatIf,
     [switch]$SkipValidation
 )
 
 $ErrorActionPreference = "Stop"
+
+$deploymentMode = if ($UseContainerApps) { "Container Apps" } else { "App Service" }
 
 Write-Host ""
 Write-Host "=========================================================="
@@ -79,7 +106,13 @@ Write-Host "Deployment Configuration:"
 Write-Host "  Environment:           $Environment"
 Write-Host "  Resource Group:        $ResourceGroupName"
 Write-Host "  Region:                $Location"
-Write-Host "  Web App SKU:           $WebAppSku"
+Write-Host "  Deployment Mode:       $deploymentMode"
+if (-not $UseContainerApps) {
+    Write-Host "  Web App SKU:           $WebAppSku"
+} else {
+    Write-Host "  Container Image Tag:   $ContainerImageTag"
+    Write-Host "  Build Containers:      $BuildContainers"
+}
 Write-Host "  Parameter File:        $ParameterFile"
 Write-Host "  Network Mode:          PUBLIC (No VNet/Private Endpoints)"
 Write-Host ""
@@ -108,7 +141,11 @@ Write-Host "[OK] Parameter file found"
 
 # Construct template and deployment paths
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$templatePath = Join-Path $scriptDir "..\bicep\main-public.bicep"
+$templatePath = if ($UseContainerApps) {
+    Join-Path $scriptDir "..\bicep\main-public-containerized.bicep"
+} else {
+    Join-Path $scriptDir "..\bicep\main-public.bicep"
+}
 $templatePath = Resolve-Path $templatePath
 
 if (-not (Test-Path $templatePath)) {
@@ -118,17 +155,30 @@ if (-not (Test-Path $templatePath)) {
 
 $deploymentName = "bhs-public-$Environment-$(Get-Date -Format yyyyMMdd-HHmmss)"
 
+# Initialize ACR name variable (will be set for Container Apps mode)
+$acrName = $null
+
+# Build parameters based on deployment mode
+$deployParams = @(
+    "--parameters", "@$ParameterFile",
+    "--parameters", "resourceGroupName=$ResourceGroupName"
+)
+
+if ($UseContainerApps) {
+    $deployParams += @("--parameters", "containerImageTag=$ContainerImageTag")
+    # Note: acrName will be added after ACR is deployed (see Container Apps Pre-Deployment Setup section)
+} else {
+    $deployParams += @("--parameters", "webAppSku=$WebAppSku")
+}
+
 # Template validation (unless skipped)
 if (-not $SkipValidation) {
     Write-Host "`n[*] Validating template..."
     $validateArgs = @(
         'deployment', 'sub', 'validate',
         '--location', $Location,
-        '--template-file', $templatePath,
-        '--parameters', "@$ParameterFile",
-        '--parameters', "resourceGroupName=$ResourceGroupName",
-        '--parameters', "webAppSku=$WebAppSku"
-    )
+        '--template-file', $templatePath
+    ) + $deployParams
     & az @validateArgs | Out-Null
 
     if ($LASTEXITCODE -eq 0) {
@@ -145,11 +195,8 @@ $whatIfArgs = @(
     'deployment', 'sub', 'what-if',
     '--location', $Location,
     '--template-file', $templatePath,
-    '--parameters', "@$ParameterFile",
-    '--parameters', "resourceGroupName=$ResourceGroupName",
-    '--parameters', "webAppSku=$WebAppSku",
     '--no-pretty-print'
-)
+) + $deployParams
 & az @whatIfArgs
 Write-Host "================================================================"
 
@@ -161,17 +208,104 @@ if ($approval -ne "yes") {
     exit 0
 }
 
+# For Container Apps mode, we need to build containers FIRST before the main deployment
+if ($UseContainerApps) {
+    Write-Host "`n=========================================================="
+    Write-Host "  Container Apps Pre-Deployment Setup"
+    Write-Host "=========================================================="
+
+    # First ensure resource group exists
+    Write-Host "[*] Ensuring resource group exists..."
+    az group create --name $ResourceGroupName --location $Location --output none 2>$null
+
+    # Deploy ACR first (separate from main deployment)
+    Write-Host "[*] Deploying Azure Container Registry..."
+    $acrTemplatePath = Join-Path $scriptDir "..\bicep\modules\acr-standalone.bicep"
+    $acrDeployName = "bhs-acr-$Environment-$(Get-Date -Format yyyyMMdd-HHmmss)"
+    $acrArgs = @(
+        'deployment', 'group', 'create',
+        '--resource-group', $ResourceGroupName,
+        '--name', $acrDeployName,
+        '--template-file', $acrTemplatePath,
+        '--parameters', "appName=bhs",
+        '--parameters', "environment=$Environment",
+        '--parameters', "location=$Location"
+    )
+    & az @acrArgs
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] ACR deployment failed"
+        exit 1
+    }
+
+    # Get ACR name from deployment
+    $acrName = az deployment group show --resource-group $ResourceGroupName --name $acrDeployName --query "properties.outputs.acrName.value" -o tsv
+    $acrLoginServer = az deployment group show --resource-group $ResourceGroupName --name $acrDeployName --query "properties.outputs.acrLoginServer.value" -o tsv
+    Write-Host "[OK] ACR deployed: $acrName ($acrLoginServer)"
+
+    # Check if container images exist (no Docker login required for read operations)
+    Write-Host "[*] Checking for container images in ACR..."
+
+    $uiImageExists = $false
+    $apiImageExists = $false
+
+    # Check for UI image - use repository list first to see if repo exists
+    $uiRepoExists = az acr repository list --name $acrName --query "[?@ == 'bhs-ui']" -o tsv 2>$null
+    if ($uiRepoExists) {
+        $uiManifest = az acr repository show-manifests --name $acrName --repository "bhs-ui" --query "[?tags[?contains(@, '$ContainerImageTag')]]" -o tsv 2>$null
+        if ($uiManifest) { $uiImageExists = $true }
+    }
+
+    # Check for API image
+    $apiRepoExists = az acr repository list --name $acrName --query "[?@ == 'bhs-api']" -o tsv 2>$null
+    if ($apiRepoExists) {
+        $apiManifest = az acr repository show-manifests --name $acrName --repository "bhs-api" --query "[?tags[?contains(@, '$ContainerImageTag')]]" -o tsv 2>$null
+        if ($apiManifest) { $apiImageExists = $true }
+    }
+
+    if (-not $uiImageExists -or -not $apiImageExists) {
+        if (-not $BuildContainers) {
+            Write-Host ""
+            Write-Host "[WARNING] Container images not found in ACR:" -ForegroundColor Yellow
+            if (-not $uiImageExists) { Write-Host "  - bhs-ui:$ContainerImageTag" -ForegroundColor Yellow }
+            if (-not $apiImageExists) { Write-Host "  - bhs-api:$ContainerImageTag" -ForegroundColor Yellow }
+            Write-Host ""
+            $buildApproval = Read-Host "Do you want to build and push the containers now? (yes/no)"
+            if ($buildApproval -eq "yes") {
+                $BuildContainers = $true
+            } else {
+                Write-Host "[ERROR] Container Apps deployment requires container images. Use -BuildContainers flag or build manually."
+                exit 1
+            }
+        }
+    } else {
+        Write-Host "[OK] Container images found in ACR"
+    }
+
+    # Build and push containers if needed
+    if ($BuildContainers) {
+        Write-Host "`n[*] Building and pushing containers..."
+        $buildScript = Join-Path $scriptDir "Build-And-Push-Containers.ps1"
+        & $buildScript -AcrName $acrName -ResourceGroupName $ResourceGroupName -ImageTag $ContainerImageTag
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] Container build failed"
+            exit 1
+        }
+        Write-Host "[OK] Containers built and pushed"
+    }
+
+    # Add ACR name to deployment parameters
+    $deployParams += @("--parameters", "acrName=$acrName")
+    Write-Host "[OK] ACR name added to deployment parameters: $acrName"
+}
+
 # Run the main deployment
 Write-Host "`n[*] Starting PUBLIC infrastructure deployment to resource group: $ResourceGroupName..."
 $createArgs = @(
     'deployment', 'sub', 'create',
     '--name', $deploymentName,
     '--location', $Location,
-    '--template-file', $templatePath,
-    '--parameters', "@$ParameterFile",
-    '--parameters', "resourceGroupName=$ResourceGroupName",
-    '--parameters', "webAppSku=$WebAppSku"
-)
+    '--template-file', $templatePath
+) + $deployParams
 
 & az @createArgs
 if ($LASTEXITCODE -ne 0) {
@@ -187,23 +321,47 @@ $showOutputsArgs = @('deployment', 'sub', 'show', '--name', $deploymentName, '--
 $outputsJson = & az @showOutputsArgs
 $outputs = $outputsJson | ConvertFrom-Json
 
-$functionAppName = $outputs.functionAppName.value
-$functionAppUrl = $outputs.functionAppUrl.value
-$functionAppPrincipalId = $outputs.functionAppPrincipalId.value
-$webAppName = $outputs.webAppName.value
-$webAppUrl = $outputs.webAppUrl.value
-$webAppPrincipalId = $outputs.webAppPrincipalId.value
 $keyVaultName = $outputs.keyVaultName.value
 $storageAccountName = $outputs.storageAccountName.value
 $documentIntelligenceName = $outputs.documentIntelligenceName.value
 $contentUnderstandingName = $outputs.contentUnderstandingName.value
 
-Write-Host "[OK] Function App: $functionAppName"
-Write-Host "[OK] Function App URL: $functionAppUrl"
-Write-Host "[OK] Function App Principal ID: $functionAppPrincipalId"
-Write-Host "[OK] Web App: $webAppName"
-Write-Host "[OK] Web App URL: $webAppUrl"
-Write-Host "[OK] Web App Principal ID: $webAppPrincipalId"
+if ($UseContainerApps) {
+    # Container Apps mode outputs
+    $acrName = $outputs.acrName.value
+    $acrLoginServer = $outputs.acrLoginServer.value
+    $uiAppName = $outputs.uiAppName.value
+    $uiAppUrl = $outputs.uiAppUrl.value
+    $uiAppPrincipalId = $outputs.uiAppPrincipalId.value
+    $apiAppName = $outputs.apiAppName.value
+    $apiAppUrl = $outputs.apiAppUrl.value
+    $apiAppPrincipalId = $outputs.apiAppPrincipalId.value
+    $containerAppsEnvName = $outputs.containerAppsEnvName.value
+
+    Write-Host "[OK] ACR: $acrName ($acrLoginServer)"
+    Write-Host "[OK] Container Apps Environment: $containerAppsEnvName"
+    Write-Host "[OK] UI Container App: $uiAppName"
+    Write-Host "[OK] UI App URL: $uiAppUrl"
+    Write-Host "[OK] UI App Principal ID: $uiAppPrincipalId"
+    Write-Host "[OK] API Container App: $apiAppName"
+    Write-Host "[OK] API App URL: $apiAppUrl"
+    Write-Host "[OK] API App Principal ID: $apiAppPrincipalId"
+} else {
+    # App Service mode outputs
+    $functionAppName = $outputs.functionAppName.value
+    $functionAppUrl = $outputs.functionAppUrl.value
+    $functionAppPrincipalId = $outputs.functionAppPrincipalId.value
+    $webAppName = $outputs.webAppName.value
+    $webAppUrl = $outputs.webAppUrl.value
+    $webAppPrincipalId = $outputs.webAppPrincipalId.value
+
+    Write-Host "[OK] Function App: $functionAppName"
+    Write-Host "[OK] Function App URL: $functionAppUrl"
+    Write-Host "[OK] Function App Principal ID: $functionAppPrincipalId"
+    Write-Host "[OK] Web App: $webAppName"
+    Write-Host "[OK] Web App URL: $webAppUrl"
+    Write-Host "[OK] Web App Principal ID: $webAppPrincipalId"
+}
 Write-Host "[OK] Key Vault: $keyVaultName"
 Write-Host "[OK] Storage Account: $storageAccountName"
 Write-Host "[OK] Document Intelligence: $documentIntelligenceName"
@@ -255,14 +413,26 @@ $docIntelAccountId = az cognitiveservices account show --name $documentIntellige
 $contentAccountId = az cognitiveservices account show --name $contentUnderstandingName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 
 # Assign additional storage roles for Function App (Queue and Table for Functions runtime)
-if ($functionAppPrincipalId -and $storageAccountId) {
-    Set-RoleAssignment -PrincipalId $functionAppPrincipalId -RoleId $storageQueueDataContributorRoleId -Scope $storageAccountId -Description "Storage Queue Data Contributor to Function App"
-    Set-RoleAssignment -PrincipalId $functionAppPrincipalId -RoleId $storageTableDataContributorRoleId -Scope $storageAccountId -Description "Storage Table Data Contributor to Function App"
-}
+if (-not $UseContainerApps) {
+    if ($functionAppPrincipalId -and $storageAccountId) {
+        Set-RoleAssignment -PrincipalId $functionAppPrincipalId -RoleId $storageQueueDataContributorRoleId -Scope $storageAccountId -Description "Storage Queue Data Contributor to Function App"
+        Set-RoleAssignment -PrincipalId $functionAppPrincipalId -RoleId $storageTableDataContributorRoleId -Scope $storageAccountId -Description "Storage Table Data Contributor to Function App"
+    }
 
-# Assign storage blob role to Web App (for downloading audio files)
-if ($webAppPrincipalId -and $storageAccountId) {
-    Set-RoleAssignment -PrincipalId $webAppPrincipalId -RoleId $storageBlobDataContributorRoleId -Scope $storageAccountId -Description "Storage Blob Data Contributor to Web App"
+    # Assign storage blob role to Web App (for downloading audio files)
+    if ($webAppPrincipalId -and $storageAccountId) {
+        Set-RoleAssignment -PrincipalId $webAppPrincipalId -RoleId $storageBlobDataContributorRoleId -Scope $storageAccountId -Description "Storage Blob Data Contributor to Web App"
+    }
+} else {
+    # Container Apps mode RBAC
+    if ($apiAppPrincipalId -and $storageAccountId) {
+        Set-RoleAssignment -PrincipalId $apiAppPrincipalId -RoleId $storageQueueDataContributorRoleId -Scope $storageAccountId -Description "Storage Queue Data Contributor to API Container App"
+        Set-RoleAssignment -PrincipalId $apiAppPrincipalId -RoleId $storageTableDataContributorRoleId -Scope $storageAccountId -Description "Storage Table Data Contributor to API Container App"
+    }
+
+    if ($uiAppPrincipalId -and $storageAccountId) {
+        Set-RoleAssignment -PrincipalId $uiAppPrincipalId -RoleId $storageBlobDataContributorRoleId -Scope $storageAccountId -Description "Storage Blob Data Contributor to UI Container App"
+    }
 }
 
 Write-Host "`n[OK] RBAC configuration complete"
@@ -288,19 +458,35 @@ Write-Host "`nDeployment Name: $deploymentName"
 Write-Host "Resource Group: $ResourceGroupName"
 Write-Host "Region: eastus2"
 Write-Host "Network Mode: PUBLIC"
+Write-Host "Deployment Mode: $deploymentMode"
 
 Write-Host "`n========== DEPLOYED SERVICES =========="
 Write-Host "OK - Key Vault (public access, RBAC-enabled)"
 Write-Host "OK - Storage Account (public access)"
-Write-Host "OK - Function App - Consumption Plan with:"
-Write-Host "     - .NET 8 isolated runtime"
-Write-Host "     - Public endpoint"
-Write-Host "     - System-assigned managed identity"
-Write-Host "     - RBAC roles for all services"
-Write-Host "OK - Web App (App Service) for React UI with:"
-Write-Host "     - Linux Node.js 20 runtime"
-Write-Host "     - MSAL authentication configured"
-Write-Host "     - CORS configured for API access"
+
+if ($UseContainerApps) {
+    Write-Host "OK - Azure Container Registry"
+    Write-Host "OK - Container Apps Environment"
+    Write-Host "OK - UI Container App (React) with:"
+    Write-Host "     - Nginx web server"
+    Write-Host "     - Auto-scaling (1-10 replicas)"
+    Write-Host "     - Health checks configured"
+    Write-Host "OK - API Container App (Functions) with:"
+    Write-Host "     - .NET 8 isolated runtime"
+    Write-Host "     - Auto-scaling (1-10 replicas)"
+    Write-Host "     - System-assigned managed identity"
+} else {
+    Write-Host "OK - Function App - Consumption Plan with:"
+    Write-Host "     - .NET 8 isolated runtime"
+    Write-Host "     - Public endpoint"
+    Write-Host "     - System-assigned managed identity"
+    Write-Host "     - RBAC roles for all services"
+    Write-Host "OK - Web App (App Service) for React UI with:"
+    Write-Host "     - Linux Node.js 20 runtime"
+    Write-Host "     - MSAL authentication configured"
+    Write-Host "     - CORS configured for API access"
+}
+
 Write-Host "OK - Document Intelligence (public endpoint)"
 Write-Host "OK - Content Understanding / AI Services (public endpoint)"
 Write-Host "OK - Application Insights & Log Analytics"
@@ -312,31 +498,53 @@ Write-Host "`n========== NOT DEPLOYED (Public Mode) =========="
 Write-Host "SKIP - VNet / Subnets (not needed for public)"
 Write-Host "SKIP - Private Endpoints (not needed for public)"
 Write-Host "SKIP - Private DNS Zones (not needed for public)"
-Write-Host "SKIP - Container Apps (not needed for public)"
 
 Write-Host "`n========== ENDPOINTS =========="
-Write-Host "Function App API: $functionAppUrl"
-Write-Host "Web App UI:       $webAppUrl"
+if ($UseContainerApps) {
+    Write-Host "UI App:  $uiAppUrl"
+    Write-Host "API App: $apiAppUrl"
+} else {
+    Write-Host "Function App API: $functionAppUrl"
+    Write-Host "Web App UI:       $webAppUrl"
+}
 
 Write-Host "`n========== NEXT STEPS =========="
 Write-Host "1. Deploy Azure OpenAI / AI Foundry Hub manually:"
 Write-Host "   - Create Azure OpenAI or AI Foundry Hub resource"
 Write-Host "   - Deploy gpt-4.1 model"
 Write-Host "   - Deploy gpt-realtime model (if needed)"
-Write-Host "   - Update Function App settings with AZURE_OPENAI_ENDPOINT"
-Write-Host "   - Assign Cognitive Services OpenAI User role to Function App"
+if ($UseContainerApps) {
+    Write-Host "   - Update API Container App settings with AZURE_OPENAI_ENDPOINT"
+    Write-Host "   - Assign Cognitive Services OpenAI User role to API Container App"
+} else {
+    Write-Host "   - Update Function App settings with AZURE_OPENAI_ENDPOINT"
+    Write-Host "   - Assign Cognitive Services OpenAI User role to Function App"
+}
 Write-Host ""
-Write-Host "2. Build & publish Function App code:"
-Write-Host "   func azure functionapp publish <function-app-name>"
-Write-Host ""
-Write-Host "3. Build & deploy React UI to Web App:"
-Write-Host "   cd BehavioralHealthSystem.Web"
-Write-Host "   npm run build"
-Write-Host "   az webapp deploy --resource-group $ResourceGroupName --name <web-app-name> --src-path ./dist"
+
+if ($UseContainerApps) {
+    Write-Host "2. To update container images:"
+    Write-Host "   .\Build-And-Push-Containers.ps1 -AcrName $acrName -ResourceGroupName $ResourceGroupName -ImageTag v1.0.1"
+    Write-Host "   az containerapp update --name $uiAppName --resource-group $ResourceGroupName --image ${acrLoginServer}/bhs-ui:v1.0.1"
+    Write-Host "   az containerapp update --name $apiAppName --resource-group $ResourceGroupName --image ${acrLoginServer}/bhs-api:v1.0.1"
+} else {
+    Write-Host "2. Build & publish Function App code:"
+    Write-Host "   func azure functionapp publish <function-app-name>"
+    Write-Host ""
+    Write-Host "3. Build & deploy React UI to Web App:"
+    Write-Host "   cd BehavioralHealthSystem.Web"
+    Write-Host "   npm run build"
+    Write-Host "   az webapp deploy --resource-group $ResourceGroupName --name <web-app-name> --src-path ./dist"
+}
 Write-Host ""
 Write-Host "4. Configure secrets in Key Vault (e.g., KINTSUGI_API_KEY)"
 Write-Host ""
 Write-Host "5. Test the application:"
-Write-Host "   - Navigate to $webAppUrl"
-Write-Host "   - Test API at $functionAppUrl/api/health"
+if ($UseContainerApps) {
+    Write-Host "   - Navigate to $uiAppUrl"
+    Write-Host "   - Test API at $apiAppUrl/api/health"
+} else {
+    Write-Host "   - Navigate to $webAppUrl"
+    Write-Host "   - Test API at $functionAppUrl/api/health"
+}
 Write-Host ""

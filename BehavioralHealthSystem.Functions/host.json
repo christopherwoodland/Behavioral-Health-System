@@ -30,7 +30,17 @@
       "routePrefix": "api",
       "maxOutstandingRequests": 200,
       "maxConcurrentRequests": 100,
-      "dynamicThrottlesEnabled": true
+      "dynamicThrottlesEnabled": true,
+      "cors": {
+        "allowedOrigins": [
+          "http://localhost:5173",
+          "http://localhost:5174",
+          "https://localhost:5173",
+          "https://localhost:5174",
+          "https://portal.azure.com"
+        ],
+        "supportCredentials": true
+      }
     }
   },
   "retry": {

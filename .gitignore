@@ -854,6 +854,10 @@ local.settings.*.json
 .azure/
 .funcignore
 
+# Docker Compose files with secrets
+docker-compose.local.yml
+docker-compose.override.yml
+
 # Environment files
 *.env
 .env

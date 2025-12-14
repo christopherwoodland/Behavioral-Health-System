@@ -1,6 +1,7 @@
 using Microsoft.DurableTask.Client;
 using Azure.AI.DocumentIntelligence;
 using Azure.Identity;
+using BehavioralHealthSystem.Functions.Services;
 
 namespace BehavioralHealthSystem.Functions;
 
@@ -13,19 +14,41 @@ public class DSM5AdministrationFunctions
 {
     private readonly ILogger<DSM5AdministrationFunctions> _logger;
     private readonly IDSM5DataService _dsm5DataService;
+    private readonly IApiKeyValidationService _apiKeyValidation;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public DSM5AdministrationFunctions(
         ILogger<DSM5AdministrationFunctions> logger,
-        IDSM5DataService dsm5DataService)
+        IDSM5DataService dsm5DataService,
+        IApiKeyValidationService apiKeyValidation)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _dsm5DataService = dsm5DataService ?? throw new ArgumentNullException(nameof(dsm5DataService));
+        _apiKeyValidation = apiKeyValidation ?? throw new ArgumentNullException(nameof(apiKeyValidation));
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true
         };
+    }
+
+    /// <summary>
+    /// Validates API key for the request. Returns an unauthorized response if validation fails.
+    /// </summary>
+    private async Task<HttpResponseData?> ValidateApiKeyAsync(HttpRequestData req)
+    {
+        if (!_apiKeyValidation.ValidateApiKey(req))
+        {
+            _logger.LogWarning("API key validation failed");
+            var unauthorizedResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauthorizedResponse.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Unauthorized - valid API key required"
+            });
+            return unauthorizedResponse;
+        }
+        return null;
     }
 
     /// <summary>
@@ -39,8 +62,12 @@ public class DSM5AdministrationFunctions
     /// </remarks>
     [Function("ValidateAndExtractDSM5Data")]
     public async Task<HttpResponseData> ValidateAndExtractDSM5Data(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "dsm5-admin/validate-extraction")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "dsm5-admin/validate-extraction")] HttpRequestData req)
     {
+        // Validate API key
+        var unauthorizedResponse = await ValidateApiKeyAsync(req);
+        if (unauthorizedResponse != null) return unauthorizedResponse;
+
         try
         {
             _logger.LogInformation("[{FunctionName}] Starting DSM-5 PDF validation and extraction",
@@ -264,8 +291,12 @@ public class DSM5AdministrationFunctions
     /// </summary>
     [Function("UploadDSM5DataToStorage")]
     public async Task<HttpResponseData> UploadDSM5DataToStorage(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "dsm5-admin/upload-data")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "dsm5-admin/upload-data")] HttpRequestData req)
     {
+        // Validate API key
+        var unauthorizedResponse = await ValidateApiKeyAsync(req);
+        if (unauthorizedResponse != null) return unauthorizedResponse;
+
         try
         {
             _logger.LogInformation("[{FunctionName}] Starting DSM-5 data upload to blob storage",

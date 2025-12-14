@@ -64,6 +64,9 @@ const SessionDetail: React.FC = () => {
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [playableAudioUrl, setPlayableAudioUrl] = useState<string | null>(null); // For audio element src (blob URL)
+  const [audioDuration, setAudioDuration] = useState<number | null>(null);
+  const [audioCurrentTime, setAudioCurrentTime] = useState(0);
+  const [audioFileSize, setAudioFileSize] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Feature flags
@@ -173,6 +176,7 @@ const SessionDetail: React.FC = () => {
       const audioUrl = session?.audioUrl;
       if (!audioUrl) {
         setPlayableAudioUrl(null);
+        setAudioFileSize(null);
         return;
       }
 
@@ -189,12 +193,14 @@ const SessionDetail: React.FC = () => {
         if (!isCancelled) {
           const blobUrl = URL.createObjectURL(audioBlob);
           setPlayableAudioUrl(blobUrl);
-          console.log('🎵 SessionDetail: Created playable blob URL:', blobUrl);
+          setAudioFileSize(audioBlob.size);
+          console.log('🎵 SessionDetail: Created playable blob URL:', blobUrl, 'size:', audioBlob.size);
         }
       } catch (error) {
         console.error('🎵 SessionDetail: Failed to load playable audio URL:', error);
         if (!isCancelled) {
           setPlayableAudioUrl(null);
+          setAudioFileSize(null);
         }
       }
     };
@@ -245,22 +251,52 @@ const SessionDetail: React.FC = () => {
     });
   }, [announceToScreenReader]);
 
+  // Format duration in mm:ss format
+  const formatDuration = useCallback((seconds: number): string => {
+    if (isNaN(seconds) || !isFinite(seconds)) return '--:--';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }, []);
+
+  // Format file size in human-readable format
+  const formatFileSize = useCallback((bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  }, []);
+
+  // Get file extension from filename
+  const getFileExtension = useCallback((filename: string): string => {
+    const ext = filename.split('.').pop()?.toUpperCase() || 'Unknown';
+    return ext;
+  }, []);
+
   // Audio controls
   const toggleAudioPlayback = useCallback(() => {
-    if (!audioRef.current) return;
+    if (!audioRef.current || !playableAudioUrl) return;
 
     if (audioPlaying) {
       audioRef.current.pause();
       setAudioPlaying(false);
       announceToScreenReader('Audio paused');
     } else {
-      audioRef.current.play().catch(() => {
+      audioRef.current.play().catch((err) => {
+        console.error('🎵 Audio playback error:', err);
         announceToScreenReader('Failed to play audio');
       });
       setAudioPlaying(true);
       announceToScreenReader('Audio playing');
     }
-  }, [audioPlaying, announceToScreenReader]);
+  }, [audioPlaying, playableAudioUrl, announceToScreenReader]);
+
+  // Seek audio to specific position
+  const seekAudio = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current || !audioDuration) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    audioRef.current.currentTime = percent * audioDuration;
+  }, [audioDuration]);
 
   // Download session data
   const downloadSessionData = useCallback(() => {
@@ -279,24 +315,6 @@ const SessionDetail: React.FC = () => {
     URL.revokeObjectURL(url);
 
     announceToScreenReader('Session data download started');
-  }, [session, announceToScreenReader]);
-
-  // Download audio file using audioUrl from session data
-  const downloadAudioFile = useCallback(async () => {
-    if (!session?.audioUrl) return;
-
-    try {
-      // Use the audioUrl directly from session data
-      const downloadUrl = session.audioUrl;
-
-      // Open the download URL in a new tab
-      window.open(downloadUrl, '_blank');
-
-      announceToScreenReader(`Downloading audio file: ${session.audioFileName || 'audio file'}`);
-    } catch (error) {
-      console.error('Failed to download audio file:', error);
-      announceToScreenReader('Failed to download audio file');
-    }
   }, [session, announceToScreenReader]);
 
   // Re-run session analysis
@@ -647,64 +665,130 @@ const SessionDetail: React.FC = () => {
           </h2>
 
           <div className="space-y-4">
-            {session.audioFileName && session.audioUrl && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  File Name
-                </label>
-                <button
-                  onClick={downloadAudioFile}
-                  className="text-sm text-blue-600 dark:text-blue-400 font-medium hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
-                  title="Click to download audio file"
-                >
-                  {session.audioFileName}
-                </button>
-              </div>
-            )}
-
-            {session.audioFileName && !session.audioUrl && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  File Name
-                </label>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {session.audioFileName} (download not available)
-                </span>
-              </div>
-            )}
-
-            {session.audioUrl && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Audio File
-                </label>
-                <div className="flex items-center space-x-3">
-                  <button type="button"
-                    onClick={toggleAudioPlayback}
-                    className="btn btn--secondary"
-                    aria-label={`${audioPlaying ? 'Pause' : 'Play'} audio`}
-                  >
-                    {audioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  </button>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {audioPlaying ? 'Playing audio...' : (playableAudioUrl ? 'Audio playback available' : 'Loading audio...')}
+            {/* File Details Grid */}
+            {session.audioFileName && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                    File Name
+                  </label>
+                  <span className="text-sm text-gray-900 dark:text-white font-medium">
+                    {session.audioFileName}
                   </span>
                 </div>
-                {playableAudioUrl && (
-                  <audio
-                    ref={audioRef}
-                    src={playableAudioUrl}
-                    onPlay={() => setAudioPlaying(true)}
-                    onPause={() => setAudioPlaying(false)}
-                    onEnded={() => setAudioPlaying(false)}
-                    onError={() => {
-                      setAudioPlaying(false);
-                      announceToScreenReader('Audio playback failed - file may not be accessible');
-                    }}
-                    className="hidden"
-                    preload="metadata"
-                  />
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                    Format
+                  </label>
+                  <span className="text-sm text-gray-900 dark:text-white">
+                    {getFileExtension(session.audioFileName)}
+                  </span>
+                </div>
+                {audioFileSize && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      File Size
+                    </label>
+                    <span className="text-sm text-gray-900 dark:text-white">
+                      {formatFileSize(audioFileSize)}
+                    </span>
+                  </div>
                 )}
+                {audioDuration !== null && audioDuration > 0 && (
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
+                      Duration
+                    </label>
+                    <span className="text-sm text-gray-900 dark:text-white">
+                      {formatDuration(audioDuration)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Audio Player */}
+            {session.audioUrl && (
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+                  Audio Playback
+                </label>
+
+                {!playableAudioUrl ? (
+                  <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Loading audio...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Custom Audio Player */}
+                    <div className="flex items-center space-x-3">
+                      <button
+                        type="button"
+                        onClick={toggleAudioPlayback}
+                        className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                        aria-label={audioPlaying ? 'Pause audio' : 'Play audio'}
+                      >
+                        {audioPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+                      </button>
+
+                      {/* Progress Bar */}
+                      <div className="flex-1">
+                        <div
+                          className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer overflow-hidden"
+                          onClick={seekAudio}
+                          role="slider"
+                          aria-label="Audio progress"
+                          aria-valuemin={0}
+                          aria-valuemax={audioDuration || 100}
+                          aria-valuenow={audioCurrentTime}
+                        >
+                          <div
+                            className="h-full bg-blue-600 rounded-full transition-all duration-100"
+                            style={{ width: audioDuration ? `${(audioCurrentTime / audioDuration) * 100}%` : '0%' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Time Display */}
+                      <div className="flex-shrink-0 text-xs text-gray-500 dark:text-gray-400 font-mono min-w-[80px] text-right">
+                        {formatDuration(audioCurrentTime)} / {formatDuration(audioDuration || 0)}
+                      </div>
+                    </div>
+
+                    {/* Hidden Audio Element */}
+                    <audio
+                      ref={audioRef}
+                      src={playableAudioUrl}
+                      onPlay={() => setAudioPlaying(true)}
+                      onPause={() => setAudioPlaying(false)}
+                      onEnded={() => {
+                        setAudioPlaying(false);
+                        setAudioCurrentTime(0);
+                      }}
+                      onTimeUpdate={(e) => setAudioCurrentTime(e.currentTarget.currentTime)}
+                      onLoadedMetadata={(e) => {
+                        setAudioDuration(e.currentTarget.duration);
+                        console.log('🎵 Audio metadata loaded, duration:', e.currentTarget.duration);
+                      }}
+                      onError={(e) => {
+                        console.error('🎵 Audio error:', e);
+                        setAudioPlaying(false);
+                        announceToScreenReader('Audio playback failed - file may not be accessible');
+                      }}
+                      className="hidden"
+                      preload="metadata"
+                      controlsList="nodownload"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* No Audio Available */}
+            {!session.audioUrl && !session.audioFileName && (
+              <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                No audio file associated with this session.
               </div>
             )}
           </div>

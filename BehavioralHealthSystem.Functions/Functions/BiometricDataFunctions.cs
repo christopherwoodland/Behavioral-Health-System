@@ -1,5 +1,6 @@
 using Microsoft.Azure.Functions.Worker.Http;
 using BehavioralHealthSystem.Helpers.Services.Interfaces;
+using BehavioralHealthSystem.Functions.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -12,6 +13,7 @@ public class BiometricDataFunctions
     private readonly IBiometricDataService _biometricDataService;
     private readonly IValidator<UserBiometricData> _validator;
     private readonly ILogger<BiometricDataFunctions> _logger;
+    private readonly IApiKeyValidationService _apiKeyValidation;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BiometricDataFunctions"/> class.
@@ -19,15 +21,37 @@ public class BiometricDataFunctions
     /// <param name="biometricDataService">The biometric data service.</param>
     /// <param name="validator">The biometric data validator.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="apiKeyValidation">The API key validation service.</param>
     /// <exception cref="ArgumentNullException">Thrown when any required dependency is null.</exception>
     public BiometricDataFunctions(
         IBiometricDataService biometricDataService,
         IValidator<UserBiometricData> validator,
-        ILogger<BiometricDataFunctions> logger)
+        ILogger<BiometricDataFunctions> logger,
+        IApiKeyValidationService apiKeyValidation)
     {
         _biometricDataService = biometricDataService ?? throw new ArgumentNullException(nameof(biometricDataService));
         _validator = validator ?? throw new ArgumentNullException(nameof(validator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _apiKeyValidation = apiKeyValidation ?? throw new ArgumentNullException(nameof(apiKeyValidation));
+    }
+
+    /// <summary>
+    /// Validates API key for the request. Returns an unauthorized response if validation fails.
+    /// </summary>
+    private async Task<HttpResponseData?> ValidateApiKeyAsync(HttpRequestData req)
+    {
+        if (!_apiKeyValidation.ValidateApiKey(req))
+        {
+            _logger.LogWarning("API key validation failed");
+            var unauthorizedResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauthorizedResponse.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Unauthorized - valid API key required"
+            });
+            return unauthorizedResponse;
+        }
+        return null;
     }
 
     /// <summary>
@@ -39,10 +63,14 @@ public class BiometricDataFunctions
     /// <returns>HTTP response indicating whether biometric data exists.</returns>
     [Function("CheckBiometricDataExists")]
     public async Task<HttpResponseData> CheckBiometricDataExists(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "biometric/{userId}/exists")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "biometric/{userId}/exists")] HttpRequestData req,
         string userId)
     {
         _logger.LogInformation("Checking biometric data existence for user: {UserId}", userId);
+
+        // Validate API key
+        var unauthorizedResponse = await ValidateApiKeyAsync(req);
+        if (unauthorizedResponse != null) return unauthorizedResponse;
 
         try
         {
@@ -95,10 +123,14 @@ public class BiometricDataFunctions
     /// <returns>HTTP response containing the user's biometric data.</returns>
     [Function("GetBiometricData")]
     public async Task<HttpResponseData> GetBiometricData(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "biometric/{userId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "biometric/{userId}")] HttpRequestData req,
         string userId)
     {
         _logger.LogInformation("Retrieving biometric data for user: {UserId}", userId);
+
+        // Validate API key
+        var unauthorizedResponse = await ValidateApiKeyAsync(req);
+        if (unauthorizedResponse != null) return unauthorizedResponse;
 
         try
         {
@@ -158,9 +190,13 @@ public class BiometricDataFunctions
     /// <returns>HTTP response indicating success or failure.</returns>
     [Function("SaveBiometricData")]
     public async Task<HttpResponseData> SaveBiometricData(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "biometric")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "biometric")] HttpRequestData req)
     {
         _logger.LogInformation("Saving biometric data");
+
+        // Validate API key
+        var unauthorizedResponse = await ValidateApiKeyAsync(req);
+        if (unauthorizedResponse != null) return unauthorizedResponse;
 
         try
         {
@@ -252,10 +288,14 @@ public class BiometricDataFunctions
     /// <returns>HTTP response indicating success or failure.</returns>
     [Function("DeleteBiometricData")]
     public async Task<HttpResponseData> DeleteBiometricData(
-        [HttpTrigger(AuthorizationLevel.Function, "delete", Route = "biometric/{userId}")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "biometric/{userId}")] HttpRequestData req,
         string userId)
     {
         _logger.LogInformation("Deleting biometric data for user: {UserId}", userId);
+
+        // Validate API key
+        var unauthorizedResponse = await ValidateApiKeyAsync(req);
+        if (unauthorizedResponse != null) return unauthorizedResponse;
 
         try
         {

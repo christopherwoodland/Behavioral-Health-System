@@ -86,14 +86,14 @@ if (-not $canSetSecrets) {
     Write-Host "[WARNING] You may not have permission to set secrets. Attempting to grant access..." -ForegroundColor Yellow
     $userId = az ad signed-in-user show --query id -o tsv
     $keyVaultId = az keyvault show --name $KeyVaultName --query id -o tsv
-    
+
     # Grant Key Vault Secrets Officer role
     az role assignment create `
         --role "Key Vault Secrets Officer" `
         --assignee $userId `
         --scope $keyVaultId `
         --output none 2>$null
-    
+
     Write-Host "[OK] Role assignment created. Waiting for propagation..." -ForegroundColor Green
     Start-Sleep -Seconds 10
 }

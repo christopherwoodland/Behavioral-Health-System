@@ -244,6 +244,14 @@ export const apiService = {
     );
   },
 
+  // Grammar Correction via Foundry Agent
+  async correctGrammarAgent(text: string): Promise<{ originalText: string; correctedText: string }> {
+    return apiClient.post<{ originalText: string; correctedText: string }>(
+      'correct-grammar-agent',
+      { text }
+    );
+  },
+
   // Transcription API methods
   async saveTranscription(sessionId: string, transcription: string): Promise<{ success: boolean; sessionId: string; message: string }> {
     return apiClient.post<{ success: boolean; sessionId: string; message: string }>(

@@ -11,6 +11,7 @@ import { getStoredProcessingMode, setStoredProcessingMode, getStoredProcessingMo
 import { useAuth } from '../contexts/AuthContext';
 import GroupSelector from '../components/GroupSelector';
 import { fileGroupService } from '../services/fileGroupService';
+import GrammarCorrectionModal from '../components/GrammarCorrectionModal';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
 interface UploadProgress {
@@ -232,6 +233,11 @@ const UploadAnalyze: React.FC = () => {
   }>({});
 
   const [isCorrectingGrammar, setIsCorrectingGrammar] = useState(false);
+
+  // Grammar correction modal state
+  const [grammarModalOpen, setGrammarModalOpen] = useState(false);
+  const [grammarCorrectedText, setGrammarCorrectedText] = useState<string | null>(null);
+  const [grammarOriginalText, setGrammarOriginalText] = useState<string>('');
 
   // Processing options state
   const [runKintsugiAssessment, setRunKintsugiAssessment] = useState(true); // Default checked
@@ -1494,29 +1500,57 @@ const UploadAnalyze: React.FC = () => {
       return;
     }
 
+    // Store original text and open modal in loading state
+    setGrammarOriginalText(userMetadata.sessionNotes);
+    setGrammarCorrectedText(null);
+    setGrammarModalOpen(true);
     setIsCorrectingGrammar(true);
+
     try {
-      const response = await apiService.correctGrammar(userMetadata.sessionNotes);
-
-      // Update the session notes with the corrected text
-      setUserMetadata(prev => ({
-        ...prev,
-        sessionNotes: response.correctedText
-      }));
-
-      // Show success toast
-      addToast('success', 'Grammar Corrected', 'Grammar and spelling corrected successfully');
-
+      // Call the Foundry agent endpoint
+      const response = await apiService.correctGrammarAgent(userMetadata.sessionNotes);
+      setGrammarCorrectedText(response.correctedText);
     } catch (error) {
       console.error('Grammar correction failed:', error);
       const appError = error as AppError;
 
       // Show error toast
       addToast('error', 'Grammar Correction Failed', appError.message || 'Failed to correct grammar. Please try again.');
+      setGrammarModalOpen(false);
     } finally {
       setIsCorrectingGrammar(false);
     }
   }, [userMetadata.sessionNotes]);
+
+  // Handler for accepting grammar corrections
+  const handleAcceptGrammarCorrection = useCallback(() => {
+    if (grammarCorrectedText) {
+      setUserMetadata(prev => ({
+        ...prev,
+        sessionNotes: grammarCorrectedText
+      }));
+      addToast('success', 'Grammar Corrected', 'Changes applied successfully');
+    }
+    setGrammarModalOpen(false);
+    setGrammarCorrectedText(null);
+    setGrammarOriginalText('');
+  }, [grammarCorrectedText]);
+
+  // Handler for rejecting grammar corrections
+  const handleRejectGrammarCorrection = useCallback(() => {
+    addToast('info', 'Changes Discarded', 'Original text kept');
+    setGrammarModalOpen(false);
+    setGrammarCorrectedText(null);
+    setGrammarOriginalText('');
+  }, []);
+
+  // Handler for closing grammar modal
+  const handleCloseGrammarModal = useCallback(() => {
+    setGrammarModalOpen(false);
+    setGrammarCorrectedText(null);
+    setGrammarOriginalText('');
+    setIsCorrectingGrammar(false);
+  }, []);
 
   const buildMetadata = useCallback(() => {
     const metadata: Partial<SessionMetadata> = {};
@@ -4872,6 +4906,17 @@ const UploadAnalyze: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Grammar Correction Modal */}
+      <GrammarCorrectionModal
+        isOpen={grammarModalOpen}
+        isLoading={isCorrectingGrammar}
+        originalText={grammarOriginalText}
+        correctedText={grammarCorrectedText}
+        onAccept={handleAcceptGrammarCorrection}
+        onReject={handleRejectGrammarCorrection}
+        onClose={handleCloseGrammarModal}
+      />
     </div>
   );
 };

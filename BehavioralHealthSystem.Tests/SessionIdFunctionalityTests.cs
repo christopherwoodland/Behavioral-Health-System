@@ -1,6 +1,8 @@
 // NOTE: These tests validate functionality that is available through the service layer
 // and validate interface contracts and model properties.
 
+using Azure.Storage.Blobs;
+
 namespace BehavioralHealthSystem.Tests
 {
     [TestClass]
@@ -9,6 +11,7 @@ namespace BehavioralHealthSystem.Tests
         private Mock<ILogger<TestFunctions>> _mockLogger = null!;
         private Mock<IKintsugiApiService> _mockKintsugiApiService = null!;
         private Mock<ISessionStorageService> _mockSessionStorageService = null!;
+        private Mock<BlobServiceClient> _mockBlobServiceClient = null!;
         private TestFunctions _testFunctions = null!;
 
         [TestInitialize]
@@ -17,8 +20,9 @@ namespace BehavioralHealthSystem.Tests
             _mockLogger = new Mock<ILogger<TestFunctions>>();
             _mockKintsugiApiService = new Mock<IKintsugiApiService>();
             _mockSessionStorageService = new Mock<ISessionStorageService>();
+            _mockBlobServiceClient = new Mock<BlobServiceClient>();
             var mockValidator = new Mock<IValidator<InitiateRequest>>();
-            _testFunctions = new TestFunctions(_mockLogger.Object, _mockKintsugiApiService.Object, _mockSessionStorageService.Object, mockValidator.Object);
+            _testFunctions = new TestFunctions(_mockLogger.Object, _mockKintsugiApiService.Object, _mockSessionStorageService.Object, mockValidator.Object, _mockBlobServiceClient.Object);
         }
 
         [TestMethod]
@@ -27,8 +31,8 @@ namespace BehavioralHealthSystem.Tests
             // Arrange & Act
             var serviceInterface = typeof(IKintsugiApiService);
             var methods = serviceInterface.GetMethods();
-            var sessionIdMethod = methods.FirstOrDefault(m => 
-                m.Name == "GetPredictionResultBySessionIdAsync" && 
+            var sessionIdMethod = methods.FirstOrDefault(m =>
+                m.Name == "GetPredictionResultBySessionIdAsync" &&
                 m.GetParameters().Length >= 1 &&
                 m.GetParameters()[0].ParameterType == typeof(string));
 

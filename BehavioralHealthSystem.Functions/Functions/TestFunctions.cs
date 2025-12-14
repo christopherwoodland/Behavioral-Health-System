@@ -656,6 +656,64 @@ public class TestFunctions
     }
 
     /// <summary>
+    /// Downloads audio from blob storage and returns it to the client.
+    /// This endpoint handles authentication with blob storage so the frontend doesn't need direct access.
+    /// </summary>
+    [Function("DownloadAudio")]
+    public async Task<HttpResponseData> DownloadAudio(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "audio/download")] HttpRequestData req)
+    {
+        try
+        {
+            // Get the blob URL from query parameter
+            var blobUrl = req.Query["url"];
+
+            if (string.IsNullOrEmpty(blobUrl))
+            {
+                _logger.LogWarning("[{FunctionName}] Missing 'url' query parameter", nameof(DownloadAudio));
+                var badRequestResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+                await badRequestResponse.WriteStringAsync("Missing 'url' query parameter");
+                return badRequestResponse;
+            }
+
+            // URL decode the blob URL
+            blobUrl = System.Web.HttpUtility.UrlDecode(blobUrl);
+            _logger.LogInformation("[{FunctionName}] Downloading audio from: {BlobUrl}", nameof(DownloadAudio), blobUrl);
+
+            // Download the audio data using the existing helper method
+            var audioData = await DownloadAudioFromBlobAsync(blobUrl);
+
+            // Determine content type based on file extension
+            var contentType = "audio/wav";
+            if (blobUrl.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
+                contentType = "audio/mpeg";
+            else if (blobUrl.EndsWith(".m4a", StringComparison.OrdinalIgnoreCase))
+                contentType = "audio/mp4";
+            else if (blobUrl.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase))
+                contentType = "audio/ogg";
+            else if (blobUrl.EndsWith(".webm", StringComparison.OrdinalIgnoreCase))
+                contentType = "audio/webm";
+
+            // Return the audio data
+            var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
+            response.Headers.Add("Content-Type", contentType);
+            response.Headers.Add("Content-Disposition", $"inline; filename=\"{Path.GetFileName(new Uri(blobUrl).LocalPath)}\"");
+            await response.Body.WriteAsync(audioData, 0, audioData.Length);
+
+            _logger.LogInformation("[{FunctionName}] Successfully returned {Size} bytes of audio data", nameof(DownloadAudio), audioData.Length);
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[{FunctionName}] Error downloading audio", nameof(DownloadAudio));
+
+            var errorResponse = req.CreateResponse(System.Net.HttpStatusCode.InternalServerError);
+            await errorResponse.WriteStringAsync($"Error downloading audio: {ex.Message}");
+            return errorResponse;
+        }
+    }
+
+    /// <summary>
     /// Downloads audio data from Azure Blob Storage using the BlobServiceClient (with managed identity/connection string auth)
     /// This method properly handles authentication for both local Azurite and Azure Blob Storage
     /// </summary>

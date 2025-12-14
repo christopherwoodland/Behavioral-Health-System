@@ -44,21 +44,16 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
     announceToScreenReader('Starting transcription...');
 
     try {
-      // Fetch the audio file and convert to blob
-      const audioResponse = await fetch(audioUrl);
-      if (!audioResponse.ok) {
-        throw new Error(`Failed to fetch audio: ${audioResponse.statusText}`);
-      }
-      
-      const audioBlob = await audioResponse.blob();
+      // Download the audio file through the backend API (handles blob storage auth)
+      const audioBlob = await apiService.downloadAudioBlob(audioUrl);
       const result = await transcriptionService.transcribeAudio(audioBlob);
-      
+
       if (result.error) {
         setError(result.error);
         announceToScreenReader(`Transcription failed: ${result.error}`);
       } else {
         setTranscription(result);
-        
+
         // Save transcription to backend if we have text
         if (result.text && result.text.trim()) {
           try {
@@ -95,13 +90,13 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
   const downloadTranscription = useCallback(() => {
     if (!transcription?.text) return;
 
-    const fileName = audioFileName ? 
-      `${audioFileName.replace(/\.[^/.]+$/, '')}_transcription.txt` : 
+    const fileName = audioFileName ?
+      `${audioFileName.replace(/\.[^/.]+$/, '')}_transcription.txt` :
       `session_${sessionId}_transcription.txt`;
-    
+
     const blob = new Blob([transcription.text], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
@@ -109,7 +104,7 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     announceToScreenReader('Transcription download started');
   }, [transcription?.text, audioFileName, sessionId, announceToScreenReader]);
 
@@ -130,7 +125,7 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
           <FileText className="w-5 h-5 mr-2" aria-hidden="true" />
           Audio Transcription
         </h3>
-        
+
         {!transcription && audioUrl && (
           <button
             onClick={handleTranscribe}

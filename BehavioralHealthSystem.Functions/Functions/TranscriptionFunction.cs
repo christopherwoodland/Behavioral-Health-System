@@ -1,5 +1,3 @@
-using Azure;
-using Azure.AI.OpenAI;
 using Azure.Identity;
 
 namespace BehavioralHealthSystem.Functions;
@@ -18,8 +16,9 @@ public class TranscriptionFunction
     }
 
     /// <summary>
-    /// Transcribe audio using Azure OpenAI gpt-4o-transcribe model
+    /// Transcribe audio using Azure Speech Service Fast Transcription API
     /// POST /api/transcribe-audio
+    /// Docs: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create
     /// </summary>
     [Function("TranscribeAudio")]
     public async Task<HttpResponseData> TranscribeAudio(
@@ -44,64 +43,100 @@ public class TranscriptionFunction
 
             _logger.LogInformation("[{FunctionName}] Received {Size} bytes of audio data", nameof(TranscribeAudio), audioData.Length);
 
-            // Get configuration from environment
-            var endpoint = Environment.GetEnvironmentVariable("TRANSCRIPTION_OPENAI_ENDPOINT")
-                ?? Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT");
-            var apiKey = Environment.GetEnvironmentVariable("TRANSCRIPTION_OPENAI_API_KEY")
-                ?? Environment.GetEnvironmentVariable("AZURE_OPENAI_API_KEY");
-            var deploymentName = Environment.GetEnvironmentVariable("TRANSCRIPTION_OPENAI_DEPLOYMENT") ?? "gpt-4o-transcribe";
-            var apiVersion = Environment.GetEnvironmentVariable("TRANSCRIPTION_OPENAI_API_VERSION") ?? "2025-03-01-preview";
+            // Detect actual format from magic bytes (file signature)
+            var detectedFormat = DetectAudioFormat(audioData);
+            _logger.LogInformation("[{FunctionName}] Detected format from bytes: {DetectedFormat}",
+                nameof(TranscribeAudio), detectedFormat ?? "unknown");
 
-            if (string.IsNullOrEmpty(endpoint))
+            // Use detected format if available, otherwise default to wav
+            var fileExtension = detectedFormat ?? "wav";
+
+            // Map extension to proper content type for the API
+            // NOTE: Azure Speech Fast Transcription API has specific format requirements
+            // WebM with Opus codec should be sent as audio/ogg for better compatibility
+            var mimeType = fileExtension switch
             {
-                _logger.LogError("[{FunctionName}] Transcription endpoint not configured", nameof(TranscribeAudio));
+                "wav" => "audio/wav",
+                "mp3" => "audio/mpeg",
+                "m4a" => "audio/mp4",
+                "mp4" => "audio/mp4",
+                "ogg" => "audio/ogg",
+                "webm" => "audio/ogg", // WebM with Opus codec - use OGG MIME type for Azure Speech API compatibility
+                "flac" => "audio/flac",
+                "aac" => "audio/aac",
+                "wma" => "audio/x-ms-wma",
+                "amr" => "audio/amr",
+                _ => "audio/wav"
+            };
+
+            // For WebM files, use .ogg extension as Azure Speech API handles OPUS/OGG better
+            if (fileExtension == "webm")
+            {
+                fileExtension = "ogg";
+                _logger.LogInformation("[{FunctionName}] Converting WebM to OGG for Azure Speech API compatibility",
+                    nameof(TranscribeAudio));
+            }
+
+            _logger.LogInformation("[{FunctionName}] Using file extension: {Extension}, MIME type: {MimeType}",
+                nameof(TranscribeAudio), fileExtension, mimeType);
+
+            // Get configuration from environment - Azure Speech Service settings
+            var speechEndpoint = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENDPOINT");
+            var speechLocale = Environment.GetEnvironmentVariable("AZURE_SPEECH_LOCALE") ?? "en-US";
+            var apiVersion = Environment.GetEnvironmentVariable("AZURE_SPEECH_API_VERSION") ?? "2024-11-15";
+
+            if (string.IsNullOrEmpty(speechEndpoint))
+            {
+                _logger.LogError("[{FunctionName}] Speech service endpoint not configured (AZURE_SPEECH_ENDPOINT)", nameof(TranscribeAudio));
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Transcription service not configured" }));
+                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Speech transcription service not configured" }));
                 return errorResponse;
             }
 
-            // Build the transcription URL
-            var transcriptionUrl = $"{endpoint.TrimEnd('/')}/openai/deployments/{deploymentName}/audio/transcriptions?api-version={apiVersion}";
+            // Build the Fast Transcription API URL
+            // Format: https://{resource}.cognitiveservices.azure.com/speechtotext/transcriptions:transcribe?api-version={version}
+            var transcriptionUrl = $"{speechEndpoint.TrimEnd('/')}/speechtotext/transcriptions:transcribe?api-version={apiVersion}";
+
+            _logger.LogInformation("[{FunctionName}] Calling Azure Speech Fast Transcription API at endpoint: {Endpoint}",
+                nameof(TranscribeAudio), speechEndpoint);
+
+            // Get access token using managed identity (key auth is disabled on this resource)
+            var credential = new DefaultAzureCredential();
+            var tokenRequestContext = new Azure.Core.TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" });
+            var accessToken = await credential.GetTokenAsync(tokenRequestContext);
+
+            _logger.LogInformation("[{FunctionName}] Acquired access token via managed identity", nameof(TranscribeAudio));
 
             using var httpClient = new HttpClient();
             using var formContent = new MultipartFormDataContent();
 
             // Add the audio file
             var audioContent = new ByteArrayContent(audioData);
-            audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("audio/wav");
-            formContent.Add(audioContent, "file", "audio.wav");
+            audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+            formContent.Add(audioContent, "audio", $"audio.{fileExtension}");
 
-            // Add model parameter
-            formContent.Add(new StringContent(deploymentName), "model");
-            formContent.Add(new StringContent("json"), "response_format");
-            formContent.Add(new StringContent("en"), "language");
-
-            // Use managed identity if no API key, otherwise use API key
-            if (string.IsNullOrEmpty(apiKey))
+            // Add the definition JSON with locale (mono channel audio)
+            var definition = JsonSerializer.Serialize(new
             {
-                var credential = new DefaultAzureCredential();
-                var tokenResult = await credential.GetTokenAsync(
-                    new Azure.Core.TokenRequestContext(new[] { "https://cognitiveservices.azure.com/.default" }));
-                httpClient.DefaultRequestHeaders.Authorization =
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenResult.Token);
-            }
-            else
-            {
-                httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
-            }
+                locales = new[] { speechLocale }
+            });
+            formContent.Add(new StringContent(definition), "definition");
 
-            _logger.LogInformation("[{FunctionName}] Calling Azure OpenAI transcription API", nameof(TranscribeAudio));
+            // Use Bearer token authentication (managed identity)
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Token);
+            httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
 
             var transcriptionResponse = await httpClient.PostAsync(transcriptionUrl, formContent);
 
             if (!transcriptionResponse.IsSuccessStatusCode)
             {
                 var errorText = await transcriptionResponse.Content.ReadAsStringAsync();
-                _logger.LogError("[{FunctionName}] Transcription API error: {StatusCode} - {Error}",
+                _logger.LogError("[{FunctionName}] Speech transcription API error: {StatusCode} - {Error}",
                     nameof(TranscribeAudio), transcriptionResponse.StatusCode, errorText);
 
                 var errorResponse = req.CreateResponse(HttpStatusCode.BadGateway);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new {
+                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
                     error = "Transcription failed",
                     details = errorText
                 }));
@@ -109,24 +144,72 @@ public class TranscriptionFunction
             }
 
             var resultJson = await transcriptionResponse.Content.ReadAsStringAsync();
+            _logger.LogDebug("[{FunctionName}] Raw transcription response: {Response}", nameof(TranscribeAudio), resultJson);
+
             var transcriptionResult = JsonSerializer.Deserialize<JsonElement>(resultJson);
 
-            var text = transcriptionResult.TryGetProperty("text", out var textProp) ? textProp.GetString() : "";
-            var duration = transcriptionResult.TryGetProperty("duration", out var durationProp) ? durationProp.GetDouble() : 0;
-            var language = transcriptionResult.TryGetProperty("language", out var langProp) ? langProp.GetString() : "en";
+            // Parse the Fast Transcription API response format
+            // Response contains: durationMilliseconds, combinedPhrases, phrases
+            var combinedText = "";
+            if (transcriptionResult.TryGetProperty("combinedPhrases", out var combinedPhrases) &&
+                combinedPhrases.GetArrayLength() > 0)
+            {
+                var firstPhrase = combinedPhrases[0];
+                combinedText = firstPhrase.TryGetProperty("text", out var textProp) ? textProp.GetString() ?? "" : "";
+            }
 
-            _logger.LogInformation("[{FunctionName}] Transcription successful: {TextLength} characters",
-                nameof(TranscribeAudio), text?.Length ?? 0);
+            // Get duration in seconds (API returns milliseconds)
+            double durationSeconds = 0;
+            if (transcriptionResult.TryGetProperty("durationMilliseconds", out var durationMs))
+            {
+                durationSeconds = durationMs.GetInt32() / 1000.0;
+            }
+
+            // Get detected language from first phrase if available
+            var detectedLanguage = speechLocale;
+            if (transcriptionResult.TryGetProperty("phrases", out var phrases) &&
+                phrases.GetArrayLength() > 0)
+            {
+                var firstPhraseDetail = phrases[0];
+                if (firstPhraseDetail.TryGetProperty("locale", out var localeProp))
+                {
+                    detectedLanguage = localeProp.GetString() ?? speechLocale;
+                }
+            }
+
+            // Calculate average confidence from phrases
+            double avgConfidence = 1.0;
+            if (transcriptionResult.TryGetProperty("phrases", out var phrasesForConfidence) &&
+                phrasesForConfidence.GetArrayLength() > 0)
+            {
+                double totalConfidence = 0;
+                int count = 0;
+                foreach (var phrase in phrasesForConfidence.EnumerateArray())
+                {
+                    if (phrase.TryGetProperty("confidence", out var conf))
+                    {
+                        totalConfidence += conf.GetDouble();
+                        count++;
+                    }
+                }
+                if (count > 0)
+                {
+                    avgConfidence = totalConfidence / count;
+                }
+            }
+
+            _logger.LogInformation("[{FunctionName}] Transcription successful: {TextLength} characters, duration: {Duration}s, language: {Language}, confidence: {Confidence:F2}",
+                nameof(TranscribeAudio), combinedText.Length, durationSeconds, detectedLanguage, avgConfidence);
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "application/json; charset=utf-8");
 
             await response.WriteStringAsync(JsonSerializer.Serialize(new
             {
-                text = text,
-                confidence = 1.0,
-                duration = duration,
-                language = language
+                text = combinedText,
+                confidence = avgConfidence,
+                duration = durationSeconds,
+                language = detectedLanguage
             }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
 
             return response;
@@ -135,7 +218,7 @@ public class TranscriptionFunction
         {
             _logger.LogError(ex, "[{FunctionName}] Error during transcription", nameof(TranscribeAudio));
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Internal server error" }));
+            await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Internal server error", details = ex.Message }));
             return errorResponse;
         }
     }
@@ -214,6 +297,54 @@ public class TranscriptionFunction
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Internal server error" }));
             return errorResponse;
         }
+    }
+
+    /// <summary>
+    /// Detect audio format from magic bytes (file signature)
+    /// </summary>
+    private static string? DetectAudioFormat(byte[] data)
+    {
+        if (data.Length < 12) return null;
+
+        // WAV: starts with "RIFF" and contains "WAVE"
+        if (data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' &&
+            data[8] == 'W' && data[9] == 'A' && data[10] == 'V' && data[11] == 'E')
+        {
+            return "wav";
+        }
+
+        // MP3: starts with ID3 tag or frame sync (0xFF 0xFB, 0xFF 0xFA, 0xFF 0xF3, 0xFF 0xF2)
+        if ((data[0] == 'I' && data[1] == 'D' && data[2] == '3') ||
+            (data[0] == 0xFF && (data[1] & 0xE0) == 0xE0))
+        {
+            return "mp3";
+        }
+
+        // FLAC: starts with "fLaC"
+        if (data[0] == 'f' && data[1] == 'L' && data[2] == 'a' && data[3] == 'C')
+        {
+            return "flac";
+        }
+
+        // OGG: starts with "OggS"
+        if (data[0] == 'O' && data[1] == 'g' && data[2] == 'g' && data[3] == 'S')
+        {
+            return "ogg";
+        }
+
+        // WebM/Matroska: starts with 0x1A 0x45 0xDF 0xA3
+        if (data[0] == 0x1A && data[1] == 0x45 && data[2] == 0xDF && data[3] == 0xA3)
+        {
+            return "webm";
+        }
+
+        // M4A/MP4: contains "ftyp" at offset 4
+        if (data.Length >= 8 && data[4] == 'f' && data[5] == 't' && data[6] == 'y' && data[7] == 'p')
+        {
+            return "m4a";
+        }
+
+        return null;
     }
 }
 

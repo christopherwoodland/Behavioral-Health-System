@@ -63,6 +63,7 @@ const SessionDetail: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [playableAudioUrl, setPlayableAudioUrl] = useState<string | null>(null); // For audio element src (blob URL)
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Feature flags
@@ -163,6 +164,51 @@ const SessionDetail: React.FC = () => {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
+  // Effect to load playable audio URL for audio element (handles blob storage auth)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadPlayableUrl = async () => {
+      const audioUrl = session?.audioUrl;
+      if (!audioUrl) {
+        setPlayableAudioUrl(null);
+        return;
+      }
+
+      // If it's already a blob: URL (local file), use it directly
+      if (audioUrl.startsWith('blob:')) {
+        setPlayableAudioUrl(audioUrl);
+        return;
+      }
+
+      // For remote URLs (Azurite/Azure Blob Storage), fetch through backend API
+      try {
+        console.log('🎵 SessionDetail: Loading playable audio URL from:', audioUrl);
+        const audioBlob = await apiService.downloadAudioBlob(audioUrl);
+        if (!isCancelled) {
+          const blobUrl = URL.createObjectURL(audioBlob);
+          setPlayableAudioUrl(blobUrl);
+          console.log('🎵 SessionDetail: Created playable blob URL:', blobUrl);
+        }
+      } catch (error) {
+        console.error('🎵 SessionDetail: Failed to load playable audio URL:', error);
+        if (!isCancelled) {
+          setPlayableAudioUrl(null);
+        }
+      }
+    };
+
+    loadPlayableUrl();
+
+    return () => {
+      isCancelled = true;
+      // Clean up old blob URL when session changes
+      if (playableAudioUrl && playableAudioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(playableAudioUrl);
+      }
+    };
+  }, [session?.audioUrl]);
 
   // Delete session
   const handleDeleteSession = useCallback(async () => {
@@ -641,22 +687,24 @@ const SessionDetail: React.FC = () => {
                     {audioPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {audioPlaying ? 'Playing audio...' : 'Audio playback available'}
+                    {audioPlaying ? 'Playing audio...' : (playableAudioUrl ? 'Audio playback available' : 'Loading audio...')}
                   </span>
                 </div>
-                <audio
-                  ref={audioRef}
-                  src={session.audioUrl}
-                  onPlay={() => setAudioPlaying(true)}
-                  onPause={() => setAudioPlaying(false)}
-                  onEnded={() => setAudioPlaying(false)}
-                  onError={() => {
-                    setAudioPlaying(false);
-                    announceToScreenReader('Audio playback failed - file may not be accessible');
-                  }}
-                  className="hidden"
-                  preload="metadata"
-                />
+                {playableAudioUrl && (
+                  <audio
+                    ref={audioRef}
+                    src={playableAudioUrl}
+                    onPlay={() => setAudioPlaying(true)}
+                    onPause={() => setAudioPlaying(false)}
+                    onEnded={() => setAudioPlaying(false)}
+                    onError={() => {
+                      setAudioPlaying(false);
+                      announceToScreenReader('Audio playback failed - file may not be accessible');
+                    }}
+                    className="hidden"
+                    preload="metadata"
+                  />
+                )}
               </div>
             )}
           </div>

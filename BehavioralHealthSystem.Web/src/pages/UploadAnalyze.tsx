@@ -182,6 +182,7 @@ const UploadAnalyze: React.FC = () => {
 
   // Legacy single file state for backward compatibility
   const [audioFile, setAudioFile] = useState<AudioFile | null>(null);
+  const [playableAudioUrl, setPlayableAudioUrl] = useState<string | null>(null); // For audio element src (blob URL)
   const [progress, setProgress] = useState<UploadProgress>({
     stage: 'idle',
     progress: 0,
@@ -419,6 +420,50 @@ const UploadAnalyze: React.FC = () => {
     // Clear any toast messages
     setToasts([]);
   }, [audioFiles, audioFile]);
+
+  // Effect to load playable audio URL for audio element (handles blob storage auth)
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadPlayableUrl = async () => {
+      if (!audioFile?.url) {
+        setPlayableAudioUrl(null);
+        return;
+      }
+
+      // If it's already a blob: URL (local file), use it directly
+      if (audioFile.url.startsWith('blob:')) {
+        setPlayableAudioUrl(audioFile.url);
+        return;
+      }
+
+      // For remote URLs (Azurite/Azure Blob Storage), fetch through backend API
+      try {
+        console.log('🎵 Loading playable audio URL from:', audioFile.url);
+        const audioBlob = await apiService.downloadAudioBlob(audioFile.url);
+        if (!isCancelled) {
+          const blobUrl = URL.createObjectURL(audioBlob);
+          setPlayableAudioUrl(blobUrl);
+          console.log('🎵 Created playable blob URL:', blobUrl);
+        }
+      } catch (error) {
+        console.error('🎵 Failed to load playable audio URL:', error);
+        if (!isCancelled) {
+          setPlayableAudioUrl(null);
+        }
+      }
+    };
+
+    loadPlayableUrl();
+
+    return () => {
+      isCancelled = true;
+      // Clean up old blob URL when audio file changes
+      if (playableAudioUrl && !playableAudioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(playableAudioUrl);
+      }
+    };
+  }, [audioFile?.url]);
 
   const generateFileId = () => {
     return Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -1983,12 +2028,8 @@ const UploadAnalyze: React.FC = () => {
             let audioBlob: Blob;
 
             if (audioFile.url && !audioFile.url.startsWith('blob:')) {
-              // Re-run scenario: fetch audio from existing URL
-              const audioResponse = await fetch(audioUrl);
-              if (!audioResponse.ok) {
-                throw new Error(`Failed to fetch audio from URL: ${audioResponse.statusText}`);
-              }
-              audioBlob = await audioResponse.blob();
+              // Re-run scenario: download audio through backend API (handles blob storage auth)
+              audioBlob = await apiService.downloadAudioBlob(audioUrl);
             } else {
               // New file scenario: use the converted blob
               if (!convertedBlob) {
@@ -2603,13 +2644,9 @@ const UploadAnalyze: React.FC = () => {
             let audioBlob: Blob;
 
             if (audioFile.url && !audioFile.url.startsWith('blob:')) {
-              // Re-run scenario: fetch audio from existing URL
+              // Re-run scenario: fetch audio from existing URL via backend (handles Azurite auth)
               console.log('🎵 processSingleFile: Fetching audio from existing URL for transcription...');
-              const audioResponse = await fetch(audioUrl);
-              if (!audioResponse.ok) {
-                throw new Error(`Failed to fetch audio from URL: ${audioResponse.statusText}`);
-              }
-              audioBlob = await audioResponse.blob();
+              audioBlob = await apiService.downloadAudioBlob(audioUrl);
             } else {
               // New file scenario: use the converted WAV blob
               console.log('🎵 processSingleFile: Using converted WAV blob for transcription...');
@@ -3716,11 +3753,12 @@ const UploadAnalyze: React.FC = () => {
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Depression</th>
                         <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Anxiety</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Message</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-600">
                       {csvRowResults.map((row) => (
-                        <tr key={row.rowIndex} className={row.status === 'processing' ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
+                        <tr key={row.rowIndex} className={row.status === 'processing' ? 'bg-blue-50 dark:bg-blue-900/20' : row.status === 'error' ? 'bg-red-50 dark:bg-red-900/10' : ''}>
                           <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{row.rowIndex + 1}</td>
                           <td className="px-4 py-2 text-sm text-gray-900 dark:text-white truncate max-w-xs" title={row.fileName}>{row.fileName}</td>
                           <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{row.userId}</td>
@@ -3743,7 +3781,7 @@ const UploadAnalyze: React.FC = () => {
                               </span>
                             )}
                             {row.status === 'error' && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300" title={row.error}>
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300">
                                 <X className="h-3 w-3 mr-1" />
                                 Error
                               </span>
@@ -3754,6 +3792,17 @@ const UploadAnalyze: React.FC = () => {
                           </td>
                           <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
                             {row.anxietyScore !== undefined ? row.anxietyScore.toFixed(2) : '-'}
+                          </td>
+                          <td className="px-4 py-2 text-sm max-w-xs">
+                            {row.error ? (
+                              <span className="text-red-600 dark:text-red-400 break-words" title={row.error}>
+                                {row.error.length > 80 ? `${row.error.substring(0, 80)}...` : row.error}
+                              </span>
+                            ) : row.status === 'success' ? (
+                              <span className="text-green-600 dark:text-green-400">Completed</span>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -3882,15 +3931,17 @@ const UploadAnalyze: React.FC = () => {
                   )}
                 </div>
 
-                <audio
-                  ref={audioRef}
-                  src={audioFile.url}
-                  onTimeUpdate={handleTimeUpdate}
-                  onEnded={() => setIsPlaying(false)}
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  className="hidden"
-                />
+                {playableAudioUrl && (
+                  <audio
+                    ref={audioRef}
+                    src={playableAudioUrl}
+                    onTimeUpdate={handleTimeUpdate}
+                    onEnded={() => setIsPlaying(false)}
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    className="hidden"
+                  />
+                )}
               </div>
             )}
 
@@ -4485,8 +4536,20 @@ const UploadAnalyze: React.FC = () => {
                     <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <button type="button"
-                          onClick={() => {
+                          onClick={async () => {
                             const audio = document.getElementById(`audio-${fileId}`) as HTMLAudioElement;
+
+                            // If audio src is empty (remote URL), load it first
+                            if (!audio.src && audioFile.url && !audioFile.url.startsWith('blob:')) {
+                              try {
+                                const audioBlob = await apiService.downloadAudioBlob(audioFile.url);
+                                audio.src = URL.createObjectURL(audioBlob);
+                              } catch (error) {
+                                console.error('Failed to load audio:', error);
+                                return;
+                              }
+                            }
+
                             if (audio.paused) {
                               // Pause all other audio elements first
                               document.querySelectorAll('audio').forEach(a => a.pause());
@@ -4512,7 +4575,7 @@ const UploadAnalyze: React.FC = () => {
                       </div>
                       <audio
                         id={`audio-${fileId}`}
-                        src={audioFile.url}
+                        src={audioFile.url.startsWith('blob:') ? audioFile.url : undefined}
                         onEnded={() => setPlayingFileId(null)}
                         className="hidden"
                       />

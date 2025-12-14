@@ -75,6 +75,20 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-05-01' = {
           ]
         }
       }
+      {
+        name: 'webapp-subnet'
+        properties: {
+          addressPrefix: '10.0.6.0/24'
+          delegations: [
+            {
+              name: 'Microsoft.Web.serverFarms'
+              properties: {
+                serviceName: 'Microsoft.Web/serverFarms'
+              }
+            }
+          ]
+        }
+      }
     ]
   }
 }
@@ -134,3 +148,4 @@ output vnetName string = vnet.name
 output appSubnetId string = vnet.properties.subnets[0].id
 output privateEndpointSubnetId string = vnet.properties.subnets[1].id
 output containerAppsSubnetId string = vnet.properties.subnets[2].id
+output webappSubnetId string = vnet.properties.subnets[3].id

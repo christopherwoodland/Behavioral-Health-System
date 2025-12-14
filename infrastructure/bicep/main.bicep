@@ -40,7 +40,7 @@ with the following services:
 
 ACTIVE SERVICES (Deployed):
 ├─ Networking
-│  └─ VNet (10.0.0.0/16) with delegated subnets for Function App integration
+│  └─ VNet (10.0.0.0/16) with delegated subnets for Function App and Web App
 │
 ├─ Security & Storage
 │  ├─ Key Vault (secrets/keys with private endpoint)
@@ -54,6 +54,13 @@ ACTIVE SERVICES (Deployed):
 │     ├─ System-assigned managed identity
 │     └─ Automatic RBAC setup for Network Contributor role
 │
+├─ Frontend UI
+│  └─ App Service (Web App)
+│     ├─ Linux Node.js 20 runtime
+│     ├─ VNet integration for secure network access
+│     ├─ MSAL authentication configured
+│     └─ System-assigned managed identity
+│
 ├─ AI & ML Services
 │  ├─ Azure OpenAI (GPT-4 models with private endpoint)
 │  ├─ Document Intelligence (form processing with private endpoint)
@@ -66,9 +73,8 @@ ACTIVE SERVICES (Deployed):
 └─ Networking
    └─ Private DNS Zones (for all private endpoint resolutions)
 
-DISABLED SERVICES (Not in this deployment):
-├─ Static Web App (React frontend - deploy separately)
-└─ Container Apps (GitHub runners - deploy separately)
+OPTIONAL SERVICES (Deploy with flag):
+└─ Container Apps (GitHub runners - deploy with -DeployContainerApps $true)
 
 VNet SUBNETS:
 - app-subnet (10.0.1.0/24)
@@ -80,7 +86,11 @@ VNet SUBNETS:
   └─ Non-delegated (required for private endpoint creation)
 
 - container-apps-subnet (10.0.4.0/23)
-  └─ Reserved for future Container Apps deployment
+  └─ Reserved for Container Apps deployment
+
+- webapp-subnet (10.0.6.0/24)
+  └─ Delegated to Microsoft.Web/serverFarms
+  └─ Used for Web App VNet integration
 
 ================================================================================
 */
@@ -199,6 +209,22 @@ module functionApp './modules/function-app.bicep' = {
   }
 }
 
+// Deploy Web App for React UI with VNet Integration
+module webApp './modules/app-service-web.bicep' = {
+  scope: rg
+  name: 'webapp-deployment'
+  params: {
+    location: location
+    appName: appName
+    environment: environment
+    uniqueSuffix: uniqueSuffix
+    tags: tags
+    functionAppUrl: functionApp.outputs.functionAppUrl
+    enableVNetIntegration: true
+    appSubnetId: networking.outputs.webappSubnetId
+  }
+}
+
 // Deploy Static Web App for React Frontend
 // NOTE: Temporarily disabled due to transient Azure CLI JSON parsing issues during long deployments.
 // This will be deployed in a separate step after core infrastructure is stable.
@@ -251,6 +277,7 @@ module rbacAssignments './modules/rbac-assignments.bicep' = {
   name: 'rbac-assignments'
   params: {
     functionAppPrincipalId: functionApp.outputs.principalId
+    webAppPrincipalId: webApp.outputs.webAppPrincipalId
     openaiAccountName: openai.outputs.openaiAccountName
     documentIntelligenceName: cognitive.outputs.documentIntelligenceName
     storageAccountName: storage.outputs.storageAccountName
@@ -258,6 +285,7 @@ module rbacAssignments './modules/rbac-assignments.bicep' = {
   }
   dependsOn: [
     functionApp
+    webApp
     openai
     cognitive
     storage
@@ -275,11 +303,16 @@ output functionAppName string = functionApp.outputs.functionAppName
 output functionAppPrincipalId string = functionApp.outputs.principalId
 output functionAppUrl string = functionApp.outputs.functionAppUrl
 output functionAppPrivateEndpointId string = functionApp.outputs.privateEndpointId
+output webAppName string = webApp.outputs.webAppName
+output webAppUrl string = webApp.outputs.webAppUrl
+output webAppPrincipalId string = webApp.outputs.webAppPrincipalId
 // Container Apps optional outputs (empty when not deployed)
 output containerAppsEnvName string = deployContainerApps ? '${appName}-${environment}-cae-${uniqueSuffix}' : ''
 output githubRunnerAppName string = deployContainerApps ? '${appName}-${environment}-runner-${uniqueSuffix}' : ''
-// output staticWebAppName string = staticWebApp.outputs.staticWebAppName
-// output staticWebAppUrl string = staticWebApp.outputs.defaultHostname
 output openaiEndpoint string = openai.outputs.endpoint
+output openaiAccountName string = openai.outputs.openaiAccountName
 output documentIntelligenceEndpoint string = cognitive.outputs.documentIntelligenceEndpoint
+output documentIntelligenceName string = cognitive.outputs.documentIntelligenceName
+output contentUnderstandingEndpoint string = cognitive.outputs.contentUnderstandingEndpoint
+output contentUnderstandingName string = cognitive.outputs.contentUnderstandingName
 output appInsightsConnectionString string = appInsights.outputs.connectionString

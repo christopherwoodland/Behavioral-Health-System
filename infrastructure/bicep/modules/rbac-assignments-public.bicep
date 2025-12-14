@@ -10,6 +10,9 @@ param openaiAccountName string
 @description('Document Intelligence Account Name')
 param documentIntelligenceName string
 
+@description('Content Understanding Account Name')
+param contentUnderstandingName string
+
 @description('Storage Account Name')
 param storageAccountName string
 
@@ -32,6 +35,10 @@ resource documentIntelligenceAccount 'Microsoft.CognitiveServices/accounts@2023-
   name: documentIntelligenceName
 }
 
+resource contentUnderstandingAccount 'Microsoft.CognitiveServices/accounts@2023-05-01' existing = {
+  name: contentUnderstandingName
+}
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
   name: storageAccountName
 }
@@ -39,6 +46,10 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing 
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: keyVaultName
 }
+
+// ============================================
+// FUNCTION APP ROLE ASSIGNMENTS
+// ============================================
 
 // Assign Cognitive Services OpenAI User role to Function App for Azure OpenAI
 resource openaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -55,6 +66,17 @@ resource openaiRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-0
 resource documentIntelligenceRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(documentIntelligenceAccount.id, functionAppPrincipalId, cognitiveServicesUserRoleId)
   scope: documentIntelligenceAccount
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
+    principalId: functionAppPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Assign Cognitive Services User role to Function App for Content Understanding
+resource contentUnderstandingRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(contentUnderstandingAccount.id, functionAppPrincipalId, cognitiveServicesUserRoleId)
+  scope: contentUnderstandingAccount
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
     principalId: functionAppPrincipalId
@@ -84,6 +106,10 @@ resource keyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04
   }
 }
 
+// ============================================
+// WEB APP ROLE ASSIGNMENTS (OPTIONAL)
+// ============================================
+
 // Assign Key Vault Secrets User role to Web App (if principal ID provided)
 resource webAppKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (!empty(webAppPrincipalId)) {
   name: guid(keyVault.id, webAppPrincipalId, keyVaultSecretsUserRoleId)
@@ -97,5 +123,6 @@ resource webAppKeyVaultRoleAssignment 'Microsoft.Authorization/roleAssignments@2
 
 output openaiRoleAssignmentId string = openaiRoleAssignment.id
 output documentIntelligenceRoleAssignmentId string = documentIntelligenceRoleAssignment.id
+output contentUnderstandingRoleAssignmentId string = contentUnderstandingRoleAssignment.id
 output storageRoleAssignmentId string = storageRoleAssignment.id
 output keyVaultRoleAssignmentId string = keyVaultRoleAssignment.id

@@ -28,10 +28,13 @@ class TranscriptionService {
    */
   async transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
     try {
+      const contentType = audioBlob.type || 'audio/wav';
+      console.log('🎤 Transcribing audio - size:', audioBlob.size, 'type:', contentType);
+
       const response = await fetch(`${this.baseUrl}/transcribe-audio`, {
         method: 'POST',
         headers: {
-          'Content-Type': audioBlob.type || 'audio/wav',
+          'Content-Type': contentType,
         },
         body: audioBlob
       });

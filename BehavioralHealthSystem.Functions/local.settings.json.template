@@ -75,7 +75,19 @@
     // FEATURE FLAGS
     // ========================================================================
     // Control which features are available in the application
-    "AGENT_MODE_ENABLED": "true"
+    "AGENT_MODE_ENABLED": "true",
+
+    // ========================================================================
+    // AZURE SPEECH SERVICE (For audio transcription - Fast Transcription API)
+    // ========================================================================
+    // Azure Speech Service for real-time and fast transcription
+    // Uses Managed Identity (DefaultAzureCredential) - no API key needed
+    // Ensure your identity has "Cognitive Services Speech User" role on the Speech resource
+    // IMPORTANT: Must use custom subdomain endpoint for managed identity auth
+    // Docs: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create
+    "AZURE_SPEECH_ENDPOINT": "https://your-speech-resource.cognitiveservices.azure.com/",  // Your Speech resource endpoint (custom subdomain required for managed identity)
+    "AZURE_SPEECH_LOCALE": "en-US",  // Default locale for transcription
+    "AZURE_SPEECH_API_VERSION": "2025-10-15"  // Fast Transcription API version
   },
 
   "ConnectionStrings": {},

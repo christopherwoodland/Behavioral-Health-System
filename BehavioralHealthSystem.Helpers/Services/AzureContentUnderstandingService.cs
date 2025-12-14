@@ -574,15 +574,6 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
                 return conditions;
             }
 
-            // DEBUG: Save markdown to file for inspection
-            try
-            {
-                var debugPath = Path.Combine(Path.GetTempPath(), $"dsm5-markdown-{DateTime.Now:yyyyMMddHHmmss}.md");
-                File.WriteAllText(debugPath, markdownText);
-                _logger.LogInformation("[{MethodName}] Saved markdown to: {Path}", nameof(ParseExtractionResult), debugPath);
-            }
-            catch { /* Ignore debug errors */ }
-
             // Parse DSM-5 conditions from the markdown text
             // Look for condition headers and their associated sections
             conditions = ParseDSM5ConditionsFromMarkdown(markdownText);

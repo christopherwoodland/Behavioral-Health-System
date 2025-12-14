@@ -34,7 +34,7 @@ class ApiClient {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
+
       throw createAppError(
         `HTTP_${response.status}`,
         errorData.message || `HTTP ${response.status}: ${response.statusText}`,
@@ -58,7 +58,7 @@ class ApiClient {
       const baseUrl = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
       const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
       const url = `${baseUrl}${cleanEndpoint}`;
-      
+
       const defaultHeaders = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -89,11 +89,11 @@ class ApiClient {
           { originalError: error }
         );
       }
-      
+
       if (error instanceof Error && 'code' in error) {
         throw error; // Re-throw AppError
       }
-      
+
       throw createAppError(
         'UNKNOWN_ERROR',
         'An unexpected error occurred',
@@ -214,9 +214,9 @@ export const apiService = {
       return { success: true, message: 'API connection successful' };
     } catch (error) {
       const appError = error as AppError;
-      return { 
-        success: false, 
-        message: appError.message || 'Connection test failed' 
+      return {
+        success: false,
+        message: appError.message || 'Connection test failed'
       };
     }
   },
@@ -250,6 +250,25 @@ export const apiService = {
       'SaveTranscription',
       { sessionId, transcription }
     );
+  },
+
+  // Download audio from blob storage through backend (avoids CORS issues)
+  async downloadAudioBlob(blobUrl: string): Promise<Blob> {
+    const encodedUrl = encodeURIComponent(blobUrl);
+    const response = await fetch(`${config.apiBaseUrl}/audio/download?url=${encodedUrl}`);
+    if (!response.ok) {
+      throw new Error(`Failed to download audio: ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const contentType = response.headers.get('Content-Type') || 'audio/wav';
+    console.log('🎵 Downloaded audio blob - size:', blob.size, 'type:', blob.type, 'response content-type:', contentType);
+
+    // If blob type doesn't match, create a new blob with correct type
+    if (!blob.type || blob.type === 'application/octet-stream') {
+      console.log('🎵 Re-creating blob with correct type:', contentType);
+      return new Blob([blob], { type: contentType });
+    }
+    return blob;
   },
 };
 
@@ -292,7 +311,7 @@ export class PredictionPoller {
     const poll = async (): Promise<void> => {
       try {
         const result = await apiService.getPredictionBySessionId(this.sessionId);
-        
+
         onUpdate(result);
 
         if (result.status === 'succeeded' || result.status === 'success' || result.status === 'failed') {

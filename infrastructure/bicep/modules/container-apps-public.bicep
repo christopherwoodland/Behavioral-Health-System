@@ -326,6 +326,38 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: contentUnderstandingEndpoint
             }
             {
+              name: 'KINTSUGI_BASE_URL'
+              value: 'https://api.kintsugihealth.com/v2'
+            }
+            {
+              name: 'KINTSUGI_TIMEOUT_SECONDS'
+              value: '300'
+            }
+            {
+              name: 'KINTSUGI_MAX_RETRY_ATTEMPTS'
+              value: '3'
+            }
+            {
+              name: 'KINTSUGI_RETRY_DELAY_MS'
+              value: '1000'
+            }
+            {
+              name: 'AZURE_SPEECH_REGION'
+              value: 'eastus2'
+            }
+            {
+              name: 'AZURE_SPEECH_ENDPOINT'
+              value: 'https://eastus2.api.cognitive.microsoft.com'
+            }
+            {
+              name: 'AZURE_SPEECH_LOCALE'
+              value: 'en-US'
+            }
+            {
+              name: 'AZURE_SPEECH_API_VERSION'
+              value: '2024-11-15'
+            }
+            {
               name: 'ALLOWED_ORIGINS'
               value: 'https://${uiAppName}.${containerAppsEnv.properties.defaultDomain}'
             }

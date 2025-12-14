@@ -192,6 +192,12 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: 'https://api.kintsugihealth.com/v2'
         }
         {
+          // Reference Kintsugi API key from Key Vault
+          name: 'KINTSUGI_API_KEY'
+          #disable-next-line no-hardcoded-env-urls
+          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/KintsugiApiKey/)'
+        }
+        {
           name: 'KINTSUGI_AUTO_PROVIDE_CONSENT'
           value: 'false'
         }
@@ -206,6 +212,28 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'KINTSUGI_RETRY_DELAY_MS'
           value: '1000'
+        }
+        {
+          // Reference Azure Speech key from Key Vault
+          name: 'AZURE_SPEECH_KEY'
+          #disable-next-line no-hardcoded-env-urls
+          value: '@Microsoft.KeyVault(SecretUri=https://${keyVaultName}.vault.azure.net/secrets/AzureSpeechKey/)'
+        }
+        {
+          name: 'AZURE_SPEECH_REGION'
+          value: 'eastus2'
+        }
+        {
+          name: 'AZURE_SPEECH_ENDPOINT'
+          value: 'https://eastus2.api.cognitive.microsoft.com'
+        }
+        {
+          name: 'AZURE_SPEECH_LOCALE'
+          value: 'en-US'
+        }
+        {
+          name: 'AZURE_SPEECH_API_VERSION'
+          value: '2024-11-15'
         }
         {
           name: 'AGENT_MODE_ENABLED'

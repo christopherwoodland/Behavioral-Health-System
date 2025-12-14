@@ -9,31 +9,60 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+// Helper to get secrets from Key Vault
+SecretClient? GetKeyVaultClient(IConfiguration config)
+{
+    // Try KEY_VAULT_URI first (from Bicep), then KEY_VAULT_URL for backwards compatibility
+    var keyVaultUrl = config["KEY_VAULT_URI"] ?? config["KEY_VAULT_URL"];
+    if (string.IsNullOrWhiteSpace(keyVaultUrl))
+    {
+        return null;
+    }
+    try
+    {
+        return new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not create Key Vault client: {ex.Message}");
+        return null;
+    }
+}
+
+string? GetSecretFromKeyVault(SecretClient? client, string secretName, string? fallbackValue = null)
+{
+    if (client == null) return fallbackValue;
+    try
+    {
+        var secret = client.GetSecret(secretName);
+        return secret.Value?.Value ?? fallbackValue;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Warning: Could not retrieve {secretName} from Key Vault: {ex.Message}");
+        return fallbackValue;
+    }
+}
+
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices((context, services) =>
     {
+        var config = context.Configuration;
+        var keyVaultClient = GetKeyVaultClient(config);
+
         // Configuration
         services.Configure<KintsugiApiOptions>(options =>
         {
-            var config = context.Configuration;
+            // Try environment variable first, then Key Vault
             var apiKey = config["KINTSUGI_API_KEY"];
-
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                var keyVaultUrl = config["KEY_VAULT_URL"];
-                if (!string.IsNullOrWhiteSpace(keyVaultUrl))
+                // Try with both naming conventions (underscores and dashes)
+                apiKey = GetSecretFromKeyVault(keyVaultClient, "KintsugiApiKey");
+                if (string.IsNullOrWhiteSpace(apiKey))
                 {
-                    try
-                    {
-                        var client = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
-                        var secret = client.GetSecret("KINTSUGI-API-KEY");
-                        apiKey = secret.Value?.Value;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Warning: Could not retrieve KINTSUGI_API_KEY from Key Vault: {ex.Message}");
-                    }
+                    apiKey = GetSecretFromKeyVault(keyVaultClient, "KINTSUGI-API-KEY");
                 }
             }
 

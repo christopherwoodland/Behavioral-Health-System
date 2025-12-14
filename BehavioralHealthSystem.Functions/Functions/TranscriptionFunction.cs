@@ -1,4 +1,5 @@
 using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
 using NAudio.Wave;
 
 namespace BehavioralHealthSystem.Functions;
@@ -14,6 +15,40 @@ public class TranscriptionFunction
     {
         _logger = logger;
         _sessionStorageService = sessionStorageService;
+    }
+
+    /// <summary>
+    /// Get a secret value from Key Vault or fall back to environment variable
+    /// </summary>
+    private string? GetSecretOrEnvVar(string envVarName, string secretName)
+    {
+        // First try environment variable
+        var value = Environment.GetEnvironmentVariable(envVarName);
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            return value;
+        }
+
+        // Try Key Vault
+        var keyVaultUri = Environment.GetEnvironmentVariable("KEY_VAULT_URI") 
+                       ?? Environment.GetEnvironmentVariable("KEY_VAULT_URL");
+        if (string.IsNullOrWhiteSpace(keyVaultUri))
+        {
+            return null;
+        }
+
+        try
+        {
+            var client = new SecretClient(new Uri(keyVaultUri), new DefaultAzureCredential());
+            var secret = client.GetSecret(secretName);
+            return secret.Value?.Value;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("[TranscriptionFunction] Could not retrieve {SecretName} from Key Vault: {Error}", 
+                secretName, ex.Message);
+            return null;
+        }
     }
 
     /// <summary>
@@ -160,10 +195,10 @@ public class TranscriptionFunction
             _logger.LogInformation("[{FunctionName}] Using file extension: {Extension}, MIME type: {MimeType}, data size: {Size} bytes",
                 nameof(TranscribeAudio), fileExtension, mimeType, processedAudioData.Length);
 
-            // Get configuration from environment - Azure Speech Service settings
+            // Get configuration from environment or Key Vault - Azure Speech Service settings
             var speechEndpoint = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENDPOINT");
-            var speechKey = Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
-            var speechRegion = Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION") ?? "eastus2";
+            var speechKey = GetSecretOrEnvVar("AZURE_SPEECH_KEY", "AzureSpeechKey");
+            var speechRegion = GetSecretOrEnvVar("AZURE_SPEECH_REGION", "AzureSpeechRegion") ?? "eastus2";
             var speechLocale = Environment.GetEnvironmentVariable("AZURE_SPEECH_LOCALE") ?? "en-US";
             var apiVersion = Environment.GetEnvironmentVariable("AZURE_SPEECH_API_VERSION") ?? "2024-11-15";
             var useEnhancedMode = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENHANCED_MODE") ?? "false";

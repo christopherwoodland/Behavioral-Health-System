@@ -25,6 +25,12 @@ param tags object = {
   NetworkMode: 'Public'
 }
 
+@description('Azure OpenAI endpoint (optional - configure manually after deployment)')
+param openaiEndpoint string = ''
+
+@description('App Service Plan SKU for Web App (e.g., F1, B1, S1, P0v3, P1v3)')
+param webAppSku string = 'P0v3'
+
 /*
 ================================================================================
 PUBLIC DEPLOYMENT ARCHITECTURE (No VNet / Private Endpoints)
@@ -118,18 +124,8 @@ module appInsights './modules/app-insights.bicep' = {
   }
 }
 
-// Deploy Azure OpenAI (Public)
-module openai './modules/openai-public.bicep' = {
-  scope: rg
-  name: 'openai-deployment'
-  params: {
-    location: location
-    appName: appName
-    environment: environment
-    uniqueSuffix: uniqueSuffix
-    tags: tags
-  }
-}
+// NOTE: Azure OpenAI is NOT deployed by this template.
+// Deploy OpenAI/AI Foundry Hub manually and provide the endpoint via parameter.
 
 // Deploy Cognitive Services (Public)
 module cognitive './modules/cognitive-public.bicep' = {
@@ -158,7 +154,7 @@ module functionApp './modules/function-app-public.bicep' = {
     appInsightsConnectionString: appInsights.outputs.connectionString
     appInsightsInstrumentationKey: appInsights.outputs.instrumentationKey
     keyVaultName: keyVault.outputs.keyVaultName
-    openaiEndpoint: openai.outputs.endpoint
+    openaiEndpoint: openaiEndpoint
     documentIntelligenceEndpoint: cognitive.outputs.documentIntelligenceEndpoint
     contentUnderstandingEndpoint: cognitive.outputs.contentUnderstandingEndpoint
     webAppUrl: webApp.outputs.webAppUrl
@@ -177,6 +173,7 @@ module webApp './modules/app-service-web.bicep' = {
     tags: tags
     functionAppUrl: 'https://${appName}-${environment}-func-${uniqueSuffix}.azurewebsites.net'
     enableVNetIntegration: false
+    skuName: webAppSku
   }
 }
 
@@ -187,7 +184,6 @@ module rbacAssignments './modules/rbac-assignments-public.bicep' = {
   params: {
     functionAppPrincipalId: functionApp.outputs.principalId
     webAppPrincipalId: webApp.outputs.webAppPrincipalId
-    openaiAccountName: openai.outputs.openaiAccountName
     documentIntelligenceName: cognitive.outputs.documentIntelligenceName
     contentUnderstandingName: cognitive.outputs.contentUnderstandingName
     storageAccountName: storage.outputs.storageAccountName
@@ -206,8 +202,6 @@ output functionAppUrl string = functionApp.outputs.functionAppUrl
 output webAppName string = webApp.outputs.webAppName
 output webAppUrl string = webApp.outputs.webAppUrl
 output webAppPrincipalId string = webApp.outputs.webAppPrincipalId
-output openaiEndpoint string = openai.outputs.endpoint
-output openaiAccountName string = openai.outputs.openaiAccountName
 output documentIntelligenceEndpoint string = cognitive.outputs.documentIntelligenceEndpoint
 output documentIntelligenceName string = cognitive.outputs.documentIntelligenceName
 output contentUnderstandingEndpoint string = cognitive.outputs.contentUnderstandingEndpoint

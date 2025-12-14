@@ -34,11 +34,21 @@ Environment name (dev, staging, prod)
 .PARAMETER ParameterFile
 Path to JSON parameter file with deployment configuration
 
+.PARAMETER Location
+Azure region for deployment (default: eastus2)
+
+.PARAMETER WebAppSku
+App Service Plan SKU for the Web App (default: P0v3)
+Common values: F1 (Free), B1 (Basic), S1 (Standard), P0v3/P1v3 (PremiumV3)
+
 .EXAMPLE
 .\Deploy-No-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json
 
 .EXAMPLE
-.\Deploy-No-VNet-Integration.ps1 -Environment staging -ParameterFile ./parameters/staging.parameters.json
+.\Deploy-No-VNet-Integration.ps1 -Environment dev -ParameterFile ./parameters/dev.parameters.json -WebAppSku F1
+
+.EXAMPLE
+.\Deploy-No-VNet-Integration.ps1 -Environment staging -ParameterFile ./parameters/staging.parameters.json -Location westus2 -WebAppSku S1
 #>
 
 param(
@@ -51,6 +61,8 @@ param(
     [string]$ResourceGroupName = "bhs-$Environment",
 
     [string]$Location = "eastus2",
+
+    [string]$WebAppSku = "P0v3",
 
     [switch]$SkipWhatIf,
     [switch]$SkipValidation
@@ -67,6 +79,7 @@ Write-Host "Deployment Configuration:"
 Write-Host "  Environment:           $Environment"
 Write-Host "  Resource Group:        $ResourceGroupName"
 Write-Host "  Region:                $Location"
+Write-Host "  Web App SKU:           $WebAppSku"
 Write-Host "  Parameter File:        $ParameterFile"
 Write-Host "  Network Mode:          PUBLIC (No VNet/Private Endpoints)"
 Write-Host ""
@@ -113,7 +126,8 @@ if (-not $SkipValidation) {
         '--location', $Location,
         '--template-file', $templatePath,
         '--parameters', "@$ParameterFile",
-        '--parameters', "resourceGroupName=$ResourceGroupName"
+        '--parameters', "resourceGroupName=$ResourceGroupName",
+        '--parameters', "webAppSku=$WebAppSku"
     )
     & az @validateArgs | Out-Null
 
@@ -133,6 +147,7 @@ $whatIfArgs = @(
     '--template-file', $templatePath,
     '--parameters', "@$ParameterFile",
     '--parameters', "resourceGroupName=$ResourceGroupName",
+    '--parameters', "webAppSku=$WebAppSku",
     '--no-pretty-print'
 )
 & az @whatIfArgs
@@ -154,7 +169,8 @@ $createArgs = @(
     '--location', $Location,
     '--template-file', $templatePath,
     '--parameters', "@$ParameterFile",
-    '--parameters', "resourceGroupName=$ResourceGroupName"
+    '--parameters', "resourceGroupName=$ResourceGroupName",
+    '--parameters', "webAppSku=$WebAppSku"
 )
 
 & az @createArgs
@@ -179,7 +195,6 @@ $webAppUrl = $outputs.webAppUrl.value
 $webAppPrincipalId = $outputs.webAppPrincipalId.value
 $keyVaultName = $outputs.keyVaultName.value
 $storageAccountName = $outputs.storageAccountName.value
-$openaiAccountName = $outputs.openaiAccountName.value
 $documentIntelligenceName = $outputs.documentIntelligenceName.value
 $contentUnderstandingName = $outputs.contentUnderstandingName.value
 
@@ -191,7 +206,6 @@ Write-Host "[OK] Web App URL: $webAppUrl"
 Write-Host "[OK] Web App Principal ID: $webAppPrincipalId"
 Write-Host "[OK] Key Vault: $keyVaultName"
 Write-Host "[OK] Storage Account: $storageAccountName"
-Write-Host "[OK] OpenAI Account: $openaiAccountName"
 Write-Host "[OK] Document Intelligence: $documentIntelligenceName"
 Write-Host "[OK] Content Understanding: $contentUnderstandingName"
 
@@ -203,7 +217,6 @@ Write-Host "  Configuring Additional RBAC Permissions"
 Write-Host "=========================================================="
 
 # Role definition IDs
-$cognitiveServicesOpenAIUserRoleId = "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
 $cognitiveServicesUserRoleId = "a97b65f3-24c7-4388-baec-2e87135dc908"
 $storageBlobDataContributorRoleId = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
 $keyVaultSecretsUserRoleId = "4633458b-17de-408a-b874-0445c86b69e6"
@@ -238,7 +251,6 @@ function Set-RoleAssignment {
 Write-Host "`n[*] Retrieving resource IDs..."
 $storageAccountId = az storage account show --name $storageAccountName --resource-group $ResourceGroupName --query id -o tsv
 $keyVaultId = az keyvault show --name $keyVaultName --resource-group $ResourceGroupName --query id -o tsv
-$openaiAccountId = az cognitiveservices account show --name $openaiAccountName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 $docIntelAccountId = az cognitiveservices account show --name $documentIntelligenceName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 $contentAccountId = az cognitiveservices account show --name $contentUnderstandingName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 
@@ -289,10 +301,12 @@ Write-Host "OK - Web App (App Service) for React UI with:"
 Write-Host "     - Linux Node.js 20 runtime"
 Write-Host "     - MSAL authentication configured"
 Write-Host "     - CORS configured for API access"
-Write-Host "OK - Azure OpenAI (public endpoint)"
 Write-Host "OK - Document Intelligence (public endpoint)"
 Write-Host "OK - Content Understanding / AI Services (public endpoint)"
 Write-Host "OK - Application Insights & Log Analytics"
+
+Write-Host "`n========== MANUAL DEPLOYMENT REQUIRED =========="
+Write-Host "MANUAL - Azure OpenAI / AI Foundry Hub (deploy separately)"
 
 Write-Host "`n========== NOT DEPLOYED (Public Mode) =========="
 Write-Host "SKIP - VNet / Subnets (not needed for public)"
@@ -305,19 +319,22 @@ Write-Host "Function App API: $functionAppUrl"
 Write-Host "Web App UI:       $webAppUrl"
 
 Write-Host "`n========== NEXT STEPS =========="
-Write-Host "1. Build & publish Function App code:"
+Write-Host "1. Deploy Azure OpenAI / AI Foundry Hub manually:"
+Write-Host "   - Create Azure OpenAI or AI Foundry Hub resource"
+Write-Host "   - Deploy gpt-4.1 model"
+Write-Host "   - Deploy gpt-realtime model (if needed)"
+Write-Host "   - Update Function App settings with AZURE_OPENAI_ENDPOINT"
+Write-Host "   - Assign Cognitive Services OpenAI User role to Function App"
+Write-Host ""
+Write-Host "2. Build & publish Function App code:"
 Write-Host "   func azure functionapp publish <function-app-name>"
 Write-Host ""
-Write-Host "2. Build & deploy React UI to Web App:"
+Write-Host "3. Build & deploy React UI to Web App:"
 Write-Host "   cd BehavioralHealthSystem.Web"
 Write-Host "   npm run build"
 Write-Host "   az webapp deploy --resource-group $ResourceGroupName --name <web-app-name> --src-path ./dist"
 Write-Host ""
-Write-Host "3. Configure secrets in Key Vault (e.g., KINTSUGI_API_KEY)"
-Write-Host ""
-Write-Host "4. Deploy Azure OpenAI model deployments via Azure Portal"
-Write-Host "   - gpt-4.1 deployment"
-Write-Host "   - gpt-realtime deployment (if needed)"
+Write-Host "4. Configure secrets in Key Vault (e.g., KINTSUGI_API_KEY)"
 Write-Host ""
 Write-Host "5. Test the application:"
 Write-Host "   - Navigate to $webAppUrl"

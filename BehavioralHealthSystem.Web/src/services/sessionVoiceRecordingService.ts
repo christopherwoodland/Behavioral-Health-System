@@ -47,9 +47,11 @@ class SessionVoiceRecordingService {
   private readonly MIN_AUDIO_LEVEL = 0.02; // Minimum RMS level (0-1 scale) to consider as speech
   private readonly SPEECH_CONFIRMATION_THRESHOLD = 0.05; // Stronger signal = definitely speech
 
-  // Recording configuration for highest quality (same as Jekyll)
+  // Recording configuration
+  // NOTE: We prefer audio/wav for Azure Speech API compatibility
+  // WebM/Opus is NOT supported by Azure Speech Fast Transcription API
   private readonly RECORDING_OPTIONS = {
-    mimeType: 'audio/webm;codecs=opus',
+    mimeType: 'audio/wav', // Preferred - universally supported by Azure Speech
     audioBitsPerSecond: 128000
   };
 
@@ -87,30 +89,36 @@ class SessionVoiceRecordingService {
       this.totalCapturedDuration = 0;
       this.isCurrentlyCapturing = false;
 
-      // Request microphone access with high quality audio settings
+      // Request microphone access with settings optimized for speech
+      // 16kHz sample rate is optimal for speech recognition
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 48000,
+          sampleRate: 16000, // Optimal for speech recognition
           channelCount: 1 // Mono for voice
         }
       });
 
-      // Determine best supported MIME type
+      // Determine best supported MIME type for Azure Speech API compatibility
+      // Priority: WAV > OGG (with opus) > MP4 > WebM (last resort, may not work)
       let mimeType = this.RECORDING_OPTIONS.mimeType;
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         const fallbackTypes = [
-          'audio/webm',
-          'audio/ogg;codecs=opus',
-          'audio/mp4',
-          'audio/wav'
+          'audio/ogg;codecs=opus', // Supported by Azure Speech
+          'audio/mp4',             // Supported by Azure Speech
+          'audio/webm;codecs=opus', // May NOT work with Azure Speech - avoid if possible
+          'audio/webm'
         ];
 
         for (const type of fallbackTypes) {
           if (MediaRecorder.isTypeSupported(type)) {
             mimeType = type;
+            console.warn(`⚠️ Session Recording: WAV not supported, using fallback: ${type}`);
+            if (type.includes('webm')) {
+              console.warn('⚠️ Session Recording: WebM format may NOT be compatible with Azure Speech API');
+            }
             break;
           }
         }

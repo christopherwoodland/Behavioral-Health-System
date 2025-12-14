@@ -223,7 +223,6 @@ $webAppPrincipalId = $outputs.webAppPrincipalId.value
 $vnetId = $outputs.vnetId.value
 $keyVaultName = $outputs.keyVaultName.value
 $storageAccountName = $outputs.storageAccountName.value
-$openaiAccountName = $outputs.openaiAccountName.value
 $documentIntelligenceName = $outputs.documentIntelligenceName.value
 $contentUnderstandingName = $outputs.contentUnderstandingName.value
 
@@ -236,7 +235,6 @@ Write-Host "[OK] Web App Principal ID: $webAppPrincipalId"
 Write-Host "[OK] VNet ID: $vnetId"
 Write-Host "[OK] Key Vault: $keyVaultName"
 Write-Host "[OK] Storage Account: $storageAccountName"
-Write-Host "[OK] OpenAI Account: $openaiAccountName"
 Write-Host "[OK] Document Intelligence: $documentIntelligenceName"
 Write-Host "[OK] Content Understanding: $contentUnderstandingName"
 
@@ -249,7 +247,6 @@ Write-Host "=========================================================="
 
 # Role definition IDs
 $networkContributorRoleId = "4d97b98b-1d4f-4787-a291-c67834d212e7"
-$cognitiveServicesOpenAIUserRoleId = "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
 $cognitiveServicesUserRoleId = "a97b65f3-24c7-4388-baec-2e87135dc908"
 $storageBlobDataContributorRoleId = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
 $keyVaultSecretsUserRoleId = "4633458b-17de-408a-b874-0445c86b69e6"
@@ -284,7 +281,6 @@ function Set-RoleAssignment {
 Write-Host "`n[*] Retrieving resource IDs..."
 $storageAccountId = az storage account show --name $storageAccountName --resource-group $ResourceGroupName --query id -o tsv
 $keyVaultId = az keyvault show --name $keyVaultName --resource-group $ResourceGroupName --query id -o tsv
-$openaiAccountId = az cognitiveservices account show --name $openaiAccountName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 $docIntelAccountId = az cognitiveservices account show --name $documentIntelligenceName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 $contentAccountId = az cognitiveservices account show --name $contentUnderstandingName --resource-group $ResourceGroupName --query id -o tsv 2>$null
 
@@ -347,11 +343,13 @@ Write-Host "     - Linux Node.js 20 runtime"
 Write-Host "     - VNet integration enabled"
 Write-Host "     - MSAL authentication configured"
 Write-Host "     - CORS configured for API access"
-Write-Host "OK - Azure OpenAI (with private endpoint)"
 Write-Host "OK - Document Intelligence (with private endpoint)"
 Write-Host "OK - Content Understanding API (with private endpoint)"
 Write-Host "OK - Application Insights & Log Analytics"
 Write-Host "OK - Private DNS Zones"
+
+Write-Host "`n========== MANUAL DEPLOYMENT REQUIRED =========="
+Write-Host "MANUAL - Azure OpenAI / AI Foundry Hub (deploy separately)"
 
 Write-Host "`n========== NOT DEPLOYED =========="
 
@@ -366,13 +364,19 @@ if ($DeployContainerApps) {
 }
 
 Write-Host "`n========== NEXT STEPS =========="
-Write-Host "1. Build & publish Function App code"
-Write-Host "2. Build & deploy React UI to Web App:"
+Write-Host "1. Deploy Azure OpenAI / AI Foundry Hub manually:"
+Write-Host "   - Create Azure OpenAI or AI Foundry Hub resource"
+Write-Host "   - Deploy gpt-4.1 model"
+Write-Host "   - Deploy gpt-realtime model (if needed)"
+Write-Host "   - Update Function App settings with AZURE_OPENAI_ENDPOINT"
+Write-Host "   - Assign Cognitive Services OpenAI User role to Function App"
+Write-Host "2. Build & publish Function App code"
+Write-Host "3. Build & deploy React UI to Web App:"
 Write-Host "   cd BehavioralHealthSystem.Web"
 Write-Host "   npm run build"
 Write-Host "   az webapp deploy --resource-group $ResourceGroupName --name <web-app-name> --src-path ./dist"
-Write-Host "3. Configure secrets in Key Vault"
-Write-Host "4. Test VNet integration and private endpoint access"
+Write-Host "4. Configure secrets in Key Vault"
+Write-Host "5. Test VNet integration and private endpoint access"
 if (-not $DeployContainerApps) {
     Write-Host "5. Deploy Container Apps for GitHub runners (optional): -DeployContainerApps `$true"
     Write-Host "6. Set up CI/CD pipeline for deployments"

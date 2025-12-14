@@ -1,4 +1,5 @@
 using Azure.Identity;
+using NAudio.Wave;
 
 namespace BehavioralHealthSystem.Functions;
 
@@ -48,37 +49,116 @@ public class TranscriptionFunction
             _logger.LogInformation("[{FunctionName}] Detected format from bytes: {DetectedFormat}",
                 nameof(TranscribeAudio), detectedFormat ?? "unknown");
 
-            // Use detected format if available, otherwise default to wav
-            var fileExtension = detectedFormat ?? "wav";
+            // Determine how to handle the audio format
+            // Azure Speech Fast Transcription API supports: WAV, MP3, OGG (with Opus), FLAC, and some other formats
+            byte[] processedAudioData;
+            string fileExtension;
+            string mimeType;
 
-            // Map extension to proper content type for the API
-            // NOTE: Azure Speech Fast Transcription API has specific format requirements
-            // WebM with Opus codec should be sent as audio/ogg for better compatibility
-            var mimeType = fileExtension switch
+            if (detectedFormat == "wav")
             {
-                "wav" => "audio/wav",
-                "mp3" => "audio/mpeg",
-                "m4a" => "audio/mp4",
-                "mp4" => "audio/mp4",
-                "ogg" => "audio/ogg",
-                "webm" => "audio/ogg", // WebM with Opus codec - use OGG MIME type for Azure Speech API compatibility
-                "flac" => "audio/flac",
-                "aac" => "audio/aac",
-                "wma" => "audio/x-ms-wma",
-                "amr" => "audio/amr",
-                _ => "audio/wav"
-            };
-
-            // For WebM files, use .ogg extension as Azure Speech API handles OPUS/OGG better
-            if (fileExtension == "webm")
+                // WAV is natively supported - use as-is
+                processedAudioData = audioData;
+                fileExtension = "wav";
+                mimeType = "audio/wav";
+                _logger.LogInformation("[{FunctionName}] Audio is WAV format (natively supported)", nameof(TranscribeAudio));
+            }
+            else if (detectedFormat == "mp3")
             {
+                // MP3 is natively supported by Azure Speech - try as-is first, convert if needed
+                processedAudioData = audioData;
+                fileExtension = "mp3";
+                mimeType = "audio/mpeg";
+                _logger.LogInformation("[{FunctionName}] Audio is MP3 format (natively supported)", nameof(TranscribeAudio));
+            }
+            else if (detectedFormat == "ogg")
+            {
+                // OGG with Opus is supported by Azure Speech API
+                processedAudioData = audioData;
                 fileExtension = "ogg";
-                _logger.LogInformation("[{FunctionName}] Converting WebM to OGG for Azure Speech API compatibility",
-                    nameof(TranscribeAudio));
+                mimeType = "audio/ogg";
+                _logger.LogInformation("[{FunctionName}] Audio is OGG format (natively supported)", nameof(TranscribeAudio));
+            }
+            else if (detectedFormat == "flac")
+            {
+                // FLAC is natively supported
+                processedAudioData = audioData;
+                fileExtension = "flac";
+                mimeType = "audio/flac";
+                _logger.LogInformation("[{FunctionName}] Audio is FLAC format (natively supported)", nameof(TranscribeAudio));
+            }
+            else if (detectedFormat == "webm")
+            {
+                // WebM with Opus codec - Azure Speech Fast Transcription API does NOT support WebM container
+                // We need to convert to WAV. Try using MediaFoundation if available on the system.
+                _logger.LogInformation("[{FunctionName}] Audio is WebM format - attempting conversion to WAV", nameof(TranscribeAudio));
+
+                try
+                {
+                    processedAudioData = ConvertToWavUsingMediaFoundation(audioData, detectedFormat);
+                    fileExtension = "wav";
+                    mimeType = "audio/wav";
+                    _logger.LogInformation("[{FunctionName}] Successfully converted WebM to WAV: {OriginalSize} -> {NewSize} bytes",
+                        nameof(TranscribeAudio), audioData.Length, processedAudioData.Length);
+                }
+                catch (Exception ex)
+                {
+                    // MediaFoundation conversion failed - WebM is not supported
+                    _logger.LogError(ex, "[{FunctionName}] Failed to convert WebM to WAV. WebM/Opus format is not supported by Azure Speech Fast Transcription API. Please record audio in WAV or MP3 format.",
+                        nameof(TranscribeAudio));
+
+                    var unsupportedResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                    await unsupportedResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                    {
+                        error = "Unsupported audio format",
+                        details = "WebM/Opus audio format is not supported. Please record in WAV or MP3 format.",
+                        detectedFormat = detectedFormat
+                    }));
+                    return unsupportedResponse;
+                }
+            }
+            else if (detectedFormat == "m4a" || detectedFormat == "mp4")
+            {
+                // M4A/MP4 - try MediaFoundation conversion to WAV
+                _logger.LogInformation("[{FunctionName}] Audio is {Format} format - attempting conversion to WAV",
+                    nameof(TranscribeAudio), detectedFormat);
+
+                try
+                {
+                    processedAudioData = ConvertToWavUsingMediaFoundation(audioData, detectedFormat);
+                    fileExtension = "wav";
+                    mimeType = "audio/wav";
+                    _logger.LogInformation("[{FunctionName}] Successfully converted {Format} to WAV",
+                        nameof(TranscribeAudio), detectedFormat);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[{FunctionName}] Failed to convert {Format} to WAV, trying as MP4 audio",
+                        nameof(TranscribeAudio), detectedFormat);
+                    processedAudioData = audioData;
+                    fileExtension = "m4a";
+                    mimeType = "audio/mp4";
+                }
+            }
+            else
+            {
+                // Unknown format - return error with details
+                _logger.LogWarning("[{FunctionName}] Unknown audio format detected. First 16 bytes: {Bytes}",
+                    nameof(TranscribeAudio),
+                    BitConverter.ToString(audioData.Take(Math.Min(16, audioData.Length)).ToArray()));
+
+                var unknownFormatResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                await unknownFormatResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    error = "Unknown audio format",
+                    details = "Could not detect audio format. Supported formats: WAV, MP3, OGG, FLAC. Please ensure you are recording in a supported format.",
+                    detectedFormat = detectedFormat ?? "unknown"
+                }));
+                return unknownFormatResponse;
             }
 
-            _logger.LogInformation("[{FunctionName}] Using file extension: {Extension}, MIME type: {MimeType}",
-                nameof(TranscribeAudio), fileExtension, mimeType);
+            _logger.LogInformation("[{FunctionName}] Using file extension: {Extension}, MIME type: {MimeType}, data size: {Size} bytes",
+                nameof(TranscribeAudio), fileExtension, mimeType, processedAudioData.Length);
 
             // Get configuration from environment - Azure Speech Service settings
             var speechEndpoint = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENDPOINT");
@@ -110,8 +190,8 @@ public class TranscriptionFunction
             using var httpClient = new HttpClient();
             using var formContent = new MultipartFormDataContent();
 
-            // Add the audio file
-            var audioContent = new ByteArrayContent(audioData);
+            // Add the audio file (use processed audio data which may have been converted to WAV)
+            var audioContent = new ByteArrayContent(processedAudioData);
             audioContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
             formContent.Add(audioContent, "audio", $"audio.{fileExtension}");
 
@@ -345,6 +425,42 @@ public class TranscriptionFunction
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Attempt to convert audio to WAV using Windows MediaFoundation.
+    /// This works for formats that MediaFoundation supports (MP3, M4A, AAC, etc.)
+    /// but will fail for WebM/Opus which requires external codec support.
+    /// </summary>
+    private static byte[] ConvertToWavUsingMediaFoundation(byte[] audioData, string sourceFormat)
+    {
+        // Write audio data to a temp file (MediaFoundation needs a file path or proper stream)
+        var tempInputPath = Path.Combine(Path.GetTempPath(), $"audio_input_{Guid.NewGuid()}.{sourceFormat}");
+        var tempOutputPath = Path.Combine(Path.GetTempPath(), $"audio_output_{Guid.NewGuid()}.wav");
+
+        try
+        {
+            File.WriteAllBytes(tempInputPath, audioData);
+
+            // Use MediaFoundationReader which can handle many formats
+            using var reader = new MediaFoundationReader(tempInputPath);
+
+            // Target format: 16kHz mono 16-bit PCM (optimal for speech recognition)
+            var targetFormat = new WaveFormat(16000, 16, 1);
+
+            using var resampler = new MediaFoundationResampler(reader, targetFormat);
+            resampler.ResamplerQuality = 60; // Highest quality
+
+            WaveFileWriter.CreateWaveFile(tempOutputPath, resampler);
+
+            return File.ReadAllBytes(tempOutputPath);
+        }
+        finally
+        {
+            // Clean up temp files
+            try { if (File.Exists(tempInputPath)) File.Delete(tempInputPath); } catch { }
+            try { if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath); } catch { }
+        }
     }
 }
 

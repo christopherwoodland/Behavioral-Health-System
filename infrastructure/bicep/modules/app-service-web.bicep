@@ -25,11 +25,39 @@ param enableVNetIntegration bool = false
 @description('Optional: Subnet ID for VNet integration')
 param appSubnetId string = ''
 
+@description('App Service Plan SKU name (e.g., F1, B1, S1, P0v3, P1v3)')
+param skuName string = 'P0v3'
+
 var webAppName = '${appName}-${environment}-web-${uniqueSuffix}'
 var appServicePlanName = '${appName}-${environment}-web-asp-${uniqueSuffix}'
 // NOTE: login.microsoftonline.com is the standard Azure AD endpoint
 #disable-next-line no-hardcoded-env-urls
 var authorityEndpoint = 'https://login.microsoftonline.com/'
+
+// SKU tier mapping based on SKU name
+var skuTierMap = {
+  F1: 'Free'
+  D1: 'Shared'
+  B1: 'Basic'
+  B2: 'Basic'
+  B3: 'Basic'
+  S1: 'Standard'
+  S2: 'Standard'
+  S3: 'Standard'
+  P1v2: 'PremiumV2'
+  P2v2: 'PremiumV2'
+  P3v2: 'PremiumV2'
+  P0v3: 'PremiumV3'
+  P1v3: 'PremiumV3'
+  P2v3: 'PremiumV3'
+  P3v3: 'PremiumV3'
+  P1mv3: 'PremiumMV3'
+  P2mv3: 'PremiumMV3'
+  P3mv3: 'PremiumMV3'
+  P4mv3: 'PremiumMV3'
+  P5mv3: 'PremiumMV3'
+}
+var skuTier = skuTierMap[?skuName] ?? 'PremiumV3'
 
 // App Service Plan for Web App (create if not using existing plan)
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = if (empty(existingAppServicePlanId)) {
@@ -38,8 +66,8 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = if (empty(exist
   tags: tags
   kind: 'linux'
   sku: {
-    name: 'P1v2'
-    tier: 'PremiumV2'
+    name: skuName
+    tier: skuTier
     capacity: 1
   }
   properties: {

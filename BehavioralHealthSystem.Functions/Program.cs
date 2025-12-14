@@ -45,7 +45,11 @@ string? GetSecretFromKeyVault(SecretClient? client, string secretName, string? f
 }
 
 var host = new HostBuilder()
-    .ConfigureFunctionsWorkerDefaults()
+    .ConfigureFunctionsWorkerDefaults(worker =>
+    {
+        // Add CORS middleware
+        worker.UseMiddleware<BehavioralHealthSystem.Functions.Services.CorsMiddleware>();
+    })
     .ConfigureServices((context, services) =>
     {
         var config = context.Configuration;
@@ -142,6 +146,7 @@ var host = new HostBuilder()
             .AddPolicyHandler(RetryPolicies.GetTimeoutPolicy());
 
         // Services
+        services.AddSingleton<IApiKeyValidationService, ApiKeyValidationService>();
         services.AddScoped<IKintsugiApiService, KintsugiApiService>();
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         services.AddScoped<IDSM5DataService, DSM5DataService>();
@@ -162,7 +167,14 @@ var host = new HostBuilder()
                 throw new InvalidOperationException("Configuration not available");
             }
 
-            // Check for storage account name (preferred for managed identity)
+            // First check for explicit connection string (Docker/Azurite)
+            var connectionString = config["AZURE_STORAGE_CONNECTION_STRING"] ?? config.GetConnectionString("AzureStorage");
+            if (!string.IsNullOrEmpty(connectionString))
+            {
+                return new BlobServiceClient(connectionString);
+            }
+
+            // Check for storage account name (preferred for managed identity in Azure)
             var storageAccountName = config["DSM5_STORAGE_ACCOUNT_NAME"] ?? config["AZURE_STORAGE_ACCOUNT_NAME"];
             if (!string.IsNullOrEmpty(storageAccountName))
             {
@@ -170,7 +182,7 @@ var host = new HostBuilder()
                 return new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential());
             }
 
-            // Fallback to local development storage emulator
+            // Fallback to local development storage emulator (only works on Windows host)
             return new BlobServiceClient("UseDevelopmentStorage=true");
         });
         services.AddScoped<ISessionStorageService, SessionStorageService>();

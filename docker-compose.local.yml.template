@@ -1,0 +1,63 @@
+services:
+  # Azure Storage Emulator (Azurite)
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: bhs-azurite
+    ports:
+      - "10000:10000"  # Blob
+      - "10001:10001"  # Queue
+      - "10002:10002"  # Table
+    volumes:
+      - azurite-data:/data
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0
+
+  # BHS Functions API
+  api:
+    image: bhs-api:local
+    container_name: bhs-api
+    build:
+      context: .
+      dockerfile: BehavioralHealthSystem.Functions/Dockerfile.local
+    ports:
+      - "7071:80"
+    environment:
+      # Storage connection for Azurite (these are the well-known Azurite dev keys - safe to commit)
+      - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1
+      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1
+      # Functions runtime
+      - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+      - ASPNETCORE_ENVIRONMENT=Development
+      - AZURE_FUNCTIONS_ENVIRONMENT=Development
+      # Kintsugi API - REPLACE WITH YOUR VALUES
+      - KINTSUGI_API_KEY=<your-kintsugi-api-key>
+      - KINTSUGI_BASE_URL=https://api.kintsugihealth.com/v2
+      - KINTSUGI_TIMEOUT_SECONDS=300
+      - KINTSUGI_MAX_RETRY_ATTEMPTS=3
+      - KINTSUGI_RETRY_DELAY_MS=1000
+      # Azure Speech - REPLACE WITH YOUR VALUES
+      - AZURE_SPEECH_ENDPOINT=<your-azure-speech-endpoint>
+      - AZURE_SPEECH_KEY=<your-azure-speech-key>
+      - AZURE_SPEECH_REGION=eastus
+      - AZURE_SPEECH_LOCALE=en-US
+      - AZURE_SPEECH_API_VERSION=2024-11-15
+      # Storage
+      - DSM5_CONTAINER_NAME=dsm5-data
+      # Feature flags - disable AI features for local testing
+      - AZURE_OPENAI_ENABLED=false
+      - EXTENDED_ASSESSMENT_OPENAI_ENABLED=false
+      - AGENT_MODE_ENABLED=false
+      # Content Understanding - REPLACE WITH YOUR VALUES (or leave empty to disable)
+      - AZURE_CONTENT_UNDERSTANDING_ENDPOINT=<your-content-understanding-endpoint>
+      - AZURE_CONTENT_UNDERSTANDING_KEY=<your-content-understanding-key>
+      - DocumentIntelligenceEndpoint=
+    depends_on:
+      - azurite
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  azurite-data:

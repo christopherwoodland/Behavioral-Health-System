@@ -1,5 +1,6 @@
 using System.Net;
 using Azure.Storage.Blobs;
+using BehavioralHealthSystem.Functions.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -13,23 +14,40 @@ public class AudioUploadFunctions
 {
     private readonly ILogger<AudioUploadFunctions> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IApiKeyValidationService _apiKeyValidation;
 
     public AudioUploadFunctions(
         ILogger<AudioUploadFunctions> logger,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IApiKeyValidationService apiKeyValidation)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
+        _apiKeyValidation = apiKeyValidation ?? throw new ArgumentNullException(nameof(apiKeyValidation));
     }
 
     /// <summary>
-    /// Uploads audio file to Azure Blob Storage
+    /// Uploads audio file to Azure Blob Storage.
+    /// Requires API key validation in production environments.
     /// </summary>
     [Function("UploadAudioFile")]
     public async Task<HttpResponseData> UploadAudioFileAsync(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "upload-audio")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "upload-audio")] HttpRequestData req)
     {
         _logger.LogInformation("🎤 Processing audio file upload request");
+
+        // Validate API key (skipped in development mode)
+        if (!_apiKeyValidation.ValidateApiKey(req))
+        {
+            _logger.LogWarning("API key validation failed for upload-audio request");
+            var unauthorizedResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
+            await unauthorizedResponse.WriteAsJsonAsync(new
+            {
+                success = false,
+                message = "Unauthorized - valid API key required"
+            });
+            return unauthorizedResponse;
+        }
 
         try
         {

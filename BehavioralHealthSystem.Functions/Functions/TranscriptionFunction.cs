@@ -30,7 +30,7 @@ public class TranscriptionFunction
         }
 
         // Try Key Vault
-        var keyVaultUri = Environment.GetEnvironmentVariable("KEY_VAULT_URI") 
+        var keyVaultUri = Environment.GetEnvironmentVariable("KEY_VAULT_URI")
                        ?? Environment.GetEnvironmentVariable("KEY_VAULT_URL");
         if (string.IsNullOrWhiteSpace(keyVaultUri))
         {
@@ -45,7 +45,7 @@ public class TranscriptionFunction
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("[TranscriptionFunction] Could not retrieve {SecretName} from Key Vault: {Error}", 
+            _logger.LogWarning("[TranscriptionFunction] Could not retrieve {SecretName} from Key Vault: {Error}",
                 secretName, ex.Message);
             return null;
         }

@@ -656,7 +656,7 @@ const UploadAnalyze: React.FC = () => {
 
   const validateGender = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
-    const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to specify'];
+    const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to say'];
     if (!validGenders.includes(value)) {
       return 'Please select a valid gender option';
     }
@@ -665,7 +665,7 @@ const UploadAnalyze: React.FC = () => {
 
   const validateRace = useCallback((value: string): string | undefined => {
     if (!value) return undefined; // Optional field
-    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
+    const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
     if (!validRaces.includes(value)) {
       return 'Please select a valid race option';
     }
@@ -877,7 +877,7 @@ const UploadAnalyze: React.FC = () => {
 
             // Validate gender options
             if (row.gender && row.gender.trim()) {
-              const validGenders = ["female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer not to specify"];
+              const validGenders = ["female", "male", "non-binary", "transgender female", "transgender male", "other", "prefer not to say"];
               if (!validGenders.includes(row.gender.toLowerCase().trim())) {
                 errors.push(`Row ${i + 1}: Invalid gender "${row.gender}". Must be one of: ${validGenders.join(', ')}`);
                 hasFieldErrors = true;
@@ -891,10 +891,10 @@ const UploadAnalyze: React.FC = () => {
                 "black or african-american",
                 "asian",
                 "american indian or alaskan native",
-                "native hawaiian or pacific islander",
+                "native Hawaiian or pacific islander",
                 "two or more races",
                 "other",
-                "prefer not to specify"
+                "prefer not to say"
               ];
               const normalizedInputRace = row.race.toLowerCase().trim();
               if (!validRaces.includes(normalizedInputRace)) {
@@ -1391,17 +1391,17 @@ const UploadAnalyze: React.FC = () => {
 
     // Gender validation
     if (userMetadata.gender) {
-      const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to specify'];
+      const validGenders = ['female', 'male', 'non-binary', 'transgender female', 'transgender male', 'other', 'prefer not to say'];
       if (!validGenders.includes(userMetadata.gender)) {
-        errors.push('Invalid gender. Must be: female, male, non-binary, transgender female, transgender male, other, or prefer not to specify');
+        errors.push('Invalid gender. Must be: female, male, non-binary, transgender female, transgender male, other, or prefer not to say');
       }
     }
 
     // Race validation
     if (userMetadata.race) {
-      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to specify'];
+      const validRaces = ['white', 'black or african-american', 'asian', 'american indian or alaskan native', 'native Hawaiian or pacific islander', 'two or more races', 'other', 'prefer not to say'];
       if (!validRaces.includes(userMetadata.race)) {
-        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native hawaiian or pacific islander, two or more races, other, prefer not to specify');
+        errors.push('Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to say');
       }
     }
 
@@ -1534,12 +1534,7 @@ const UploadAnalyze: React.FC = () => {
       hasMetadata = true;
     }
     if (userMetadata.race) {
-      // Special case: preserve capital H in "Hawaiian"
-      let normalizedRace = userMetadata.race.toLowerCase().trim();
-      if (normalizedRace === 'native hawaiian or pacific islander') {
-        normalizedRace = 'native Hawaiian or pacific islander';
-      }
-      metadata.race = normalizedRace as SessionMetadata['race'];
+      metadata.race = userMetadata.race.trim() as SessionMetadata['race'];
       hasMetadata = true;
     }
     if (userMetadata.ethnicity) {
@@ -1608,12 +1603,7 @@ const UploadAnalyze: React.FC = () => {
       hasMetadata = true;
     }
     if (userData.race) {
-      // Special case: preserve capital H in "Hawaiian"
-      let normalizedRace = userData.race.toLowerCase().trim();
-      if (normalizedRace === 'native hawaiian or pacific islander') {
-        normalizedRace = 'native Hawaiian or pacific islander';
-      }
-      metadata.race = normalizedRace as SessionMetadata['race'];
+      metadata.race = userData.race.trim() as SessionMetadata['race'];
       hasMetadata = true;
     }
     if (userData.ethnicity) {
@@ -3364,7 +3354,7 @@ const UploadAnalyze: React.FC = () => {
               <option value="male">Male</option>
               <option value="non-binary">Non-binary</option>
               <option value="other">Other</option>
-              <option value="prefer not to specify">Prefer Not to Specify</option>
+              <option value="prefer not to say">prefer not to say</option>
               <option value="transgender female">Transgender Female</option>
               <option value="transgender male">Transgender Male</option>
             </select>
@@ -3384,9 +3374,9 @@ const UploadAnalyze: React.FC = () => {
               <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
               <option value="asian">Asian</option>
               <option value="black or african-american">Black or African-American</option>
-              <option value="native hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
+              <option value="native Hawaiian or pacific islander">native Hawaiian or pacific islander</option>
               <option value="other">Other</option>
-              <option value="prefer not to specify">Prefer Not to Specify</option>
+              <option value="prefer not to say">prefer not to say</option>
               <option value="two or more races">Two or more races</option>
               <option value="white">White</option>
             </select>
@@ -4719,7 +4709,7 @@ const UploadAnalyze: React.FC = () => {
                   <option value="male">Male</option>
                   <option value="non-binary">Non-binary</option>
                   <option value="other">Other</option>
-                  <option value="prefer not to specify">Prefer Not to Specify</option>
+                  <option value="prefer not to say">prefer not to say</option>
                   <option value="transgender female">Transgender Female</option>
                   <option value="transgender male">Transgender Male</option>
                 </select>
@@ -4739,9 +4729,9 @@ const UploadAnalyze: React.FC = () => {
                   <option value="american indian or alaskan native">American Indian or Alaskan Native</option>
                   <option value="asian">Asian</option>
                   <option value="black or african-american">Black or African-American</option>
-                  <option value="native Hawaiian or pacific islander">Native Hawaiian or Pacific Islander</option>
+                  <option value="native Hawaiian or pacific islander">native Hawaiian or pacific islander</option>
                   <option value="other">Other</option>
-                  <option value="prefer not to specify">Prefer Not to Specify</option>
+                  <option value="prefer not to say">prefer not to say</option>
                   <option value="two or more races">Two or more races</option>
                   <option value="white">White</option>
                 </select>

@@ -1,0 +1,49 @@
+# Build output
+**/bin/
+**/obj/
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Test results
+**/TestResults/
+
+# NuGet
+*.nupkg
+
+# Logs
+*.log
+
+# Local settings (don't include secrets in image)
+**/local.settings.json
+**/.env
+**/.env.*
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# Test projects
+BehavioralHealthSystem.Tests/
+
+# Console project (not needed for Functions)
+BehavioralHealthSystem.Console/
+
+# Web project (separate image)
+BehavioralHealthSystem.Web/
+
+# Band Service (separate)
+BehavioralHealthSystem.BandService/
+
+# Infrastructure
+infrastructure/
+
+# Scripts
+scripts/

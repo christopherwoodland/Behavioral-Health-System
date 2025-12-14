@@ -45,7 +45,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
         RuleFor(x => x.Gender)
             .Must(BeValidGender)
             .When(x => HasMeaningfulValue(x, nameof(UserMetadata.Gender)))
-            .WithMessage("Invalid gender. Must be: male, female, non-binary, transgender female, transgender male, other, or prefer not to specify");
+            .WithMessage("Invalid gender. Must be: male, female, non-binary, transgender female, transgender male, other, or prefer not to say");
 
         // Ethnicity is optional, but when provided must be valid
         RuleFor(x => x.Ethnicity)
@@ -57,7 +57,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
         RuleFor(x => x.Race)
             .Must(BeValidRace)
             .When(x => HasMeaningfulValue(x, nameof(UserMetadata.Race)))
-            .WithMessage("Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native hawaiian or pacific islander, two or more races, other, prefer not to specify");
+            .WithMessage("Invalid race. Must be: white, black or african-american, asian, american indian or alaskan native, native Hawaiian or pacific islander, two or more races, other, prefer not to say");
 
         // Zipcode is optional, but when provided must be alphanumeric up to 10 characters
         RuleFor(x => x.Zipcode)
@@ -103,7 +103,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
     /// <returns>True if the gender is valid; otherwise, false.</returns>
     private static bool BeValidGender(string gender)
     {
-        var validGenders = new[] { "male", "female", "non-binary", "transgender female", "transgender male", "other", "prefer not to specify" };
+        var validGenders = new[] { "male", "female", "non-binary", "transgender female", "transgender male", "other", "prefer not to say" };
         return validGenders.Contains(gender, StringComparer.OrdinalIgnoreCase);
     }
 
@@ -115,7 +115,7 @@ public class UserMetadataValidator : AbstractValidator<UserMetadata>
     /// <returns>True if the race is valid; otherwise, false.</returns>
     private static bool BeValidRace(string race)
     {
-        var validRaces = new[] { "white", "black or african-american", "asian", "american indian or alaskan native", "native hawaiian or pacific islander", "two or more races", "other", "prefer not to specify" };
+        var validRaces = new[] { "white", "black or african-american", "asian", "american indian or alaskan native", "native Hawaiian or pacific islander", "two or more races", "other", "prefer not to say" };
         return validRaces.Contains(race, StringComparer.OrdinalIgnoreCase);
     }
 

@@ -73,7 +73,7 @@ if ($keyVault) { Write-Host "  Key Vault:        $($keyVault.name)" }
 if ($functionApp) { Write-Host "  Function App:     $($functionApp.name)" }
 if ($webApp) { Write-Host "  Web App:          $($webApp.name)" }
 if ($storageAccount) { Write-Host "  Storage Account:  $($storageAccount.name)" }
-if ($cognitiveAccounts) { 
+if ($cognitiveAccounts) {
     foreach ($cog in $cognitiveAccounts) {
         Write-Host "  Cognitive Svc:    $($cog.name) ($($cog.kind))"
     }
@@ -96,10 +96,10 @@ function New-RoleAssignmentSafe {
     )
 
     Write-Host "[*] $Description..."
-    
+
     # Check if assignment already exists
     $existing = az role assignment list --assignee $PrincipalId --role $RoleId --scope $Scope -o json 2>$null | ConvertFrom-Json
-    
+
     if ($existing -and $existing.Count -gt 0) {
         Write-Host "    [SKIP] Role assignment already exists" -ForegroundColor DarkGray
         $script:assignmentsSkipped += $Description
@@ -113,7 +113,7 @@ function New-RoleAssignmentSafe {
             --assignee-principal-type $PrincipalType `
             --scope $Scope `
             --output none 2>$null
-        
+
         Write-Host "    [OK] Role assigned" -ForegroundColor Green
         $script:assignmentsCreated += $Description
         return $true
@@ -130,11 +130,11 @@ function New-RoleAssignmentSafe {
 if ($GrantUserAccess) {
     Write-Host ""
     Write-Host "--- User Access ---" -ForegroundColor Cyan
-    
+
     $userId = az ad signed-in-user show --query id -o tsv
     $userName = az ad signed-in-user show --query userPrincipalName -o tsv
     Write-Host "Current User: $userName ($userId)"
-    
+
     if ($keyVault) {
         New-RoleAssignmentSafe `
             -RoleName "KeyVaultSecretsOfficer" `
@@ -152,13 +152,13 @@ if ($GrantUserAccess) {
 if ($functionApp) {
     Write-Host ""
     Write-Host "--- Function App Managed Identity ---" -ForegroundColor Cyan
-    
+
     $funcPrincipalId = $functionApp.identity.principalId
     if (-not $funcPrincipalId) {
         Write-Host "[WARNING] Function App does not have a managed identity enabled" -ForegroundColor Yellow
     } else {
         Write-Host "Principal ID: $funcPrincipalId"
-        
+
         # Key Vault Secrets User
         if ($keyVault) {
             New-RoleAssignmentSafe `
@@ -169,7 +169,7 @@ if ($functionApp) {
                 -Scope $keyVault.id `
                 -Description "Function App -> Key Vault Secrets User"
         }
-        
+
         # Storage Blob Data Contributor
         if ($storageAccount) {
             New-RoleAssignmentSafe `
@@ -180,7 +180,7 @@ if ($functionApp) {
                 -Scope $storageAccount.id `
                 -Description "Function App -> Storage Blob Data Contributor"
         }
-        
+
         # Cognitive Services User for each cognitive account
         foreach ($cog in $cognitiveAccounts) {
             New-RoleAssignmentSafe `
@@ -200,13 +200,13 @@ if ($functionApp) {
 if ($webApp) {
     Write-Host ""
     Write-Host "--- Web App Managed Identity ---" -ForegroundColor Cyan
-    
+
     $webPrincipalId = $webApp.identity.principalId
     if (-not $webPrincipalId) {
         Write-Host "[WARNING] Web App does not have a managed identity enabled" -ForegroundColor Yellow
     } else {
         Write-Host "Principal ID: $webPrincipalId"
-        
+
         # Key Vault Secrets User
         if ($keyVault) {
             New-RoleAssignmentSafe `
@@ -217,7 +217,7 @@ if ($webApp) {
                 -Scope $keyVault.id `
                 -Description "Web App -> Key Vault Secrets User"
         }
-        
+
         # Storage Blob Data Reader (read-only for web app)
         if ($storageAccount) {
             New-RoleAssignmentSafe `

@@ -7,6 +7,7 @@ WORKDIR /src
 COPY BehavioralHealthSystem.sln ./
 COPY BehavioralHealthSystem.Functions/BehavioralHealthSystem.Functions.csproj ./BehavioralHealthSystem.Functions/
 COPY BehavioralHealthSystem.Helpers/BehavioralHealthSystem.Helpers.csproj ./BehavioralHealthSystem.Helpers/
+COPY BehavioralHealthSystem.Agents/BehavioralHealthSystem.Agents.csproj ./BehavioralHealthSystem.Agents/
 
 # Restore dependencies
 RUN dotnet restore BehavioralHealthSystem.Functions/BehavioralHealthSystem.Functions.csproj
@@ -24,6 +25,11 @@ COPY BehavioralHealthSystem.Helpers/Models/ ./BehavioralHealthSystem.Helpers/Mod
 COPY BehavioralHealthSystem.Helpers/Services/ ./BehavioralHealthSystem.Helpers/Services/
 COPY BehavioralHealthSystem.Helpers/Validators/ ./BehavioralHealthSystem.Helpers/Validators/
 COPY BehavioralHealthSystem.Helpers/Deploy/ ./BehavioralHealthSystem.Helpers/Deploy/
+COPY BehavioralHealthSystem.Agents/*.cs ./BehavioralHealthSystem.Agents/
+COPY BehavioralHealthSystem.Agents/Services/ ./BehavioralHealthSystem.Agents/Services/
+COPY BehavioralHealthSystem.Agents/Configuration/ ./BehavioralHealthSystem.Agents/Configuration/
+COPY BehavioralHealthSystem.Agents/DependencyInjection/ ./BehavioralHealthSystem.Agents/DependencyInjection/
+COPY BehavioralHealthSystem.Agents/Interfaces/ ./BehavioralHealthSystem.Agents/Interfaces/
 
 # Build and publish (do full restore to avoid Windows path issues)
 WORKDIR /src/BehavioralHealthSystem.Functions

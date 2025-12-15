@@ -156,7 +156,7 @@ public class UserMetadataValidatorTests
     [DataRow("Transgender Female")]
     [DataRow("transgender male")]
     [DataRow("other")]
-    [DataRow("prefer not to specify")]
+    [DataRow("prefer not to say")]
     public void Validate_ValidGender_ShouldPass(string gender)
     {
         // Arrange
@@ -287,7 +287,7 @@ public class UserMetadataValidatorTests
     [DataRow("native hawaiian or pacific islander")]
     [DataRow("two or more races")]
     [DataRow("other")]
-    [DataRow("prefer not to specify")]
+    [DataRow("prefer not to say")]
     public void Validate_ValidRace_ShouldPass(string race)
     {
         // Arrange

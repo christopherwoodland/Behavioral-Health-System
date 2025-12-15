@@ -244,10 +244,10 @@ export const apiService = {
     );
   },
 
-  // Grammar Correction via Foundry Agent
+  // Grammar Correction via Microsoft.Agents SDK Agent
   async correctGrammarAgent(text: string): Promise<{ originalText: string; correctedText: string }> {
     return apiClient.post<{ originalText: string; correctedText: string }>(
-      'correct-grammar-agent',
+      'agent/grammar/correct',
       { text }
     );
   },

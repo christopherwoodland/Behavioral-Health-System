@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { 
-  EventType, 
-  EventMessage, 
+import {
+  EventType,
+  EventMessage,
   AccountInfo,
   InteractionStatus,
   PopupRequest,
   RedirectRequest
 } from '@azure/msal-browser';
-import { 
-  useMsal, 
-  useAccount, 
+import {
+  useMsal,
+  useAccount,
   useIsAuthenticated,
   AuthenticatedTemplate as MsalAuthenticatedTemplate,
   UnauthenticatedTemplate as MsalUnauthenticatedTemplate
@@ -76,23 +76,23 @@ const extractUserRoles = (account: AccountInfo): string[] => {
 
   // Check for roles in token claims (preferred method)
   if (claims?.[ROLE_CLAIMS.APP_ROLES]) {
-    const tokenRoles = Array.isArray(claims[ROLE_CLAIMS.APP_ROLES]) 
-      ? claims[ROLE_CLAIMS.APP_ROLES] 
+    const tokenRoles = Array.isArray(claims[ROLE_CLAIMS.APP_ROLES])
+      ? claims[ROLE_CLAIMS.APP_ROLES]
       : [claims[ROLE_CLAIMS.APP_ROLES]];
     roles.push(...tokenRoles);
   }
 
   // Check for group-based roles (fallback)
   if (claims?.[ROLE_CLAIMS.GROUPS]) {
-    const groups = Array.isArray(claims[ROLE_CLAIMS.GROUPS]) 
-      ? claims[ROLE_CLAIMS.GROUPS] 
+    const groups = Array.isArray(claims[ROLE_CLAIMS.GROUPS])
+      ? claims[ROLE_CLAIMS.GROUPS]
       : [claims[ROLE_CLAIMS.GROUPS]];
-    
+
     // Map group IDs to roles based on configuration
     groups.forEach((groupId: string) => {
-      if (groupId === process.env.VITE_AZURE_AD_ADMIN_GROUP_ID) {
+      if (groupId === import.meta.env.VITE_AZURE_ADMIN_GROUP_ID) {
         roles.push(APP_ROLES.ADMIN);
-      } else if (groupId === process.env.VITE_AZURE_AD_CONTROL_PANEL_GROUP_ID) {
+      } else if (groupId === import.meta.env.VITE_AZURE_CONTROL_PANEL_GROUP_ID) {
         roles.push(APP_ROLES.CONTROL_PANEL);
       }
     });
@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { instance, accounts, inProgress } = useMsal();
   const account = useAccount(accounts[0] || {});
   const isAuthenticated = useIsAuthenticated();
-  
+
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,7 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const userInfo = createUserInfo(account);
     setUser(userInfo);
-    
+
     // Update the global user ID for API calls
     if (userInfo) {
       setAuthenticatedUserId(userInfo.id);
@@ -208,7 +208,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setError(null);
       setIsLoading(true);
-      
+
       const loginRequestWithDefaults = {
         ...loginRequest,
         ...request,
@@ -229,7 +229,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setError(null);
       setIsLoading(true);
-      
+
       const logoutRequest = {
         account: account || undefined,
         ...request,

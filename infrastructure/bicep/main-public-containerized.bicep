@@ -38,6 +38,43 @@ param azureAdClientId string = ''
 @description('Azure Container Registry name (must be pre-deployed with images)')
 param acrName string
 
+// ============================================================================
+// AZURE OPENAI REALTIME API PARAMETERS (UI)
+// ============================================================================
+@description('Azure OpenAI Realtime deployment name')
+param azureOpenAIRealtimeDeployment string = 'gpt-realtime'
+
+@description('Azure OpenAI Realtime API version')
+param azureOpenAIRealtimeApiVersion string = '2025-04-01-preview'
+
+@description('Azure OpenAI resource name for Realtime API')
+param azureOpenAIResourceName string = ''
+
+@description('Azure OpenAI WebRTC region')
+param azureOpenAIWebRTCRegion string = 'eastus2'
+
+@secure()
+@description('Azure OpenAI Realtime API Key')
+param azureOpenAIRealtimeKey string = ''
+
+// ============================================================================
+// AGENT CONFIGURATION PARAMETERS
+// ============================================================================
+@description('Extended Assessment OpenAI Deployment')
+param extendedAssessmentDeployment string = 'gpt-5.2'
+
+@description('Agent Model Deployment')
+param agentModelDeployment string = 'gpt-5.2'
+
+// ============================================================================
+// SMART BAND CONFIGURATION
+// ============================================================================
+@description('Band Service URL for Smart Band integration')
+param bandServiceUrl string = ''
+
+@description('Enable Smart Band integration')
+param enableSmartBand bool = false
+
 /*
 ================================================================================
 PUBLIC CONTAINERIZED DEPLOYMENT ARCHITECTURE (No VNet / Private Endpoints)
@@ -162,6 +199,18 @@ module containerApps './modules/container-apps-public.bicep' = {
     azureAdClientId: azureAdClientId
     uiImageTag: containerImageTag
     apiImageTag: containerImageTag
+    // Azure OpenAI Realtime API parameters
+    azureOpenAIRealtimeDeployment: azureOpenAIRealtimeDeployment
+    azureOpenAIRealtimeApiVersion: azureOpenAIRealtimeApiVersion
+    azureOpenAIResourceName: azureOpenAIResourceName
+    azureOpenAIWebRTCRegion: azureOpenAIWebRTCRegion
+    azureOpenAIRealtimeKey: azureOpenAIRealtimeKey
+    // Agent configuration
+    extendedAssessmentDeployment: extendedAssessmentDeployment
+    agentModelDeployment: agentModelDeployment
+    // Smart Band configuration
+    bandServiceUrl: bandServiceUrl
+    enableSmartBand: enableSmartBand
   }
 }
 

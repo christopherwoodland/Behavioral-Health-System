@@ -12,6 +12,7 @@ interface LayoutProps {
 export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
   const { skipToMain } = useSkipToContent();
   const isDevEnvironment = import.meta.env.VITE_DEV_ENVIRONMENT === 'true';
+  const devEnvironmentText = import.meta.env.VITE_DEV_ENVIRONMENT_TEXT || '';
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
@@ -29,7 +30,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
 
       {/* Development Environment Banner */}
       {isDevEnvironment && (
-        <div className="bg-pink-500 text-white text-center py-2 px-4 font-semibold text-sm">
+        <div
+          className="bg-pink-500 text-white text-center py-2 px-4 font-semibold text-sm"
+          role="banner"
+          aria-label="Development environment indicator"
+        >
           Development Environment
         </div>
       )}
@@ -54,8 +59,23 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
         aria-atomic="true"
       />
 
+      {/* Development Environment Text Banner (above footer) */}
+      {devEnvironmentText && (
+        <div
+          className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100 text-center py-2 px-4 text-sm border-t border-amber-200 dark:border-amber-700"
+          role="status"
+          aria-label="Environment status message"
+        >
+          {devEnvironmentText}
+        </div>
+      )}
+
       {/* Footer */}
-      <footer className="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 mt-auto">
+      <footer
+        className="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 mt-auto"
+        role="contentinfo"
+        aria-label="Site footer"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col items-center space-y-4">
             {/* Microsoft Logo */}

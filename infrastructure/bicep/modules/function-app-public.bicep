@@ -108,10 +108,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: 'https://${keyVaultName}.vault.azure.net/'
         }
         {
-          name: 'AZURE_TENANT_ID'
-          value: subscription().tenantId
-        }
-        {
           name: 'AZURE_CLIENT_ID'
           value: '63e9b3fd-de9d-4083-879c-9c13f3aac54d'
         }
@@ -134,18 +130,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
         {
           name: 'AZURE_OPENAI_API_VERSION'
           value: '2024-12-01-preview'
-        }
-        {
-          name: 'GPT_REALTIME_ENDPOINT'
-          value: openaiEndpoint
-        }
-        {
-          name: 'GPT_REALTIME_DEPLOYMENT'
-          value: 'gpt-realtime'
-        }
-        {
-          name: 'GPT_REALTIME_API_VERSION'
-          value: '2025-04-01-preview'
         }
         {
           name: 'EXTENDED_ASSESSMENT_OPENAI_ENDPOINT'

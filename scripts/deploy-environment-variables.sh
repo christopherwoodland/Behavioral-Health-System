@@ -56,10 +56,6 @@ az functionapp config appsettings set \
         "AZURE_OPENAI_DEPLOYMENT=gpt-4.1" \
         "AZURE_OPENAI_ENABLED=true" \
         "AZURE_OPENAI_API_VERSION=2024-12-01-preview" \
-        "GPT_REALTIME_ENDPOINT=https://cdc-traci-aif-002.cognitiveservices.azure.com/openai/realtime" \
-        "GPT_REALTIME_API_KEY=89a35462495b4448b433e57d092397e3" \
-        "GPT_REALTIME_DEPLOYMENT=gpt-realtime" \
-        "GPT_REALTIME_API_VERSION=2024-10-01-preview" \
         "AUDIO_SAMPLE_RATE=24000" \
         "AUDIO_BITS_PER_SAMPLE=16" \
         "AUDIO_CHANNELS=1" \
@@ -99,10 +95,6 @@ if [ $? -eq 0 ]; then
     echo "   ✓ AZURE_OPENAI_DEPLOYMENT"
     echo "   ✓ AZURE_OPENAI_ENABLED"
     echo "   ✓ AZURE_OPENAI_API_VERSION"
-    echo "   ✓ GPT_REALTIME_ENDPOINT"
-    echo "   ✓ GPT_REALTIME_API_KEY"
-    echo "   ✓ GPT_REALTIME_DEPLOYMENT"
-    echo "   ✓ GPT_REALTIME_API_VERSION"
     echo "   ✓ AUDIO_SAMPLE_RATE"
     echo "   ✓ AUDIO_BITS_PER_SAMPLE"
     echo "   ✓ AUDIO_CHANNELS"

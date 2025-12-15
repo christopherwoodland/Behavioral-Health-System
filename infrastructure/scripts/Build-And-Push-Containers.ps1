@@ -94,15 +94,16 @@ if (-not $PushOnly) {
     Write-Host "Building UI Container" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
 
-    if (-not (Test-Path (Join-Path $UIDir "Dockerfile"))) {
-        Write-Error "UI Dockerfile not found at $UIDir"
+    $UIDockerfile = Join-Path $UIDir "Dockerfile.prod"
+    if (-not (Test-Path $UIDockerfile)) {
+        Write-Error "UI Dockerfile.prod not found at $UIDir"
         exit 1
     }
 
     Push-Location $UIDir
     try {
         Write-Host "Building Docker image: $UIImage" -ForegroundColor Yellow
-        docker build -t $UIImage -t "${AcrLoginServer}/bhs-ui:latest" .
+        docker build -f Dockerfile.prod -t $UIImage -t "${AcrLoginServer}/bhs-ui:latest" .
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to build UI Docker image"
             exit 1
@@ -119,8 +120,9 @@ if (-not $PushOnly) {
     Write-Host "Building API Container" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
 
-    if (-not (Test-Path (Join-Path $APIDir "Dockerfile"))) {
-        Write-Error "API Dockerfile not found at $APIDir"
+    $APIDockerfile = Join-Path $APIDir "Dockerfile.prod"
+    if (-not (Test-Path $APIDockerfile)) {
+        Write-Error "API Dockerfile.prod not found at $APIDir"
         exit 1
     }
 
@@ -128,7 +130,7 @@ if (-not $PushOnly) {
     Push-Location $RootDir
     try {
         Write-Host "Building Docker image: $APIImage" -ForegroundColor Yellow
-        docker build -t $APIImage -t "${AcrLoginServer}/bhs-api:latest" -f BehavioralHealthSystem.Functions/Dockerfile .
+        docker build -f BehavioralHealthSystem.Functions/Dockerfile.prod -t $APIImage -t "${AcrLoginServer}/bhs-api:latest" .
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Failed to build API Docker image"
             exit 1

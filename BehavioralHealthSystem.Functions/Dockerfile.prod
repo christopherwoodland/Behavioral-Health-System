@@ -31,10 +31,10 @@ COPY BehavioralHealthSystem.Agents/Configuration/ ./BehavioralHealthSystem.Agent
 COPY BehavioralHealthSystem.Agents/DependencyInjection/ ./BehavioralHealthSystem.Agents/DependencyInjection/
 COPY BehavioralHealthSystem.Agents/Interfaces/ ./BehavioralHealthSystem.Agents/Interfaces/
 
-# Build and publish with Release configuration and optimizations
+# Build and publish with Release configuration
 WORKDIR /src/BehavioralHealthSystem.Functions
 RUN dotnet publish -c Release -o /app/publish \
-    /p:PublishReadyToRun=true \
+    /p:PublishReadyToRun=false \
     /p:PublishTrimmed=false
 
 # Stage 2: Runtime image with Azure Functions runtime

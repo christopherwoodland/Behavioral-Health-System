@@ -721,11 +721,14 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
 }
 
 // ============================================================================
-// ROLE ASSIGNMENTS
+// ROLE ASSIGNMENTS (skipped if already exist - set createRoleAssignments=true for first deployment)
 // ============================================================================
 
+@description('Create role assignments - set to false if they already exist')
+param createRoleAssignments bool = false
+
 // Key Vault Secrets User role for UI Container App
-resource uiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource uiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (createRoleAssignments) {
   name: guid(keyVault.id, uiContainerApp.id, '4633458b-17de-408a-b874-0445c86b69e6')
   scope: keyVault
   properties: {
@@ -736,7 +739,7 @@ resource uiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-
 }
 
 // Key Vault Secrets User role for API Container App
-resource apiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource apiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (createRoleAssignments) {
   name: guid(keyVault.id, apiContainerApp.id, '4633458b-17de-408a-b874-0445c86b69e6')
   scope: keyVault
   properties: {
@@ -747,7 +750,7 @@ resource apiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04
 }
 
 // ACR Pull role for UI Container App
-resource uiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource uiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (createRoleAssignments) {
   name: guid(acr.id, uiContainerApp.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   scope: acr
   properties: {
@@ -758,7 +761,7 @@ resource uiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // ACR Pull role for API Container App
-resource apiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource apiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (createRoleAssignments) {
   name: guid(acr.id, apiContainerApp.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   scope: acr
   properties: {
@@ -769,7 +772,7 @@ resource apiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // Storage Blob Data Contributor role for API Container App
-resource apiStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+resource apiStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (createRoleAssignments) {
   name: guid(storageAccount.id, apiContainerApp.id, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
   scope: storageAccount
   properties: {

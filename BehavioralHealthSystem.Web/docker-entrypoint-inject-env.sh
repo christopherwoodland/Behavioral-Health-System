@@ -1,34 +1,3 @@
-# Stage 1: Build the React application
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
-
-# Install envsubst for runtime environment variable substitution
-RUN apk add --no-cache gettext
-
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Copy built assets from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Create entrypoint script for runtime environment variables
-RUN cat > /docker-entrypoint.d/40-inject-env.sh << 'EOF'
 #!/bin/sh
 set -e
 
@@ -41,17 +10,17 @@ cat > "$CONFIG_FILE" << ENVCONFIG
 // Runtime configuration injected at container startup
 window.__RUNTIME_CONFIG__ = {
   // API Configuration
-  VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:7071/api}",
+  VITE_API_BASE_URL: "${VITE_API_BASE_URL:-}",
 
   // Azure AD / Entra ID Authentication
-  VITE_AZURE_ADMIN_GROUP_ID: "${VITE_AZURE_ADMIN_GROUP_ID:-}",
-  VITE_AZURE_AUTHORITY: "${VITE_AZURE_AUTHORITY:-}",
   VITE_AZURE_CLIENT_ID: "${VITE_AZURE_CLIENT_ID:-}",
-  VITE_AZURE_CONTROL_PANEL_GROUP_ID: "${VITE_AZURE_CONTROL_PANEL_GROUP_ID:-}",
-  VITE_AZURE_POST_LOGOUT_REDIRECT_URI: "${VITE_AZURE_POST_LOGOUT_REDIRECT_URI:-}",
-  VITE_AZURE_REDIRECT_URI: "${VITE_AZURE_REDIRECT_URI:-}",
   VITE_AZURE_TENANT_ID: "${VITE_AZURE_TENANT_ID:-}",
-  VITE_ENABLE_ENTRA_AUTH: "${VITE_ENABLE_ENTRA_AUTH:-false}",
+  VITE_AZURE_AUTHORITY: "${VITE_AZURE_AUTHORITY:-}",
+  VITE_AZURE_REDIRECT_URI: "${VITE_AZURE_REDIRECT_URI:-}",
+  VITE_AZURE_POST_LOGOUT_REDIRECT_URI: "${VITE_AZURE_POST_LOGOUT_REDIRECT_URI:-}",
+  VITE_AZURE_ADMIN_GROUP_ID: "${VITE_AZURE_ADMIN_GROUP_ID:-}",
+  VITE_AZURE_CONTROL_PANEL_GROUP_ID: "${VITE_AZURE_CONTROL_PANEL_GROUP_ID:-}",
+  VITE_ENABLE_ENTRA_AUTH: "${VITE_ENABLE_ENTRA_AUTH:-true}",
 
   // Azure Blob Storage
   VITE_STORAGE_CONTAINER_NAME: "${VITE_STORAGE_CONTAINER_NAME:-audio-uploads}",
@@ -69,18 +38,18 @@ window.__RUNTIME_CONFIG__ = {
   VITE_JEKYLL_PHQ2_THRESHOLD: "${VITE_JEKYLL_PHQ2_THRESHOLD:-1}",
   VITE_MATRON_VOICE: "${VITE_MATRON_VOICE:-coral}",
 
-  // Feature Flags
+  // Feature Flags (Production defaults)
   VITE_DEV_ENVIRONMENT: "${VITE_DEV_ENVIRONMENT:-false}",
   VITE_DEV_ENVIRONMENT_TEXT: "${VITE_DEV_ENVIRONMENT_TEXT:-}",
   VITE_AUTO_START_SESSION: "${VITE_AUTO_START_SESSION:-true}",
-  VITE_ENABLE_DEBUG_LOGGING: "${VITE_ENABLE_DEBUG_LOGGING:-true}",
+  VITE_ENABLE_DEBUG_LOGGING: "${VITE_ENABLE_DEBUG_LOGGING:-false}",
   VITE_ENABLE_FFMPEG_WORKER: "${VITE_ENABLE_FFMPEG_WORKER:-true}",
   VITE_ENABLE_KINTSUGI: "${VITE_ENABLE_KINTSUGI:-true}",
   VITE_ENABLE_TRANSCRIPTION: "${VITE_ENABLE_TRANSCRIPTION:-true}",
-  VITE_ENABLE_VERBOSE_LOGGING: "${VITE_ENABLE_VERBOSE_LOGGING:-true}",
-  VITE_ENABLE_AI_RISK_ASSESSMENT: "${VITE_ENABLE_AI_RISK_ASSESSMENT:-false}",
+  VITE_ENABLE_VERBOSE_LOGGING: "${VITE_ENABLE_VERBOSE_LOGGING:-false}",
+  VITE_ENABLE_AI_RISK_ASSESSMENT: "${VITE_ENABLE_AI_RISK_ASSESSMENT:-true}",
   VITE_AGENT_MODE_ENABLED: "${VITE_AGENT_MODE_ENABLED:-false}",
-  VITE_ENABLE_JEKYLL_AGENT: "${VITE_ENABLE_JEKYLL_AGENT:-false}",
+  VITE_ENABLE_JEKYLL_AGENT: "${VITE_ENABLE_JEKYLL_AGENT:-true}",
 
   // Voice Recording Configuration
   VITE_ENABLE_SESSION_VOICE_RECORDING: "${VITE_ENABLE_SESSION_VOICE_RECORDING:-true}",
@@ -95,7 +64,7 @@ window.__RUNTIME_CONFIG__ = {
   VITE_API_MAX_RETRIES: "${VITE_API_MAX_RETRIES:-3}",
   VITE_API_RETRY_DELAY_MS: "${VITE_API_RETRY_DELAY_MS:-1000}",
 
-  // WebRTC Configuration (Advanced)
+  // WebRTC Configuration
   VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS: "${VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS:-3}",
   VITE_REALTIME_RECONNECTION_DELAY_MS: "${VITE_REALTIME_RECONNECTION_DELAY_MS:-2000}",
   VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS: "${VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS:-5000}",
@@ -110,22 +79,3 @@ window.__RUNTIME_CONFIG__ = {
 ENVCONFIG
 
 echo "Runtime configuration injected into $CONFIG_FILE"
-EOF
-
-RUN chmod +x /docker-entrypoint.d/40-inject-env.sh
-
-# Expose port 80
-EXPOSE 80
-
-# Health check with faster intervals for local development
-HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/health || exit 1
-
-# Labels for container metadata
-LABEL maintainer="BHS Team" \
-      version="1.0" \
-      description="Behavioral Health System Web UI - Local Development" \
-      environment="development"
-
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]

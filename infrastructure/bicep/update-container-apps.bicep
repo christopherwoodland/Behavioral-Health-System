@@ -1,76 +1,97 @@
+/*
+================================================================================
+UPDATE EXISTING CONTAINER APPS
+================================================================================
+This Bicep template updates EXISTING Container Apps with new environment
+variables. It does NOT create new resources - it references existing ones.
+
+Use this when you need to update env vars without full infrastructure deployment.
+
+SECRETS: This template pulls secrets from Key Vault using managed identity.
+Required Key Vault secrets:
+  - openai-realtime-key     (UI: VITE_AZURE_OPENAI_REALTIME_KEY)
+  - kintsugi-api-key        (API: Kintsugi API key)
+  - speech-api-key          (API: Azure Speech API key)
+
+PRE-REQUISITES:
+1. Container Apps must have System-Assigned Managed Identity enabled
+2. Managed Identities must have 'Key Vault Secrets User' role on Key Vault
+3. Key Vault must allow access from Container Apps (firewall/private endpoint)
+
+DEPLOY COMMAND:
+az deployment group create \
+  --resource-group bhs-development-public \
+  --template-file update-container-apps.bicep
+================================================================================
+*/
+
+targetScope = 'resourceGroup'
+
 @description('Azure region for resources')
-param location string
+param location string = 'eastus2'
 
-@description('Application name prefix')
-param appName string
+// ============================================================================
+// EXISTING RESOURCE NAMES (hardcoded from your deployment)
+// ============================================================================
+@description('Existing Container Apps Environment name')
+param containerAppsEnvName string = 'bhs-dev-cae-4exbxrzknexso'
 
-@description('Environment name')
-param environment string
+@description('Existing UI Container App name')
+param uiAppName string = 'bhs-dev-ui-4exbxrzknexso'
 
-@description('Unique suffix for global names')
-param uniqueSuffix string
+@description('Existing API Container App name')
+param apiAppName string = 'bhs-dev-api-4exbxrzknexso'
 
-@description('Resource tags')
-param tags object
+@description('Existing Azure Container Registry name')
+param acrName string = 'bhsdevelopmentacr4znv2wxlxs4xq'
 
-@description('Log Analytics Workspace ID')
-param logAnalyticsWorkspaceId string
+@description('Existing Storage account name')
+param storageAccountName string = 'bhsdevstg4exbxrzknexso'
 
-@description('Azure Container Registry name')
-param acrName string
+@description('Existing Key Vault name')
+param keyVaultName string = 'bhs-dev-kv-4exbxrzknexso'
 
-@description('Storage account name for Function App')
-param storageAccountName string
+@description('Existing Application Insights name')
+param appInsightsName string = 'bhs-dev-appinsights'
 
-@description('Application Insights connection string')
-param appInsightsConnectionString string
-
-@description('Key Vault name')
-param keyVaultName string
-
-@description('Azure OpenAI endpoint')
-param openaiEndpoint string = ''
-
-@description('Document Intelligence endpoint')
-param documentIntelligenceEndpoint string
-
-@description('Content Understanding endpoint')
-param contentUnderstandingEndpoint string
-
-@description('Azure Tenant ID')
-param tenantId string = subscription().tenantId
-
-@description('Azure AD Client ID for MSAL')
-param azureAdClientId string = ''
-
+// ============================================================================
+// CONFIGURABLE PARAMETERS
+// ============================================================================
 @description('Container image tag for UI')
 param uiImageTag string = 'latest'
 
 @description('Container image tag for API')
 param apiImageTag string = 'latest'
 
-// ============================================================================
-// AZURE OPENAI REALTIME API PARAMETERS (UI)
-// ============================================================================
+@description('Azure OpenAI endpoint')
+param openaiEndpoint string = 'https://bhs-development-public-foundry-r.cognitiveservices.azure.com/'
+
+@description('Document Intelligence endpoint')
+param documentIntelligenceEndpoint string = 'https://bhs-development-public-foundry-r.cognitiveservices.azure.com/'
+
+@description('Content Understanding endpoint')
+param contentUnderstandingEndpoint string = 'https://bhs-development-public-foundry-r.cognitiveservices.azure.com/'
+
+@description('Azure AD Client ID for MSAL')
+param azureAdClientId string = '63e9b3fd-de9d-4083-879c-9c13f3aac54d'
+
+@description('Azure Tenant ID')
+param tenantId string = '3d6eb90f-fb5d-4624-99d7-1b8c4e077d07'
+
+// Azure OpenAI Realtime API Parameters (UI)
 @description('Azure OpenAI Realtime deployment name')
 param azureOpenAIRealtimeDeployment string = 'gpt-realtime'
 
 @description('Azure OpenAI Realtime API version')
 param azureOpenAIRealtimeApiVersion string = '2025-04-01-preview'
 
-@description('Azure OpenAI resource name for Realtime API')
-param azureOpenAIResourceName string = ''
+@description('Azure OpenAI resource name for Realtime API (from .env.local VITE_AZURE_OPENAI_RESOURCE_NAME)')
+param azureOpenAIResourceName string = 'cwood-mgsuknv5-eastus2'
 
 @description('Azure OpenAI WebRTC region')
 param azureOpenAIWebRTCRegion string = 'eastus2'
 
-@secure()
-@description('Azure OpenAI Realtime API Key')
-param azureOpenAIRealtimeKey string = ''
-
-// ============================================================================
-// AGENT CONFIGURATION PARAMETERS
-// ============================================================================
+// Agent Configuration
 @description('Extended Assessment OpenAI Deployment')
 param extendedAssessmentDeployment string = 'gpt-5.2'
 
@@ -78,61 +99,37 @@ param extendedAssessmentDeployment string = 'gpt-5.2'
 param agentModelDeployment string = 'gpt-5.2'
 
 // ============================================================================
-// SMART BAND CONFIGURATION
+// REFERENCE EXISTING RESOURCES
 // ============================================================================
-@description('Band Service URL for Smart Band integration')
-param bandServiceUrl string = ''
-
-@description('Enable Smart Band integration')
-param enableSmartBand bool = false
-
-var containerAppsEnvName = '${appName}-${environment}-cae-${uniqueSuffix}'
-var uiAppName = '${appName}-${environment}-ui-${uniqueSuffix}'
-var apiAppName = '${appName}-${environment}-api-${uniqueSuffix}'
-
-// Get Log Analytics workspace reference
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10-01' existing = {
-  name: last(split(logAnalyticsWorkspaceId, '/'))
+resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
+  name: containerAppsEnvName
 }
 
-// Get Storage Account reference
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
-  name: storageAccountName
-}
-
-// Reference existing Azure Container Registry (deployed separately before container apps)
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: acrName
 }
 
-// Container Apps Environment (Public - no VNet)
-resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' = {
-  name: containerAppsEnvName
-  location: location
-  tags: tags
-  properties: {
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logAnalyticsWorkspace.properties.customerId
-        sharedKey: logAnalyticsWorkspace.listKeys().primarySharedKey
-      }
-    }
-    zoneRedundant: false
-    workloadProfiles: [
-      {
-        name: 'Consumption'
-        workloadProfileType: 'Consumption'
-      }
-    ]
-  }
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
+  name: storageAccountName
 }
 
-// UI Container App (React Frontend)
+resource appInsights 'Microsoft.Insights/components@2020-02-02' existing = {
+  name: appInsightsName
+}
+
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: keyVaultName
+}
+
+// Key Vault URI for secret references
+var keyVaultUri = 'https://${keyVaultName}.vault.azure.net/secrets'
+
+// ============================================================================
+// UI CONTAINER APP
+// ============================================================================
 resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: uiAppName
   location: location
-  tags: tags
   identity: {
     type: 'SystemAssigned'
   }
@@ -161,18 +158,14 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
       registries: [
         {
           server: acr.properties.loginServer
-          username: acr.listCredentials().username
-          passwordSecretRef: 'acr-password'
+          identity: 'system'
         }
       ]
       secrets: [
         {
-          name: 'acr-password'
-          value: acr.listCredentials().passwords[0].value
-        }
-        {
           name: 'openai-realtime-key'
-          value: azureOpenAIRealtimeKey
+          keyVaultUrl: '${keyVaultUri}/openai-realtime-key'
+          identity: 'system'
         }
       ]
     }
@@ -342,15 +335,6 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'VITE_AGENT_HANDOFF_DELAY_MS'
               value: '2000'
             }
-            // Smart Band Integration Configuration
-            {
-              name: 'VITE_ENABLE_SMART_BAND'
-              value: string(enableSmartBand)
-            }
-            {
-              name: 'VITE_BAND_SERVICE_URL'
-              value: bandServiceUrl
-            }
             // Realtime API Advanced Configuration
             {
               name: 'VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS'
@@ -426,11 +410,12 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-// API Container App (Function App)
+// ============================================================================
+// API CONTAINER APP
+// ============================================================================
 resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: apiAppName
   location: location
-  tags: tags
   identity: {
     type: 'SystemAssigned'
   }
@@ -463,18 +448,24 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
       registries: [
         {
           server: acr.properties.loginServer
-          username: acr.listCredentials().username
-          passwordSecretRef: 'acr-password'
+          identity: 'system'
         }
       ]
       secrets: [
         {
-          name: 'acr-password'
-          value: acr.listCredentials().passwords[0].value
+          name: 'storage-connection'
+          keyVaultUrl: '${keyVaultUri}/storage-connection-string'
+          identity: 'system'
         }
         {
-          name: 'storage-connection'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+          name: 'kintsugi-api-key'
+          keyVaultUrl: '${keyVaultUri}/KintsugiApiKey'
+          identity: 'system'
+        }
+        {
+          name: 'speech-api-key'
+          keyVaultUrl: '${keyVaultUri}/AzureSpeechKey'
+          identity: 'system'
         }
       ]
     }
@@ -503,7 +494,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
-              value: appInsightsConnectionString
+              value: appInsights.properties.ConnectionString
             }
             {
               name: 'KEY_VAULT_URI'
@@ -593,6 +584,10 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'https://api.kintsugihealth.com/v2'
             }
             {
+              name: 'KINTSUGI_API_KEY'
+              secretRef: 'kintsugi-api-key'
+            }
+            {
               name: 'KINTSUGI_TIMEOUT_SECONDS'
               value: '300'
             }
@@ -608,7 +603,6 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'KINTSUGI_AUTO_PROVIDE_CONSENT'
               value: 'false'
             }
-            // Note: KINTSUGI_API_KEY should be retrieved from Key Vault via managed identity
             // Azure Speech Configuration
             {
               name: 'AZURE_SPEECH_REGION'
@@ -617,6 +611,10 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'AZURE_SPEECH_ENDPOINT'
               value: 'https://eastus2.api.cognitive.microsoft.com'
+            }
+            {
+              name: 'AZURE_SPEECH_KEY'
+              secretRef: 'speech-api-key'
             }
             {
               name: 'AZURE_SPEECH_LOCALE'
@@ -722,15 +720,69 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
 }
 
-// Outputs
-output containerAppsEnvId string = containerAppsEnv.id
-output containerAppsEnvName string = containerAppsEnv.name
-output containerAppsEnvDefaultDomain string = containerAppsEnv.properties.defaultDomain
-output acrName string = acr.name
-output acrLoginServer string = acr.properties.loginServer
-output uiAppName string = uiContainerApp.name
+// ============================================================================
+// ROLE ASSIGNMENTS
+// ============================================================================
+
+// Key Vault Secrets User role for UI Container App
+resource uiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, uiContainerApp.id, '4633458b-17de-408a-b874-0445c86b69e6')
+  scope: keyVault
+  properties: {
+    principalId: uiContainerApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Key Vault Secrets User role for API Container App
+resource apiKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, apiContainerApp.id, '4633458b-17de-408a-b874-0445c86b69e6')
+  scope: keyVault
+  properties: {
+    principalId: apiContainerApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ACR Pull role for UI Container App
+resource uiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, uiContainerApp.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+  scope: acr
+  properties: {
+    principalId: uiContainerApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ACR Pull role for API Container App
+resource apiAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(acr.id, apiContainerApp.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+  scope: acr
+  properties: {
+    principalId: apiContainerApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d') // AcrPull
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Storage Blob Data Contributor role for API Container App
+resource apiStorageBlobContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, apiContainerApp.id, 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
+  scope: storageAccount
+  properties: {
+    principalId: apiContainerApp.identity.principalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe') // Storage Blob Data Contributor
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// ============================================================================
+// OUTPUTS
+// ============================================================================
 output uiAppUrl string = 'https://${uiContainerApp.properties.configuration.ingress.fqdn}'
-output uiAppPrincipalId string = uiContainerApp.identity.principalId
-output apiAppName string = apiContainerApp.name
 output apiAppUrl string = 'https://${apiContainerApp.properties.configuration.ingress.fqdn}'
+output uiAppPrincipalId string = uiContainerApp.identity.principalId
 output apiAppPrincipalId string = apiContainerApp.identity.principalId

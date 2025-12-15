@@ -1,0 +1,167 @@
+services:
+  # BHS Functions API - Production
+  # NOTE: In production, this runs on Azure Container Apps/App Service with:
+  # - Managed Identity for Azure services (no API keys)
+  # - Key Vault references for third-party secrets (Kintsugi)
+  # - Environment variables set via Azure portal/Bicep
+  api:
+    image: bhs-api:prod
+    container_name: bhs-api-prod
+    build:
+      context: .
+      dockerfile: BehavioralHealthSystem.Functions/Dockerfile.prod
+    ports:
+      - "7071:80"
+    environment:
+      # Storage connection - Uses Managed Identity (account name only)
+      - AzureWebJobsStorage__accountName=${STORAGE_ACCOUNT_NAME}
+      - DSM5_STORAGE_ACCOUNT_NAME=${DSM5_STORAGE_ACCOUNT_NAME}
+      # Application Insights - Key Vault reference in Azure
+      - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
+      # Functions runtime
+      - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
+      - ASPNETCORE_ENVIRONMENT=Production
+      - AZURE_FUNCTIONS_ENVIRONMENT=Production
+      # Kintsugi API - Key from Key Vault reference in Azure
+      - KINTSUGI_API_KEY=${KINTSUGI_API_KEY}
+      - KINTSUGI_BASE_URL=https://api.kintsugihealth.com/v2
+      - KINTSUGI_TIMEOUT_SECONDS=300
+      - KINTSUGI_MAX_RETRY_ATTEMPTS=3
+      - KINTSUGI_RETRY_DELAY_MS=1000
+      - KINTSUGI_AUTO_PROVIDE_CONSENT=false
+      # Azure Speech - Managed Identity (no key)
+      - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
+      - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
+      - AZURE_SPEECH_LOCALE=en-US
+      - AZURE_SPEECH_API_VERSION=2024-11-15
+      # Storage
+      - DSM5_CONTAINER_NAME=dsm5-data
+      - DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING
+      # Azure OpenAI - Managed Identity (no key)
+      - AZURE_OPENAI_ENABLED=true
+      - AZURE_OPENAI_API_VERSION=2024-12-01-preview
+      - AZURE_OPENAI_DEPLOYMENT=gpt-4.1
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      # Extended Assessment OpenAI - Managed Identity (no key)
+      - EXTENDED_ASSESSMENT_OPENAI_ENABLED=true
+      - EXTENDED_ASSESSMENT_OPENAI_API_VERSION=2024-12-01-preview
+      - EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT=gpt-5
+      - EXTENDED_ASSESSMENT_OPENAI_ENDPOINT=${EXTENDED_ASSESSMENT_OPENAI_ENDPOINT}
+      - EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS=4000
+      - EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE=0.2
+      - EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS=120
+      - EXTENDED_ASSESSMENT_USE_FALLBACK=false
+      # Agent mode
+      - AGENT_MODE_ENABLED=false
+      # Content Understanding - Managed Identity (no key)
+      - AZURE_CONTENT_UNDERSTANDING_ENDPOINT=${AZURE_CONTENT_UNDERSTANDING_ENDPOINT}
+      # Document Intelligence - Managed Identity (no key)
+      - DocumentIntelligenceEndpoint=${DOCUMENT_INTELLIGENCE_ENDPOINT}
+      - DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT=${DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT}
+      # Grammar Correction Agent - Managed Identity (no API key)
+      - AGENT_ENDPOINT=${AGENT_ENDPOINT}
+      - AGENT_MODEL_DEPLOYMENT=gpt-5
+      - AGENT_ENABLED=true
+      - AGENT_SUPPORTS_TEMPERATURE=false
+      - AGENT_SUPPORTS_MAX_TOKENS=false
+      - AGENT_TIMEOUT_SECONDS=60
+      - GRAMMAR_AGENT_NAME=GrammarCorrectionAgent
+      - GRAMMAR_AGENT_INCLUDE_EXPLANATIONS=false
+      - GRAMMAR_AGENT_PRESERVE_FORMATTING=true
+      - GRAMMAR_AGENT_SUGGEST_ALTERNATIVES=false
+      # Azure Identity for Managed Identity
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  # BHS Web UI - Production
+  web:
+    image: bhs-web:prod
+    container_name: bhs-web-prod
+    build:
+      context: ./BehavioralHealthSystem.Web
+      dockerfile: Dockerfile.prod
+    ports:
+      - "5173:80"
+    environment:
+      # API Configuration
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+
+      # Azure AD / Entra ID Authentication
+      - VITE_AZURE_ADMIN_GROUP_ID=${VITE_AZURE_ADMIN_GROUP_ID}
+      - VITE_AZURE_AUTHORITY=${VITE_AZURE_AUTHORITY}
+      - VITE_AZURE_CLIENT_ID=${VITE_AZURE_CLIENT_ID}
+      - VITE_AZURE_CONTROL_PANEL_GROUP_ID=${VITE_AZURE_CONTROL_PANEL_GROUP_ID}
+      - VITE_AZURE_POST_LOGOUT_REDIRECT_URI=${VITE_AZURE_POST_LOGOUT_REDIRECT_URI}
+      - VITE_AZURE_REDIRECT_URI=${VITE_AZURE_REDIRECT_URI}
+      - VITE_AZURE_TENANT_ID=${VITE_AZURE_TENANT_ID}
+      - VITE_ENABLE_ENTRA_AUTH=true
+
+      # Azure Blob Storage
+      - VITE_STORAGE_CONTAINER_NAME=audio-uploads
+
+      # Azure OpenAI Realtime API
+      - VITE_AZURE_OPENAI_REALTIME_API_VERSION=2025-04-01-preview
+      - VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime
+      - VITE_AZURE_OPENAI_REALTIME_KEY=${VITE_AZURE_OPENAI_REALTIME_KEY}
+      - VITE_AZURE_OPENAI_RESOURCE_NAME=${VITE_AZURE_OPENAI_RESOURCE_NAME}
+      - VITE_AZURE_OPENAI_WEBRTC_REGION=${VITE_AZURE_OPENAI_WEBRTC_REGION}
+
+      # Agent Voice Configuration
+      - VITE_TARS_VOICE=echo
+      - VITE_JEKYLL_VOICE=shimmer
+      - VITE_JEKYLL_PHQ2_THRESHOLD=1
+      - VITE_MATRON_VOICE=coral
+
+      # Feature Flags (Production settings)
+      - VITE_DEV_ENVIRONMENT=false
+      - VITE_DEV_ENVIRONMENT_TEXT=
+      - VITE_AUTO_START_SESSION=true
+      - VITE_ENABLE_DEBUG_LOGGING=false
+      - VITE_ENABLE_FFMPEG_WORKER=true
+      - VITE_ENABLE_KINTSUGI=true
+      - VITE_ENABLE_TRANSCRIPTION=true
+      - VITE_ENABLE_VERBOSE_LOGGING=false
+      - VITE_ENABLE_AI_RISK_ASSESSMENT=true
+      - VITE_AGENT_MODE_ENABLED=false
+      - VITE_ENABLE_JEKYLL_AGENT=true
+
+      # Voice Recording Configuration
+      - VITE_ENABLE_SESSION_VOICE_RECORDING=true
+
+      # Biometric Data Service Configuration
+      - VITE_BIOMETRIC_SAVE_DELAY_MS=2000
+      - VITE_MATRON_MAX_COLLECTION_ATTEMPTS=2
+      - VITE_AGENT_HANDOFF_DELAY_MS=2000
+
+      # API Request Configuration
+      - VITE_API_TIMEOUT_MS=30000
+      - VITE_API_MAX_RETRIES=3
+      - VITE_API_RETRY_DELAY_MS=1000
+
+      # WebRTC Configuration
+      - VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS=3
+      - VITE_REALTIME_RECONNECTION_DELAY_MS=2000
+      - VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS=5000
+      - VITE_INITIAL_GREETING_SESSION_DELAY_MS=1500
+      - VITE_INITIAL_GREETING_RESPONSE_DELAY_MS=300
+
+      # Polling Configuration
+      - VITE_CONTROL_PANEL_REFRESH_INTERVAL=30
+      - VITE_JOB_POLL_INTERVAL_MS=10000
+      - VITE_POLL_INTERVAL_MS=1000
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped

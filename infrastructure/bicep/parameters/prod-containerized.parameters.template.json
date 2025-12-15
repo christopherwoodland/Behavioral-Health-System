@@ -1,0 +1,69 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "TEMPLATE FILE - Copy to prod-containerized.parameters.json and fill in values. DO NOT commit the actual parameters file with secrets.",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "appName": {
+      "value": "bhs"
+    },
+    "resourceGroupName": {
+      "value": "<your-resource-group-name>"
+    },
+    "tags": {
+      "value": {
+        "Application": "Behavioral Health System",
+        "Environment": "prod",
+        "ManagedBy": "Bicep",
+        "NetworkMode": "Public",
+        "DeploymentMode": "ContainerApps",
+        "CostCenter": "Engineering",
+        "Project": "BHS"
+      }
+    },
+    "acrName": {
+      "value": "<your-acr-name>"
+    },
+    "azureAdClientId": {
+      "value": "<your-azure-ad-client-id>"
+    },
+    "containerImageTag": {
+      "value": "latest"
+    },
+    "openaiEndpoint": {
+      "value": "<your-azure-openai-endpoint>"
+    },
+    "azureOpenAIRealtimeDeployment": {
+      "value": "gpt-realtime"
+    },
+    "azureOpenAIRealtimeApiVersion": {
+      "value": "2025-04-01-preview"
+    },
+    "azureOpenAIResourceName": {
+      "value": "<your-openai-resource-name>"
+    },
+    "azureOpenAIWebRTCRegion": {
+      "value": "eastus2"
+    },
+    "azureOpenAIRealtimeKey": {
+      "value": "<REPLACE-WITH-KEY>"
+    },
+    "extendedAssessmentDeployment": {
+      "value": "gpt-5.2"
+    },
+    "agentModelDeployment": {
+      "value": "gpt-5.2"
+    },
+    "enableSmartBand": {
+      "value": false
+    },
+    "bandServiceUrl": {
+      "value": ""
+    }
+  }
+}

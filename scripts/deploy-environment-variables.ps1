@@ -4,10 +4,10 @@
 param(
     [Parameter(Mandatory=$true)]
     [string]$FunctionAppName,
-    
+
     [Parameter(Mandatory=$true)]
     [string]$ResourceGroupName,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$SubscriptionId
 )
@@ -35,10 +35,6 @@ $environmentVariables = @(
     "AZURE_OPENAI_DEPLOYMENT=gpt-4.1",
     "AZURE_OPENAI_ENABLED=true",
     "AZURE_OPENAI_API_VERSION=2024-12-01-preview",
-    "GPT_REALTIME_ENDPOINT=https://cdc-traci-aif-002.cognitiveservices.azure.com/openai/realtime",
-    "GPT_REALTIME_API_KEY=REDACTED_AZURE_OPENAI_API_KEY",
-    "GPT_REALTIME_DEPLOYMENT=gpt-realtime",
-    "GPT_REALTIME_API_VERSION=2024-10-01-preview",
     "AUDIO_SAMPLE_RATE=24000",
     "AUDIO_BITS_PER_SAMPLE=16",
     "AUDIO_CHANNELS=1",
@@ -75,11 +71,11 @@ try {
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "SUCCESS: Successfully deployed environment variables to $FunctionAppName" -ForegroundColor Green
-        
+
         # Display the count of variables set
         $variableCount = $environmentVariables.Count
         Write-Host "STATS: Total variables set: $variableCount" -ForegroundColor Cyan
-        
+
         # Optionally show all variables that were set
         Write-Host ""
         Write-Host "VARIABLES: Variables deployed:" -ForegroundColor Cyan

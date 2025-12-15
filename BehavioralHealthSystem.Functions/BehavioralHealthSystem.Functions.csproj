@@ -15,7 +15,7 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Blobs" Version="6.2.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
     <PackageReference Include="Azure.AI.DocumentIntelligence" Version="1.0.0-beta.3" />
-    <PackageReference Include="Azure.Identity" Version="1.16.0" />
+    <PackageReference Include="Azure.Identity" Version="1.17.1" />
     <PackageReference Include="Azure.Security.KeyVault.Secrets" Version="4.5.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
@@ -30,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BehavioralHealthSystem.Helpers\BehavioralHealthSystem.Helpers.csproj" />
+    <ProjectReference Include="..\BehavioralHealthSystem.Agents\BehavioralHealthSystem.Agents.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

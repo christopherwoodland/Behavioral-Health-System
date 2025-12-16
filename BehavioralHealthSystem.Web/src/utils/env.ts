@@ -92,7 +92,6 @@ export const env = {
   get DEV_ENVIRONMENT_TEXT() { return getEnvVar('VITE_DEV_ENVIRONMENT_TEXT'); },
   get AUTO_START_SESSION() { return getEnvVarBool('VITE_AUTO_START_SESSION', true); },
   get ENABLE_DEBUG_LOGGING() { return getEnvVarBool('VITE_ENABLE_DEBUG_LOGGING', false); },
-  get ENABLE_VERBOSE_LOGGING() { return getEnvVarBool('VITE_ENABLE_VERBOSE_LOGGING', false); },
   get ENABLE_FFMPEG_WORKER() { return getEnvVarBool('VITE_ENABLE_FFMPEG_WORKER', true); },
   get ENABLE_KINTSUGI() { return getEnvVarBool('VITE_ENABLE_KINTSUGI', true); },
   get ENABLE_TRANSCRIPTION() { return getEnvVarBool('VITE_ENABLE_TRANSCRIPTION', true); },

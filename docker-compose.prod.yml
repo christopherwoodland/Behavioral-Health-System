@@ -122,12 +122,11 @@ services:
       # Feature Flags (Production settings)
       - VITE_DEV_ENVIRONMENT=false
       - VITE_DEV_ENVIRONMENT_TEXT=
-      - VITE_AUTO_START_SESSION=true
+      - VITE_AUTO_START_SESSION=false
       - VITE_ENABLE_DEBUG_LOGGING=false
       - VITE_ENABLE_FFMPEG_WORKER=true
       - VITE_ENABLE_KINTSUGI=true
       - VITE_ENABLE_TRANSCRIPTION=true
-      - VITE_ENABLE_VERBOSE_LOGGING=false
       - VITE_ENABLE_AI_RISK_ASSESSMENT=true
       - VITE_AGENT_MODE_ENABLED=false
       - VITE_ENABLE_JEKYLL_AGENT=true

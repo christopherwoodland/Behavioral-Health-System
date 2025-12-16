@@ -68,9 +68,9 @@ interface SessionStatus {
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
 }
 
-// Verbose logging flag - controlled via VITE_ENABLE_VERBOSE_LOGGING environment variable
-// This provides extremely granular debugging (every message render, transcript event, etc.)
-const ENABLE_VERBOSE_LOGGING = env.ENABLE_VERBOSE_LOGGING;
+// Debug logging flag - controlled via VITE_ENABLE_DEBUG_LOGGING environment variable
+// When enabled, provides granular debugging (every message render, transcript event, etc.)
+const ENABLE_DEBUG_LOGGING = env.ENABLE_DEBUG_LOGGING;
 
 /**
  * Get agent-specific color classes for visual differentiation
@@ -399,7 +399,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     // Azure OpenAI Realtime service callbacks
     agentService.onMessage((message: RealtimeMessage) => {
       // Verbose logging - only when debugging
-      if (ENABLE_VERBOSE_LOGGING) {
+      if (ENABLE_DEBUG_LOGGING) {
         console.log('🎭 ========================================');
         console.log('🎭 UI RECEIVED MESSAGE CALLBACK');
         console.log('🎭 Role:', message.role);
@@ -596,7 +596,7 @@ Just speak naturally - I understand variations of these commands!`,
       }
 
       // Add ALL messages to the chat display (both user and assistant)
-      if (ENABLE_VERBOSE_LOGGING) {
+      if (ENABLE_DEBUG_LOGGING) {
         console.log(`✅ Adding ${message.role} message to chat display`);
       }
 
@@ -632,7 +632,7 @@ Just speak naturally - I understand variations of these commands!`,
             }
           }
 
-          if (ENABLE_VERBOSE_LOGGING) {
+          if (ENABLE_DEBUG_LOGGING) {
             console.log('✅ Saving user message to transcript:', message.content.substring(0, 50) + '...');
           }
 
@@ -667,7 +667,7 @@ Just speak naturally - I understand variations of these commands!`,
               const questionTextMatch = message.content.match(/Question \d+:\s*([^?]+\?)/);
               if (questionTextMatch && questionTextMatch[1]) {
                 const questionText = questionTextMatch[1].trim();
-                if (ENABLE_VERBOSE_LOGGING) {
+                if (ENABLE_DEBUG_LOGGING) {
                   console.log(`📝 Extracted question text for Q${questionNumber}:`, questionText);
                 }
 
@@ -675,7 +675,7 @@ Just speak naturally - I understand variations of these commands!`,
                 phqSessionService.setQuestionText(questionNumber, questionText);
               }
 
-              if (ENABLE_VERBOSE_LOGGING) {
+              if (ENABLE_DEBUG_LOGGING) {
                 console.log(`🏷️ PHQ Question detected with marker: Q${questionNumber}`, metadata);
               }
 
@@ -698,7 +698,7 @@ Just speak naturally - I understand variations of these commands!`,
               const currentQuestion = phqAssessmentService.getNextQuestion();
 
               if (currentQuestion && acknowledgedAnswer >= 0 && acknowledgedAnswer <= 3) {
-                if (ENABLE_VERBOSE_LOGGING) {
+                if (ENABLE_DEBUG_LOGGING) {
                   console.log(`🎯 AI acknowledged answer ${acknowledgedAnswer} for Q${currentQuestion.questionNumber}`);
                 }
 
@@ -713,7 +713,7 @@ Just speak naturally - I understand variations of these commands!`,
                   const score = phqAssessmentService.calculateScore();
                   const severity = phqAssessmentService.determineSeverity(score, updatedAssessment.assessmentType);
                   phqSessionService.completeAssessment(score, severity);
-                  if (ENABLE_VERBOSE_LOGGING) {
+                  if (ENABLE_DEBUG_LOGGING) {
                     console.log(`✅ PHQ Assessment completed! Score: ${score}, Severity: ${severity}`);
                   }
                 }
@@ -725,14 +725,14 @@ Just speak naturally - I understand variations of these commands!`,
             const completeMatch = message.content.match(/(?:completes?|completed|finished)\s+(?:the\s+)?(?:PHQ-2|PHQ-9|assessment|screening)/i);
 
             if (skipMatch) {
-              if (ENABLE_VERBOSE_LOGGING) {
+              if (ENABLE_DEBUG_LOGGING) {
                 console.log('⏭️ AI indicated question will be skipped');
               }
               // Question is already marked as skipped by recordInvalidAttempt, just log it
             }
 
             if (completeMatch) {
-              if (ENABLE_VERBOSE_LOGGING) {
+              if (ENABLE_DEBUG_LOGGING) {
                 console.log('🏁 AI indicated assessment is complete');
               }
               // Check if we need to force completion (in case some questions were skipped)
@@ -742,7 +742,7 @@ Just speak naturally - I understand variations of these commands!`,
                 const score = phqAssessmentService.calculateScore();
                 const severity = phqAssessmentService.determineSeverity(score, updatedAssessment.assessmentType);
                 phqSessionService.completeAssessment(score, severity);
-                if (ENABLE_VERBOSE_LOGGING) {
+                if (ENABLE_DEBUG_LOGGING) {
                   console.log(`✅ PHQ Assessment force-completed! Score: ${score}, Severity: ${severity}`);
                 }
               }
@@ -2073,7 +2073,7 @@ Just speak naturally - I understand variations of these commands!`,
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((message) => {
             // Verbose logging - only when debugging
-            if (ENABLE_VERBOSE_LOGGING) {
+            if (ENABLE_DEBUG_LOGGING) {
               console.log('💬 Rendering message:', { id: message.id, role: message.role, content: message.content?.substring(0, 50) });
             }
             const agentColors = message.role === 'assistant' ? getAgentColor(message.agentId) : null;

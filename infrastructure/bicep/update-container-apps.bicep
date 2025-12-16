@@ -85,7 +85,7 @@ param azureOpenAIRealtimeDeployment string = 'gpt-realtime'
 @description('Azure OpenAI Realtime API version')
 param azureOpenAIRealtimeApiVersion string = '2025-04-01-preview'
 
-@description('Azure OpenAI resource name for Realtime API (from .env.local VITE_AZURE_OPENAI_RESOURCE_NAME)')
+@description('Azure OpenAI resource name for Realtime API (from .env.local VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME)')
 param azureOpenAIResourceName string = 'cwood-mgsuknv5-eastus2'
 
 @description('Azure OpenAI WebRTC region')
@@ -261,7 +261,7 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: azureOpenAIRealtimeApiVersion
             }
             {
-              name: 'VITE_AZURE_OPENAI_RESOURCE_NAME'
+              name: 'VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME'
               value: azureOpenAIResourceName
             }
             {

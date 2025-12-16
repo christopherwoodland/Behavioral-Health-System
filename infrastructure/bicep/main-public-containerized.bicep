@@ -225,6 +225,7 @@ module rbacAssignments './modules/rbac-assignments-containerapp.bicep' = {
     contentUnderstandingName: cognitive.outputs.contentUnderstandingName
     storageAccountName: storage.outputs.storageAccountName
     keyVaultName: keyVault.outputs.keyVaultName
+    acrName: acrName
   }
 }
 

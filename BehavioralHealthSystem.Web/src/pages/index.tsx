@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, AlertCircle, Activity, Info } from 'lucide-react';
+import { RefreshCw, AlertCircle, Activity, Info, Database, Cloud, Brain, FileText } from 'lucide-react';
 import { useHealthCheck } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
 
@@ -28,13 +28,13 @@ export const SystemHealth: React.FC = () => {
 
   const formatTimestamp = (timestamp?: string) => {
     if (!timestamp) return 'Just now';
-    
+
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) {
         return 'Just now';
       }
-      
+
       return date.toLocaleString(undefined, {
         year: 'numeric',
         month: 'short',
@@ -160,7 +160,7 @@ export const SystemHealth: React.FC = () => {
                 {healthStatus.status}
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="text-3xl mb-2">{getStatusIcon(healthStatus.status)}</div>
@@ -169,7 +169,7 @@ export const SystemHealth: React.FC = () => {
                   {healthStatus.status}
                 </div>
               </div>
-              
+
               <div className="text-center">
                 <div className="text-3xl mb-2">⏱️</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Response Time</div>
@@ -177,7 +177,7 @@ export const SystemHealth: React.FC = () => {
                   {healthStatus.totalDuration ? `${healthStatus.totalDuration}ms` : 'N/A'}
                 </div>
               </div>
-              
+
               <div className="text-center">
                 <div className="text-3xl mb-2">📅</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Last Checked</div>
@@ -195,7 +195,7 @@ export const SystemHealth: React.FC = () => {
                 <Activity className="w-5 h-5 mr-2" />
                 Service Details
               </h3>
-              
+
               <div className="space-y-4">
                 {Object.entries(healthStatus.checks).map(([serviceName, serviceStatus]) => (
                   <div key={serviceName} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -212,7 +212,7 @@ export const SystemHealth: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-4">
                       {serviceStatus.duration && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -229,13 +229,61 @@ export const SystemHealth: React.FC = () => {
             </div>
           )}
 
+          {/* Azure Resources */}
+          {healthStatus.resources && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <Cloud className="w-5 h-5 mr-2" />
+                Azure Resources
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {healthStatus.resources.storageAccount && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Database className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Storage Account</span>
+                    </div>
+                    <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
+                      {healthStatus.resources.storageAccount}
+                    </div>
+                  </div>
+                )}
+
+                {healthStatus.resources.documentIntelligence && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <FileText className="w-4 h-4 text-green-500" />
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Document Intelligence</span>
+                    </div>
+                    <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
+                      {healthStatus.resources.documentIntelligence}
+                    </div>
+                  </div>
+                )}
+
+                {healthStatus.resources.openAI && (
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Brain className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Azure OpenAI</span>
+                    </div>
+                    <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
+                      {healthStatus.resources.openAI}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* System Information */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
               <Info className="w-5 h-5 mr-2" />
               System Information
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">API Endpoints</h4>
@@ -254,7 +302,7 @@ export const SystemHealth: React.FC = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Connection Status</h4>
                 <div className="space-y-2 text-sm">

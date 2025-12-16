@@ -1,21 +1,23 @@
+import { env } from '@/utils/env';
+
 // Environment configuration
 export const config = {
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api',
+    baseUrl: env.API_BASE_URL,
   },
   azure: {
-    blobSasUrl: import.meta.env.VITE_AZURE_BLOB_SAS_URL || '',
-    containerName: import.meta.env.VITE_STORAGE_CONTAINER_NAME || 'audio-uploads',
+    blobSasUrl: env.AZURE_BLOB_SAS_URL,
+    containerName: env.STORAGE_CONTAINER_NAME,
   },
   polling: {
-    intervalMs: parseInt(import.meta.env.VITE_POLL_INTERVAL_MS || '3000', 10),
-    jobIntervalMs: parseInt(import.meta.env.VITE_JOB_POLL_INTERVAL_MS || '5000', 10),
+    intervalMs: env.POLL_INTERVAL_MS,
+    jobIntervalMs: env.JOB_POLL_INTERVAL_MS,
     maxAttempts: 60, // 3 minutes at 3s intervals
     backoffFactor: 1.2,
   },
   features: {
-    enableFFmpegWorker: import.meta.env.VITE_ENABLE_FFMPEG_WORKER === 'true',
-    enableDebugLogging: import.meta.env.VITE_ENABLE_DEBUG_LOGGING === 'true',
+    enableFFmpegWorker: env.ENABLE_FFMPEG_WORKER,
+    enableDebugLogging: env.ENABLE_DEBUG_LOGGING,
   },
   audio: {
     acceptedFormats: ['.wav', '.mp3', '.m4a', '.aac', '.flac'],

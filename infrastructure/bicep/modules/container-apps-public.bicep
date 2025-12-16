@@ -95,10 +95,8 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2022-10
   name: last(split(logAnalyticsWorkspaceId, '/'))
 }
 
-// Get Storage Account reference
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
-  name: storageAccountName
-}
+// NOTE: Storage account is accessed via managed identity using RBAC roles
+// No need to reference it here since we don't use connection strings
 
 // Reference existing Azure Container Registry (deployed separately before container apps)
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
@@ -472,10 +470,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'acr-password'
           value: acr.listCredentials().passwords[0].value
         }
-        {
-          name: 'storage-connection'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
-        }
+        // NOTE: No storage connection string - using managed identity with RBAC instead
+        // Required roles: Storage Blob/Table/Queue Data Contributor
       ]
     }
     template: {
@@ -493,10 +489,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'FUNCTIONS_WORKER_RUNTIME'
               value: 'dotnet-isolated'
             }
-            {
-              name: 'AzureWebJobsStorage'
-              secretRef: 'storage-connection'
-            }
+            // Use managed identity for storage (no connection string)
+            // AzureWebJobsStorage__accountName tells the SDK to use DefaultAzureCredential
             {
               name: 'AzureWebJobsStorage__accountName'
               value: storageAccountName

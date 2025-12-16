@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info, X } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
+import { env } from '@/utils/env';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
 
 // Types for analytics data
@@ -142,26 +143,26 @@ const getPercentage = (value: number, total: number): number => {
 const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData => {
   const totalSessions = allSessions.length;
   const uniqueUsers = new Set(allSessions.map(s => s.userId)).size;
-  
-  const completedSessions = allSessions.filter(s => 
+
+  const completedSessions = allSessions.filter(s =>
     s.status === 'succeeded' || s.status === 'completed'
   );
-  
-  const failedSessions = allSessions.filter(s => 
+
+  const failedSessions = allSessions.filter(s =>
     s.status === 'failed'
   );
-  
-  const processingSessions = allSessions.filter(s => 
+
+  const processingSessions = allSessions.filter(s =>
     s.status === 'processing'
   );
 
   // Calculate success rate and average sessions per user
   const successRate = getPercentage(completedSessions.length, totalSessions);
   const avgSessionsPerUser = uniqueUsers > 0 ? Math.round((totalSessions / uniqueUsers) * 10) / 10 : 0;
-  
+
   // Calculate recent activity (sessions in last 24 hours)
   const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const recentActivity = allSessions.filter(s => 
+  const recentActivity = allSessions.filter(s =>
     new Date(s.createdAt) > twentyFourHoursAgo
   ).length;
 
@@ -246,11 +247,11 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     const date = new Date();
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
-    
-    const sessionsOnDate = allSessions.filter(s => 
+
+    const sessionsOnDate = allSessions.filter(s =>
       s.createdAt.split('T')[0] === dateStr
     ).length;
-    
+
     timeData.push({
       date: dateStr,
       count: sessionsOnDate,
@@ -268,7 +269,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   allSessions.forEach(session => {
     // Use metadata_user_id (patient ID) for grouping if available, otherwise use userId (authenticated user)
     const groupingUserId = session.metadata_user_id || session.userId;
-    
+
     if (!userStatsMap.has(groupingUserId)) {
       userStatsMap.set(groupingUserId, {
         totalSessions: 0,
@@ -287,17 +288,17 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   // Calculate detailed user statistics
   const userStats = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
     const successRate = getPercentage(stats.successfulSessions, stats.totalSessions);
-    
+
     // Calculate average confidence for this user
-    const successfulSessions = stats.sessions.filter(s => 
+    const successfulSessions = stats.sessions.filter(s =>
       s.status === 'succeeded' || s.status === 'completed'
     );
-    
+
     const confidenceValues = successfulSessions
       .map(s => s.analysisResults?.confidence)
       .filter(c => c !== null && c !== undefined && typeof c === 'number');
-    
-    const avgConfidence = confidenceValues.length > 0 
+
+    const avgConfidence = confidenceValues.length > 0
       ? confidenceValues.reduce((sum, c) => sum + c!, 0) / confidenceValues.length
       : 0;
 
@@ -435,7 +436,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 
   // Process sessions with metadata
   const sessionsWithMetadata = allSessions.filter(session => session.userMetadata);
-  
+
   sessionsWithMetadata.forEach(session => {
     const metadata = session.userMetadata!;
     const hasDepression = hasDepressionCase(session);
@@ -656,11 +657,11 @@ const TimeSeriesChart: React.FC<{
   const maxCount = Math.max(...data.map(d => d.count), 1);
   const minCount = 0; // Start bars from zero for better visual comparison
   const range = maxCount - minCount || 1;
-  
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">{title}</h3>
-      
+
       {/* Chart Container */}
       <div className="relative h-48">
         {/* SVG Chart */}
@@ -685,17 +686,17 @@ const TimeSeriesChart: React.FC<{
               <stop offset="100%" stopColor="rgb(59 130 246)" stopOpacity="0.6"/>
             </linearGradient>
           </defs>
-          
+
           {/* Grid */}
           <rect width="100" height="100" fill="url(#grid)" />
-          
+
           {/* Thin Vertical Bars */}
           {data.map((point, index) => {
             const barWidth = 80 / data.length; // Thin bars with spacing
             const x = (index / (data.length - 1)) * (100 - barWidth) + barWidth / 2;
             const barHeight = ((point.count - minCount) / range) * 95; // 95% of container height
             const y = 100 - barHeight;
-            
+
             return (
               <rect
                 key={index}
@@ -713,14 +714,14 @@ const TimeSeriesChart: React.FC<{
           })}
         </svg>
       </div>
-      
+
       {/* X-axis labels */}
       <div className="flex items-center justify-between mt-4 px-2">
         {data.map((item, index) => {
           const date = new Date(item.date);
           const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
           const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          
+
           return (
             <div key={index} className="text-center flex-1">
               <div className="text-xs font-medium text-gray-900 dark:text-white">
@@ -747,7 +748,7 @@ const MetadataCorrelationChart: React.FC<{
   subtitle?: string;
 }> = ({ title, data, subtitle }) => {
   const categories = Object.keys(data);
-  
+
   if (categories.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
@@ -768,17 +769,17 @@ const MetadataCorrelationChart: React.FC<{
       {subtitle && (
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{subtitle}</p>
       )}
-      
+
       <div className="space-y-4">
         {categories.map((category, index) => {
           const categoryData = data[category];
-          const depressionRate = categoryData.totalSessions > 0 
-            ? (categoryData.depressionCases / categoryData.totalSessions) * 100 
+          const depressionRate = categoryData.totalSessions > 0
+            ? (categoryData.depressionCases / categoryData.totalSessions) * 100
             : 0;
-          const anxietyRate = categoryData.totalSessions > 0 
-            ? (categoryData.anxietyCases / categoryData.totalSessions) * 100 
+          const anxietyRate = categoryData.totalSessions > 0
+            ? (categoryData.anxietyCases / categoryData.totalSessions) * 100
             : 0;
-          
+
           return (
             <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <div className="flex justify-between items-center mb-3">
@@ -787,7 +788,7 @@ const MetadataCorrelationChart: React.FC<{
                   {categoryData.totalSessions} sessions
                 </span>
               </div>
-              
+
               {/* Depression Bar */}
               <div className="mb-3">
                 <div className="flex justify-between items-center mb-1">
@@ -805,7 +806,7 @@ const MetadataCorrelationChart: React.FC<{
                   />
                 </div>
               </div>
-              
+
               {/* Anxiety Bar */}
               <div>
                 <div className="flex justify-between items-center mb-1">
@@ -827,7 +828,7 @@ const MetadataCorrelationChart: React.FC<{
           );
         })}
       </div>
-      
+
       {/* Summary */}
       <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
         <div className="grid grid-cols-2 gap-4 text-center">
@@ -881,7 +882,7 @@ const CorrelationChart: React.FC<{
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">{title}</h3>
-      
+
       <div className="relative h-[28rem]">
         <svg className="w-full h-full" viewBox="0 0 600 350">
           {/* Grid lines */}
@@ -896,19 +897,19 @@ const CorrelationChart: React.FC<{
               />
             </pattern>
           </defs>
-          
+
           <rect width="600" height="350" fill="url(#correlationGrid)" />
-          
+
           {/* Axes */}
           <line x1="70" y1="310" x2="550" y2="310" stroke="rgb(107 114 128)" strokeWidth="2" />
           <line x1="70" y1="310" x2="70" y2="40" stroke="rgb(107 114 128)" strokeWidth="2" />
-          
+
           {/* Data points */}
           {correlationPoints.map((point, index) => {
             const x = 70 + (point.depression / maxValue) * 480;
             const y = 310 - (point.anxiety / maxValue) * 270;
             const radius = Math.max(Math.sqrt(point.depression + point.anxiety) * 3, 10);
-            
+
             return (
               <g key={index}>
                 <circle
@@ -929,7 +930,7 @@ const CorrelationChart: React.FC<{
               </g>
             );
           })}
-          
+
           {/* Axis labels */}
           <text x="310" y="335" textAnchor="middle" className="text-sm font-medium fill-gray-700 dark:fill-gray-300">
             Depression Cases →
@@ -939,7 +940,7 @@ const CorrelationChart: React.FC<{
           </text>
         </svg>
       </div>
-      
+
       {/* Legend */}
       <div className="mt-4 flex justify-center space-x-4">
         {correlationPoints.map((point, index) => (
@@ -970,12 +971,12 @@ const FunnelChart: React.FC<{
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-6">{title}</h3>
-      
+
       <div className="space-y-4">
         {stages.map((stage, index) => {
           const width = (stage.value / maxValue) * 100;
           const conversionRate = index > 0 ? ((stage.value / stages[0].value) * 100).toFixed(1) : '100.0';
-          
+
           return (
             <div key={index} className="relative">
               <div className="flex justify-between items-center mb-2">
@@ -991,7 +992,7 @@ const FunnelChart: React.FC<{
                   </span>
                 </div>
               </div>
-              
+
               <div className="relative h-8 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
                 <div
                   className={`h-full ${stage.color} transition-all duration-700 ease-out flex items-center justify-center relative progress-dynamic`}
@@ -1003,7 +1004,7 @@ const FunnelChart: React.FC<{
                     </span>
                   )}
                 </div>
-                
+
                 {/* Conversion arrow */}
                 {index < stages.length - 1 && (
                   <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
@@ -1017,7 +1018,7 @@ const FunnelChart: React.FC<{
           );
         })}
       </div>
-      
+
       {/* Summary */}
       <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
         <div className="grid grid-cols-2 gap-4 text-center">
@@ -1045,7 +1046,7 @@ const UserStatsTable: React.FC<{
 }> = ({ userStats }) => {
   const [showConfidenceModal, setShowConfidenceModal] = useState(false);
   const [showRiskModal, setShowRiskModal] = useState(false);
-  
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -1068,11 +1069,11 @@ const UserStatsTable: React.FC<{
 
   // Calculate summary stats
   const totalUsers = userStats.length;
-  const avgSessionsPerUser = totalUsers > 0 
+  const avgSessionsPerUser = totalUsers > 0
     ? Math.round(userStats.reduce((sum, u) => sum + u.totalSessions, 0) / totalUsers * 10) / 10
     : 0;
-  const topPerformer = userStats.length > 0 
-    ? userStats.reduce((best, current) => 
+  const topPerformer = userStats.length > 0
+    ? userStats.reduce((best, current) =>
         current.avgConfidence > best.avgConfidence ? current : best, userStats[0])
     : null;
 
@@ -1083,7 +1084,7 @@ const UserStatsTable: React.FC<{
           <Users className="h-5 w-5 mr-2 text-blue-500" />
           Per-User Analytics
         </h3>
-        
+
         {/* Summary stats */}
         <div className="flex space-x-6 text-sm">
           <div className="text-center">
@@ -1102,7 +1103,7 @@ const UserStatsTable: React.FC<{
           )}
         </div>
       </div>
-      
+
       {userStats.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400 text-center py-8">
           No user data available
@@ -1137,7 +1138,7 @@ const UserStatsTable: React.FC<{
               </div>
             </div>
           </div>
-          
+
           <div className="overflow-x-auto overflow-y-visible relative">
           <table className="w-full text-sm">
             <thead>
@@ -1188,7 +1189,7 @@ const UserStatsTable: React.FC<{
             </thead>
             <tbody>
               {userStats.map((user, index) => (
-                <tr 
+                <tr
                   key={user.userId}
                   className={`border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors ${
                     index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-800' : 'bg-white dark:bg-gray-900'
@@ -1315,22 +1316,22 @@ export const ControlPanel: React.FC = () => {
   const { announceToScreenReader } = useAccessibility();
 
   // Get refresh interval from environment variable (default to 69 seconds)
-  const refreshInterval = parseInt(import.meta.env.VITE_CONTROL_PANEL_REFRESH_INTERVAL || '69') * 1000;
+  const refreshInterval = env.CONTROL_PANEL_REFRESH_INTERVAL * 1000;
 
   // Load all sessions data for analytics
   const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Get all sessions from all users for system-wide analytics
       let allSessions: ImportedSessionData[] = [];
-      
+
       try {
         // Add cache-busting timestamp to ensure fresh data
         const timestamp = Date.now();
         console.log('🔄 ControlPanel: Fetching data with cache-buster:', timestamp);
-        
+
         const allSessionsResponse = await apiService.getAllSessions();
         allSessions = allSessionsResponse.sessions;
         console.log('📊 ControlPanel: Fetched sessions data:', {
@@ -1346,11 +1347,11 @@ export const ControlPanel: React.FC = () => {
         });
       } catch (apiError) {
         console.warn('getAllSessions endpoint not available:', apiError);
-        
+
         // No fallback data - show empty state when API is unavailable
         allSessions = [];
       }
-      
+
       const aggregatedData = aggregateSessionData(allSessions);
       console.log('📈 ControlPanel: Aggregated analytics:', {
         totalSessions: aggregatedData.overview.totalSessions,
@@ -1360,7 +1361,7 @@ export const ControlPanel: React.FC = () => {
       });
       setAnalytics(aggregatedData);
       setLastRefresh(new Date());
-      
+
       announceToScreenReader('Control panel data loaded successfully');
     } catch (err) {
       const appError = err as AppError;
@@ -1379,7 +1380,7 @@ export const ControlPanel: React.FC = () => {
   // Auto-refresh data at specified interval
   useEffect(() => {
     console.log('🔄 ControlPanel: Setting up auto-refresh with interval:', refreshInterval / 1000, 'seconds');
-    
+
     const interval = setInterval(() => {
       console.log('🔄 ControlPanel: Auto-refresh triggered, loading state:', loading);
       // Remove loading check to ensure refresh happens
@@ -1470,7 +1471,7 @@ export const ControlPanel: React.FC = () => {
                 System-wide analytics and insights from all users and sessions
               </p>
             </div>
-            
+
             {/* Auto-refresh status and controls */}
             <div className="flex items-center space-x-4">
               <div className="text-right">
@@ -1574,7 +1575,7 @@ export const ControlPanel: React.FC = () => {
               Correlation between patient demographics and mental health outcomes (Depression & Anxiety cases)
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Depression vs Anxiety Correlation - Featured First */}
             <div className="lg:col-span-2">
@@ -1584,49 +1585,49 @@ export const ControlPanel: React.FC = () => {
                 anxietyData={analytics.predictions.anxiety}
               />
             </div>
-            
+
             {/* Age Correlation */}
             <MetadataCorrelationChart
               title="Age Groups vs Mental Health Cases"
               subtitle="Distribution by age ranges showing depression and anxiety case rates"
               data={analytics.correlations.ageDistribution}
             />
-            
+
             {/* Gender Correlation */}
             <MetadataCorrelationChart
               title="Gender vs Mental Health Cases"
               subtitle="Distribution by gender identity showing case rates"
               data={analytics.correlations.genderDistribution}
             />
-            
+
             {/* Weight Correlation */}
             <MetadataCorrelationChart
               title="Weight Groups vs Mental Health Cases"
               subtitle="Distribution by weight ranges showing case rates"
               data={analytics.correlations.weightDistribution}
             />
-            
+
             {/* Race Correlation */}
             <MetadataCorrelationChart
               title="Race vs Mental Health Cases"
               subtitle="Distribution by racial identity showing case rates"
               data={analytics.correlations.raceDistribution}
             />
-            
+
             {/* Ethnicity Correlation */}
             <MetadataCorrelationChart
               title="Ethnicity vs Mental Health Cases"
               subtitle="Distribution by ethnic background showing case rates"
               data={analytics.correlations.ethnicityDistribution}
             />
-            
+
             {/* Language Correlation */}
             <MetadataCorrelationChart
               title="Primary Language vs Mental Health Cases"
               subtitle="Distribution by language preference showing case rates"
               data={analytics.correlations.languageDistribution}
             />
-            
+
             {/* Geographic Correlation */}
             <MetadataCorrelationChart
               title="Geographic Region vs Mental Health Cases"

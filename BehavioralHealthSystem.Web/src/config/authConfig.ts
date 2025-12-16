@@ -1,8 +1,9 @@
 import { Configuration, PopupRequest, RedirectRequest } from '@azure/msal-browser';
+import { env } from '@/utils/env';
 
 /**
  * Azure AD B2C / Entra ID Configuration
- * 
+ *
  * Configure these values with your Azure AD tenant information:
  * - clientId: Application (client) ID from Azure AD app registration
  * - authority: Azure AD tenant authority URL
@@ -10,10 +11,10 @@ import { Configuration, PopupRequest, RedirectRequest } from '@azure/msal-browse
  */
 export const msalConfig: Configuration = {
   auth: {
-    clientId: import.meta.env.VITE_AZURE_CLIENT_ID || 'your-client-id-here', 
-    authority: import.meta.env.VITE_AZURE_AUTHORITY || `https://login.microsoftonline.com/${import.meta.env.VITE_AZURE_TENANT_ID}`,
-    redirectUri: import.meta.env.VITE_AZURE_REDIRECT_URI || window.location.origin,
-    postLogoutRedirectUri: import.meta.env.VITE_AZURE_POST_LOGOUT_REDIRECT_URI || window.location.origin,
+    clientId: env.AZURE_CLIENT_ID || 'your-client-id-here',
+    authority: env.AZURE_AUTHORITY || `https://login.microsoftonline.com/${env.AZURE_TENANT_ID}`,
+    redirectUri: env.AZURE_REDIRECT_URI || window.location.origin,
+    postLogoutRedirectUri: env.AZURE_POST_LOGOUT_REDIRECT_URI || window.location.origin,
   },
   cache: {
     cacheLocation: 'sessionStorage', // This configures where your cache will be stored
@@ -93,8 +94,8 @@ export const ROLE_CLAIMS = {
  * Configure these with your Azure AD group object IDs
  */
 export const ROLE_GROUPS = {
-  ADMIN_GROUP_ID: import.meta.env.VITE_AZURE_ADMIN_GROUP_ID || 'admin-group-id-here',
-  CONTROL_PANEL_GROUP_ID: import.meta.env.VITE_AZURE_CONTROL_PANEL_GROUP_ID || 'control-panel-group-id-here',
+  ADMIN_GROUP_ID: env.AZURE_ADMIN_GROUP_ID,
+  CONTROL_PANEL_GROUP_ID: env.AZURE_CONTROL_PANEL_GROUP_ID,
 } as const;
 
 /**

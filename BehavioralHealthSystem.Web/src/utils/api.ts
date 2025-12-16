@@ -3,6 +3,8 @@
  * Consolidates repeated API call patterns and error handling
  */
 
+import { env } from './env';
+
 // Common API response types
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -26,9 +28,9 @@ export interface FetchConfig extends RequestInit {
 
 // Default fetch configuration
 const DEFAULT_CONFIG: FetchConfig = {
-  timeout: parseInt(import.meta.env.VITE_API_TIMEOUT_MS || '30000', 10),
-  retries: parseInt(import.meta.env.VITE_API_MAX_RETRIES || '3', 10),
-  retryDelay: parseInt(import.meta.env.VITE_API_RETRY_DELAY_MS || '1000', 10),
+  timeout: env.API_TIMEOUT_MS,
+  retries: env.API_MAX_RETRIES,
+  retryDelay: env.API_RETRY_DELAY_MS,
   headers: {
     'Content-Type': 'application/json',
   },

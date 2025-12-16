@@ -4,6 +4,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { APP_ROLES } from '@/config/authConfig';
+import { env } from '@/utils/env';
 
 interface HeaderProps {
   className?: string;
@@ -18,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Check if authentication is enabled
-  const isAuthEnabled = import.meta.env.VITE_ENABLE_ENTRA_AUTH === 'true';
+  const isAuthEnabled = env.ENABLE_ENTRA_AUTH;
 
   // Filter navigation items based on user permissions
   const getNavigationItems = () => {

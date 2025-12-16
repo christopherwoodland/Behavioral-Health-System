@@ -15,7 +15,12 @@ param tags object
 
 var storageAccountName = '${appName}${environment}stg${uniqueSuffix}'
 
-// Storage Account (Public access enabled)
+// Storage Account (Public access enabled, managed identity auth)
+// NOTE: allowSharedKeyAccess is false - use RBAC roles for all access
+// Required RBAC roles for Container Apps:
+//   - Storage Blob Data Contributor
+//   - Storage Table Data Contributor
+//   - Storage Queue Data Contributor
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: location
@@ -29,14 +34,14 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     supportsHttpsTrafficOnly: true
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: true // Required for Function App consumption plan
+    allowSharedKeyAccess: false // Use managed identity with RBAC instead
     networkAcls: {
       bypass: 'AzureServices'
       defaultAction: 'Allow'
       virtualNetworkRules: []
       ipRules: []
     }
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Enabled' // Required for non-VNet deployments
   }
 }
 
@@ -95,6 +100,33 @@ resource kintsugiContainer 'Microsoft.Storage/storageAccounts/blobServices/conta
 resource functionDeployContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
   parent: blobService
   name: 'function-app-deployment'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// File Groups Container
+resource fileGroupsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'file-groups'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Sessions Container
+resource sessionsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'sessions'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Biometric Data Container
+resource biometricDataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'biometric-data'
   properties: {
     publicAccess: 'None'
   }

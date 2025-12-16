@@ -32,7 +32,7 @@ export interface SessionInitiateResponse {
 
 export interface PredictionSubmitRequest {
   userId: string;
-  sessionid: string;
+  sessionId: string;
   audioFileUrl: string;
   audioFileName: string;
 }
@@ -67,6 +67,11 @@ export interface HealthCheckResponse {
   status: 'Healthy' | 'Degraded' | 'Unhealthy';
   timestamp: string;
   totalDuration?: number;
+  resources?: {
+    storageAccount?: string;
+    documentIntelligence?: string;
+    openAI?: string;
+  };
   checks?: Record<string, {
     status: string;
     description?: string;

@@ -1154,7 +1154,7 @@ const UploadAnalyze: React.FC = () => {
 
           await apiService.submitPrediction({
             userId: row.userId.trim(),
-            sessionid: sessionId,
+            sessionId: sessionId,
             audioFileUrl: audioUrl,
             audioFileName: blobFileName
           });
@@ -1976,7 +1976,7 @@ const UploadAnalyze: React.FC = () => {
         // Submit prediction with URL to /predictions/submit endpoint
         await apiService.submitPrediction({
           userId: userMetadata.userId.trim(),
-          sessionid: sessionData.sessionId,
+          sessionId: sessionData.sessionId,
           audioFileUrl: audioUrl,
           audioFileName: fileName
         });
@@ -2720,7 +2720,7 @@ const UploadAnalyze: React.FC = () => {
         // Step 5: Submit prediction with URL to /predictions/submit endpoint
         await apiService.submitPrediction({
           userId: userMetadata.userId.trim(),
-          sessionid: sessionData.sessionId,
+          sessionId: sessionData.sessionId,
           audioFileUrl: audioUrl,
           audioFileName: fileName
         });

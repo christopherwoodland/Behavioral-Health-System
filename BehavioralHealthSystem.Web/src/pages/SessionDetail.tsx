@@ -26,6 +26,8 @@ import {
   X,
   Trash2
 } from 'lucide-react';
+import { config } from '@/config/constants';
+import { env } from '@/utils/env';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
@@ -70,7 +72,7 @@ const SessionDetail: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Feature flags
-  const isAIRiskAssessmentEnabled = import.meta.env.VITE_ENABLE_AI_RISK_ASSESSMENT === 'true';
+  const isAIRiskAssessmentEnabled = env.ENABLE_AI_RISK_ASSESSMENT;
 
   // DSM-5 condition selection state
   const [selectedDSM5Conditions, setSelectedDSM5Conditions] = useState<string[]>([]);
@@ -1139,7 +1141,7 @@ const SessionDetail: React.FC = () => {
               {/* Extended Risk Assessment Component */}
               <ExtendedRiskAssessmentButton
                 sessionId={session.sessionId}
-                apiBaseUrl={import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071'}
+                apiBaseUrl={config.api.baseUrl}
                 existingAssessment={session.extendedRiskAssessment}
                 selectedDSM5Conditions={selectedDSM5Conditions}
                 onStart={() => {

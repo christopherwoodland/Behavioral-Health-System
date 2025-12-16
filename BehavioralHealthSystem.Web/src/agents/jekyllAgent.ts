@@ -10,6 +10,7 @@ import { phqAssessmentService } from '../services/phqAssessmentService';
 import { phqSessionService } from '../services/phqSessionService';
 import { phqProgressService } from '../services/phqProgressService';
 import { chatTranscriptService } from '../services/chatTranscriptService';
+import { env } from '@/utils/env';
 
 /**
  * Jekyll Assessment Context
@@ -371,7 +372,7 @@ const recordConversationalResponseTool: AgentTool = {
       const phq2Score = Array.from(jekyllContext.inferredAnswers.values()).reduce((a, b) => a + b, 0);
 
       // Get configurable threshold from environment variable (default to 1)
-      const phq2Threshold = parseInt(import.meta.env.VITE_JEKYLL_PHQ2_THRESHOLD || '1', 10);
+      const phq2Threshold = env.JEKYLL_PHQ2_THRESHOLD;
 
       if (phq2Score >= phq2Threshold) {
         // Promote to PHQ-9
@@ -523,7 +524,7 @@ const getPhqAssessmentSummaryTool: AgentTool = {
     console.log('📊 ========================================');
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const apiBaseUrl = env.API_BASE_URL;
       const endpoint = `${apiBaseUrl}/GetPhqAssessmentSummary`;
 
       const requestBody = {

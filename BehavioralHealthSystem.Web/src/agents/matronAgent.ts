@@ -6,6 +6,7 @@
 
 import type { Agent, AgentTool } from '../services/agentOrchestrationService';
 import { biometricDataService } from '../services/biometricDataService';
+import { env } from '@/utils/env';
 
 /**
  * Tool: Start Biometric Data Collection
@@ -176,7 +177,7 @@ const addToArrayFieldTool: AgentTool = {
 
 // Track retry attempts for data collection
 let collectionAttempts = 0;
-const MAX_COLLECTION_ATTEMPTS = parseInt(import.meta.env.VITE_MATRON_MAX_COLLECTION_ATTEMPTS || '2', 10);
+const MAX_COLLECTION_ATTEMPTS = env.MATRON_MAX_COLLECTION_ATTEMPTS;
 
 /**
  * Tool: Save Biometric Data
@@ -269,7 +270,7 @@ const saveBiometricDataTool: AgentTool = {
       console.log('➕ Saving data:', biometricData);
 
       // Save to API (fixed URL - VITE_API_BASE_URL already includes /api)
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric`;
+      const apiUrl = `${env.API_BASE_URL}/biometric`;
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -341,7 +342,7 @@ const getBiometricDataTool: AgentTool = {
     console.log(`➕ Retrieving biometric data for user: ${userId}`);
 
     try {
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'}/biometric/${userId}`;
+      const apiUrl = `${env.API_BASE_URL}/biometric/${userId}`;
       const response = await fetch(apiUrl);
 
       if (!response.ok) {

@@ -290,10 +290,6 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: 'false'
             }
             {
-              name: 'VITE_ENABLE_VERBOSE_LOGGING'
-              value: 'false'
-            }
-            {
               name: 'VITE_ENABLE_FFMPEG_WORKER'
               value: 'true'
             }

@@ -50,7 +50,7 @@ export const useSubmitPrediction = () => {
     onSuccess: (_, variables) => {
       // Invalidate related queries
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.sessionPrediction(variables.sessionid),
+        queryKey: QUERY_KEYS.sessionPrediction(variables.sessionId),
       });
       
       const userId = getUserId();

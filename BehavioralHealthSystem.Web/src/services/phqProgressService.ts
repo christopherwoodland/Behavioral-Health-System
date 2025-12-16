@@ -3,6 +3,8 @@
  * Tracks question-by-question progress during PHQ-2 and PHQ-9 assessments
  */
 
+import { env } from '@/utils/env';
+
 export interface PhqAnsweredQuestion {
   questionNumber: number;
   questionText: string;
@@ -272,7 +274,7 @@ class PhqProgressService {
         this.saveTimer = null;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const apiBaseUrl = env.API_BASE_URL;
       const endpoint = `${apiBaseUrl}/SavePhqProgress`;
 
       console.log('🟢 Saving PHQ progress to:', endpoint);

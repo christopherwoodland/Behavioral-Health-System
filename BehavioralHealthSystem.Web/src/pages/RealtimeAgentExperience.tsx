@@ -18,6 +18,8 @@ import {
   X,
   MessageSquare
 } from 'lucide-react';
+import { config } from '@/config/constants';
+import { env } from '@/utils/env';
 import { announceToScreenReader, getUserId } from '@/utils';
 import {
   azureOpenAIRealtimeService,
@@ -68,7 +70,7 @@ interface SessionStatus {
 
 // Verbose logging flag - controlled via VITE_ENABLE_VERBOSE_LOGGING environment variable
 // This provides extremely granular debugging (every message render, transcript event, etc.)
-const ENABLE_VERBOSE_LOGGING = import.meta.env.VITE_ENABLE_VERBOSE_LOGGING === 'true';
+const ENABLE_VERBOSE_LOGGING = env.ENABLE_VERBOSE_LOGGING;
 
 /**
  * Get agent-specific color classes for visual differentiation
@@ -132,11 +134,11 @@ const getAgentVoice = (agentId: string, fallbackVoice: VoiceType = 'alloy'): Voi
 
   switch (normalizedId) {
     case 'tars':
-      return (import.meta.env.VITE_TARS_VOICE as VoiceType) || 'echo';
+      return (env.TARS_VOICE as VoiceType) || 'echo';
     case 'jekyll':
-      return (import.meta.env.VITE_JEKYLL_VOICE as VoiceType) || 'shimmer';
+      return (env.JEKYLL_VOICE as VoiceType) || 'shimmer';
     case 'matron':
-      return (import.meta.env.VITE_MATRON_VOICE as VoiceType) || 'nova';
+      return (env.MATRON_VOICE as VoiceType) || 'nova';
     default:
       console.warn(`⚠️ Unknown agent '${agentId}', using fallback voice: ${fallbackVoice}`);
       return fallbackVoice;
@@ -309,7 +311,7 @@ export const RealtimeAgentExperience: React.FC = () => {
     turnDetectionSilenceDuration: 300,
     maxResponse: 1638,
     temperature: 0.7, // Changed from 0.7 to meet Azure OpenAI minimum of 0.6
-    voice: import.meta.env.VITE_TARS_VOICE || 'echo'
+    voice: (env.TARS_VOICE || 'echo') as VoiceType
   });
 
   // Assessment State (optional - can be added if needed)
@@ -344,7 +346,7 @@ export const RealtimeAgentExperience: React.FC = () => {
         announceToScreenReader('Azure OpenAI Realtime service initialized');
 
         // Auto-start session after initialization (controlled by environment variable)
-        const autoStartEnabled = import.meta.env.VITE_AUTO_START_SESSION === 'true';
+        const autoStartEnabled = env.AUTO_START_SESSION;
         if (autoStartEnabled) {
           console.log('🚀 Auto-starting session...');
           await startSession();
@@ -869,12 +871,12 @@ Just speak naturally - I understand variations of these commands!`,
   useEffect(() => {
     if (speechDetection.isUserSpeaking) {
       // User started speaking - start capturing audio for session recording (if enabled)
-      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+      if (env.ENABLE_SESSION_VOICE_RECORDING) {
         sessionVoiceRecordingService.onUserSpeechStart();
       }
     } else {
       // User stopped speaking - stop capturing audio
-      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+      if (env.ENABLE_SESSION_VOICE_RECORDING) {
         sessionVoiceRecordingService.onUserSpeechStop();
       }
 
@@ -936,7 +938,7 @@ Just speak naturally - I understand variations of these commands!`,
       agentOrchestrationService.registerAgent(humorAwareMatronAgent);
 
       // Conditionally register Jekyll agent based on feature flag
-      if (import.meta.env.VITE_ENABLE_JEKYLL_AGENT === 'true') {
+      if (env.ENABLE_JEKYLL_AGENT) {
         console.log('✅ Jekyll agent enabled');
         const humorAwareJekyllAgent = {
           ...jekyllAgent,
@@ -954,7 +956,7 @@ Just speak naturally - I understand variations of these commands!`,
       const tarsRootAgent = createTarsAgent({
         firstName: getFirstName(),
         humorLevel: humorLevel,
-        functionsBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api'
+        functionsBaseUrl: config.api.baseUrl
       });
 
       // Add session control and UI-specific tool handlers that need access to component state
@@ -1150,7 +1152,7 @@ Just speak naturally - I understand variations of these commands!`,
 
               // Add delay when switching from Tars to any other agent
               // This allows Tars's handoff announcement to be heard before the switch
-              const HANDOFF_DELAY_MS = parseInt(import.meta.env.VITE_AGENT_HANDOFF_DELAY_MS || '1500', 10);
+              const HANDOFF_DELAY_MS = env.AGENT_HANDOFF_DELAY_MS;
 
               if (currentAgent.id === 'tars' && result.targetAgentId !== 'Agent_Tars') {
                 const targetAgentName =
@@ -1235,7 +1237,7 @@ Just speak naturally - I understand variations of these commands!`,
 
       // Start session-wide voice recording (captures all user speech)
       // Only if enabled via environment variable
-      if (import.meta.env.VITE_ENABLE_SESSION_VOICE_RECORDING === 'true') {
+      if (env.ENABLE_SESSION_VOICE_RECORDING) {
         const sessionId = sessionStorage.getItem('chat-session-id') || `session_${Date.now()}`;
         const userId = authenticatedUserId || getUserId();
         try {

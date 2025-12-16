@@ -1,4 +1,5 @@
 import { config } from '@/config/constants';
+import { env } from '@/utils/env';
 import { convertAudioToWav } from './audio';
 
 export interface TranscriptionResult {
@@ -107,8 +108,7 @@ class TranscriptionService {
    */
   isTranscriptionEnabled(): boolean {
     // Enable transcription by default unless explicitly disabled
-    const enableFlag = import.meta.env.VITE_ENABLE_TRANSCRIPTION;
-    return enableFlag !== 'false' && enableFlag !== '0';
+    return env.ENABLE_TRANSCRIPTION;
   }
 
   /**
@@ -117,8 +117,7 @@ class TranscriptionService {
    */
   isKintsugiEnabled(): boolean {
     // Enable Kintsugi by default unless explicitly disabled
-    const enableFlag = import.meta.env.VITE_ENABLE_KINTSUGI;
-    return enableFlag !== 'false' && enableFlag !== '0';
+    return env.ENABLE_KINTSUGI;
   }
 }
 

@@ -10,6 +10,7 @@ public class HealthCheckFunction
 {
     private readonly ILogger<HealthCheckFunction> _logger;
     private readonly HealthCheckService _healthCheckService;
+    private readonly IConfiguration _configuration;
     private readonly JsonSerializerOptions _jsonOptions;
 
     /// <summary>
@@ -17,13 +18,16 @@ public class HealthCheckFunction
     /// </summary>
     /// <param name="logger">Logger for diagnostics and monitoring.</param>
     /// <param name="healthCheckService">Service for executing registered health checks.</param>
+    /// <param name="configuration">Configuration for accessing app settings.</param>
     /// <exception cref="ArgumentNullException">Thrown when logger or healthCheckService is null.</exception>
     public HealthCheckFunction(
         ILogger<HealthCheckFunction> logger,
-        HealthCheckService healthCheckService)
+        HealthCheckService healthCheckService,
+        IConfiguration configuration)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _healthCheckService = healthCheckService ?? throw new ArgumentNullException(nameof(healthCheckService));
+        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 
         _jsonOptions = JsonSerializerOptionsFactory.Default;
     }
@@ -68,10 +72,23 @@ public class HealthCheckFunction
             var response = req.CreateResponse(
                 healthReport.Status == HealthStatus.Healthy ? HttpStatusCode.OK : HttpStatusCode.ServiceUnavailable);
 
+            // Get resource names from configuration
+            var storageAccountName = _configuration["DSM5_STORAGE_ACCOUNT_NAME"]
+                ?? _configuration["AZURE_STORAGE_ACCOUNT_NAME"]
+                ?? "Not configured";
+            var documentIntelligenceEndpoint = _configuration["DocumentIntelligenceEndpoint"] ?? "Not configured";
+            var openAiEndpoint = _configuration["AZURE_OPENAI_ENDPOINT"] ?? "Not configured";
+
             var healthResult = new
             {
                 Status = healthReport.Status.ToString(),
                 TotalDuration = healthReport.TotalDuration.TotalMilliseconds,
+                Resources = new
+                {
+                    StorageAccount = storageAccountName,
+                    DocumentIntelligence = ExtractResourceName(documentIntelligenceEndpoint),
+                    OpenAI = ExtractResourceName(openAiEndpoint)
+                },
                 Entries = healthReport.Entries.ToDictionary(
                     kvp => kvp.Key,
                     kvp => new
@@ -102,5 +119,34 @@ public class HealthCheckFunction
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(errorResult, _jsonOptions));
             return errorResponse;
         }
+    }
+
+    /// <summary>
+    /// Extracts the resource name from an Azure endpoint URL.
+    /// </summary>
+    /// <param name="endpoint">The full endpoint URL.</param>
+    /// <returns>The resource name or the original value if extraction fails.</returns>
+    private static string ExtractResourceName(string endpoint)
+    {
+        if (string.IsNullOrEmpty(endpoint) || endpoint == "Not configured")
+            return endpoint;
+
+        try
+        {
+            // Try to extract resource name from URLs like https://resource-name.openai.azure.com/
+            if (Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+            {
+                var host = uri.Host;
+                var parts = host.Split('.');
+                if (parts.Length > 0)
+                    return parts[0];
+            }
+        }
+        catch
+        {
+            // Fallback to returning the original endpoint
+        }
+
+        return endpoint;
     }
 }

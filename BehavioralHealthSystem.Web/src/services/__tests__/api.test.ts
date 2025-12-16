@@ -247,7 +247,7 @@ describe('API Service', () => {
     describe('submitPrediction', () => {
       it('should submit prediction successfully', async () => {
         const mockRequest: PredictionSubmitRequest = {
-          sessionid: 'test-session-123',
+          sessionId: 'test-session-123',
           userId: 'test-user-456',
           audioFileUrl: 'https://storage.example.com/audio/test.wav',
           audioFileName: 'test-audio.wav'

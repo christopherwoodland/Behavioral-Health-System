@@ -4,6 +4,8 @@
  * Similar to chat transcript service pattern
  */
 
+import { env } from '@/utils/env';
+
 export interface BiometricData {
   userId: string;
   nickname?: string;
@@ -24,8 +26,8 @@ export interface BiometricData {
 class BiometricDataService {
   private currentData: BiometricData | null = null;
   private saveTimer: NodeJS.Timeout | null = null;
-  private readonly saveDelayMs = parseInt(import.meta.env.VITE_BIOMETRIC_SAVE_DELAY_MS || '2000', 10);
-  private readonly apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+  private readonly saveDelayMs = env.BIOMETRIC_SAVE_DELAY_MS;
+  private readonly apiBaseUrl = env.API_BASE_URL;
 
   /**
    * Initialize a new biometric data collection session

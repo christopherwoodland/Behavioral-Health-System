@@ -3,6 +3,8 @@
  * Handles session management and real-time conversation updates
  */
 
+import { env } from '@/utils/env';
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -212,7 +214,7 @@ class ChatTranscriptService {
         this.saveTimer = null;
       }
 
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const apiBaseUrl = env.API_BASE_URL;
       const endpoint = `${apiBaseUrl}/SaveChatTranscript`;
 
       const request: ChatTranscriptSaveRequest = {

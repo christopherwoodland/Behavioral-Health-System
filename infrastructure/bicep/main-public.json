@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "2893458135780629973"
+      "templateHash": "3292643966521597307"
     }
   },
   "parameters": {
@@ -35,12 +35,6 @@
         "description": "Application name prefix"
       }
     },
-    "deploymentClientIP": {
-      "type": "string",
-      "metadata": {
-        "description": "Your IP address for Key Vault firewall (for initial setup)"
-      }
-    },
     "resourceGroupName": {
       "type": "string",
       "defaultValue": "",
@@ -53,17 +47,11 @@
       "defaultValue": {
         "Application": "Behavioral Health System",
         "Environment": "[parameters('environment')]",
-        "ManagedBy": "Bicep"
+        "ManagedBy": "Bicep",
+        "NetworkMode": "Public"
       },
       "metadata": {
         "description": "Tags to apply to all resources"
-      }
-    },
-    "deployContainerApps": {
-      "type": "bool",
-      "defaultValue": false,
-      "metadata": {
-        "description": "Optional: deploy Container Apps resources (e.g., GitHub runners). Default false; core template does not deploy them when false or when module is disabled."
       }
     },
     "openaiEndpoint": {
@@ -71,6 +59,13 @@
       "defaultValue": "",
       "metadata": {
         "description": "Azure OpenAI endpoint (optional - configure manually after deployment)"
+      }
+    },
+    "webAppSku": {
+      "type": "string",
+      "defaultValue": "P0v3",
+      "metadata": {
+        "description": "App Service Plan SKU for Web App (e.g., F1, B1, S1, P0v3, P1v3)"
       }
     }
   },
@@ -85,237 +80,6 @@
       "name": "[variables('rgName')]",
       "location": "[parameters('location')]",
       "tags": "[parameters('tags')]"
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "networking-deployment",
-      "resourceGroup": "[variables('rgName')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "appName": {
-            "value": "[parameters('appName')]"
-          },
-          "environment": {
-            "value": "[parameters('environment')]"
-          },
-          "tags": {
-            "value": "[parameters('tags')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "16697714351956476544"
-            }
-          },
-          "parameters": {
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure region for resources"
-              }
-            },
-            "appName": {
-              "type": "string",
-              "metadata": {
-                "description": "Application name prefix"
-              }
-            },
-            "environment": {
-              "type": "string",
-              "metadata": {
-                "description": "Environment name"
-              }
-            },
-            "tags": {
-              "type": "object",
-              "metadata": {
-                "description": "Resource tags"
-              }
-            }
-          },
-          "variables": {
-            "vnetName": "[format('{0}-{1}-vnet', parameters('appName'), parameters('environment'))]",
-            "nsgName": "[format('{0}-{1}-nsg', parameters('appName'), parameters('environment'))]"
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('vnetName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "addressSpace": {
-                  "addressPrefixes": [
-                    "10.0.0.0/16"
-                  ]
-                },
-                "subnets": [
-                  {
-                    "name": "app-subnet",
-                    "properties": {
-                      "addressPrefix": "10.0.1.0/24",
-                      "networkSecurityGroup": {
-                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
-                      },
-                      "serviceEndpoints": [
-                        {
-                          "service": "Microsoft.Storage"
-                        },
-                        {
-                          "service": "Microsoft.KeyVault"
-                        },
-                        {
-                          "service": "Microsoft.CognitiveServices"
-                        }
-                      ],
-                      "delegations": [
-                        {
-                          "name": "Microsoft.App.environments",
-                          "properties": {
-                            "serviceName": "Microsoft.App/environments"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "name": "private-endpoint-subnet",
-                    "properties": {
-                      "addressPrefix": "10.0.2.0/24",
-                      "privateEndpointNetworkPolicies": "Disabled",
-                      "privateLinkServiceNetworkPolicies": "Enabled"
-                    }
-                  },
-                  {
-                    "name": "container-apps-subnet",
-                    "properties": {
-                      "addressPrefix": "10.0.4.0/23",
-                      "delegations": [
-                        {
-                          "name": "Microsoft.App.environments",
-                          "properties": {
-                            "serviceName": "Microsoft.App/environments"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "name": "webapp-subnet",
-                    "properties": {
-                      "addressPrefix": "10.0.6.0/24",
-                      "delegations": [
-                        {
-                          "name": "Microsoft.Web.serverFarms",
-                          "properties": {
-                            "serviceName": "Microsoft.Web/serverFarms"
-                          }
-                        }
-                      ]
-                    }
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/networkSecurityGroups",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('nsgName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "securityRules": [
-                  {
-                    "name": "AllowHTTPSInbound",
-                    "properties": {
-                      "priority": 100,
-                      "direction": "Inbound",
-                      "access": "Allow",
-                      "protocol": "Tcp",
-                      "sourcePortRange": "*",
-                      "destinationPortRange": "443",
-                      "sourceAddressPrefix": "*",
-                      "destinationAddressPrefix": "*"
-                    }
-                  },
-                  {
-                    "name": "AllowHTTPInbound",
-                    "properties": {
-                      "priority": 110,
-                      "direction": "Inbound",
-                      "access": "Allow",
-                      "protocol": "Tcp",
-                      "sourcePortRange": "*",
-                      "destinationPortRange": "80",
-                      "sourceAddressPrefix": "*",
-                      "destinationAddressPrefix": "*"
-                    }
-                  },
-                  {
-                    "name": "DenyAllInbound",
-                    "properties": {
-                      "priority": 4096,
-                      "direction": "Inbound",
-                      "access": "Deny",
-                      "protocol": "*",
-                      "sourcePortRange": "*",
-                      "destinationPortRange": "*",
-                      "sourceAddressPrefix": "*",
-                      "destinationAddressPrefix": "*"
-                    }
-                  }
-                ]
-              }
-            }
-          ],
-          "outputs": {
-            "vnetId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]"
-            },
-            "vnetName": {
-              "type": "string",
-              "value": "[variables('vnetName')]"
-            },
-            "appSubnetId": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-05-01').subnets[0].id]"
-            },
-            "privateEndpointSubnetId": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-05-01').subnets[1].id]"
-            },
-            "containerAppsSubnetId": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-05-01').subnets[2].id]"
-            },
-            "webappSubnetId": {
-              "type": "string",
-              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', variables('vnetName')), '2023-05-01').subnets[3].id]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
-      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -342,12 +106,6 @@
           },
           "tags": {
             "value": "[parameters('tags')]"
-          },
-          "privateEndpointSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.privateEndpointSubnetId.value]"
-          },
-          "deploymentClientIP": {
-            "value": "[parameters('deploymentClientIP')]"
           }
         },
         "template": {
@@ -357,7 +115,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "9044732765760878579"
+              "templateHash": "16205072288902963072"
             }
           },
           "parameters": {
@@ -390,23 +148,10 @@
               "metadata": {
                 "description": "Resource tags"
               }
-            },
-            "privateEndpointSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Private endpoint subnet ID"
-              }
-            },
-            "deploymentClientIP": {
-              "type": "string",
-              "metadata": {
-                "description": "Deployment client IP for initial access"
-              }
             }
           },
           "variables": {
-            "keyVaultName": "[format('{0}-{1}-kv-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "privateEndpointName": "[format('{0}-pe', variables('keyVaultName'))]"
+            "keyVaultName": "[format('{0}-{1}-kv-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
           },
           "resources": [
             {
@@ -427,42 +172,12 @@
                 "enablePurgeProtection": true,
                 "networkAcls": {
                   "bypass": "AzureServices",
-                  "defaultAction": "Deny",
-                  "ipRules": [
-                    {
-                      "value": "[parameters('deploymentClientIP')]"
-                    }
-                  ],
+                  "defaultAction": "Allow",
+                  "ipRules": [],
                   "virtualNetworkRules": []
                 },
                 "publicNetworkAccess": "Enabled"
               }
-            },
-            {
-              "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('privateEndpointName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "subnet": {
-                  "id": "[parameters('privateEndpointSubnetId')]"
-                },
-                "privateLinkServiceConnections": [
-                  {
-                    "name": "[variables('privateEndpointName')]",
-                    "properties": {
-                      "privateLinkServiceId": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-                      "groupIds": [
-                        "vault"
-                      ]
-                    }
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -477,20 +192,11 @@
             "keyVaultUri": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
-            },
-            "privateEndpointName": {
-              "type": "string",
-              "value": "[variables('privateEndpointName')]"
-            },
-            "privateEndpointId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
             }
           }
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
       ]
     },
@@ -519,9 +225,6 @@
           },
           "tags": {
             "value": "[parameters('tags')]"
-          },
-          "privateEndpointSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.privateEndpointSubnetId.value]"
           }
         },
         "template": {
@@ -531,7 +234,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "17225529328273846829"
+              "templateHash": "2083213435939053975"
             }
           },
           "parameters": {
@@ -564,17 +267,10 @@
               "metadata": {
                 "description": "Resource tags"
               }
-            },
-            "privateEndpointSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Private endpoint subnet ID"
-              }
             }
           },
           "variables": {
-            "storageAccountName": "[format('{0}{1}stg{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "privateEndpointName": "[format('{0}-pe', variables('storageAccountName'))]"
+            "storageAccountName": "[format('{0}{1}stg{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
           },
           "resources": [
             {
@@ -595,11 +291,11 @@
                 "allowSharedKeyAccess": false,
                 "networkAcls": {
                   "bypass": "AzureServices",
-                  "defaultAction": "Deny",
+                  "defaultAction": "Allow",
                   "virtualNetworkRules": [],
                   "ipRules": []
                 },
-                "publicNetworkAccess": "Disabled"
+                "publicNetworkAccess": "Enabled"
               }
             },
             {
@@ -666,6 +362,17 @@
             {
               "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
               "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'function-app-deployment')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
               "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'file-groups')]",
               "properties": {
                 "publicAccess": "None"
@@ -695,32 +402,6 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
               ]
-            },
-            {
-              "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('privateEndpointName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "subnet": {
-                  "id": "[parameters('privateEndpointSubnetId')]"
-                },
-                "privateLinkServiceConnections": [
-                  {
-                    "name": "[variables('privateEndpointName')]",
-                    "properties": {
-                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-                      "groupIds": [
-                        "blob"
-                      ]
-                    }
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -732,19 +413,14 @@
               "type": "string",
               "value": "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
             },
-            "privateEndpointName": {
+            "primaryBlobEndpoint": {
               "type": "string",
-              "value": "[variables('privateEndpointName')]"
-            },
-            "privateEndpointId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').primaryEndpoints.blob]"
             }
           }
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
       ]
     },
@@ -898,9 +574,6 @@
           },
           "tags": {
             "value": "[parameters('tags')]"
-          },
-          "privateEndpointSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.privateEndpointSubnetId.value]"
           }
         },
         "template": {
@@ -910,7 +583,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "16137778256794375850"
+              "templateHash": "3442664087826583176"
             }
           },
           "parameters": {
@@ -943,19 +616,11 @@
               "metadata": {
                 "description": "Resource tags"
               }
-            },
-            "privateEndpointSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Private endpoint subnet ID"
-              }
             }
           },
           "variables": {
             "documentIntelligenceName": "[format('{0}-{1}-docintel-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "contentUnderstandingName": "[format('{0}-{1}-content-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "documentPrivateEndpointName": "[format('{0}-pe', variables('documentIntelligenceName'))]",
-            "contentPrivateEndpointName": "[format('{0}-pe', variables('contentUnderstandingName'))]"
+            "contentUnderstandingName": "[format('{0}-{1}-content-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
           },
           "resources": [
             {
@@ -971,11 +636,11 @@
               "properties": {
                 "customSubDomainName": "[variables('documentIntelligenceName')]",
                 "networkAcls": {
-                  "defaultAction": "Deny",
+                  "defaultAction": "Allow",
                   "virtualNetworkRules": [],
                   "ipRules": []
                 },
-                "publicNetworkAccess": "Disabled"
+                "publicNetworkAccess": "Enabled"
               }
             },
             {
@@ -991,64 +656,12 @@
               "properties": {
                 "customSubDomainName": "[variables('contentUnderstandingName')]",
                 "networkAcls": {
-                  "defaultAction": "Deny",
+                  "defaultAction": "Allow",
                   "virtualNetworkRules": [],
                   "ipRules": []
                 },
-                "publicNetworkAccess": "Disabled"
+                "publicNetworkAccess": "Enabled"
               }
-            },
-            {
-              "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('documentPrivateEndpointName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "subnet": {
-                  "id": "[parameters('privateEndpointSubnetId')]"
-                },
-                "privateLinkServiceConnections": [
-                  {
-                    "name": "[variables('documentPrivateEndpointName')]",
-                    "properties": {
-                      "privateLinkServiceId": "[resourceId('Microsoft.CognitiveServices/accounts', variables('documentIntelligenceName'))]",
-                      "groupIds": [
-                        "account"
-                      ]
-                    }
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.CognitiveServices/accounts', variables('documentIntelligenceName'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('contentPrivateEndpointName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "subnet": {
-                  "id": "[parameters('privateEndpointSubnetId')]"
-                },
-                "privateLinkServiceConnections": [
-                  {
-                    "name": "[variables('contentPrivateEndpointName')]",
-                    "properties": {
-                      "privateLinkServiceId": "[resourceId('Microsoft.CognitiveServices/accounts', variables('contentUnderstandingName'))]",
-                      "groupIds": [
-                        "account"
-                      ]
-                    }
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.CognitiveServices/accounts', variables('contentUnderstandingName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -1071,20 +684,11 @@
             "contentUnderstandingEndpoint": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('contentUnderstandingName')), '2023-10-01-preview').endpoint]"
-            },
-            "documentPrivateEndpointName": {
-              "type": "string",
-              "value": "[variables('documentPrivateEndpointName')]"
-            },
-            "contentPrivateEndpointName": {
-              "type": "string",
-              "value": "[variables('contentPrivateEndpointName')]"
             }
           }
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
       ]
     },
@@ -1114,12 +718,6 @@
           "tags": {
             "value": "[parameters('tags')]"
           },
-          "appSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.appSubnetId.value]"
-          },
-          "privateEndpointSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.privateEndpointSubnetId.value]"
-          },
           "storageAccountName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountName.value]"
           },
@@ -1140,6 +738,9 @@
           },
           "contentUnderstandingEndpoint": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'cognitive-deployment'), '2025-04-01').outputs.contentUnderstandingEndpoint.value]"
+          },
+          "webAppUrl": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'webapp-deployment'), '2025-04-01').outputs.webAppUrl.value]"
           }
         },
         "template": {
@@ -1149,7 +750,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "12623212815331751929"
+              "templateHash": "4016074188012506033"
             }
           },
           "parameters": {
@@ -1181,18 +782,6 @@
               "type": "object",
               "metadata": {
                 "description": "Resource tags"
-              }
-            },
-            "appSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "App subnet ID for VNet integration"
-              }
-            },
-            "privateEndpointSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Private endpoint subnet ID"
               }
             },
             "storageAccountName": {
@@ -1236,12 +825,18 @@
               "metadata": {
                 "description": "Content Understanding endpoint"
               }
+            },
+            "webAppUrl": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Web App URL for CORS (optional)"
+              }
             }
           },
           "variables": {
             "functionAppName": "[format('{0}-{1}-func-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "appServicePlanName": "[format('{0}-{1}-asp-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "privateEndpointName": "[format('{0}-pe', variables('functionAppName'))]"
+            "appServicePlanName": "[format('{0}-{1}-asp-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
           },
           "resources": [
             {
@@ -1252,8 +847,8 @@
               "tags": "[parameters('tags')]",
               "kind": "functionapp",
               "sku": {
-                "name": "FC1",
-                "tier": "FlexConsumption"
+                "name": "Y1",
+                "tier": "Dynamic"
               },
               "properties": {
                 "reserved": true
@@ -1272,36 +867,15 @@
               "properties": {
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
                 "httpsOnly": true,
-                "virtualNetworkSubnetId": "[parameters('appSubnetId')]",
-                "functionAppConfig": {
-                  "deployment": {
-                    "storage": {
-                      "type": "blobContainer",
-                      "value": "[format('{0}function-app-deployment', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').primaryEndpoints.blob)]",
-                      "authentication": {
-                        "type": "SystemAssignedIdentity"
-                      }
-                    }
-                  },
-                  "scaleAndConcurrency": {
-                    "maximumInstanceCount": 100,
-                    "instanceMemoryMB": 2048
-                  },
-                  "runtime": {
-                    "name": "dotnet-isolated",
-                    "version": "8.0"
-                  }
-                },
+                "publicNetworkAccess": "Enabled",
                 "siteConfig": {
+                  "linuxFxVersion": "DOTNET-ISOLATED|8.0",
                   "alwaysOn": false,
-                  "vnetRouteAllEnabled": true,
                   "ftpsState": "Disabled",
                   "minTlsVersion": "1.2",
                   "use32BitWorkerProcess": false,
                   "cors": {
-                    "allowedOrigins": [
-                      "https://portal.azure.com"
-                    ],
+                    "allowedOrigins": "[union(createArray('https://portal.azure.com'), if(not(empty(parameters('webAppUrl'))), createArray(parameters('webAppUrl')), createArray()))]",
                     "supportCredentials": true
                   },
                   "appSettings": [
@@ -1310,8 +884,12 @@
                       "value": "~4"
                     },
                     {
-                      "name": "AzureWebJobsStorage",
-                      "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
+                      "name": "FUNCTIONS_WORKER_RUNTIME",
+                      "value": "dotnet-isolated"
+                    },
+                    {
+                      "name": "AzureWebJobsStorage__accountName",
+                      "value": "[parameters('storageAccountName')]"
                     },
                     {
                       "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
@@ -1390,6 +968,10 @@
                       "value": "https://api.kintsugihealth.com/v2"
                     },
                     {
+                      "name": "KINTSUGI_API_KEY",
+                      "value": "[format('@Microsoft.KeyVault(SecretUri=https://{0}.vault.azure.net/secrets/KintsugiApiKey/)', parameters('keyVaultName'))]"
+                    },
+                    {
                       "name": "KINTSUGI_AUTO_PROVIDE_CONSENT",
                       "value": "false"
                     },
@@ -1404,6 +986,26 @@
                     {
                       "name": "KINTSUGI_RETRY_DELAY_MS",
                       "value": "1000"
+                    },
+                    {
+                      "name": "AZURE_SPEECH_KEY",
+                      "value": "[format('@Microsoft.KeyVault(SecretUri=https://{0}.vault.azure.net/secrets/AzureSpeechKey/)', parameters('keyVaultName'))]"
+                    },
+                    {
+                      "name": "AZURE_SPEECH_REGION",
+                      "value": "eastus2"
+                    },
+                    {
+                      "name": "AZURE_SPEECH_ENDPOINT",
+                      "value": "https://eastus2.api.cognitive.microsoft.com"
+                    },
+                    {
+                      "name": "AZURE_SPEECH_LOCALE",
+                      "value": "en-US"
+                    },
+                    {
+                      "name": "AZURE_SPEECH_API_VERSION",
+                      "value": "2024-11-15"
                     },
                     {
                       "name": "AGENT_MODE_ENABLED",
@@ -1423,32 +1025,6 @@
               "dependsOn": [
                 "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
               ]
-            },
-            {
-              "type": "Microsoft.Network/privateEndpoints",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('privateEndpointName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "subnet": {
-                  "id": "[parameters('privateEndpointSubnetId')]"
-                },
-                "privateLinkServiceConnections": [
-                  {
-                    "name": "[variables('privateEndpointName')]",
-                    "properties": {
-                      "privateLinkServiceId": "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
-                      "groupIds": [
-                        "sites"
-                      ]
-                    }
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -1467,14 +1043,6 @@
             "principalId": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2024-04-01', 'full').identity.principalId]"
-            },
-            "privateEndpointName": {
-              "type": "string",
-              "value": "[variables('privateEndpointName')]"
-            },
-            "privateEndpointId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
             }
           }
         }
@@ -1483,9 +1051,9 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'appinsights-deployment')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'cognitive-deployment')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'keyvault-deployment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage-deployment')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage-deployment')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'webapp-deployment')]"
       ]
     },
     {
@@ -1515,13 +1083,13 @@
             "value": "[parameters('tags')]"
           },
           "functionAppUrl": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'functionapp-deployment'), '2025-04-01').outputs.functionAppUrl.value]"
+            "value": "[format('https://{0}-{1}-func-{2}.azurewebsites.net', parameters('appName'), parameters('environment'), variables('uniqueSuffix'))]"
           },
           "enableVNetIntegration": {
-            "value": true
+            "value": false
           },
-          "appSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.webappSubnetId.value]"
+          "skuName": {
+            "value": "[parameters('webAppSku')]"
           }
         },
         "template": {
@@ -1762,468 +1330,7 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'functionapp-deployment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
         "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
-      ]
-    },
-    {
-      "condition": "[parameters('deployContainerApps')]",
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "containerapps-deployment",
-      "resourceGroup": "[variables('rgName')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "appName": {
-            "value": "[parameters('appName')]"
-          },
-          "environment": {
-            "value": "[parameters('environment')]"
-          },
-          "uniqueSuffix": {
-            "value": "[variables('uniqueSuffix')]"
-          },
-          "tags": {
-            "value": "[parameters('tags')]"
-          },
-          "containerAppsSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.containerAppsSubnetId.value]"
-          },
-          "logAnalyticsWorkspaceId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'appinsights-deployment'), '2025-04-01').outputs.logAnalyticsWorkspaceId.value]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "6139469268410518332"
-            }
-          },
-          "parameters": {
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure region for resources"
-              }
-            },
-            "appName": {
-              "type": "string",
-              "metadata": {
-                "description": "Application name prefix"
-              }
-            },
-            "environment": {
-              "type": "string",
-              "metadata": {
-                "description": "Environment name"
-              }
-            },
-            "uniqueSuffix": {
-              "type": "string",
-              "metadata": {
-                "description": "Unique suffix for global names"
-              }
-            },
-            "tags": {
-              "type": "object",
-              "metadata": {
-                "description": "Resource tags"
-              }
-            },
-            "containerAppsSubnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "Container Apps subnet ID"
-              }
-            },
-            "logAnalyticsWorkspaceId": {
-              "type": "string",
-              "metadata": {
-                "description": "Log Analytics Workspace ID"
-              }
-            }
-          },
-          "variables": {
-            "containerAppsEnvName": "[format('{0}-{1}-cae-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "githubRunnerAppName": "[format('{0}-{1}-runner-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
-          },
-          "resources": [
-            {
-              "type": "Microsoft.App/managedEnvironments",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('containerAppsEnvName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "appLogsConfiguration": {
-                  "destination": "log-analytics",
-                  "logAnalyticsConfiguration": {
-                    "customerId": "[reference(parameters('logAnalyticsWorkspaceId'), '2022-10-01').customerId]",
-                    "sharedKey": "[listKeys(parameters('logAnalyticsWorkspaceId'), '2022-10-01').primarySharedKey]"
-                  }
-                },
-                "vnetConfiguration": {
-                  "infrastructureSubnetId": "[parameters('containerAppsSubnetId')]",
-                  "internal": true
-                },
-                "workloadProfiles": [
-                  {
-                    "name": "Consumption",
-                    "workloadProfileType": "Consumption"
-                  }
-                ]
-              }
-            },
-            {
-              "type": "Microsoft.App/containerApps",
-              "apiVersion": "2023-05-01",
-              "name": "[variables('githubRunnerAppName')]",
-              "location": "[parameters('location')]",
-              "tags": "[parameters('tags')]",
-              "properties": {
-                "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
-                "configuration": {
-                  "activeRevisionsMode": "Single",
-                  "secrets": [],
-                  "registries": []
-                },
-                "template": {
-                  "containers": [
-                    {
-                      "name": "github-runner",
-                      "image": "myoung34/github-runner:latest",
-                      "resources": {
-                        "cpu": "[json('1.0')]",
-                        "memory": "2Gi"
-                      },
-                      "env": [
-                        {
-                          "name": "REPO_URL",
-                          "value": "https://github.com/christopherwoodland/BehavioralHealthSystem"
-                        },
-                        {
-                          "name": "RUNNER_SCOPE",
-                          "value": "repo"
-                        },
-                        {
-                          "name": "LABELS",
-                          "value": "azure,container-apps,self-hosted"
-                        }
-                      ]
-                    }
-                  ],
-                  "scale": {
-                    "minReplicas": 0,
-                    "maxReplicas": 3,
-                    "rules": [
-                      {
-                        "name": "github-runner-scaling",
-                        "custom": {
-                          "type": "github-runner",
-                          "metadata": {
-                            "owner": "christopherwoodland",
-                            "repos": "BehavioralHealthSystem",
-                            "targetWorkflowQueueLength": "1"
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]"
-              ]
-            }
-          ],
-          "outputs": {
-            "containerAppsEnvId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]"
-            },
-            "containerAppsEnvName": {
-              "type": "string",
-              "value": "[variables('containerAppsEnvName')]"
-            },
-            "githubRunnerAppId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.App/containerApps', variables('githubRunnerAppName'))]"
-            },
-            "githubRunnerAppName": {
-              "type": "string",
-              "value": "[variables('githubRunnerAppName')]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'appinsights-deployment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]"
-      ]
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2025-04-01",
-      "name": "privatedns-deployment",
-      "resourceGroup": "[variables('rgName')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "vnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.vnetId.value]"
-          },
-          "keyVaultName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultName.value]"
-          },
-          "storageAccountName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountName.value]"
-          },
-          "documentIntelligenceName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'cognitive-deployment'), '2025-04-01').outputs.documentIntelligenceName.value]"
-          },
-          "functionAppName": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'functionapp-deployment'), '2025-04-01').outputs.functionAppName.value]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "6458970871011584468"
-            }
-          },
-          "parameters": {
-            "vnetId": {
-              "type": "string",
-              "metadata": {
-                "description": "VNet ID"
-              }
-            },
-            "keyVaultName": {
-              "type": "string",
-              "metadata": {
-                "description": "Key Vault name"
-              }
-            },
-            "storageAccountName": {
-              "type": "string",
-              "metadata": {
-                "description": "Storage account name"
-              }
-            },
-            "documentIntelligenceName": {
-              "type": "string",
-              "metadata": {
-                "description": "Document Intelligence name"
-              }
-            },
-            "functionAppName": {
-              "type": "string",
-              "metadata": {
-                "description": "Function App name"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
-              "name": "privatelink.vaultcore.azure.net",
-              "location": "global",
-              "properties": {}
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.vaultcore.azure.net', format('{0}-link', 'privatelink.vaultcore.azure.net'))]",
-              "location": "global",
-              "properties": {
-                "registrationEnabled": false,
-                "virtualNetwork": {
-                  "id": "[parameters('vnetId')]"
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
-              "name": "privatelink.blob.core.windows.net",
-              "location": "global",
-              "properties": {}
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.blob.core.windows.net', format('{0}-link', 'privatelink.blob.core.windows.net'))]",
-              "location": "global",
-              "properties": {
-                "registrationEnabled": false,
-                "virtualNetwork": {
-                  "id": "[parameters('vnetId')]"
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.blob.core.windows.net')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
-              "name": "privatelink.cognitiveservices.azure.com",
-              "location": "global",
-              "properties": {}
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.cognitiveservices.azure.com', format('{0}-link', 'privatelink.cognitiveservices.azure.com'))]",
-              "location": "global",
-              "properties": {
-                "registrationEnabled": false,
-                "virtualNetwork": {
-                  "id": "[parameters('vnetId')]"
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.cognitiveservices.azure.com')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones",
-              "apiVersion": "2020-06-01",
-              "name": "privatelink.azurewebsites.net",
-              "location": "global",
-              "properties": {}
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.azurewebsites.net', format('{0}-link', 'privatelink.azurewebsites.net'))]",
-              "location": "global",
-              "properties": {
-                "registrationEnabled": false,
-                "virtualNetwork": {
-                  "id": "[parameters('vnetId')]"
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/A",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.vaultcore.azure.net', parameters('keyVaultName'))]",
-              "properties": {
-                "ttl": 3600,
-                "aRecords": [
-                  {
-                    "ipv4Address": "10.0.2.4"
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/A",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.blob.core.windows.net', parameters('storageAccountName'))]",
-              "properties": {
-                "ttl": 3600,
-                "aRecords": [
-                  {
-                    "ipv4Address": "10.0.2.5"
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.blob.core.windows.net')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/A",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.cognitiveservices.azure.com', parameters('documentIntelligenceName'))]",
-              "properties": {
-                "ttl": 3600,
-                "aRecords": [
-                  {
-                    "ipv4Address": "10.0.2.7"
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.cognitiveservices.azure.com')]"
-              ]
-            },
-            {
-              "type": "Microsoft.Network/privateDnsZones/A",
-              "apiVersion": "2020-06-01",
-              "name": "[format('{0}/{1}', 'privatelink.azurewebsites.net', parameters('functionAppName'))]",
-              "properties": {
-                "ttl": 3600,
-                "aRecords": [
-                  {
-                    "ipv4Address": "10.0.1.4"
-                  }
-                ]
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
-              ]
-            }
-          ],
-          "outputs": {
-            "keyVaultDnsZoneId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]"
-            },
-            "storageDnsZoneId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.blob.core.windows.net')]"
-            },
-            "cognitiveDnsZoneId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.cognitiveservices.azure.com')]"
-            },
-            "functionAppDnsZoneId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.azurewebsites.net')]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'cognitive-deployment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'functionapp-deployment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'keyvault-deployment')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment')]",
-        "[subscriptionResourceId('Microsoft.Resources/resourceGroups', variables('rgName'))]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage-deployment')]"
       ]
     },
     {
@@ -2246,6 +1353,9 @@
           "documentIntelligenceName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'cognitive-deployment'), '2025-04-01').outputs.documentIntelligenceName.value]"
           },
+          "contentUnderstandingName": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'cognitive-deployment'), '2025-04-01').outputs.contentUnderstandingName.value]"
+          },
           "storageAccountName": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'storage-deployment'), '2025-04-01').outputs.storageAccountName.value]"
           },
@@ -2260,7 +1370,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "17753027472225599914"
+              "templateHash": "4441213407271475682"
             }
           },
           "parameters": {
@@ -2281,6 +1391,12 @@
               "type": "string",
               "metadata": {
                 "description": "Document Intelligence Account Name"
+              }
+            },
+            "contentUnderstandingName": {
+              "type": "string",
+              "metadata": {
+                "description": "Content Understanding Account Name"
               }
             },
             "storageAccountName": {
@@ -2309,6 +1425,17 @@
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('documentIntelligenceName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('contentUnderstandingName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
                 "principalId": "[parameters('functionAppPrincipalId')]",
@@ -2377,6 +1504,10 @@
               "type": "string",
               "value": "[extensionResourceId(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesUserRoleId')))]"
             },
+            "contentUnderstandingRoleAssignmentId": {
+              "type": "string",
+              "value": "[extensionResourceId(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesUserRoleId')))]"
+            },
             "storageRoleAssignmentId": {
               "type": "string",
               "value": "[extensionResourceId(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionAppPrincipalId'), variables('storageBlobDataContributorRoleId')))]"
@@ -2403,10 +1534,6 @@
       "type": "string",
       "value": "[variables('rgName')]"
     },
-    "vnetId": {
-      "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.vnetId.value]"
-    },
     "keyVaultName": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'keyvault-deployment'), '2025-04-01').outputs.keyVaultName.value]"
@@ -2431,10 +1558,6 @@
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'functionapp-deployment'), '2025-04-01').outputs.functionAppUrl.value]"
     },
-    "functionAppPrivateEndpointId": {
-      "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'functionapp-deployment'), '2025-04-01').outputs.privateEndpointId.value]"
-    },
     "webAppName": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'webapp-deployment'), '2025-04-01').outputs.webAppName.value]"
@@ -2446,14 +1569,6 @@
     "webAppPrincipalId": {
       "type": "string",
       "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'webapp-deployment'), '2025-04-01').outputs.webAppPrincipalId.value]"
-    },
-    "containerAppsEnvName": {
-      "type": "string",
-      "value": "[if(parameters('deployContainerApps'), format('{0}-{1}-cae-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix')), '')]"
-    },
-    "githubRunnerAppName": {
-      "type": "string",
-      "value": "[if(parameters('deployContainerApps'), format('{0}-{1}-runner-{2}', parameters('appName'), parameters('environment'), variables('uniqueSuffix')), '')]"
     },
     "documentIntelligenceEndpoint": {
       "type": "string",

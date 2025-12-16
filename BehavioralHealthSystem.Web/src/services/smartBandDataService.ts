@@ -4,6 +4,8 @@
  * Based on Microsoft Band SDK: https://github.com/mattleibow/Microsoft-Band-SDK-Bindings
  */
 
+import { env } from '@/utils/env';
+
 export interface SmartBandSensorData {
   // Accelerometer data
   accelerometer?: {
@@ -92,7 +94,7 @@ class SmartBandDataService {
 
   constructor() {
     // Check if smart band feature is enabled via environment variable
-    this.isEnabled = import.meta.env.VITE_ENABLE_SMART_BAND === 'true';
+    this.isEnabled = env.ENABLE_SMART_BAND;
   }
 
   /**
@@ -115,7 +117,7 @@ class SmartBandDataService {
       console.log('🏃 Checking for Microsoft Band device via local service...');
 
       // Call the local Band Service REST API
-      const bandServiceUrl = import.meta.env.VITE_BAND_SERVICE_URL || 'http://localhost:8765';
+      const bandServiceUrl = env.BAND_SERVICE_URL;
       const response = await fetch(`${bandServiceUrl}/api/band/status`, {
         method: 'GET',
         headers: {
@@ -211,7 +213,7 @@ class SmartBandDataService {
       console.log('📊 Collecting sensor data from Band Service...');
 
       // Call the local Band Service REST API to collect data
-      const bandServiceUrl = import.meta.env.VITE_BAND_SERVICE_URL || 'http://localhost:8765';
+      const bandServiceUrl = env.BAND_SERVICE_URL;
       const response = await fetch(`${bandServiceUrl}/api/band/collect`, {
         method: 'POST',
         headers: {
@@ -338,7 +340,7 @@ class SmartBandDataService {
    */
   async saveSnapshot(snapshot: SmartBandDataSnapshot): Promise<boolean> {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7071/api';
+      const apiBaseUrl = env.API_BASE_URL;
       const endpoint = `${apiBaseUrl}/SaveSmartBandData`;
 
       console.log('💾 Saving Smart Band data to:', endpoint);

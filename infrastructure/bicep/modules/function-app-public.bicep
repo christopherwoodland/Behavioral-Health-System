@@ -40,10 +40,8 @@ param webAppUrl string = ''
 var functionAppName = '${appName}-${environment}-func-${uniqueSuffix}'
 var appServicePlanName = '${appName}-${environment}-asp-${uniqueSuffix}'
 
-// Get storage account resource
-resource storageAccountResource 'Microsoft.Storage/storageAccounts@2023-01-01' existing = {
-  name: storageAccountName
-}
+// NOTE: Storage account is accessed via managed identity using RBAC roles
+// No need to reference it here since we don't use connection strings
 
 // App Service Plan (Consumption plan for public deployment - cost-effective)
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-04-01' = {
@@ -94,9 +92,12 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           name: 'FUNCTIONS_WORKER_RUNTIME'
           value: 'dotnet-isolated'
         }
+        // Use managed identity for storage (no connection string)
+        // AzureWebJobsStorage__accountName tells the SDK to use DefaultAzureCredential
+        // Required RBAC roles: Storage Blob/Table/Queue Data Contributor
         {
-          name: 'AzureWebJobsStorage'
-          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccountName};AccountKey=${storageAccountResource.listKeys().keys[0].value};EndpointSuffix=core.windows.net'
+          name: 'AzureWebJobsStorage__accountName'
+          value: storageAccountName
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'

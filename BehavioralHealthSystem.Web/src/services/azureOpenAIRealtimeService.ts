@@ -6,6 +6,8 @@
  * https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/realtime-audio-webrtc
  */
 
+import { env } from '@/utils/env';
+
 export interface RealtimeMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -261,8 +263,8 @@ export class AzureOpenAIRealtimeService {
 
   // Reconnection state
   private reconnectionAttempts: number = 0;
-  private maxReconnectionAttempts: number = parseInt(import.meta.env.VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS || '3', 10);
-  private reconnectionDelay: number = parseInt(import.meta.env.VITE_REALTIME_RECONNECTION_DELAY_MS || '2000', 10); // Start with configurable delay (uses exponential backoff)
+  private maxReconnectionAttempts: number = env.REALTIME_MAX_RECONNECTION_ATTEMPTS;
+  private reconnectionDelay: number = env.REALTIME_RECONNECTION_DELAY_MS; // Start with configurable delay (uses exponential backoff)
   private reconnectionTimer: NodeJS.Timeout | null = null;
   private lastConfig: RealtimeSessionConfig | null = null;
   private isReconnecting: boolean = false;
@@ -288,18 +290,18 @@ export class AzureOpenAIRealtimeService {
   constructor() {
     // Load configuration from environment variables
     // Two-step authentication: sessions endpoint + WebRTC regional endpoint
-    this.endpoint = import.meta.env.VITE_AZURE_OPENAI_RESOURCE_NAME || '';
-    this.apiKey = import.meta.env.VITE_AZURE_OPENAI_REALTIME_KEY || '';
-    this.deploymentName = import.meta.env.VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT || 'gpt-4o-realtime-preview';
-    this.apiVersion = import.meta.env.VITE_AZURE_OPENAI_REALTIME_API_VERSION || '2025-04-01-preview';
-    this.webrtcRegion = import.meta.env.VITE_AZURE_OPENAI_WEBRTC_REGION || 'eastus2'; // Changed default from 'eastus' to 'eastus2'
+    this.endpoint = env.AZURE_OPENAI_RESOURCE_NAME;
+    this.apiKey = env.AZURE_OPENAI_REALTIME_KEY;
+    this.deploymentName = env.AZURE_OPENAI_REALTIME_DEPLOYMENT;
+    this.apiVersion = env.AZURE_OPENAI_REALTIME_API_VERSION;
+    this.webrtcRegion = env.AZURE_OPENAI_WEBRTC_REGION;
 
     console.log('🔧 Azure OpenAI Realtime Config:');
     console.log('  Resource:', this.endpoint);
     console.log('  Deployment:', this.deploymentName);
     console.log('  API Version:', this.apiVersion);
     console.log('  WebRTC Region:', this.webrtcRegion);
-    console.log('  Env Var Loaded:', import.meta.env.VITE_AZURE_OPENAI_WEBRTC_REGION ? 'YES ✅' : 'NO ❌ (using default)');
+    console.log('  Env Var Loaded:', env.AZURE_OPENAI_WEBRTC_REGION ? 'YES ✅' : 'NO ❌ (using default)');
 
     if (!this.endpoint || !this.apiKey) {
       console.warn('⚠️ Azure OpenAI Realtime credentials not configured');
@@ -1453,7 +1455,7 @@ export class AzureOpenAIRealtimeService {
    * Wait for data channel to be ready
    * Polls the data channel status with timeout
    */
-  private async waitForDataChannelReady(timeoutMs: number = parseInt(import.meta.env.VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS || '5000', 10)): Promise<void> {
+  private async waitForDataChannelReady(timeoutMs: number = env.REALTIME_DATA_CHANNEL_TIMEOUT_MS): Promise<void> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeoutMs) {
@@ -1554,7 +1556,7 @@ export class AzureOpenAIRealtimeService {
       this.hasInitialGreetingBeenSent = true;
 
       // Wait to ensure session setup is complete (configurable via env)
-      const sessionDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_SESSION_DELAY_MS || '1500', 10);
+      const sessionDelay = env.INITIAL_GREETING_SESSION_DELAY_MS;
       await new Promise(resolve => setTimeout(resolve, sessionDelay));
 
       // Send system message to trigger greeting
@@ -1576,7 +1578,7 @@ export class AzureOpenAIRealtimeService {
       console.log('📤 Sent system message for initial greeting');
 
       // Wait before triggering response (configurable via env)
-      const responseDelay = parseInt(import.meta.env.VITE_INITIAL_GREETING_RESPONSE_DELAY_MS || '300', 10);
+      const responseDelay = env.INITIAL_GREETING_RESPONSE_DELAY_MS;
       await new Promise(resolve => setTimeout(resolve, responseDelay));
 
       // Use safeCreateResponse to properly handle response state

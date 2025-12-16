@@ -4,17 +4,18 @@ import { MsalProvider } from '@azure/msal-react';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { MockAuthProvider } from '@/contexts/MockAuthContext';
 import { msalConfig } from '@/config/authConfig';
+import { env } from '@/utils/env';
 
 interface ConditionalAuthProviderProps {
   children: ReactNode;
 }
 
 // Create MSAL instance only if authentication is enabled
-const isAuthEnabled = import.meta.env.VITE_ENABLE_ENTRA_AUTH === 'true';
+const isAuthEnabled = env.ENABLE_ENTRA_AUTH;
 
 // Log authentication mode for debugging
 console.log('Authentication mode:', isAuthEnabled ? 'Entra ID enabled' : 'Mock authentication enabled');
-console.log('VITE_ENABLE_ENTRA_AUTH:', import.meta.env.VITE_ENABLE_ENTRA_AUTH);
+console.log('VITE_ENABLE_ENTRA_AUTH:', env.ENABLE_ENTRA_AUTH);
 
 const msalInstance = isAuthEnabled ? new PublicClientApplication(msalConfig) : null;
 

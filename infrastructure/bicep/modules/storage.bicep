@@ -95,6 +95,33 @@ resource kintsugiContainer 'Microsoft.Storage/storageAccounts/blobServices/conta
   }
 }
 
+// File Groups Container
+resource fileGroupsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'file-groups'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Sessions Container
+resource sessionsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'sessions'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
+// Biometric Data Container
+resource biometricDataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'biometric-data'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 // Private Endpoint for Blob Storage
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
   name: privateEndpointName

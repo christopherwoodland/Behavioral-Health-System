@@ -3,6 +3,7 @@ import { Header } from './Header';
 import { useSkipToContent } from '@/hooks/accessibility';
 import { A11Y } from '@/config/constants';
 import { MicrosoftLogo } from '@/components/icons';
+import { env } from '@/utils/env';
 
 interface LayoutProps {
   children: ReactNode;
@@ -11,8 +12,8 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
   const { skipToMain } = useSkipToContent();
-  const isDevEnvironment = import.meta.env.VITE_DEV_ENVIRONMENT === 'true';
-  const devEnvironmentText = import.meta.env.VITE_DEV_ENVIRONMENT_TEXT || '';
+  const isDevEnvironment = env.DEV_ENVIRONMENT;
+  const devEnvironmentText = env.DEV_ENVIRONMENT_TEXT;
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">

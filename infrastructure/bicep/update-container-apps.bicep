@@ -73,10 +73,10 @@ param documentIntelligenceEndpoint string = 'https://bhs-development-public-foun
 param contentUnderstandingEndpoint string = 'https://bhs-development-public-foundry-r.cognitiveservices.azure.com/'
 
 @description('Azure AD Client ID for MSAL')
-param azureAdClientId string = '63e9b3fd-de9d-4083-879c-9c13f3aac54d'
+param azureAdClientId string = '7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b'
 
 @description('Azure Tenant ID')
-param tenantId string = '3d6eb90f-fb5d-4624-99d7-1b8c4e077d07'
+param tenantId string = '36584371-2a86-4e03-afee-c2ba00e5e30e'
 
 // Azure OpenAI Realtime API Parameters (UI)
 @description('Azure OpenAI Realtime deployment name')
@@ -275,11 +275,11 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             // Feature Flags
             {
               name: 'VITE_DEV_ENVIRONMENT'
-              value: 'false'
+              value: 'true'
             }
             {
               name: 'VITE_DEV_ENVIRONMENT_TEXT'
-              value: ''
+              value: 'Please be mindful when uploading content and avoid submitting any proprietary, confidential, or sensitive data. Only provide information that is safe and intended for shared or demonstration purposes.'
             }
             {
               name: 'VITE_AUTO_START_SESSION'

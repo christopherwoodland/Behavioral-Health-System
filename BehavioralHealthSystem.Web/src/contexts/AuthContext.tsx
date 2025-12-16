@@ -16,6 +16,7 @@ import {
 } from '@azure/msal-react';
 import { loginRequest, ROLE_CLAIMS, APP_ROLES } from '@/config/authConfig';
 import { setAuthenticatedUserId } from '@/utils';
+import { env } from '@/utils/env';
 
 // Define the default role for users without specific roles
 const DEFAULT_ROLE = 'User';
@@ -90,9 +91,9 @@ const extractUserRoles = (account: AccountInfo): string[] => {
 
     // Map group IDs to roles based on configuration
     groups.forEach((groupId: string) => {
-      if (groupId === import.meta.env.VITE_AZURE_ADMIN_GROUP_ID) {
+      if (groupId === env.AZURE_ADMIN_GROUP_ID) {
         roles.push(APP_ROLES.ADMIN);
-      } else if (groupId === import.meta.env.VITE_AZURE_CONTROL_PANEL_GROUP_ID) {
+      } else if (groupId === env.AZURE_CONTROL_PANEL_GROUP_ID) {
         roles.push(APP_ROLES.CONTROL_PANEL);
       }
     });
@@ -290,7 +291,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 };
 
 // Conditional authentication templates
-const isAuthEnabled = import.meta.env.VITE_ENABLE_ENTRA_AUTH === 'true';
+const isAuthEnabled = env.ENABLE_ENTRA_AUTH;
 
 interface AuthTemplateProps {
   children: ReactNode;

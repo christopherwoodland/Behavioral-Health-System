@@ -1,8 +1,17 @@
 /**
  * Frontend Feature Flags Hook
- * All feature flags are read from environment variables (VITE_*)
+ * Feature flags are read from:
+ * 1. window.__RUNTIME_CONFIG__ (runtime injection for containerized deployments)
+ * 2. import.meta.env (build-time Vite environment variables)
  * No backend API calls - purely client-side configuration
  */
+
+// Declare global type for runtime config
+declare global {
+  interface Window {
+    __RUNTIME_CONFIG__?: Record<string, string | undefined>;
+  }
+}
 
 // Map of feature flag names to their environment variable names
 const FEATURE_FLAG_ENV_MAP: Record<string, string> = {
@@ -19,6 +28,18 @@ const FEATURE_FLAG_ENV_MAP: Record<string, string> = {
   ENABLE_SESSION_VOICE_RECORDING: 'VITE_ENABLE_SESSION_VOICE_RECORDING',
   ENABLE_SMART_BAND: 'VITE_ENABLE_SMART_BAND',
   ENABLE_ENTRA_AUTH: 'VITE_ENABLE_ENTRA_AUTH',
+};
+
+/**
+ * Get environment variable from runtime config first, then fall back to build-time env
+ */
+const getEnvVar = (name: string): string | undefined => {
+  // First check runtime config (for containerized deployments)
+  if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__?.[name]) {
+    return window.__RUNTIME_CONFIG__[name];
+  }
+  // Fall back to build-time Vite env
+  return import.meta.env[name];
 };
 
 /**
@@ -41,7 +62,7 @@ const getFeatureFlags = (): Record<string, boolean> => {
   const flags: Record<string, boolean> = {};
 
   for (const [flagName, envVar] of Object.entries(FEATURE_FLAG_ENV_MAP)) {
-    const envValue = import.meta.env[envVar];
+    const envValue = getEnvVar(envVar);
     // Default to true for most flags, false for debug/dev flags
     const defaultValue = !flagName.includes('DEBUG') && !flagName.includes('VERBOSE') && !flagName.includes('DEV_ENVIRONMENT');
     flags[flagName] = parseEnvBoolean(envValue, defaultValue);
@@ -95,8 +116,8 @@ export const useFeatureFlag = (flagName: string, defaultValue: boolean = true) =
  * Helper function to check agent mode without a hook (synchronous)
  * Useful for non-React contexts or conditional logic
  */
-export const checkAgentModeEnabled = (defaultValue: boolean = true): boolean => {
-  const envValue = import.meta.env.VITE_AGENT_MODE_ENABLED;
+export const checkAgentModeEnabled = (defaultValue: boolean = false): boolean => {
+  const envValue = getEnvVar('VITE_AGENT_MODE_ENABLED');
   return parseEnvBoolean(envValue, defaultValue);
 };
 
@@ -105,6 +126,6 @@ export const checkAgentModeEnabled = (defaultValue: boolean = true): boolean => 
  */
 export const checkFeatureFlag = (flagName: string, defaultValue: boolean = true): boolean => {
   const envVarName = FEATURE_FLAG_ENV_MAP[flagName] || `VITE_${flagName}`;
-  const envValue = import.meta.env[envVarName];
+  const envValue = getEnvVar(envVarName);
   return parseEnvBoolean(envValue, defaultValue);
 };

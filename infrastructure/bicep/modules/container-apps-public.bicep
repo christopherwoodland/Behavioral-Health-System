@@ -273,7 +273,7 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               value: azureOpenAIRealtimeApiVersion
             }
             {
-              name: 'VITE_AZURE_OPENAI_RESOURCE_NAME'
+              name: 'VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME'
               value: azureOpenAIResourceName
             }
             {

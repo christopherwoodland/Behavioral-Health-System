@@ -290,7 +290,7 @@ export class AzureOpenAIRealtimeService {
   constructor() {
     // Load configuration from environment variables
     // Two-step authentication: sessions endpoint + WebRTC regional endpoint
-    this.endpoint = env.AZURE_OPENAI_RESOURCE_NAME;
+    this.endpoint = env.AZURE_OPENAI_REALTIME_RESOURCE_NAME;
     this.apiKey = env.AZURE_OPENAI_REALTIME_KEY;
     this.deploymentName = env.AZURE_OPENAI_REALTIME_DEPLOYMENT;
     this.apiVersion = env.AZURE_OPENAI_REALTIME_API_VERSION;

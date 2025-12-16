@@ -4,6 +4,33 @@ A **production-ready** full-stack behavioral health assessment platform featurin
 
 ---
 
+## 🌍 Three-Environment Setup
+
+This application supports three distinct environments for different use cases:
+
+| Environment | Purpose | Setup Guide |
+|------------|---------|-------------|
+| **🏠 Local** | Offline development with local models | [Quick Start](#local-offline-mode) |
+| **🧪 Development** | Azure dev/test with Managed Identity | [Development Setup](#development-environment) |
+| **🚀 Production** | Production deployment on Azure | [Production Deployment](#production-deployment) |
+
+**👉 See [ENVIRONMENTS.md](ENVIRONMENTS.md) for detailed environment configuration guide**
+
+### Quick Start by Environment
+
+```powershell
+# Local offline mode (no Azure needed)
+.\scripts\run-environment.ps1 -Environment local
+
+# Development with Azure dev resources
+.\scripts\run-environment.ps1 -Environment development
+
+# Production deployment
+.\scripts\build-and-push-containers.ps1 -Environment production
+```
+
+---
+
 ## 📝 Documentation Notice
 
 This README consolidates all markdown documentation for the Behavioral Health System. Previously separate documentation files have been merged into this single comprehensive guide covering:

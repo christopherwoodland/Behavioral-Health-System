@@ -40,6 +40,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
         </div>
       )}
 
+      {/* Development Environment Text Banner (below dev banner) */}
+      {devEnvironmentText && (
+        <div
+          className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100 text-center py-2 px-4 text-sm border-b border-amber-200 dark:border-amber-700"
+          role="status"
+          aria-label="Environment status message"
+        >
+          {devEnvironmentText}
+        </div>
+      )}
+
       {/* Header */}
       <Header />
 
@@ -59,17 +70,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
         aria-live="polite"
         aria-atomic="true"
       />
-
-      {/* Development Environment Text Banner (above footer) */}
-      {devEnvironmentText && (
-        <div
-          className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100 text-center py-2 px-4 text-sm border-t border-amber-200 dark:border-amber-700"
-          role="status"
-          aria-label="Environment status message"
-        >
-          {devEnvironmentText}
-        </div>
-      )}
 
       {/* Footer */}
       <footer

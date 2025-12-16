@@ -128,9 +128,29 @@ class ApiClient {
 // Create API client instance
 const apiClient = new ApiClient(config.api.baseUrl);
 
+// Store auth provider reference for external access
+let _authProvider: AuthHeaders | undefined;
+
 // Function to set authentication provider (called from app initialization)
 export const setApiAuthProvider = (authProvider: AuthHeaders) => {
+  _authProvider = authProvider;
   apiClient.setAuthProvider(authProvider);
+};
+
+/**
+ * Get authentication headers for external use (e.g., direct fetch calls)
+ * Returns empty object if not authenticated
+ */
+export const getApiAuthHeaders = async (): Promise<Record<string, string>> => {
+  if (_authProvider) {
+    try {
+      return await _authProvider.getAuthHeaders();
+    } catch (error) {
+      console.warn('Failed to get auth headers:', error);
+      return {};
+    }
+  }
+  return {};
 };
 
 // API Service functions

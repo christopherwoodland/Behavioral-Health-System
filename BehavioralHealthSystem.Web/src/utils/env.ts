@@ -20,7 +20,8 @@ declare global {
  */
 export const getEnvVar = (name: string, defaultValue: string = ''): string => {
   // First check runtime config (for containerized deployments)
-  if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__?.[name]) {
+  // Use 'in' operator to check key existence, not truthiness (handles 'false' and '' values)
+  if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__ && name in window.__RUNTIME_CONFIG__) {
     return window.__RUNTIME_CONFIG__[name] || defaultValue;
   }
   // Fall back to build-time Vite env
@@ -66,6 +67,8 @@ export const env = {
   get AZURE_ADMIN_GROUP_ID() { return getEnvVar('VITE_AZURE_ADMIN_GROUP_ID'); },
   get AZURE_CONTROL_PANEL_GROUP_ID() { return getEnvVar('VITE_AZURE_CONTROL_PANEL_GROUP_ID'); },
   get ENABLE_ENTRA_AUTH() { return getEnvVarBool('VITE_ENABLE_ENTRA_AUTH', false); },
+  // API App Registration ID - separate from frontend client ID for token scopes
+  get AZURE_API_CLIENT_ID() { return getEnvVar('VITE_AZURE_API_CLIENT_ID', getEnvVar('VITE_AZURE_CLIENT_ID')); },
 
   // Azure Blob Storage
   get STORAGE_CONTAINER_NAME() { return getEnvVar('VITE_STORAGE_CONTAINER_NAME', 'audio-uploads'); },

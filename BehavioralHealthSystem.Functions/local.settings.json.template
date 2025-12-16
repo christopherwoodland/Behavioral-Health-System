@@ -78,6 +78,17 @@
     "AGENT_MODE_ENABLED": "true",
 
     // ========================================================================
+    // ENTRA ID / AZURE AD AUTHENTICATION (For API token validation)
+    // ========================================================================
+    // Configure these values to enable Entra ID bearer token validation
+    // The ENTRA_CLIENT_ID should match the API app registration (backend)
+    // Frontend acquires tokens with scope: api://{ENTRA_CLIENT_ID}/user_impersonation
+    "ENTRA_TENANT_ID": "your-tenant-id",  // Azure AD Tenant ID
+    "ENTRA_CLIENT_ID": "your-api-client-id",  // API App Registration Client ID (backend)
+    // Optional: Override audience validation (defaults to ENTRA_CLIENT_ID)
+    // "ENTRA_AUDIENCE": "api://your-api-client-id",
+
+    // ========================================================================
     // AZURE SPEECH SERVICE (For audio transcription - Fast Transcription API)
     // ========================================================================
     // Azure Speech Service for real-time and fast transcription

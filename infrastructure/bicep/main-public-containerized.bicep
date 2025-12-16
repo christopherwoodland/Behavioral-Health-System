@@ -35,6 +35,9 @@ param containerImageTag string = 'latest'
 @description('Azure AD Client ID for MSAL authentication')
 param azureAdClientId string = ''
 
+@description('Azure AD API Client ID (Backend API app registration - defaults to same as frontend)')
+param azureAdApiClientId string = ''
+
 @description('Azure Container Registry name (must be pre-deployed with images)')
 param acrName string
 
@@ -197,6 +200,7 @@ module containerApps './modules/container-apps-public.bicep' = {
     documentIntelligenceEndpoint: cognitive.outputs.documentIntelligenceEndpoint
     contentUnderstandingEndpoint: cognitive.outputs.contentUnderstandingEndpoint
     azureAdClientId: azureAdClientId
+    azureAdApiClientId: !empty(azureAdApiClientId) ? azureAdApiClientId : azureAdClientId
     uiImageTag: containerImageTag
     apiImageTag: containerImageTag
     // Azure OpenAI Realtime API parameters

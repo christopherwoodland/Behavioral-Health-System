@@ -40,8 +40,11 @@ param contentUnderstandingEndpoint string
 @description('Azure Tenant ID')
 param tenantId string = subscription().tenantId
 
-@description('Azure AD Client ID for MSAL')
+@description('Azure AD Client ID for MSAL (Frontend app registration)')
 param azureAdClientId string = ''
+
+@description('Azure AD API Client ID (Backend API app registration)')
+param azureAdApiClientId string = ''
 
 @description('Container image tag for UI')
 param uiImageTag string = 'latest'
@@ -222,6 +225,10 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'VITE_AZURE_CLIENT_ID'
               value: azureAdClientId
+            }
+            {
+              name: 'VITE_AZURE_API_CLIENT_ID'
+              value: azureAdApiClientId
             }
             {
               name: 'VITE_AZURE_TENANT_ID'
@@ -674,6 +681,15 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'ALLOWED_ORIGINS'
               value: 'https://${uiAppName}.${containerAppsEnv.properties.defaultDomain}'
+            }
+            // Entra ID / Azure AD Authentication
+            {
+              name: 'ENTRA_TENANT_ID'
+              value: tenantId
+            }
+            {
+              name: 'ENTRA_CLIENT_ID'
+              value: azureAdApiClientId
             }
           ]
           probes: [

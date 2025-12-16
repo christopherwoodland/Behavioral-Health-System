@@ -35,7 +35,8 @@ const FEATURE_FLAG_ENV_MAP: Record<string, string> = {
  */
 const getEnvVar = (name: string): string | undefined => {
   // First check runtime config (for containerized deployments)
-  if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__?.[name]) {
+  // Use 'in' operator to check key existence, not truthiness (handles 'false' and '' values)
+  if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__ && name in window.__RUNTIME_CONFIG__) {
     return window.__RUNTIME_CONFIG__[name];
   }
   // Fall back to build-time Vite env
@@ -100,7 +101,7 @@ export const useFeatureFlags = () => {
 export const useFeatureFlag = (flagName: string, defaultValue: boolean = true) => {
   // Get environment variable name for this flag
   const envVarName = FEATURE_FLAG_ENV_MAP[flagName] || `VITE_${flagName}`;
-  const envValue = import.meta.env[envVarName];
+  const envValue = getEnvVar(envVarName);
 
   const isEnabled = parseEnvBoolean(envValue, defaultValue);
 

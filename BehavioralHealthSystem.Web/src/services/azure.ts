@@ -1,5 +1,6 @@
 import { config } from '@/config/constants';
 import { createAppError, getUserId } from '@/utils';
+import { getApiAuthHeaders } from './api';
 
 export interface UploadProgress {
   progress: number;
@@ -16,6 +17,7 @@ export interface UploadResult {
 /**
  * Upload audio file via backend API (uses managed identity)
  * This replaces direct Azure Blob Storage uploads with SAS URLs
+ * Includes Entra ID authentication headers when available
  */
 export const uploadToAzureBlob = async (
   file: File | Blob,
@@ -46,10 +48,14 @@ export const uploadToAzureBlob = async (
   onProgress?.(30);
 
   try {
+    // Get authentication headers (Entra ID token if authenticated)
+    const authHeaders = await getApiAuthHeaders();
+
     const response = await fetch(uploadUrl.toString(), {
       method: 'POST',
       headers: {
         'Content-Type': fileToUpload.type || 'audio/wav',
+        ...authHeaders,
       },
       body: fileToUpload,
     });

@@ -20,6 +20,9 @@
     "azureAdApiClientId": {
       "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b"
     },
+    "azureAdTenantId": {
+      "value": "36584371-2a86-4e03-afee-c2ba00e5e30e"
+    },
     "tags": {
       "value": {
         "Application": "Behavioral Health System",

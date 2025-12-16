@@ -1,0 +1,112 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "15879706926088746120"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure region for resources"
+      }
+    },
+    "appName": {
+      "type": "string",
+      "metadata": {
+        "description": "Application name prefix"
+      }
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Environment name"
+      }
+    },
+    "uniqueSuffix": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique suffix for global names"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "metadata": {
+        "description": "Resource tags"
+      }
+    }
+  },
+  "variables": {
+    "documentIntelligenceName": "[format('{0}-{1}-docintel-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
+    "contentUnderstandingName": "[format('{0}-{1}-content-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[variables('documentIntelligenceName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "FormRecognizer",
+      "properties": {
+        "customSubDomainName": "[variables('documentIntelligenceName')]",
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "virtualNetworkRules": [],
+          "ipRules": []
+        },
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[variables('contentUnderstandingName')]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "AIServices",
+      "properties": {
+        "customSubDomainName": "[variables('contentUnderstandingName')]",
+        "disableLocalAuth": true,
+        "networkAcls": {
+          "defaultAction": "Allow",
+          "virtualNetworkRules": [],
+          "ipRules": []
+        },
+        "publicNetworkAccess": "Enabled"
+      }
+    }
+  ],
+  "outputs": {
+    "documentIntelligenceName": {
+      "type": "string",
+      "value": "[variables('documentIntelligenceName')]"
+    },
+    "documentIntelligenceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.CognitiveServices/accounts', variables('documentIntelligenceName'))]"
+    },
+    "documentIntelligenceEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('documentIntelligenceName')), '2023-10-01-preview').endpoint]"
+    },
+    "contentUnderstandingName": {
+      "type": "string",
+      "value": "[variables('contentUnderstandingName')]"
+    },
+    "contentUnderstandingEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('contentUnderstandingName')), '2023-10-01-preview').endpoint]"
+    }
+  }
+}

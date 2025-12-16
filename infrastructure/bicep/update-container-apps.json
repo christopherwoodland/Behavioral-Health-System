@@ -5,108 +5,64 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "10962721536100567105"
+      "templateHash": "17522383637557134985"
     }
   },
   "parameters": {
     "location": {
       "type": "string",
+      "defaultValue": "eastus2",
       "metadata": {
         "description": "Azure region for resources"
       }
     },
-    "appName": {
+    "containerAppsEnvName": {
       "type": "string",
+      "defaultValue": "bhs-dev-cae-4exbxrzknexso",
       "metadata": {
-        "description": "Application name prefix"
+        "description": "Existing Container Apps Environment name"
       }
     },
-    "environment": {
+    "uiAppName": {
       "type": "string",
+      "defaultValue": "bhs-dev-ui-4exbxrzknexso",
       "metadata": {
-        "description": "Environment name"
+        "description": "Existing UI Container App name"
       }
     },
-    "uniqueSuffix": {
+    "apiAppName": {
       "type": "string",
+      "defaultValue": "bhs-dev-api-4exbxrzknexso",
       "metadata": {
-        "description": "Unique suffix for global names"
-      }
-    },
-    "tags": {
-      "type": "object",
-      "metadata": {
-        "description": "Resource tags"
-      }
-    },
-    "logAnalyticsWorkspaceId": {
-      "type": "string",
-      "metadata": {
-        "description": "Log Analytics Workspace ID"
+        "description": "Existing API Container App name"
       }
     },
     "acrName": {
       "type": "string",
+      "defaultValue": "bhsdevelopmentacr4znv2wxlxs4xq",
       "metadata": {
-        "description": "Azure Container Registry name"
+        "description": "Existing Azure Container Registry name"
       }
     },
     "storageAccountName": {
       "type": "string",
+      "defaultValue": "bhsdevstg4exbxrzknexso",
       "metadata": {
-        "description": "Storage account name for Function App"
-      }
-    },
-    "appInsightsConnectionString": {
-      "type": "string",
-      "metadata": {
-        "description": "Application Insights connection string"
+        "description": "Existing Storage account name"
       }
     },
     "keyVaultName": {
       "type": "string",
+      "defaultValue": "bhs-dev-kv-4exbxrzknexso",
       "metadata": {
-        "description": "Key Vault name"
+        "description": "Existing Key Vault name"
       }
     },
-    "openaiEndpoint": {
+    "appInsightsName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "bhs-dev-appinsights",
       "metadata": {
-        "description": "Azure OpenAI endpoint"
-      }
-    },
-    "documentIntelligenceEndpoint": {
-      "type": "string",
-      "metadata": {
-        "description": "Document Intelligence endpoint"
-      }
-    },
-    "contentUnderstandingEndpoint": {
-      "type": "string",
-      "metadata": {
-        "description": "Content Understanding endpoint"
-      }
-    },
-    "tenantId": {
-      "type": "string",
-      "defaultValue": "[subscription().tenantId]",
-      "metadata": {
-        "description": "Azure Tenant ID"
-      }
-    },
-    "azureAdClientId": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Azure AD Client ID for MSAL (Frontend app registration)"
-      }
-    },
-    "azureAdApiClientId": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Azure AD API Client ID (Backend API app registration)"
+        "description": "Existing Application Insights name"
       }
     },
     "uiImageTag": {
@@ -121,6 +77,41 @@
       "defaultValue": "latest",
       "metadata": {
         "description": "Container image tag for API"
+      }
+    },
+    "openaiEndpoint": {
+      "type": "string",
+      "defaultValue": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com/",
+      "metadata": {
+        "description": "Azure OpenAI endpoint"
+      }
+    },
+    "documentIntelligenceEndpoint": {
+      "type": "string",
+      "defaultValue": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com/",
+      "metadata": {
+        "description": "Document Intelligence endpoint"
+      }
+    },
+    "contentUnderstandingEndpoint": {
+      "type": "string",
+      "defaultValue": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com/",
+      "metadata": {
+        "description": "Content Understanding endpoint"
+      }
+    },
+    "azureAdClientId": {
+      "type": "string",
+      "defaultValue": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b",
+      "metadata": {
+        "description": "Azure AD Client ID for MSAL"
+      }
+    },
+    "tenantId": {
+      "type": "string",
+      "defaultValue": "36584371-2a86-4e03-afee-c2ba00e5e30e",
+      "metadata": {
+        "description": "Azure Tenant ID"
       }
     },
     "azureOpenAIRealtimeDeployment": {
@@ -139,9 +130,9 @@
     },
     "azureOpenAIResourceName": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "cwood-mgsuknv5-eastus2",
       "metadata": {
-        "description": "Azure OpenAI resource name for Realtime API"
+        "description": "Azure OpenAI resource name for Realtime API (from .env.local VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME)"
       }
     },
     "azureOpenAIWebRTCRegion": {
@@ -149,13 +140,6 @@
       "defaultValue": "eastus2",
       "metadata": {
         "description": "Azure OpenAI WebRTC region"
-      }
-    },
-    "azureOpenAIRealtimeKey": {
-      "type": "securestring",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Azure OpenAI Realtime API Key"
       }
     },
     "extendedAssessmentDeployment": {
@@ -172,61 +156,28 @@
         "description": "Agent Model Deployment"
       }
     },
-    "bandServiceUrl": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Band Service URL for Smart Band integration"
-      }
-    },
-    "enableSmartBand": {
+    "createRoleAssignments": {
       "type": "bool",
       "defaultValue": false,
       "metadata": {
-        "description": "Enable Smart Band integration"
+        "description": "Create role assignments - set to false if they already exist"
       }
     }
   },
   "variables": {
-    "containerAppsEnvName": "[format('{0}-{1}-cae-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-    "uiAppName": "[format('{0}-{1}-ui-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-    "apiAppName": "[format('{0}-{1}-api-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
+    "keyVaultUri": "[format('https://{0}.vault.azure.net/secrets', parameters('keyVaultName'))]"
   },
   "resources": [
     {
-      "type": "Microsoft.App/managedEnvironments",
-      "apiVersion": "2024-03-01",
-      "name": "[variables('containerAppsEnvName')]",
-      "location": "[parameters('location')]",
-      "tags": "[parameters('tags')]",
-      "properties": {
-        "appLogsConfiguration": {
-          "destination": "log-analytics",
-          "logAnalyticsConfiguration": {
-            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', last(split(parameters('logAnalyticsWorkspaceId'), '/'))), '2022-10-01').customerId]",
-            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', last(split(parameters('logAnalyticsWorkspaceId'), '/'))), '2022-10-01').primarySharedKey]"
-          }
-        },
-        "zoneRedundant": false,
-        "workloadProfiles": [
-          {
-            "name": "Consumption",
-            "workloadProfileType": "Consumption"
-          }
-        ]
-      }
-    },
-    {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2024-03-01",
-      "name": "[variables('uiAppName')]",
+      "name": "[parameters('uiAppName')]",
       "location": "[parameters('location')]",
-      "tags": "[parameters('tags')]",
       "identity": {
         "type": "SystemAssigned"
       },
       "properties": {
-        "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "environmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName'))]",
         "configuration": {
           "activeRevisionsMode": "Single",
           "ingress": {
@@ -260,18 +211,14 @@
           "registries": [
             {
               "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').loginServer]",
-              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').username]",
-              "passwordSecretRef": "acr-password"
+              "identity": "system"
             }
           ],
           "secrets": [
             {
-              "name": "acr-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').passwords[0].value]"
-            },
-            {
               "name": "openai-realtime-key",
-              "value": "[parameters('azureOpenAIRealtimeKey')]"
+              "keyVaultUrl": "[format('{0}/openai-realtime-key', variables('keyVaultUri'))]",
+              "identity": "system"
             }
           ]
         },
@@ -287,7 +234,7 @@
               "env": [
                 {
                   "name": "VITE_API_BASE_URL",
-                  "value": "[format('https://{0}.{1}/api', variables('apiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                  "value": "[format('https://{0}.{1}/api', parameters('apiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
                 },
                 {
                   "name": "VITE_API_TIMEOUT_MS",
@@ -322,10 +269,6 @@
                   "value": "[parameters('azureAdClientId')]"
                 },
                 {
-                  "name": "VITE_AZURE_API_CLIENT_ID",
-                  "value": "[parameters('azureAdApiClientId')]"
-                },
-                {
                   "name": "VITE_AZURE_TENANT_ID",
                   "value": "[parameters('tenantId')]"
                 },
@@ -335,11 +278,11 @@
                 },
                 {
                   "name": "VITE_AZURE_REDIRECT_URI",
-                  "value": "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                  "value": "[format('https://{0}.{1}', parameters('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
                 },
                 {
                   "name": "VITE_AZURE_POST_LOGOUT_REDIRECT_URI",
-                  "value": "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                  "value": "[format('https://{0}.{1}', parameters('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
                 },
                 {
                   "name": "VITE_ENABLE_ENTRA_AUTH",
@@ -379,11 +322,11 @@
                 },
                 {
                   "name": "VITE_DEV_ENVIRONMENT",
-                  "value": "false"
+                  "value": "true"
                 },
                 {
                   "name": "VITE_DEV_ENVIRONMENT_TEXT",
-                  "value": ""
+                  "value": "Please be mindful when uploading content and avoid submitting any proprietary, confidential, or sensitive data. Only provide information that is safe and intended for shared or demonstration purposes."
                 },
                 {
                   "name": "VITE_AUTO_START_SESSION",
@@ -432,14 +375,6 @@
                 {
                   "name": "VITE_AGENT_HANDOFF_DELAY_MS",
                   "value": "2000"
-                },
-                {
-                  "name": "VITE_ENABLE_SMART_BAND",
-                  "value": "[string(parameters('enableSmartBand'))]"
-                },
-                {
-                  "name": "VITE_BAND_SERVICE_URL",
-                  "value": "[parameters('bandServiceUrl')]"
                 },
                 {
                   "name": "VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS",
@@ -511,22 +446,18 @@
             ]
           }
         }
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]"
-      ]
+      }
     },
     {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2024-03-01",
-      "name": "[variables('apiAppName')]",
+      "name": "[parameters('apiAppName')]",
       "location": "[parameters('location')]",
-      "tags": "[parameters('tags')]",
       "identity": {
         "type": "SystemAssigned"
       },
       "properties": {
-        "environmentId": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]",
+        "environmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName'))]",
         "configuration": {
           "activeRevisionsMode": "Single",
           "ingress": {
@@ -542,7 +473,7 @@
             ],
             "corsPolicy": {
               "allowedOrigins": [
-                "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]",
+                "[format('https://{0}.{1}', parameters('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName')), '2024-03-01').defaultDomain)]",
                 "https://portal.azure.com"
               ],
               "allowedMethods": [
@@ -562,14 +493,19 @@
           "registries": [
             {
               "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').loginServer]",
-              "username": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').username]",
-              "passwordSecretRef": "acr-password"
+              "identity": "system"
             }
           ],
           "secrets": [
             {
-              "name": "acr-password",
-              "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').passwords[0].value]"
+              "name": "storage-connection",
+              "keyVaultUrl": "[format('{0}/storage-connection-string', variables('keyVaultUri'))]",
+              "identity": "system"
+            },
+            {
+              "name": "kintsugi-api-key",
+              "keyVaultUrl": "[format('{0}/KintsugiApiKey', variables('keyVaultUri'))]",
+              "identity": "system"
             }
           ]
         },
@@ -605,7 +541,7 @@
                 },
                 {
                   "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
-                  "value": "[parameters('appInsightsConnectionString')]"
+                  "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').ConnectionString]"
                 },
                 {
                   "name": "KEY_VAULT_URI",
@@ -686,6 +622,10 @@
                 {
                   "name": "KINTSUGI_BASE_URL",
                   "value": "https://api.kintsugihealth.com/v2"
+                },
+                {
+                  "name": "KINTSUGI_API_KEY",
+                  "secretRef": "kintsugi-api-key"
                 },
                 {
                   "name": "KINTSUGI_TIMEOUT_SECONDS",
@@ -769,15 +709,7 @@
                 },
                 {
                   "name": "ALLOWED_ORIGINS",
-                  "value": "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
-                },
-                {
-                  "name": "ENTRA_TENANT_ID",
-                  "value": "[parameters('tenantId')]"
-                },
-                {
-                  "name": "ENTRA_CLIENT_ID",
-                  "value": "[parameters('azureAdApiClientId')]"
+                  "value": "[format('https://{0}.{1}', parameters('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
                 }
               ],
               "probes": [
@@ -817,56 +749,100 @@
             ]
           }
         }
+      }
+    },
+    {
+      "condition": "[parameters('createRoleAssignments')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '4633458b-17de-408a-b874-0445c86b69e6')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2024-03-01', 'full').identity.principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalType": "ServicePrincipal"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]"
+        "[resourceId('Microsoft.App/containerApps', parameters('uiAppName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('createRoleAssignments')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '4633458b-17de-408a-b874-0445c86b69e6')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', parameters('apiAppName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('createRoleAssignments')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2024-03-01', 'full').identity.principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', parameters('uiAppName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('createRoleAssignments')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', parameters('apiAppName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('createRoleAssignments')]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), resourceId('Microsoft.App/containerApps', parameters('apiAppName')), 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', parameters('apiAppName'))]"
       ]
     }
   ],
   "outputs": {
-    "containerAppsEnvId": {
-      "type": "string",
-      "value": "[resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName'))]"
-    },
-    "containerAppsEnvName": {
-      "type": "string",
-      "value": "[variables('containerAppsEnvName')]"
-    },
-    "containerAppsEnvDefaultDomain": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain]"
-    },
-    "acrName": {
-      "type": "string",
-      "value": "[parameters('acrName')]"
-    },
-    "acrLoginServer": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').loginServer]"
-    },
-    "uiAppName": {
-      "type": "string",
-      "value": "[variables('uiAppName')]"
-    },
     "uiAppUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('uiAppName')), '2024-03-01').configuration.ingress.fqdn)]"
-    },
-    "uiAppPrincipalId": {
-      "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('uiAppName')), '2024-03-01', 'full').identity.principalId]"
-    },
-    "apiAppName": {
-      "type": "string",
-      "value": "[variables('apiAppName')]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2024-03-01').configuration.ingress.fqdn)]"
     },
     "apiAppUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', variables('apiAppName')), '2024-03-01').configuration.ingress.fqdn)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01').configuration.ingress.fqdn)]"
+    },
+    "uiAppPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2024-03-01', 'full').identity.principalId]"
     },
     "apiAppPrincipalId": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.App/containerApps', variables('apiAppName')), '2024-03-01', 'full').identity.principalId]"
+      "value": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]"
     }
   }
 }

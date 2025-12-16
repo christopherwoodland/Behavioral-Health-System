@@ -36,7 +36,8 @@ resource documentIntelligence 'Microsoft.CognitiveServices/accounts@2023-10-01-p
   }
 }
 
-// Content Understanding / AI Services (Public access enabled)
+// Content Understanding / AI Services (Public access enabled, managed identity auth required)
+// NOTE: disableLocalAuth=true means API keys are disabled - must use managed identity
 resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-10-01-preview' = {
   name: contentUnderstandingName
   location: location
@@ -47,6 +48,7 @@ resource contentUnderstanding 'Microsoft.CognitiveServices/accounts@2023-10-01-p
   kind: 'AIServices'
   properties: {
     customSubDomainName: contentUnderstandingName
+    disableLocalAuth: true
     networkAcls: {
       defaultAction: 'Allow'
       virtualNetworkRules: []

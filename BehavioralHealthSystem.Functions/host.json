@@ -19,6 +19,7 @@
     "durableTask": {
       "hubName": "KintsugiHealthHub",
       "storageProvider": {
+        "connectionName": "AzureWebJobsStorage",
         "maxQueuePollingInterval": "00:00:10",
         "partitionCount": 4
       },

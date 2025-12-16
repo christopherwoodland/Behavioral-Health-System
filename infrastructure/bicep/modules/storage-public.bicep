@@ -141,6 +141,15 @@ resource audioUploadsContainer 'Microsoft.Storage/storageAccounts/blobServices/c
   }
 }
 
+// Session Data Container (for session storage)
+resource sessionDataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'session-data'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 output storageAccountName string = storageAccount.name
 output storageAccountId string = storageAccount.id
 output primaryBlobEndpoint string = storageAccount.properties.primaryEndpoints.blob

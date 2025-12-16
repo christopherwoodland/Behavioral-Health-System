@@ -492,11 +492,24 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'FUNCTIONS_WORKER_RUNTIME'
               value: 'dotnet-isolated'
             }
-            // Use managed identity for storage (no connection string)
-            // AzureWebJobsStorage__accountName tells the SDK to use DefaultAzureCredential
+            // Azure Storage configuration for managed identity
+            // Using __accountName suffix enables DefaultAzureCredential
+            // Service URIs are required for Durable Functions extension
             {
               name: 'AzureWebJobsStorage__accountName'
               value: storageAccountName
+            }
+            {
+              name: 'AzureWebJobsStorage__blobServiceUri'
+              value: 'https://${storageAccountName}.blob.core.windows.net'
+            }
+            {
+              name: 'AzureWebJobsStorage__queueServiceUri'
+              value: 'https://${storageAccountName}.queue.core.windows.net'
+            }
+            {
+              name: 'AzureWebJobsStorage__tableServiceUri'
+              value: 'https://${storageAccountName}.table.core.windows.net'
             }
             {
               name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -607,13 +620,16 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             // Note: KINTSUGI_API_KEY should be retrieved from Key Vault via managed identity
             // Azure Speech Configuration
+            // NOTE: Uses AIServices endpoint with managed identity (disableLocalAuth=true)
+            // No AZURE_SPEECH_KEY needed - uses DefaultAzureCredential
+            // Requires Cognitive Services User role on the AIServices resource
             {
               name: 'AZURE_SPEECH_REGION'
               value: 'eastus2'
             }
             {
               name: 'AZURE_SPEECH_ENDPOINT'
-              value: 'https://eastus2.api.cognitive.microsoft.com'
+              value: contentUnderstandingEndpoint
             }
             {
               name: 'AZURE_SPEECH_LOCALE'

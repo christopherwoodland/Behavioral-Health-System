@@ -63,6 +63,22 @@ export const loginRequest: RedirectRequest = {
 };
 
 /**
+ * Scopes for API access - used when calling the backend API
+ * The scope should match the API's exposed scope in Azure AD app registration
+ * Format: api://{api-client-id}/.default or api://{api-client-id}/{scope-name}
+ *
+ * Production uses: api://{app-id}/user_impersonation
+ * Dev may use: api://{app-id}/access_as_user
+ */
+export const apiRequest: PopupRequest = {
+  scopes: [
+    // Use the API's app ID with user_impersonation scope
+    // Format: api://{api-identifier}/user_impersonation
+    `api://${env.AZURE_API_CLIENT_ID}/user_impersonation`,
+  ],
+};
+
+/**
  * An optional silentRequest object can be used to achieve silent SSO
  * between applications by providing a "login_hint" property.
  */

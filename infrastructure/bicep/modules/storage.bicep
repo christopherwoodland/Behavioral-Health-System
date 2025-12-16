@@ -122,6 +122,15 @@ resource biometricDataContainer 'Microsoft.Storage/storageAccounts/blobServices/
   }
 }
 
+// Audio Uploads Container (for Kintsugi predictions)
+resource audioUploadsContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  parent: blobService
+  name: 'audio-uploads'
+  properties: {
+    publicAccess: 'None'
+  }
+}
+
 // Private Endpoint for Blob Storage
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
   name: privateEndpointName

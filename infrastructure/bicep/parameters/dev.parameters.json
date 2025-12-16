@@ -19,6 +19,12 @@
         "CostCenter": "Engineering",
         "Project": "BHS"
       }
+    },
+    "azureAdClientId": {
+      "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b"
+    },
+    "azureAdApiClientId": {
+      "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b"
     }
   }
 }

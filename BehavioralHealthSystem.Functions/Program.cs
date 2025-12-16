@@ -150,8 +150,11 @@ var host = new HostBuilder()
             .AddPolicyHandler((serviceProvider, request) => RetryPolicies.GetRetryPolicy(serviceProvider.GetService<ILogger<KintsugiApiService>>()))
             .AddPolicyHandler(RetryPolicies.GetTimeoutPolicy());
 
-        // Services
+        // Authentication & Authorization Services
+        services.AddSingleton<IEntraIdValidationService, EntraIdValidationService>();
         services.AddSingleton<IApiKeyValidationService, ApiKeyValidationService>();
+
+        // Application Services
         services.AddScoped<IKintsugiApiService, KintsugiApiService>();
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         services.AddScoped<IDSM5DataService, DSM5DataService>();

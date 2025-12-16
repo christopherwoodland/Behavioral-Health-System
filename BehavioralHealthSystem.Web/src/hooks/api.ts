@@ -32,7 +32,7 @@ export const useHealthCheck = () => {
 // Session initiation mutation
 export const useInitiateSession = () => {
   return useMutation({
-    mutationFn: (request: SessionInitiateRequest) => 
+    mutationFn: (request: SessionInitiateRequest) =>
       apiService.initiateSession(request),
     onError: () => {
       // Error is handled by the UI components
@@ -45,14 +45,14 @@ export const useSubmitPrediction = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: PredictionSubmitRequest) => 
+    mutationFn: (request: PredictionSubmitRequest) =>
       apiService.submitPrediction(request),
     onSuccess: (_, variables) => {
       // Invalidate related queries
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.sessionPrediction(variables.sessionId),
       });
-      
+
       const userId = getUserId();
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.userPredictions(userId),
@@ -136,12 +136,12 @@ export const usePredictionPolling = () => {
           QUERY_KEYS.sessionPrediction(sessionId),
           result
         );
-        
+
         const userId = getUserId();
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.userPredictions(userId),
         });
-        
+
         options?.onComplete?.(result);
       },
       (error) => {

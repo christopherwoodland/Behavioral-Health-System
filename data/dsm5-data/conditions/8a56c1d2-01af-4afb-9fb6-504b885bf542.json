@@ -1,0 +1,55 @@
+{
+  "id": "8a56c1d2-01af-4afb-9fb6-504b885bf542",
+  "name": "Depersonalization/Derealization Disorder",
+  "code": "300.6 (F48.1)",
+  "category": "Depersonalization/Derealization Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. The presence of persistent or recurrent experiences of depersonalization, derealiza-\ntion, or both:\n\n1\\. Depersonalization: Experiences of unreality, detachment, or being an outside ob-\nserver with respect to one\u0027s thoughts, feelings, sensations, body, or actions (e.g.,\nperceptual alterations, distorted sense of time, unreal or absent self, emotional and/\nor physical numbing).\n\n2\\. Derealization: Experiences of unreality or detachment with respect to surround-\nings (e.g., Individuals or objects are experienced as unreal, dreamlike, foggy, life-\nless, or visually distorted).\n\nB. During the depersonalization or derealization experiences, reality testing remains intact.\nC. The symptoms cause clinically significant distress or impairment in social, occupa-\ntional, or other important areas of functioning.\n\nD. The disturbance is not attributable to the physiological effects of a substance (e.g., a\ndrug of abuse, medication) or another medical condition (e.g., seizures).\nE. The disturbance is not better explained by another mental disorder, such as schizo-\nphrenia, panic disorder, major depressive disorder, acute stress disorder, posttrau-\nmatic stress disorder, or another dissociative disorder.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential features of depersonalization/derealization disorder are persistent or recur-\nrent episodes of depersonalization, derealization, or both. Episodes of depersonalization\nare characterized by a feeling of unreality or detachment from, or unfamiliarity with, one\u0027s\nwhole self or from aspects of the self (Criterion A1). The individual may feel detached\nfrom his or her entire being (e.g., \u0022I am no one,\u0022 \u0022I have no self\u0022). He or she may also feel\nsubjectively detached from aspects of the self, including feelings (e.g., hypoemotionality:\nDepersonalization/Derealization Disorder 303\n\n\u0022I know I have feelings but I don\u0027t feel them\u0022), thoughts (e.g., \u0022My thoughts don\u0027t feel like\nmy own,\u0022 \u0022head filled with cotton\u0022), whole body or body parts, or sensations (e.g., touch,\nproprioception, hunger, thirst, libido). There may also be a diminished sense of agency\n(e.g., feeling robotic, like an automaton; lacking control of one\u0027s speech or movements).\nThe depersonalization experience can sometimes be one of a split self, with one part ob-\nserving and one participating, known as an \u0022out-of-body experience\u0022 in its most extreme\nform. The unitary symptom of \u0022depersonalization\u0022 consists of several symptom factors:\nanomalous body experiences (i.e., unreality of the self and perceptual alterations); emo-\ntional or physical numbing; and temporal distortions with anomalous subjective recall.\nEpisodes of derealization are characterized by a feeling of unreality or detachment\nfrom, or unfamiliarity with, the world, be it individuals, Inanimate objects, or all surround-\nings (Criterion A2). The Individual may feel as if he or she were in a fog, dream, or bubble, or\nas if there were a vell or a glass wall between the individual and world around. Surround-\nings may be experienced as artificial, colorless, or lifeless. Derealization is commonly ac-\ncompanied by subjective visual distortions, such as blurriness, heightened acuity, widened\nor narrowed visual field, two-dimensionality or flatness, exaggerated three-dimensional-\nIty, or altered distance or size of objects (i.e., macropsla or micropsia). Auditory distortions\ncan also occur, whereby voices or sounds are muted or heightened. In addition, Criterion\nC requires the presence of clinically significant distress or impairment in social, occupa-\ntional, or other important areas of functioning, and Criteria D and E describe exclusionary\ndiagnoses.\n\n\n###",
+  "associatedFeatures": "Individuals with depersonalization/derealization disorder may have difficulty describ-\ning their symptoms and may think they are \u0022crazy\u0022 or \u0022going crazy\u0022. Another common\nexperience is the fear of irreversible brain damage. A commonly associated symptom is a\nsubjectively altered sense of time (Le., too fast or too slow), as well as a subjective difficulty\nin vividly recalling past memories and owning them as personal and emotional. Vague so-\nmatic symptoms, such as head fullness, tingling, or lightheadedness, are not uncommon.\nIndividuals may suffer extreme rumination or obsessional preoccupation (e.g., constantly\nobsessing about whether they really exist, or checking their perceptions to determine\nwhether they appear real). Varying degrees of anxiety and depression are also common as-\nsociated features. Individuals with the disorder have been found to have physiological\nhyporeactivity to emotional stimuli. Neural substrates of interest include the hypotha-\nlamic-pituitary-adrenocortical axis, inferior parietal lobule, and prefrontal cortical-limbic\ncircuits.\n\n\n###",
+  "prevalence": "Transient depersonalization/derealization symptoms lasting hours to days are common\nin the general population. The 12-month prevalence of depersonalization/derealization\ndisorder is thought to be markedly less than for transient symptoms, although precise es-\ntimates for the disorder are unavailable. In general, approximately one-half of all adults\nhave experienced at least one lifetime episode of depersonalization/derealization. How-\never, symptomatology that meets full criteria for depersonalization/derealization disor-\nder is markedly less common than transient symptoms. Lifetime prevalence in U.S. and\nnon-U.S. countries is approximately 2% (range of 0.8% to 2.8%). The",
+  "developmentAndCourse": "The mean age at onset of depersonalization/derealization disorder is 16 years, although the\ndisorder can start in early or middle childhood; a minority cannot recall ever not having had\n304 Dissociative Disorders\n\nthe symptoms. Less than 20% of individuals experience onset after age 20 years and only\n\n5% after age 25 years. Onset in the fourth decade of life or later is highly unusual. Onset can\nrange from extremely sudden to gradual. Duration of depersonalization/derealization\ndisorder episodes can vary greatly, from brief (hours or days) to prolonged (weeks,\nmonths, or years). Given the rarity of disorder onset after age 40 years, in such cases the in-\ndividual should be examined more closely for underlying medical conditions (e.g., brain\nlesions, seizure disorders, sleep apnea). The course of the disorder is often persistent.\nAbout one-third of cases involve discrete episodes; another third, continuous symptoms\nfrom the start; and still another third, an initially episodic course that eventually becomes\ncontinuous.\n\nWhile in some individuals the intensity of symptoms can wax and wane considerably,\nothers report an unwavering level of intensity that in extreme cases can be constantly pres-\nent for years or decades. Internal and external factors that affect symptom intensity vary\nbetween individuals, yet some typical patterns are reported. Exacerbations can be trig-\ngered by stress, worsening mood or anxiety symptoms, novel or overstimulating settings,\nand physical factors such as lighting or lack of sleep.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Individuals with depersonalization/derealization disorder are charac-\nterized by harm-avoidant temperament, Immature defenses, and both disconnection and\noverconnection schemata. Immature defenses such as idealization/devaluation, projec-\ntion and acting out result in denial of reality and poor adaptation. Cognitive disconnection\nschemata reflect defectiveness and emotional inhibition and subsume themes of abuse, ne-\nglect, and deprivation. Overconnection schemata involve impaired autonomy with themes\nof dependency, vulnerability, and incompetence.\n\nEnvironmental. There is a clear association between the disorder and childhood interper-\nsonal traumas in a substantial portion of individuals, although this association is not as prev-\nalent or as extreme in the nature of the traumas as in other dissociative disorders, such as\ndissociative identity disorder. In particular, emotional abuse and emotional neglect have been\nmost strongly and consistently associated with the disorder. Other stressors can include phys-\nical abuse; witnessing domestic violence; growing up with a seriously impaired, mentally il\nparent; or unexpected death or",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Volitionally induced experiences of depersonalization/derealization can be a part of med-\nItative practices that are prevalent in many religions and cultures and should not be diag-\nnosed as a disorder. However, there are individuals who initially induce these states\nintentionally but over time lose control over them and may develop a fear and aversion for\nrelated practices.\n\n\n###",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Symptoms of depersonalization/derealization disorder are highly distressing and are as-\nsociated with major morbidity. The affectively flattened and robotic demeanor that these\nDepersonalization/Derealization Disorder 305\n\nindividuals often demonstrate may appear Incongruent with the extreme emotional pain\nreported by those with the disorder. Impairment is often experienced in both interpersonal\nand occupational spheres, largely due to the hypoemotionality with others, subjective diffi-\nculty in focusing and retaining information, and a general sense of disconnectedness from\nlife.\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences"
+  ],
+  "missingSections": [
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:02:28.0863115Z",
+  "extractionMetadata": null
+}

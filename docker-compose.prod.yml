@@ -164,3 +164,9 @@ services:
       retries: 3
       start_period: 60s
     restart: unless-stopped
+
+# Labels for container metadata
+labels:
+  environment: "production"
+  project: "behavioral-health-system"
+  managed-by: "docker-compose"

@@ -1,0 +1,57 @@
+{
+  "id": "ed810808-a0ad-4aec-b858-03f0523abbfd",
+  "name": "Kleptomania",
+  "code": "312.32 (F63.2)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Recurrent failure to resist impulses to steal objects that are not needed for personal\nuse or for their monetary value.\n\nB. Increasing sense of tension immediately before committing the theft.\n\nC. Pleasure, gratification, or relief at the time of committing the theft.\n\nD. The stealing is not committed to express anger or vengeance and is not in response\n\nto a delusion or a halucination.\n\nE. The stealing is not better explained by conduct disorder, a manic episode, or antisocial\npersonality disorder.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of kleptomania is the recurrent failure to resist impulses to steal items\neven though the items are not needed for personal use or for their monetary value (Criterion\nA). The individual experiences a rising subjective sense of tension before the theft (Criterion B)\nand feels pleasure, gratification, or relief when committing the theft (Criterion C). The stealing\nis not committed to express anger or vengeance, is not done in response to a delusion or hal-\nlucination (Criterion D), and is not better explained by conduct disorder, a manic episode, or\nantisocial personality disorder (Criterion E). The objects are stolen despite the fact that they are\ntypically of little value to the individual, who could have afforded to pay for them and often\ngives them away or discards them. Occasionally the individual may hoard the stolen objects or\nsurreptitiously retur them. Although individuals with this disorder will generally avoid\nstealing when immediate arrest is probable (e.g., in full view of a police oficer), they usually\ndo not preplan the thefts or fully take into account the chances of apprehension. The stealing is\ndone without assistance from, or collaboration with, others.\n\n\n###",
+  "associatedFeatures": "Individuals with kleptomania typically attempt to resist the impulse to steal, and they are\naware that the act is wrong and senseless. The individual frequently fears being appre-\nhended and often feels depressed or guilty about the thefts. Neurotransmitter pathways\nassociated with behavioral addictions, including those associated with the serotonin, do-\npamine, and opioid systems, appear to play a role in kleptomania as well.\n\n\n###",
+  "prevalence": "Kleptomania occurs in about 4%-24% of individuals arrested for shoplifting. Its preva-\nlence in the general population is very rare, at approximately 0.3%-0.6%. Females outnum-\nber males at a ratio of 3:1.",
+  "developmentAndCourse": "Substance-induced mental disorders develop in the context of intoxication or withdrawal\nfrom substances of abuse, and medication-induced mental disorders are seen with pre-\nscribed or over the counter medications that are taken at the suggested doses. Both condi-\ntions are usually temporary and likely to disappear within 1 month or so of cessation of acute\nwithdrawal, severe intoxication, or use of the medication. Exceptions to these generaliza-\ntions occur for certain long-duration substance-induced disorders: substance associated\nneurocognitive disorders that relate to conditions such as alcohol-induced neurocognitive\ndisorder, inhalant-induced neurocognitive disorder, and sedative\u00BB, hypnotic\u00BB, or anxiolytio-\ninduced neurocognitive disorder, and hallucinogen persisting perception disorder (\u0022flash-\nbacks\u0022; see the section \u0022Hallucinogen-Related Disorders\u0022 later in this chapter). However,\nmost other substance/medication-induced mental disorders, regardless of the severity of\nthe symptoms, are likely to improve relatively quickly with abstinence and unlikely to re-\nmain clinicaly relevant for more than 1 month after complete cessation of use.\n\nAs is true of many consequences of heavy substance use, some individuals are more\nand others less prone toward specific substance-induced disorders. Similar types of pre-\ndispositions may make some individuals more likely to develop psychiatric side effects of\nsome types of medications, but not others. However, it is unclear whether individuals\nwith family histories or personal prior histories with independent psychiatric syndromes\nare more likely to develop the induced syndrome once the consideration is made as to\nwhether the quantity and frequency of the substance was sufficient to lead to the devel-\nopment of a substance-induced syndrome.\n\nThere are indications that the intake of substances of abuse or some medications with\npsychiatric side effects in the context of a preexisting mental disorder is likely to result in\nan intensification of the preexisting independent syndrome. The",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. There are no controlled family history studies of kleptoma-\nnia. However, first-degree relatives of individuals with kleptomania may have higher\nrates of obsessive compulsive disorder than the general population. There also appears to\nbe a higher rate of substance use disorders, including alcohol use disorder, in relatives of\nindividuals with kleptomania than in the general population.",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]\n\n\n##",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Induced Mental Disorders\n\nThe same consequences related to the relevant independent mental disorder (e.g., suicide\nattempts) are likely to apply to the substance/medication-induced mental disorders, but\nthese are likely to disappear within 1 month after abstinence. Similarly, the same func-\ntional consequences associated with the relevant substance use disorder are likely to be seen\nfor the substance-induced mental disorders.\n\nRecording Procedures for Substance/Medication-\n\nInduced Mental Disorders\nCoding notes and separate recording procedures for ICD-9-CM and ICD-10-CM codes for\nother specific substance/medication-induced mental disorders are provided in other\nchapters of the manual with disorders with which they share phenomenology (see the sub-\nstance/medication-induced mental disorders in these chapters: \u0022Schizophrenia Spectrum\nand Other Psychotic Disorders,\u0022 \u0022Bipolar and Related Disorders,\u0022 \u0022Depressive Disor-\nders,\u0022 \u0022Anxiety Disorders,\u0022 \u0022Obsessive Compulsive and Related Disorders,\u0022 \u0022Sleep-\nWake Disorders,\u0022 \u0022Sexual Dysfunctions,\u0022 and \u0022Neurocognitive Disorders\u0022). Generally,\nfor ICD-9-CM, if a mental disorder is induced by a substance use disorder, a separate di-\nagnostic code is given for the specific substance use disorder, in addition to the code for the\nsubstance/medication-induced mental disorder. For ICD-10-CM, a single code combines\nthe substance-induced mental disorder with the substance use disorder. A separate diag-\nnosis of the comorbid substance use disorder is not given, although the name and severity\nof the specific substance use disorder (when present) are used when recording the sub-\nstance/medication-induced mental disorder. ICD-10-CM codes are also provided for sit-\nuations in which the substance/medication-induced mental disorder is not induced by a\nsubstance use disorder (e.g., when a disorder is induced by one-time use of a substance or\nmedication). Additional information needed to record the diagnostic name of the sub-\nstance/medication-induced mental disorder is provided in the section \u0022Recording Proce-\ndures\u0022 for each substance/medication-induced mental disorder in its respective chapter.\nAlcohol-Related Disorders\nAlcohol Use Disorder\nAlcohol Intoxication\nAlcohol Withdrawal\nOther Alcohol-Induced Disorders\nUnspecified Alcohol-Related Disorder\nAlcohol Use Disorder\n\n\n####",
+  "differentialDiagnosis": [
+    "Ordinary theft. Kleptomania should be distinguished from ordinary acts of theft or\nshoplifting. Ordinary theft (whether planned or impulsive) is deliberate and is motivated\nby the usefulness of the object or its monetary worth. Some individuals, especialy adoles\ncents, may also steal on a dare, as an act of rebellion, or as a rite of passage. The diagnosis\nis not made unless other characteristic features of kleptomania are also present. Klepto-\nmania is exceedingly rare, whereas shoplifting is relatively common.\n\nMalingering. In malingering, individuals may simulate the symptoms of kleptomania to\navoid criminal prosecution.\n\nAntisocial personality disorder and conduct disorder. Antisocial personality disorder\n\nand conduct disorder are distinguished from kleptomania by a general pattem of antiso-\ncial behavior.\n\nManic episodes, psychotic episodes, and major neurocognitive disorder. Kleptomania\nshould be distinguished from intentional or inadvertent stealing that may occur during a\nmanic episode, in response to delusions or hallucinations (as in, e.g., schizophrenia), or as\na result of a major neurocognitive disorder."
+  ],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis"
+  ],
+  "missingSections": [
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:25:51.9437706Z",
+  "extractionMetadata": null
+}

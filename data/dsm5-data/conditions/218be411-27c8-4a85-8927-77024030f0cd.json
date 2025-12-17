@@ -1,0 +1,56 @@
+{
+  "id": "218be411-27c8-4a85-8927-77024030f0cd",
+  "name": "Language Disorder",
+  "code": "315.32 (F80.2)",
+  "category": "Language Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Persistent difficulties in the acquisition and use of language across modalities (i.e.,\nspoken, written, sign language, or other) due to deficits in comprehension or produc-\ntion that include the following:\n\n1\\. Reduced vocabulary (word knowledge and use).\n\n2\\. Limited sentence structure (ability to put words and word endings together to form\nsentences based on the rules of grammar and morphology).\n\n3\\. Impairments in discourse (ability to use vocabulary and connect sentences to ex-\nplain or describe a topic or series of events or have a conversation).\n\nB. Language abilities are substantially and quantifiably below those expected for age, re-\nsulting in",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The core diagnostic features of language disorder are difficulties in the acquisition and use\nof language due to deficits in the comprehension or production of vocabulary, sentence\nstructure, and discourse. The language deficits are evident in spoken communication,\nwritten communication, or sign language. Language learning and use is dependent on\nboth receptive and expressive skills. Expressive ability refers to the production of vocal, ges-\ntural, or verbal signals, while receptive ability refers to the process of receiving and com-\nprehending language messages. Language skills need to be assessed in both expressive\nand receptive modalities as these may differ in severity. For example, an individual\u0027s ex-\npressive language may be severely impaired, while his receptive language is hardly im-\npaired at all.\n\nLanguage disorder usually affects vocabulary and grammar, and these effects then\nlimit the capacity for discourse. The child\u0027s first words and phrases are likely to be delayed\nin onset; vocabulary size is smaller and less varied than expected; and sentences are\nshorter and less complex with grammatical errors, especially in past tense. Deficits in com-\nprehension of language are frequently underestimated, as children may be good at using\ncontext to infer meaning. There may be word-finding problems, impoverished verbal def-\ninitions, or poor understanding of synonyms, multiple meanings, or word play appro-\npriate for age and",
+  "associatedFeatures": "A positive family history of language disorders is often present. Individuals, even chil-\ndren, can be adept at accommodating to their limited language. They may appear to be shy\nor reticent to talk. Affected individuals may prefer to communicate only with family mem-\nbers or other familiar individuals. Although these social indicators are not diagnostic of a\nlanguage disorder, if they are notable and persistent, they warrant referral for a full lan-\nguage assessment. Language disorder, particularly expressive deficits, may co-occur with\nspeech sound disorder.\n\n\n##",
+  "prevalence": "[No data available for this section]\n\n\n###",
+  "developmentAndCourse": "Language acquisition is marked by changes from onset in toddlerhood to the adult level of\ncompetency that appears during adolescence. Changes appear across the dimensions of\nlanguage (sounds, words, grammar, narratives/expository texts, and conversational\nskills) in age-graded increments and synchronies. Language disorder emerges during the\nearly developmental period; however, there is considerable variation in early vocabulary\nacquisition and early word combinations, and individual differences are not, as single\nindicators, highly predictive of later outcomes. By age 4 years, individual differences in\nlanguage ability are more stable, with better measurement accuracy, and are highly pre-\ndictive of later outcomes. Language disorder diagnosed from 4 years of age is likely to be\nstable over time and typically persists into adulthood, although the particular profile of\nlanguage strengths and deficits is likely to change over the course of development.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Children with receptive language impairments have a poorer prognosis than those with\npredominantly expressive impairments. They are more resistant to treatment, and diffi-\nculties with reading comprehension are frequently seen.\n\nGenetic and physiological. Language disorders are highly heritable, and family mem-\nbers are more likely to have a history of language impairment.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]\n\n\n###",
+  "differentialDiagnosis": [
+    "Normal variations in language. Language disorder needs to be distinguished from nor-\nmal developmental variations, and this distinction may be difficult to make before 4 years\nof age. Regional, social, or cultural/ethnic variations of language (e.g., dialects) must be\nconsidered when an individual is being assessed for language impairment.\n\nHearing or other sensory impairment. Hearing impairment needs to be excluded as the\nprimary cause of language difficulties. Language deficits may be associated with a hearing\nimpairment, other sensory deficit, or a speech-motor deficit. When language deficits are in\nexcess of those usually associated with these problems, a diagnosis of language disorder\nmay be made.\n\nIntellectual disability (intellectual developmental disorder). Language delay is often the\npresenting feature of intellectual disability, and the definitive diagnosis may not be made\nuntil the child is able to complete standardized assessments. A separate diagnosis is not\ngiven unless the language deficits are clearly in excess of the intellectual limitations.\nNeurological disorders. Language disorder can be acquired in association with neuro-\nlogical disorders, including epilepsy (e.g., acquired aphasia or Landau-Kleffner syndrome).\nLanguage regression. Loss of speech and language in a child younger than 3 years may\nbe a sign of autism spectrum disorder (with developmental regression) or a specific neuro-\nlogical condition, such as Landau-Kleffner syndrome. Among children older than 3 years,\nlanguage loss may be a symptom of seizures, and a diagnostic assessment is necessary to\nexclude the presence of epilepsy (e.g., routine and sleep electroencephalogram).\n44 Neurodevelopmental Disorders\n\n\n###"
+  ],
+  "comorbidity": "Language disorder is strongly associated with other neurodevelopmental disorders in\nterms of specific learning disorder (literacy and numeracy), attention-deficit/hyperactiv-\nity disorder, autism spectrum disorder, and developmental coordination disorder. It is\nalso associated with social (pragmatic) communication disorder. A positive family history\nof speech or language disorders is often present.\n\nSpeech Sound Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 87-89 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:27:23.2992865Z",
+  "extractionMetadata": null
+}

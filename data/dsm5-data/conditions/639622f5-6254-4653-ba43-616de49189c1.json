@@ -1,0 +1,55 @@
+{
+  "id": "639622f5-6254-4653-ba43-616de49189c1",
+  "name": "Stereotypic Movement Disorder",
+  "code": "307.3 (F98.4)",
+  "category": "Stereotypic Movement Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Repetitive, seemingly driven, and apparently purposeless motor behavior (e.g., hand\nshaking or waving, body rocking, head banging, self-biting, hitting own body).\nB. The repetitive motor behavior interferes with social, academic, or other activities and\nmay result in self-injury.\n\nC. Onset is in the early developmental period.\n\nD. The repetitive motor behavior is not attributable to the physiological effects of a sub-\nstance or neurological condition and is not better explained by another neurodevel-\nopmental or mental disorder (e.g., trichotillomania [hair-pulling disorder], obsessive-\ncompulsive disorder).\n\nSpecify if:\n\nWith self-Injurious behavior (or behavior that would result in an injury if preventive\nmeasures were not used)\nWithout self-Injurious behavior\nSpecify if:\n\nAssociated with a known medical or genetic condition, neurodevelopmental dis-\norder, or environmental factor (e.g., Lesch-Nyhan syndrome, Intellectual disability\n[intellectual developmental disorder], intrauterine alcohol exposure)\n78 Neurodevelopmental Disorders\n\nCoding note: Use additional code to identify the associated medical or genetic\ncondition, or neurodevelopmental disorder.\nSpecify current severity:\nMild: Symptoms are easily suppressed by sensory stimulus or distraction.\nModerate: Symptoms require explicit protective measures and behavioral modification.\nSevere: Continuous monitoring and protective measures are required to prevent seri-\nous injury.\n\n\n## Recording Procedures\n\nFor stereotypic movement disorder that is associated with a known medical or genetic\ncondition, neurodevelopmental disorder, or environmental factor, record stereotypic\nmovement disorder associated with (name of condition, disorder, or factor) (e.g., stereo-\ntypic movement disorder associated with Lesch-Nyhan syndrome).\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of stereotypic movement disorder is repetitive, seemingly driven,\nand apparently purposeless motor behavior (Criterion A). These behaviors are often\nrhythmical movements of the head, hands, or body without obvious adaptive function.\nThe movements may or may not respond to efforts to stop them. Among typically devel-\noping children, the repetitive movements may be stopped when attention is directed to\nthem or when the child is distracted from performing them. Among children with neuro-\ndevelopmental disorders, the behaviors are typically less responsive to such efforts. In\nother cases, the individual demonstrates self-restraining behaviors (e.g., sitting on hands,\nwrapping arms in clothing, finding a protective device).\n\nThe repertoire of behaviors is variable; each individual presents with his or her own in-\ndividually patterned, \u0022signature\u0022 behavior. Examples of non-self-injurious stereotypic\nmovements include, but are not limited to, body rocking, bilateral flapping or rotating\nhand movements, flicking or fluttering fingers in front of the face, arm waving or flapping,\nand head nodding. Stereotyped self-Injurious behaviors include, but are not limited to, re-\npetitive head banging, face slapping, eye poking, and biting of hands, lips, or other body\nparts. Eye poking is particularly concerning; it occurs more frequently among children\nwith visual impairment. Multiple movements may be combined (e.g., cocking the head,\nrocking the torso, waving a small string repetitively in front of the face).\n\nStereotypic movements may occur many times during a day, lasting a few seconds to\nseveral minutes or longer. Frequency can vary from many occurrences in a single day to\nseveral weeks elapsing between episodes. The behaviors vary in context, occurring when\nthe Individual is engrossed in other activities, when excited, stressed, fatigued, or bored.\nCriterion A requires that the movements be \u0022apparently\u0022 purposeless. However, some\nfunctions may be served by the movements. For example, stereotyplc movements might\nreduce anxiety in response to external stressors.\n\nCriterion B states that the stereotypic movements interfere with social, academic, or\nother activities and, in some children, may result in self-Injury (or would if protective mea-\nsures were not used). If self-Injury is present, it should be coded using the specifier. Onset\nStereotypic Movement Disorder 79\n\nof stereotypic movements is in the early developmental period (Criterion C). Criterion D\nstates that the repetitive, stereotyped behavior in stereotyplc movement disorder is not at-\ntributable to the physiological effects of a substance or neurological condition and is not\nbetter explained by another neurodevelopmental or mental disorder. The presence of\nstereotypic movements may Indicate an undetected neurodevelopmental problem, espe-\ncially in children ages 1-3 years.\n\n\n##",
+  "associatedFeatures": "[No data available for this section]\n\n\n###",
+  "prevalence": "Simple stereotypic movements (e.g., rocking) are common in young typically developing chil-\ndren. Complex stereotypic movements are much less common (occurring in approximately\n3%-4%). Between 4% and 16% of individuals with intellectual disability (intellectual develop-\nmental disorder) engage in stereotypy and self-Injury. The",
+  "developmentAndCourse": "Stereotypic movements typically begin within the first 3 years of life. Simple stereotypic move-\nments are common in infancy and may be involved in acquisition of motor mastery. In chil-\ndren who develop complex motor stereotyples, approximately 80% exhibit symptoms before\n24 months of age, 12% between 24 and 35 months, and 8% at 36 months or older. In most typ-\nically developing children, these movements resolve over time or can be suppressed. Onset of\ncomplex motor stereotyples may be in infancy or later in the developmental period. Among\nindividuals with intellectual disability, the stereotyped, self-Injurious behaviors may persist\nfor years, even though the typography or pattern of self-Injury may change.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Social isolation is a risk factor for self-stimulation that may progress to\nstereotypic movements with repetitive self-Injury. Environmental stress may also trigger\nstereotypic behavior. Fear may alter physiological state, resulting in increased frequency\nof stereotypic behaviors.\n\nGenetic and physiological. Lower cognitive functioning is linked to greater risk for stereo-\ntypic behaviors and poorer response to Interventions. Stereotypic movements are more fre-\nquent among individuals with moderate-to-severe/profound intellectual disability, who by\nvirtue of a particular syndrome (e.g., Rett syndrome) or environmental factor (e.g., an environ-\nment with relatively insufficient stimulation) seem to be at higher risk for stereotyples. Repet-\nItive self-injurious behavior may be a behavioral phenotype in neurogenetic syndromes. For\nexample, in Lesch-Nyhan syndrome, there are both stereotypic dystonic movements and self-\nmutilation of fingers, lip biting, and other forms of self-injury unless the individual is re-\nstrained, and in Rett syndrome and Cornelia de Lange syndrome, self-injury may result from\nthe hand-to-mouth stereotyples. Stereotypic behaviors may result from a painful medical con-\ndition (e.g., middle ear infection, dental problems, gastroesophageal reflux).\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Stereotypic movement disorder, with or without self-Injury, occurs in all races and cultures.\nCultural attitudes toward unusual behaviors may result in delayed diagnosis. Overall cultural\ntolerance and attitudes toward stereotypic movement vary and must be considered.",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]",
+  "differentialDiagnosis": [],
+  "comorbidity": "Stereotypic movement disorder may occur as a primary diagnosis or secondary to another\ndisorder. For example, stereotyples are a common manifestation of a variety of neuro-\ngenetic disorders, such as Lesch-Nyhan syndrome, Rett syndrome, fragile X syndrome,\nCornelia de Lange syndrome, and Smith-Magenis syndrome. When stereotypic move-\nment disorder co-occurs with another medical condition, both should be coded.\nTic Disorders 81\nTic Disorders\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 122-126 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:23:15.6133469Z",
+  "extractionMetadata": null
+}

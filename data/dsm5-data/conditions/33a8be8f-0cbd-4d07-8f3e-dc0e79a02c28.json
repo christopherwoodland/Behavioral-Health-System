@@ -1,0 +1,55 @@
+{
+  "id": "33a8be8f-0cbd-4d07-8f3e-dc0e79a02c28",
+  "name": "Separation Anxiety Disorder",
+  "code": "309.21 (F93.0)",
+  "category": "Separation Anxiety Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Developmentally Inappropriate and excessive fear or anxiety concerning separation from\nthose to whom the individual is attached, as evidenced by at least three of the following:\n1\\. Recurrent excessive distress when anticipating or experiencing separation from\nhome or from major attachment figures.\nSeparation Anxiety Disorder 191\n\n2\\. Persistent and excessive worry about losing major attachment figures or about pos-\nsible harm to them, such as illness, injury, disasters, or death.\n3\\. Persistent and excessive worry about experiencing an untoward event (e.g., getting\nlost, being kidnapped, having an accident, becoming ill) that causes separation\nfrom a major attachment figure.\n\n4\\. Persistent reluctance or refusal to go out, away from home, to school, to work, or\nelsewhere because of fear of separation.\n\n5\\. Persistent and excessive fear of or reluctance about being alone or without major\nattachment figures at home or in other settings.\n\n6\\. Persistent reluctance or refusal to sleep away from home or to go to sleep without\nbeing near a major attachment figure.\n\n7\\. Repeated nightmares involving the theme of separation.\n\n8\\. Repeated complaints of physical symptoms (e.g., headaches, stomachaches, nau-\nsea, vomiting) when separation from major attachment figures occurs or is antici-\npated.\n\nB. The fear, anxiety, or avoidance is persistent, lasting at least 4 weeks in children and\nadolescents and typically 6 months or more in adults.\n\nC. The disturbance causes clinically significant distress or Impairment in social, aca-\ndemic, occupational, or other important areas of functioning.\n\nD. The disturbance is not better explained by another mental disorder, such as refusing\nto leave home because of excessive resistance to change in autism spectrum disorder;\ndelusions or hallucinations conceming separation in psychotic disorders; refusal to go\noutside without a trusted companion in agoraphobia; worries about ill health or other\nharm befalling significant others in generalized anxiety disorder; or concerns about\nhaving an illness in illness anxiety disorder.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "When separated from major attachment figures, children with separation anxiety disorder\nmay exhibit social withdrawal, apathy, sadness, or difficulty concentrating on work or\nplay. Depending on their age, individuals may have fears of animals, monsters, the dark,\nmuggers, burglars, kidnappers, car accidents, plane travel, and other situations that are\nperceived as presenting danger to the family or themselves. Some Individuals become\nhomesick and uncomfortable to the point of misery when away from home. Separation\nanxiety disorder in children may lead to school refusal, which in turn may lead to academic\ndifficulties and social isolation. When extremely upset at the prospect of separation, chil-\ndren may show anger or occasionally aggression toward someone who is forcing separa-\ntion. When alone, especially in the evening or the dark, young children may report unusual\nperceptual experiences (e.g., seeing people peering into their room, frightening creatures\nreaching for them, feeling eyes staring at them). Children with this disorder may be de-\nscribed as demanding, Intrusive, and in need of constant attention, and, as adults, may ap-\npear dependent and overprotective. The Individual\u0027s excessive demands often become a\nsource of frustration for family members, leading to resentment and conflict in the family.\n\n\n###",
+  "prevalence": "The 12-month prevalence of separation anxiety disorder among adults in the United States\nIs 0.9%-1.9%. In children, 6- to 12-month prevalence is estimated to be approximately 4%.\nIn adolescents in the United States, the 12-month prevalence is 1.6%. Separation anxiety\ndisorder decreases in prevalence from childhood through adolescence and adulthood and\nis the most prevalent anxiety disorder in children younger than 12 years. In clinical sam-\nples of children, the disorder is equally common in males and females. In the community.\nthe disorder is more frequent in females.\n\n\n###",
+  "developmentAndCourse": "Periods of heightened separation anxiety from attachment figures are part of normal early\ndevelopment and may indicate the development of secure attachment relationships (e.g.,\naround 1 year of age, when infants may suffer from stranger anxiety). Onset of separation\nanxiety disorder may be as early as preschool age and may occur at any time during child-\nhood and more rarely in adolescence. Typically there are periods of exacerbation and re-\nmission. In some cases, both the anxiety about possible separation and the avoidance of\nsituations involving separation from the home or nuclear family (e.g., going away to col-\nlege, moving away from attachment figures) may persist through adulthood. However,\nthe majority of children with separation anxiety disorder are free of impairing anxiety dis-\norders over their lifetimes. Many adults with separation anxiety disorder do not recall a\nchildhood onset of separation anxiety disorder, although they may recall symptoms.\nSeparation Anxiety Disorder 193\n\nThe manifestations of separation anxiety disorder vary with age. Younger children are\nmore reluctant to go to school or may avold school altogether. Younger children may not\nexpress worries or specific fears of definite threats to parents, home, or themselves, and the\nanxiety is manifested only when separation is experienced. As children age, worries\nemerge; these are often worries about specific dangers (e.g., accidents, kidnapping, mug-\nging, death) or vague concems about not being reunited with attachment figures. In adults,\nseparation anxiety disorder may limit their ability to cope with changes in circumstances\n(e.g., moving, getting married). Adults with the disorder are typically overconcerned about\ntheir offspring and spouses and experience marked discomfort when separated from them.\nThey may also experience significant disruption in work or social experiences because of\nneeding to continuously check on the whereabouts of a significant other.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Separation anxiety disorder often develops after life stress, especially a\nloss (e.g., the death of a relative or pet; an illness of the individual or a relative; a change of\nschools; parental divorce; a move to a new neighborhood; immigration; a disaster that in-\nvolved periods of separation from attachment figures). In young adults, other examples of\nlife stress include leaving the parental home, entering into a romantic relationship, and be-\ncoming a parent. Parental overprotection and intrusiveness may be associated with sepa-\nration anxiety disorder.\n\nGenetic and physiological. Separation anxiety disorder in children may be heritable.\nHeritability was estimated at 73% in a community sample of 6-year-old twins, with higher\nrates in girls. Children with separation anxiety disorder display particularly enhanced\nsensitivity to respiratory stimulation using CO -enriched alr.\n\n\n### 2\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "There are cultural variations in the degree to which it is considered desirable to tolerate\nseparation, so that demands and opportunities for separation between parents and chil-\ndren are avoided in some cultures. For example, there is wide varlation across countries\nand cultures with respect to the age at which it is expected that offspring should leave the\nparental home. It is important to differentiate separation anxiety disorder from the high\nvalue some cultures place on strong interdependence among family members.\n\n\n###",
+  "genderRelatedIssues": "Girls manifest greater reluctance to attend or avoidance of school than boys. Indirect ex-\npression of fear of separation may be more common in males than in females, for example,\nby limited independent activity, reluctance to be away from home alone, or distress when\nspouse or offspring do things independently or when contact with spouse or offspring is\nnot possible.\n\n\n###",
+  "suicideRisk": "Separation anxiety disorder in children may be associated with an increased risk for sul-\ncide. In a community sample, the presence of mood disorders, anxiety disorders, or sub-\nstance use has been associated with suicidal ideation and attempts. However, this\nassociation is not specific to separation anxiety disorder and is found in several anxiety\ndisorders.\n\n\n###",
+  "functionalConsequences": "Individuals with separation anxiety disorder often limit independent activities away from\nhome or attachment figures (e.g., in children, avoiding school, not going to camp, having\n194 Anxiety Disorders\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 235-240 | Computer-Readable Format\u0022 --\u003E\n\ndifficulty sleeping alone; in adolescents, not going away to college; in adults, not leaving the\nparental home, not traveling, not working outside the home).\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": "In children, separation anxiety disorder is highly comorbid with generalized anxiety dis-\norder and specific phobia. In adults, common comorbidities include specific phobia,\nPTSD, panic disorder, generalized anxiety disorder, social anxiety disorder, agoraphobia,\nobsessive-compulsive disorder, and personality disorders. Depressive and bipolar disor-\nders are also comorbid with separation anxiety disorder in adults.\nSelective Mutism",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features",
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:25:02.467432Z",
+  "extractionMetadata": null
+}

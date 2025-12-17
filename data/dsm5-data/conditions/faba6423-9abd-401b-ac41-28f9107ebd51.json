@@ -1,0 +1,55 @@
+{
+  "id": "faba6423-9abd-401b-ac41-28f9107ebd51",
+  "name": "Dissociative Amnesia",
+  "code": "300.12 (F44.0)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. An inability to recall important autobiographical information, usually of a traumatic or\nstressful nature, that is inconsistent with ordinary forgetting.\nNote: Dissociative amnesia most often consists of localized or selective amnesia for a\nspecific event or events; or generalized amnesia for identity and life history.\nB. The symptoms cause clinically significant distress or Impairment in social, occupa-\ntional, or other important areas of functioning.\n\nC. The disturbance is not attributable to the physiological effects of a substance (e.g., al-\ncohol or other drug of abuse, a medication) or a neurological or other medical condition\n(e.g., partial complex seizures, transient global amnesia, sequelae of a closed head in-\njury/traumatic brain injury, other neurological condition).\n\nD. The disturbance is not better explained by dissociative identity disorder, posttraumatic\nstress disorder, acute stress disorder, somatic symptom disorder, or major or mild neu-\nrocognitive disorder.\n\nCoding note: The code for dissociative amnesia without dissociative fugue is 300.12\n(F44.0). The code for dissociative amnesia with dissociative fugue is 300.13 (F44.1).\nSpecify if:\n\n300.13 (F44.1) With dissociative fugue: Apparently purposeful travel or bewildered\nwandering that is associated with amnesia for identity or for other important autobio-\ngraphical information.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The defining characteristic of dissociative amnesia is an inability to recall important auto-\nbiographical information that 1) should be successfully stored in memory and 2) ordinar-\nily would be readily remembered (Criterion A). Dissociative amnesia differs from the\npermanent amnesias due to neurobiological damage or toxicity that prevent memory stor-\nage or retrieval in that it is always potentially reversible because the memory has been suc-\ncessfully stored.\n\nLocalized amnesia, a failure to recall events during a circumscribed period of time, is the\nmost common form of dissociative amnesia. Localized amnesia may be broader than am-\nnesla for a single traumatic event (e.g., months or years associated with child abuse or in-\ntense combat). In selective amnesia, the individual can recall some, but not all, of the events\nduring a circumscribed period of time. Thus, the individual may remember part of a trau-\nmatic event but not other parts. Some individuals report both localized and selective am-\nnesias.\n\nGeneralized amnesia, a complete loss of memory for one\u0027s life history, is rare. Individuals\nwith generalized amnesia may forget personal identity. Some lose previous knowledge\nabout the world (i.e., semantic knowledge) and can no longer access well-learned skills\nDissociative Amnesia 299\n\n(i.e., procedural knowledge). Generalized amnesia has an acute onset; the perplexity, dis-\norientation, and purposeless wandering of individuals with generalized amnesia usually\nbring them to the attention of the police or psychiatric emergency services. Generalized\namnesia may be more common among combat veterans, sexual assault victims, and indi-\nviduals experiencing extreme emotional stress or conflict.\n\nIndividuals with dissociative amnesia are frequently unaware (or only partially aware)\nof their memory problems. Many, especially those with localized amnesia, minimize the\nImportance of their memory loss and may become uncomfortable when prompted to ad-\ndress it. In systematized amnesia, the individual loses memory for a specific category of in-\nformation (e.g., all memories relating to one\u0027s family, a particular person, or childhood\nsexual abuse). In continuous amnesia, an Individual forgets each new event as it occurs.\n\n\n###",
+  "associatedFeatures": "Many individuals with dissociative amnesia are chronically impaired in their ability to\nform and sustain satisfactory relationships. Histories of trauma, child abuse, and victim-\nization are common. Some individuals with dissociative amnesia report dissociative flash-\nbacks (i.e., behavioral reexperiencing of traumatic events). Many have a history of self-\nmutilation,",
+  "prevalence": "The 12-month prevalence for dissociative amnesia among adults in a small U.S. commu-\nnity study was 1.8% (1.0% for males; 2.6% for females).",
+  "developmentAndCourse": "Onset of generalized amnesia is usually sudden. Less is known about the onset of localized\nand selective amneslas because these amnesias are seldom evident, even to the individual.\nAlthough overwhelming or intolerable events typically precede localized amnesia, its on-\nset may be delayed for hours, days, or longer.\n\nIndividuals may report multiple episodes of dissociative amnesia. A single episode\n\nmay predispose to future episodes. In between episodes of amnesia, the individual may or\nmay not appear to be acutely symptomatic. The duration of the forgotten events can range\nfrom minutes to decades. Some episodes of dissociative amnesia resolve rapidly (e.g.,\nwhen the person is removed from combat or some other stressful situation), whereas other\nepisodes persist for long periods of time. Some individuals may gradually recall the dis-\nsoclated memories years later. Dissociative capacities may decline with age, but not al-\nways. As the amnesia remits, there may be considerable distress, suicidal behavior, and\nsymptoms of posttraumatic stress disorder (PTSD).\n\nDissociative amnesia has been observed in young children, adolescents, and adults.\nChildren may be the most difficult to evaluate because they often have difficulty under-\nstanding questions about amnesia, and interviewers may find it difficult to formulate child-\nfriendly questions about memory and amnesia. Observations of apparent dissociative am-\nnesia are often difficult to differentiate from inattention, absorption, anxiety, oppositional\nbehavior, and learning disorders. Reports from several different sources (e.g., teacher,\ntherapist, case worker) may be needed to diagnose amnesia in children.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Single or repeated traumatic experiences (e.g., war, childhood maltreat-\nment, natural disaster, interment in concentration camps, genocide) are common ante-\n300 Dissociative Disorders\n\ncedents. Dissociative amnesia is more likely to occur with 1) a greater number of adverse\nchildhood experiences, particularly physical and/or sexual abuse, 2) interpersonal vio-\nlence; and 3) increased severity, frequency, and violence of the trauma.\n\nGenetic and physiological. There are no genetic studies of dissociative amnesia. Stud-\nles of dissociation report significant genetic and environmental factors in both clinical and\nnonclinical samples.\n\nCourse modifiers. Removal from the traumatic circumstances underlying the dissociative\namnesia (e.g., combat) may bring about a rapid return of memory. The memory loss of indi-\nviduals with dissociative fugue may be particularly refractory. Onset of PTSD symptoms may\ndecrease localized, selective, or systematized amnesia. The returning memory, however, may\nbe experienced as flashbacks that alternate with amnesia for the content of the flashbacks.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "In Asia, the Middle East, and Latin America, non-epileptic seizures and other",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n####",
+  "suicideRisk": "Suicidal and other self-destructive behaviors are common in individuals with dissociative\namnesia. Suicidal behavior may be a particular risk when the amnesia remits suddenly\nand overwhelms the individual with intolerable memories.\n\n\n####",
+  "functionalConsequences": "The impairment of individuals with localized, selective, or systematized dissociative am-\nnesla ranges from limited to severe. Individuals with chronic generalized dissociative am-\nnesla usually have impairment in all aspects of functioning. Even when these individuals\n\u0022re-learn\u0022 aspects of their life history, autobiographical memory remains very impaired.\nMost become vocationally and interpersonally disabled.\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": "As dissociative amnesia begins to remit, a wide variety of affective phenomena may sur-\nface: dysphoria, grief, rage, shame, guilt, psychological conflict and turmoil, and suicidal\nand homicidal ideation, Impulses, and acts. These individuals may have symptoms that\nthen meet diagnostic criteria for persistent depressive disorder (dysthymia); major de-\npressive disorder; other specified or unspecified depressive disorder, adjustment disor-\nder, with depressed mood; or adjustment disorder, with mixed disturbance of emotions\nand conduct. Many individuals with dissociative amnesia develop PTSD at some point\nduring their life, especially when the traumatic antecedents of their amnesia are brought\ninto conscious awareness.\n\nMany individuals with dissociative amnesia have symptoms that meet diagnostic crl-\nteria for a comorbid somatic symptom or related disorder (and vice versa), including so-\nmatic symptom disorder and conversion disorder (functional neurological symptom\ndisorder). Many individuals with dissociative amnesia have symptoms that meet diagnos-\ntic criteria for a personality disorder, especially dependent, avoidant, and borderline.\nDepersonalization/Derealization Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 343-347 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:00:53.7211448Z",
+  "extractionMetadata": null
+}

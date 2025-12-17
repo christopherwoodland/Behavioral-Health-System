@@ -1,0 +1,57 @@
+{
+  "id": "e7b4dcde-dbab-4554-9a48-f46d74b924e9",
+  "name": "Hallucinogen Persisting Perception Disorder",
+  "code": "292.89 (F16.983)",
+  "category": "Hallucinogen Persisting Perception Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Following cessation of use of a hallucinogen, the reexperiencing of one or more of the\nperceptual symptoms that were experienced while intoxicated with the hallucinogen\n(e.g., geometric hallucinations, false perceptions of movement in the peripheral visual\nfields, flashes of color, intensified colors, trails of images of moving objects, positive\nafterimages, halos around objects, macropsia and micropsia).\n\nB. The symptoms in Criterion A cause clinically significant distress or impairment in so-\ncial, occupational, or other important areas of functioning.\n\nC. The symptoms are not attributable to another medical condition (e.g., anatomical le-\nsions and infections of the brain, visual epilepsies) and are not better explained by an-\nother mental disorder (e.g., delirium, major neurocognitive disorder, schizophrenia) or\nhypnopompic hallucinations.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The hallmark of hallucinogen persisting perception disorder is the reexperiencing, when the\nindividual is sober, of the perceptual disturbances that were experienced while the individ-\nual was intoxicated with the hallucinogen (Criterion A). The symptoms may include any\nperceptual perturbations, but visual disturbances tend to be predominant. Typical of the ab-\nnormal visual perceptions are geometric hallucinations, false perceptions of movement in\nthe peripheral visual fields, flashes of color, intensified colors, trails of images of moving ob-\njects (i.e., images left suspended in the path of a moving object as seen in stroboscopic pho-\ntography), perceptions of entire objects, positive afterimages (i.e., a same-colored or\ncomplementary-colored \u0022shadow\u0022 of an object remaining after removal of the object), halos\naround objects, or misperception of images as too large (macropsia) or too small (micropsia).\nDuration of the visual disturbances may be episodic or nearly continuous and must cause\nclinically significant distress or impairment in social, occupational, or other important areas\nof functioning (Criterion B). The disturbances may last for weeks, months, or years. Other\nexplanations for the disturbances (e.g., brain lesions, preexisting psychosis, seizure disor-\nders, migraine aura without headaches) must be ruled out (Criterion C).\n\nHallucinogen persisting perception disorder occurs primarily after LSD (lysergic acid\ndiethylamide) use, but not exclusively. There does not appear to be a strong correlation be-\ntween hallucinogen persisting perception disorder and number of occasions of hallucino-\ngen use, with some instances of hallucinogen persisting perception disorder occurring in\nindividuals with minimal exposure to hallucinogens. Some instances of hallucinogen per-\nsisting perception disorder may be triggered by use of other substances (e.g., cannabis or\nalcohol) or in adaptation to dark environments.\n\n\n###",
+  "associatedFeatures": "Reality testing remains intact in individuals with hallucinogen persisting perception dis-\norder (i.e., the individual is aware that the disturbance is linked to the effect of the drug).\nIf this is not the case, another disorder might better explain the abnormal perceptions.",
+  "prevalence": "imately 4.2%.\n\n\n#### 532 Substance-Related and Addictive Disorders",
+  "developmentAndCourse": "Little is known about the development of hallucinogen persisting perception disorder. Its\ncourse, as suggested by its name, is persistent, lasting for weeks, months, or even years in\ncertain individuals.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "There is little evidence regarding risk factors for hallucinogen persisting perception dis-\norder, although genetic factors have been suggested as a possible explanation underlying\nthe susceptibility to LSD effects in this condition.",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Although hallucinogen persisting perception disorder remains a chronic condition in\nsome cases, many individuals with the disorder are able to suppress the disturbances and\ncontinue to function normally.\n\n\n###",
+  "differentialDiagnosis": [
+    "Conditions to be ruled out include schizophrenia, other drug effects, neurodegenerative\ndisorders, stroke, brain tumors, infections, and head trauma. Neuroimaging results in hal-\nlucinogen persisting perception disorder cases are typically negative. As noted earlier, re-\nality testing remains intact (i.e., the individual is aware that the disturbance is linked to the\neffect of the drug); if this is not the case, another disorder (e.g., psychotic disorder, another\nmedical condition) might better explain the abnormal perceptions.\n\n\n###"
+  ],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis"
+  ],
+  "missingSections": [
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T20:59:35.4486135Z",
+  "extractionMetadata": null
+}

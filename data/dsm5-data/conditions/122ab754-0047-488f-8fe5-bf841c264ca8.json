@@ -1,0 +1,56 @@
+{
+  "id": "122ab754-0047-488f-8fe5-bf841c264ca8",
+  "name": "Disinhibited Social Engagement Disorder",
+  "code": "313.89 (F94.2)",
+  "category": "Disinhibited Social Engagement Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. A pattern of behavior in which a child actively approaches and interacts with unfamiliar\nadults and exhibits at least two of the following:\n\n1\\. Reduced or absent reticence in approaching and interacting with unfamiliar adults.\n\n2\\. Overly familiar verbal or physical behavior (that is not consistent with culturally\nsanctioned and with age-appropriate social boundaries).\n\n3\\. Diminished or absent checking back with adult caregiver after venturing away, even\nin unfamiliar settings.\n\n4\\. Willingness to go off with an unfamiliar adult with minimal or no hesitation.\n\nB. The behaviors in Criterion A are not limited to impulsivity (as in attention-deficit/hyper-\nactivity disorder) but include socially disinhibited behavior.\n\nC. The child has experienced a pattern of extremes of insufficient care as evidenced by\nat least one of the following:\n\n1\\. Social neglect or deprivation in the form of persistent lack of having basic emotional\nneeds for comfort, stimulation, and affection met by caregiving adults.\n\n2\\. Repeated changes of primary caregivers that limit opportunities to form stable at-\ntachments (e.g., frequent changes in foster care).\n\n3\\. Rearing in unusual settings that severely limit opportunities to form selective at-\ntachments (e.g., institutions with high child-to-caregiver ratios).\nDisinhibited Social Engagement Disorder 269\n\nD. The care in Criterion C is presumed to be responsible for the disturbed behavior in Cri-\nterion A (e.g., the disturbances in Criterion A began following the pathogenic care in\nCriterion C).\n\nE. The child has a developmental age of at least 9 months.\n\nSpecify if:\n\nPersistent: The disorder has been present for more than 12 months.\nSpecify current severity:\n\nDisinhibited social engagement disorder is specified as severe when the child exhibits\nall symptoms of the disorder, with each symptom manifesting at relatively high levels.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of disinhibited social engagement disorder is a pattern of behavior\nthat involves culturally inappropriate, overly familiar behavior with relative strangers\n(Criterion A). This overly familiar behavior violates the social boundaries of the",
+  "associatedFeatures": "Because of the shared etiological association with social neglect, disinhibited social en-\ngagement disorder may co-occur with developmental delays, especially cognitive and lan-\nguage delays, stereotypies, and other signs of severe neglect, such as malnutrition or poor\ncare. However, signs of the disorder often persist even after these other signs of neglect are\nno longer present. Therefore, it is not uncommon for children with the disorder to present\nwith no current signs of neglect. Moreover, the condition can present in children who\nshow no signs of disordered attachment. Thus, disinhibited social engagement disorder\nmay be seen in children with a history of neglect who lack attachments or whose attach-\nments to their caregivers range from disturbed to secure.\n\n\n###",
+  "prevalence": "The prevalence of disinhibited social attachment disorder is unknown. Nevertheless, the\ndisorder appears to be rare, occurring in a minority of children, even those who have been\nseverely neglected and subsequently placed in foster care or raised in institutions. In such\nhigh-",
+  "developmentAndCourse": "Conditions of social neglect are often present in the first months of life in children diag-\nnosed with disinhibited social engagement disorder, even before the disorder is diag-\nnosed. However, there is no evidence that neglect beginning after age 2 years is associated\nwith manifestations of the disorder. If neglect occurs early and signs of the disorder\nappear, clinical features of the disorder are moderately stable over time, particularly if\nconditions of neglect persist. Indiscriminate social behavior and lack of reticence with un-\nfamiliar adults in toddlerhood are accompanied by attention-seeking behaviors in pre-\nschoolers. When the disorder persists into middle childhood, clinical features manifest as\nverbal and physical overfamiliarity as well as inauthentic expression of emotions. These\nsigns appear particularly apparent when the child interacts with adults. Peer relationships\nare most affected in adolescence, with both indiscriminate behavior and conflicts appar-\nent. The disorder has not been described in adults.\n\n270 Trauma- and Stressor-Related Disorders\n\nDisinhibited social engagement disorder has been described from the second year of\nlife through adolescence. There are some differences in manifestations of the disorder\nfrom early childhood through adolescence. At the youngest ages, across many",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Serious social neglect is a diagnostic requirement for disinhibited social\nengagement disorder and is also the only known risk factor for the disorder. However, the\nmajority of severely neglected children do not develop the disorder. Neurobiological vul-\nnerability may differentiate neglected children who do and do not develop the disorder.\nHowever, no clear link with any specific neurobiological factors has been established. The\ndisorder has not been identified in children who experience social neglect only after age\n2 years. Prognosis is only modestly associated with quality of the caregiving environment\nfollowing serious neglect. In many cases, the disorder persists, even in children whose\ncaregiving environment becomes markedly improved.\n\nCourse modifiers. Caregiving quality seems to moderate the course of disinhibited so-\ncial engagement disorder. Nevertheless, even after placement in normative caregiving\nenvironments, some children show persistent signs of the disorder, at least through ado-\nlescence.\n\n\n##",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Disinhibited social engagement disorder significantly impairs young children\u0027s abilities to\nrelate interpersonally to adults and peers.\n\n\n###",
+  "differentialDiagnosis": [
+    "Attention-deficit/hyperactivity disorder. Because of social impulsivity that sometimes\naccompanies attention-deficit/hyperactivity disorder (ADHD), it is necessary to differ-\nentiate the two disorders. Children with disinhibited social engagement disorder may be\ndistinguished from those with ADHD because the former do not show difficulties with at-\ntention or hyperactivity.\n\n\n###"
+  ],
+  "comorbidity": "Limited research has examined the issue of disorders comorbid with disinhibited social\nengagement disorder. Conditions associated with neglect, including cognitive delays,\nlanguage delays, and stereotypies, may co-occur with disinhibited social engagement dis-\norder. In addition, children may be diagnosed with ADHD and disinhibited social engage-\nment disorder concurrently.\n\nPosttraumatic Stress Disorder 271\n\nPosttraumatic Stress Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 313-316 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:27:10.8586854Z",
+  "extractionMetadata": null
+}

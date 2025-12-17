@@ -1,0 +1,88 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "TEMPLATE FILE - Copy to private.parameters.json and fill in values. DO NOT commit the actual parameters file with secrets.",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "appName": {
+      "value": "bhs"
+    },
+    "resourceGroupName": {
+      "value": "bhs-development-private"
+    },
+    "tags": {
+      "value": {
+        "Application": "Behavioral Health System",
+        "Environment": "prod",
+        "ManagedBy": "Bicep",
+        "NetworkMode": "Private",
+        "DeploymentMode": "ContainerApps-PrivateLink",
+        "CostCenter": "Engineering",
+        "Project": "BHS"
+      }
+    },
+    "azureAdClientId": {
+      "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b",
+      "_comment": "Azure AD Client ID for MSAL authentication (from public deployment)"
+    },
+    "azureAdApiClientId": {
+      "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b",
+      "_comment": "Azure AD API Client ID (same as frontend)"
+    },
+    "azureAdTenantId": {
+      "value": "36584371-2a86-4e03-afee-c2ba00e5e30e",
+      "_comment": "Azure AD Tenant ID"
+    },
+    "containerImageTag": {
+      "value": "latest"
+    },
+    "openaiEndpoint": {
+      "value": "",
+      "_comment": "Leave empty to use AI Services endpoint. Set if using separate Azure OpenAI resource."
+    },
+    "azureOpenAIRealtimeDeployment": {
+      "value": "gpt-realtime"
+    },
+    "azureOpenAIRealtimeApiVersion": {
+      "value": "2025-04-01-preview"
+    },
+    "azureOpenAIResourceName": {
+      "value": "",
+      "_comment": "Azure OpenAI resource name for Realtime API. May differ from AI Services."
+    },
+    "azureOpenAIWebRTCRegion": {
+      "value": "eastus2"
+    },
+    "azureOpenAIRealtimeKey": {
+      "value": "<REPLACE-WITH-KEY>",
+      "_comment": "Azure OpenAI Realtime API Key - store in Key Vault"
+    },
+    "extendedAssessmentDeployment": {
+      "value": "gpt-5.2",
+      "_comment": "Model deployment for extended assessment (o3 model)"
+    },
+    "agentModelDeployment": {
+      "value": "gpt-5.2",
+      "_comment": "Model deployment for AI agents (o3 model)"
+    },
+    "kintsugiApiKey": {
+      "value": "<REPLACE-WITH-KEY>",
+      "_comment": "Kintsugi API Key - will be stored in Key Vault"
+    },
+    "kintsugiBaseUrl": {
+      "value": "https://api.kintsugihealth.com/v2"
+    },
+    "bandServiceUrl": {
+      "value": "",
+      "_comment": "Smart Band service URL (optional)"
+    },
+    "enableSmartBand": {
+      "value": false
+    }
+  }
+}

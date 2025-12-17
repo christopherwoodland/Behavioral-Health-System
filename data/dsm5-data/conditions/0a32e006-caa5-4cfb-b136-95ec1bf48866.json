@@ -1,0 +1,55 @@
+{
+  "id": "0a32e006-caa5-4cfb-b136-95ec1bf48866",
+  "name": "Body Dysmorphic Disorder",
+  "code": "300.7 (F45.22)",
+  "category": "Body Dysmorphic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Preoccupation with one or more perceived defects or flaws in physical appearance that\nare not observable or appear slight to others.\n\nB. At some point during the course of the disorder, the individual has performed repetitive\nbehaviors (e.g., mirror checking, excessive grooming, skin picking, reassurance seek-\ning) or mental acts (e.g., comparing his or her appearance with that of others) in re-\nsponse to the appearance concerns.\n\nC. The preoccupation causes clinically significant distress or impairment in social, occu-\npational, or other important areas of functioning.\n\nD. The appearance preoccupation is not better explained by concerns with body fat or\nweight in an individual whose symptoms meet diagnostic criteria for an eating disorder.\nBody Dysmorphic Disorder 243\n\nSpecify if:\n\nWith muscle dysmorphla: The individual is preoccupled with the idea that his or her\nbody build is too small or insufficiently muscular. This specifier is used even if the indi-\nvidual is preoccupied with other body areas, which is often the case.\nSpecify if:\n\nIndicate degree of insight regarding body dysmorphic disorder beliefs (e.g., \u0022I look ugly\u0022 or\n\u0022I look deformed\u0022).\n\nWith good or fair insight: The Individual recognizes that the body dysmorphic disor-\nder beliefs are definitely or probably not true or that they may or may not be true.\nWith poor insight: The individual thinks that the body dysmorphic disorder beliefs are\nprobably true.\n\nWith absent insight/delusional beliefs: The individual is completely convinced that\nthe body dysmorphic disorder beliefs are true.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "Many individuals with body dysmorphic disorder have ideas or delusions of reference,\nbelieving that other people take special notice of them or mock them because of how they\nlook. Body dysmorphic disorder is associated with high levels of anxiety, social anxiety,\nsocial avoidance, depressed mood, neuroticism, and perfectionism as well as low extro-\nversion and low self-esteem. Many Individuals are ashamed of their appearance and their\nexcessive focus on how they look, and are reluctant to reveal their concerns to others. A\nmajority of individuals receive cosmetic treatment to try to improve their perceived de-\nfects. Dermatological treatment and surgery are most common, but any type (e.g., dental,\nelectrolysis) may be received. Occasionally, Individuals may perform surgery on them-\nselves. Body dysmorphic disorder appears to respond poorly to such treatments and\nsometimes becomes worse. Some Individuals take legal action or are violent toward the\nclinician because they are dissatisfied with the cosmetic outcome.\nBody dysmorphic disorder has been associated with executive dysfunction and visual\nprocessing abnormalities, with a bias for analyzing and encoding details rather than ho-\nlistic or configural aspects of visual stimuli. Individuals with this disorder tend to have a\nblas for negative and threatening interpretations of facial expressions and ambiguous sce-\nnarios\n\n\n##",
+  "prevalence": "The point prevalence among U.S. adults is 2.4% (2.5% in females and 2.2% in males). Out-\nside the United States (i.e., Germany), current prevalence is approximately 1.7%-1.8%,\nwith a",
+  "developmentAndCourse": "The mean age at disorder onset is 16-17 years, the median age at onset is 15 years, and the\nmost common age at onset is 12-13 years. Two-thirds of individuals have disorder onset\nbefore age 18. Subclinical body dysmorphic disorder symptoms begin, on average, at age\n12 or 13 years. Subclinical concems usually evolve gradually to the full disorder, although\nsome individuals experience abrupt onset of body dysmorphic disorder. The disorder\nappears to usually be chronic, although improvement is likely when evidence-based\ntreatment is received. The disorder\u0027s clinical features appear largely similar in children/\nadolescents and adults. Body dysmorphic disorder occurs in the elderly, but little is known\nabout the disorder in this age group. Individuals with disorder onset before age 18 years\nare more likely to attempt",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Body dysmorphic disorder has been associated with high rates of child-\nhood neglect and abuse.\nGenetic and physiological. The prevalence of body dysmorphic disorder is elevated in\nfirst-degree relatives of individuals with obsessive-compulsive disorder (OCD).\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Body dysmorphic disorder has been reported internationally. It appears that the disorder\nmay have more similarities than differences across races and cultures but that cultural\nvalues and preferences may influence symptom content to some degree. Taljin kyofusho,\nIncluded in the traditional Japanese diagnostic system, has a subtype similar to body dys-\nmorphic disorder: shubo-kyofu (\u0022the phobia of a deformed body\u0022).\n\n\n####",
+  "genderRelatedIssues": "Females and males appear to have more similarities than differences in terms of most clin-\nical features- for example, disliked body areas, types of repetitive behaviors, symptom\nseverity, suicidality,",
+  "suicideRisk": "Rates of suicidal ideation and suicide attempts are high in both adults and children/ado-\nlescents with body dysmorphic disorder. Furthermore, risk for suicide appears high in ad-\nolescents. A substantial proportion of individuals attribute suicidal ideation or suicide\nattempts primarily to their appearance concerns. Individuals with body dysmorphic dis-\norder have many risk factors for completed suicide, such as high rates of suicidal ideation\nand suicide attempts, demographic characteristics associated with suicide, and high rates\nof comorbid major depressive disorder.\n\n\n####",
+  "functionalConsequences": "Nearly all individuals with body dysmorphic disorder experience impaired psychosocial\nfunctioning because of their appearance concerns. Impairment can range from moderate\n(e.g., avoidance of some social situations) to extreme and incapacitating (e.g., being com-\npletely housebound). On average, psychosocial functioning and quality of life are mark-\nedly poor. More severe body dysmorphic disorder symptoms are associated with poorer\nfunctioning and quality of life. Most individuals experience impairment in their job, aca-\ndemlc, or role functioning (e.g., as a parent or caregiver), which is often severe (e.g., per-\nforming poorly, missing school or work, not working). About 20% of youths with body\ndysmorphic disorder report dropping out of school primarily because of their body dys-\nmorphic disorder symptoms. Impairment in social functioning (e.g., social activities, rela-\ntionships, intimacy), including avoidance, is common. Individuals may be housebound\nbecause of their body dysmorphic disorder symptoms, sometimes for years. A high pro-\nportion of adults and adolescents have been psychiatrically hospitalized.",
+  "differentialDiagnosis": [],
+  "comorbidity": "Major depressive disorder is the most common comorbid disorder, with onset usually af-\nter that of body dysmorphic disorder. Comorbid social anxiety disorder (social phobia),\nOCD, and substance-related disorders are also common.\nHoarding Disorder",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features",
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:02:50.7977344Z",
+  "extractionMetadata": null
+}

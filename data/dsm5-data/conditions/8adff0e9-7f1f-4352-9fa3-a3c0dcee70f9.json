@@ -1,0 +1,55 @@
+{
+  "id": "8adff0e9-7f1f-4352-9fa3-a3c0dcee70f9",
+  "name": "Obstructive Sleep Apnea Hypopnea",
+  "code": "327.23 (G47.33)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Either (1) or (2):\n\n1\\. Evidence by polysomnography of at least five obstructive apneas or hypopneas per\nhour of sleep and either of the following sleep symptoms:\n\na. Nocturnal breathing disturbances: snoring, snorting/gasping, or breathing\npauses during sleep.\n\nb. Daytime sleepiness, fatigue, or unrefreshing sleep despite sufficient opportuni-\nties to sleep that is not better explained by another mental disorder (including a\nsleep disorder) and is not attributable to another medical condition.\n\n2\\. Evidence by polysomnography of 15 or more obstructive apneas and/or hypopneas\nper hour of sleep regardless of accompanying symptoms.\nSpecify current severity:\nMild: Apnea hypopnea index is less than 15.\nModerate: Apnea hypopnea index is 15-30.\nSevere: Apnea hypopnea index is greater than 30.\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Obstructive sleep apnea hypopnea is the most common breathing-related sleep disorder.\nIt is characterized by repeated episodes of upper (pharyngeal) airway obstruction (apneas\nand hypopneas) during sleep. Apnea refers to the total absence of airflow, and hypopnea re-\nfers to a reduction in airflow. Each apnea or hypopnea represents a reduction in breathing\nof at least 10 seconds in duration in adults or two missed breaths in children and is typl-\ncally associated with drops in oxygen saturation of 3% or greater and/or an electroenceph-\nalographic arousal. Both sleep-related (nocturnal) and wake-time symptoms are common.\nThe cardinal symptoms of obstructive sleep apnea hypopnea are snoring and daytime\nsleepiness.\n\nObstructive sleep apnea hypopnea in adults is diagnosed on the basis of polysom-\nnographic findings and symptoms. The diagnosis is based on symptoms of 1) nocturnal\nbreathing disturbances (i.e., snoring, snorting/gasping, breathing pauses during sleep), or\n2) daytime sleepiness, fatigue, or unrefreshing sleep despite sufficient opportunities to\nsleep that are not better explained by another mental disorder and not attributable to an-\nother medical condition, along with 3) evidence by polysomnography of five or more ob-\nstructive apneas or hypopneas per hour of sleep (Criterion A1). Diagnosis can be made in\nthe absence of these symptoms if there is evidence by polysomnography of 15 or more ob-\nstructive apneas and/or hypopneas per hour of sleep (Criterion A2).\nSpecific attention to disturbed sleep occurring in association with snoring or breathing\npauses and physical findings that increase",
+  "associatedFeatures": "Because of the frequency of nocturnal awakenings that occur with obstructive sleep apnea\nhypopnea, individuals may report symptoms of insomnia. Other common, though non-\nspecific, symptoms of obstructive sleep apnea hypopnea are heartbum, nocturla, morning\nheadaches, dry mouth, erectile dysfunction, and reduced libido. Rarely, Individuals may\ncomplain of difficulty breathing while lying supine or sleeping. Hypertension may occur\nin more than 60% of individuals with obstructive sleep apnea hypopnea.\n\n\n###",
+  "prevalence": "Obstructive sleep apnea hypopnea is a very common disorder, affecting at least 1%-2% of\nchildren, 2%-15% of middle-age adults, and more than 20% of older individuals. In the\ngeneral community, prevalence rates of undiagnosed obstructive sleep apnea hypopnea\nmay be very high in elderly individuals. Since the disorder is strongly associated with obe-\nsity, increases in obesity rates are likely to be accompanied by an Increased prevalence of\nthis disorder. Prevalence may be particularly high among males, older adults, and certain\nracial/ethnic groups. In adults, the male-to-female ratio of obstructive sleep apnea hypop-\nnea ranges from 2:1 to 4:1.",
+  "developmentAndCourse": null,
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. The major risk factors for obstructive sleep apnea hypopnea\nare obesity and male",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "There is a potential for sleepiness and fatigue to be reported differently across cultures. In\nsome groups, snoring may be considered a sign of health and thus may not trigger con-\ncerns. Individuals of Asian ancestry may be at increased risk for obstructive sleep apnea\nhypopnea despite relatively low BMI, possibly reflecting the influence of craniofacial risk\nfactors that narrow the nasopharynx.",
+  "genderRelatedIssues": "Females may more commonly report fatigue rather than sleepiness and may underreport\nsnoring.\n\n\n### Diagnostic Markers\n\nPolysomnography provides quantitative data on frequency of sleep-related respiratory\ndisturbances and associated changes in oxygen saturation and sleep continuity. Polysom-\nnographic findings in children differ from those in adults in that children demonstrate\nlabored breathing, partial obstructive hypoventilation with cyclical desaturations, hyper-\ncapnia and paradoxical movements. Apnea hypopnea index levels as low as 2 are used to\ndefine thresholds of abnormality in children.\n\nArterial blood gas measurements while the individual is awake are usually normal, but\nsome individuals can have waking hypoxemla or hypercapnia. This pattern should alert the\nclinician to the possibility of coexisting lung disease or hypoventilation. Imaging procedures\nmay reveal narrowing of the upper airway. Cardiac testing may show evidence of impaired\nventricular function. Individuals with severe noctumal oxygen desaturation may also have el-\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 423-428 | Computer-Readable Format\u0022 --\u003E\n\nevated hemoglobin or hematocrit values. Validated sleep measures (e.g., multiple sleep la-\ntency test [MSLT], maintenance of wakefulness test) may identify sleepiness.\n\nGender-Related Diagnostic Issues\n\n[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "More than 50% of individuals with moderate to severe obstructive sleep apnea hypopnea\nreport symptoms of daytime sleepiness. A twofold increased risk of occupational accidents\nhas been reported in association with symptoms of snoring and sleepiness. Motor vehicle\ncrashes also have been reported to be as much as sevenfold higher among individuals with\nelevated apnea hypopnea index values. Clinicians should be cognizant of state govem-\nment requirements for reporting this disorder, especially in relationship to commercial\ndrivers. Reduced scores on measures of health-related quality of life are common in individ-\nuals with obstructive sleep apnea hypopnea, with the largest decrements observed in the\nphysical and vitality subscales.\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": "Systemic hypertension, coronary artery disease, heart failure, stroke, diabetes, and increased\nmortality are consistently associated with obstructive sleep apnea hypopnea. Risk esti-\nmates vary from 30% to as much as 300% for moderate to severe obstructive sleep apnea\nhypopnea. Evidence of pulmonary hypertension and right heart failure (e.g., cor pulmo-\nnale, ankle edema, hepatic congestion) are rare in obstructive sleep apnea hypopnea and\nwhen present indicate elther very severe disease or associated hypoventilation or cardio-\npulmonary comorbidities. Obstructive sleep apnea hypopnea also may occur with in-\ncreased frequency in association with a number of medical or neurological conditions (e.g.,\ncerebrovascular disease, Parkinson\u0027s disease). Physical findings reflect the co-occurrence of\nthese conditions.\n\nAs many as one-third of individuals referred for evaluation of obstructive sleep apnea\nhypopnea report symptoms of depression, with as many of 10% having depression scores\nconsistent with moderate to severe depression. Severity of obstructive sleep apnea hypop-\nnea, as measured by the apnea hypopnea index, has been found to be correlated with se-\nverity of symptoms of depression. This association may be stronger in males than in\nfemales.\n\nRelationship to International Classification of\nSleep Disorders\n\nThe International Classification of Sleep Disorders, 2nd Edition (ICSD-2), differentiates 11 sub-\ntypes of \u0022sleep-related breathing disorders,\u0022 including primary central sleep apnea, ob-\nstructive sleep apnea, and sleep-related hypoventilation.\nCentral Sleep Apnea",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Development and Course",
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-05T01:45:55.9731071Z",
+  "extractionMetadata": null
+}

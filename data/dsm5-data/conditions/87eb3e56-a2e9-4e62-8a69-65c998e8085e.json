@@ -1,0 +1,57 @@
+{
+  "id": "87eb3e56-a2e9-4e62-8a69-65c998e8085e",
+  "name": "Tic Disorders",
+  "code": "307.23 (F95.2)",
+  "category": "Tic Disorders",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "Note: A tic is a sudden, rapid, recurrent, nonrhythmic motor movement or vocalization.\nTourette\u0027s Disorder 307.23 (F95.2)\n\nA. Both multiple motor and one or more vocal tics have been present at some time during\nthe illness, although not necessarily concurrently.\n\nB. The tics may wax and wane in frequency but have persisted for more than 1 year since\nfirst tic onset.\nC. Onset is before age 18 years.\n\nD. The disturbance is not attributable to the physiological effects of a substance (e.g., co-\ncaine) or another medical condition (e.g., Huntington\u0027s disease, postviral encephalitis).\nPersistent (Chronic) Motor or Vocal Tic Disorder 307.22 (F96.1)\n\nA. Single or multiple motor or vocal tics have been present during the illness, but not both\nmotor and vocal.\n\nB. The tics may wax and wane in frequency but have persisted for more than 1 year since\nfirst tic onset.\nC. Onset is before age 18 years.\n\nD. The disturbance is not attributable to the physiological effects of a substance (e.g., co-\ncaine) or another medical condition (e.g., Huntington\u0027s disease, postviral encephalitis).\nE. Criteria have never been met for Tourette\u0027s disorder.\n\nSpecify if:\nWith motor tics only\nWith vocal tics only\nProvisional Tic Disorder 307.21 (F95.0)\n\nA. Single or multiple motor and/or vocal tics.\n\nB. The tics have been present for less than 1 year since first tic onset.\n\nC. Onset is before age 18 years.\n\nD. The disturbance is not attributable to the physiological effects of a substance (e.g., co-\ncaine) or another medical condition (e.g., Huntington\u0027s disease, postviral encephalitis).\nE. Criteria have never been met for Tourette\u0027s disorder or persistent (chronic) motor or\n\nvocal tic disorder.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "section]\n\n\n#### Prevalence\n\nTics are common in childhood but transient in most cases. The estimated",
+  "prevalence": "Tics are common in childhood but transient in most cases. The estimated prevalence of\nTourette\u0027s disorder ranges from 3 to 8 per 1,000 in school-age children. Males are more\ncommonly affected than females, with the ratio varying from 2:1 to 4:1. A national survey\nin the United States estimated 3 per 1,000 for the prevalence of clinicaly identified cases.\nThe frequency of identified cases was lower among African Americans and Hispanic\nAmericans, which may be related to differences in access to care.\n\n\n####",
+  "developmentAndCourse": "Onset of tics is typically between ages 4 and 6 years. Peak severity occurs between ages 10\nand 12 years, with a decline in severity during adolescence. Many adults with tic disorders\nexperience diminished symptoms. A small percentage of individuals will have persis-\ntently severe or worsening symptoms in adulthood.\n\nTic symptoms manifest similarly in all age groups and across the lifespan. Tics wax and\nwane in severity and change in affected muscle groups and vocalizations over time. As\nchildren get older, they begin to report their tics being associated with a premonitory\nurge-a somatic sensation that precedes the tic-and a feeling of tension reduction follow-\ning the expression of the tic. Tics associated with a premonitory urge may be experienced\nas not completely \u0022involuntary\u0022 in that the urge and the tic can be resisted. An individual\nmay also feel the need to perform a tic in a specific way or repeat it until he or she achieves\nthe feeling that the tic has been done \u0022just right.\u0022\n\nThe vulnerability toward developing co-occurring conditions changes as individuals\npass through the age of",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Tics are worsened by anxiety, excitement, and exhaustion and are better\nduring calm, focused activities. Individuals may have fewer tics when engaged in schoolwork\nor tasks at work than when relaxing at home after school or in the evening. Stressful/exciting\nevents (e.g., taking a test, participating in exciting activities) often make tics worse.\nEnvironmental. Observing a gesture or sound in another person may result in an indi-\nvidual with a tic disorder making a similar gesture or sound, which may be incorrectly\nperceived by others as purposeful. This can be a particular problem when the individual is\ninteracting with authority figures (e.g., teachers, supervisors, police).\n\nGenetic and physiological. Genetic and environmental factors influence tic symptom\nexpression and severity. Important risk alleles for Tourette\u0027s disorder and rare genetic\nvariants in families with tic disorders have been identified. Obstetrical complications,\nolder paternal age, lower birth weight, and maternal smoking during pregnancy are as-\nsociated with worse tic severity.\n\n\n####",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Tic disorders do not appear to vary in clinical characteristics, course, or etiology by race,\nethnicity, and culture. However, race, ethnicity, and culture may impact how tic disorders\nare perceived and managed in the family and community, as well as influencing patterns\nof help seeking, and choices of treatment.\n\n84 Neurodevelopmental Disorders",
+  "genderRelatedIssues": "Males are more commonly affected than females, but there are no gender differences in the\nkinds of tics, age at onset, or course. Women with persistent tic disorders may be more\nlikely to experience anxiety and depression.",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Many individuals with mild to moderate tic severity experience no distress or impairment\nin functioning and may even be unaware of their tics. Individuals with more severe symp.\ntoms generally have more impairment in daily living, but even individuals with moderate\nor even severe tic disorders may function well. The presence of a co-occurring condition,\nsuch as ADHD or OCD, can have greater impact on functioning. Less commonly, tics dis-\nrupt functioning in daily activities and result in social isolation, interpersonal conflict,\npeer victimization, inability to work or to go to school, and lower quality of life. The indi-\nvidual also may experience substantial psychological distress. Rare complications of Tou-\nrette\u0027s disorder include physical injury, such as eye injury (from hitting oneself in the face).\nand orthopedic and neurological injury (e.g., disc disease related to forceful head and neck\nmovements).\n\n\n###",
+  "differentialDiagnosis": [
+    "Abnormal movements that may accompany other medical conditions and stereotypic\nmovement disorder. Motor stereotypies are defined as involuntary rhythmic, repetitive,\npredictable movements that appear purposeful but serve no obvious adaptive function or\npurpose and stop with distraction. Examples include repetitive hand waving/rotating,\narm flapping, and finger wiggling. Motor stereotypies can be differentiated from tics based\non the former\u0027s earlier age at onset (younger than 3 years), prolonged duration (seconds to\nminutes), constant repetitive fixed form and location, exacerbation when engrossed in ac-\ntivities, lack of a premonitory urge, and cessation with distraction (e.g., name called or\ntouched). Chorea represents rapid, random, continual, abrupt, irregular, unpredictable,\nnonstereotyped actions that are usually bilateral and affect all parts of the body (i.e., face,\ntrunk, and limbs). The timing, direction, and distribution of movements vary from mo-\nment to moment, and movements usually worsen during attempted voluntary action. Dys-\ntonia is the simultaneous sustained contracture of both agonist and antagonist muscles,\n\nresulting in a distorted posture or movement of parts of the body. Dystonic postures are of-\nten triggered by attempts at voluntary movements and are not seen during sleep.\nSubstance-induced and paroxysmal dyskinesias. Paroxysmal dyskinesias usually oc-\ncur as dystonic or choreoathetoid movements that are precipitated by voluntary move-\nment or exertion and less commonly arise from normal background activity.\nMyoclonus. Myoclonus is characterized by a sudden unidirectional movement that is\noften nonrhythmic. It may be worsened by movement and occur during sleep. Myoclonus\nis differentiated from tics by its rapidity, lack of suppressibility, and absence of a premon-\nitory urge.\n\nObsessive compulsive and related disorders. Differentiating obsessive compulsive\nbehaviors from tics may be difficult. Clues favoring an obsessive compulsive behavior in-\ndude a cognitive-based drive (e.g., fear of contamination) and the need to perform the ac-\ntion in a particular fashion a certain number of times, equally on both sides of the body, or\nuntil a \u0022just right\u0022 feeling is achieved. Impulse-control problems and other repetitive be-\nhaviors, including persistent hair puling, skin picking, and nail biting, appear more goal\ndirected and complex than tics.\n\nOther Specified Tic Disorder 85"
+  ],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis"
+  ],
+  "missingSections": [
+    "Diagnostic Features",
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:23:04.2746883Z",
+  "extractionMetadata": null
+}

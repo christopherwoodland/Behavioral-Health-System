@@ -985,15 +985,15 @@ const UploadAnalyze: React.FC = () => {
       return;
     }
 
-    // Filter for audio files only
-    const audioExtensions = ['.wav', '.mp3', '.m4a', '.aac', '.flac'];
+    // Filter for audio/video files only
+    const audioExtensions = ['.wav', '.mp3', '.m4a', '.aac', '.flac', '.mp4', '.webm', '.ogg', '.mov'];
     const audioFiles = Array.from(files).filter(file => {
       const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
       return audioExtensions.includes(ext);
     });
 
     setCsvFolderFiles(audioFiles);
-    addToast('success', 'Folder Selected', `Found ${audioFiles.length} audio file(s) in selected folder`);
+    addToast('success', 'Folder Selected', `Found ${audioFiles.length} audio/video file(s) in selected folder`);
     announceToScreenReader(`Selected folder contains ${audioFiles.length} audio files`);
   }, [addToast, announceToScreenReader]);
 
@@ -1295,17 +1295,18 @@ const UploadAnalyze: React.FC = () => {
         'audio/mp3', 'audio/mpeg', 'audio/mp4',
         'audio/m4a', 'audio/x-m4a', 'audio/mp4a-latm',
         'audio/aac', 'audio/x-aac',
-        'audio/flac', 'audio/x-flac'
+        'audio/flac', 'audio/x-flac',
+        'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'
       ];
 
       const fileName = file.name.toLowerCase();
-      const supportedExtensions = ['.wav', '.mp3', '.m4a', '.aac', '.flac'];
+      const supportedExtensions = ['.wav', '.mp3', '.m4a', '.aac', '.flac', '.mp4', '.webm', '.ogg', '.mov'];
       const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
       const hasValidMimeType = supportedMimeTypes.includes(file.type);
 
       // Accept file if either MIME type OR extension is valid (some browsers don't set MIME types correctly)
       if (!hasValidMimeType && !hasValidExtension) {
-        setError(`Unsupported file type for ${file.name}. Please select supported audio files (WAV, MP3, M4A, AAC, or FLAC)`);
+        setError(`Unsupported file type for ${file.name}. Please select supported audio/video files (WAV, MP3, M4A, AAC, FLAC, MP4, WebM)`);
         addToast('error', 'Unsupported File', `${file.name} is not a supported audio file format`);
         announceToScreenReader(`Error: Unsupported file format selected for ${file.name}`);
         return;
@@ -3876,7 +3877,7 @@ const UploadAnalyze: React.FC = () => {
               </p>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Supported formats: WAV, MP3, M4A, AAC, FLAC (max 50MB each)
+              Supported formats: WAV, MP3, M4A, AAC, FLAC, MP4, WebM (max 50MB each)
               {processingMode !== 'single' && <br />}
               {processingMode !== 'single' && 'You can select multiple files at once'}
             </p>
@@ -3884,10 +3885,10 @@ const UploadAnalyze: React.FC = () => {
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept=".wav,.mp3,.m4a,.aac,.flac,audio/*"
+              accept=".wav,.mp3,.m4a,.aac,.flac,.mp4,.webm,.ogg,.mov,audio/*,video/*"
               onChange={handleFileSelect}
               multiple={processingMode !== 'single'}
-              aria-label={`Select audio file${processingMode !== 'single' ? 's' : ''} for analysis`}
+              aria-label={`Select audio or video file${processingMode !== 'single' ? 's' : ''} for analysis`}
             />
           </div>
         ) : (
@@ -4085,10 +4086,10 @@ const UploadAnalyze: React.FC = () => {
                   ref={fileInputRef}
                   type="file"
                   className="hidden"
-                  accept=".wav,.mp3,.m4a,.aac,.flac,audio/*"
+                  accept=".wav,.mp3,.m4a,.aac,.flac,.mp4,.webm,.ogg,.mov,audio/*,video/*"
                   onChange={handleFileSelect}
                   multiple={processingMode === 'batch-files' || processingMode === 'batch-csv'}
-                  aria-label="Select additional audio files for analysis"
+                  aria-label="Select additional audio or video files for analysis"
                 />
               </>
             )}

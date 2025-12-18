@@ -1,0 +1,56 @@
+{
+  "id": "b4f69fcd-4a57-4735-8ce1-f345ecc47350",
+  "name": "Sexual Masochism Disorder",
+  "code": "302.83 (F65.51)",
+  "category": "Sexual Masochism Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from the act\nof being humiliated, beaten, bound, or otherwise made to suffer, as manifested by fan-\ntasies, urges, or behaviors.\n\nB. The fantasies, sexual urges, or behaviors cause clinically significant distress or impair-\nment in social, occupational, or other important areas of functioning.\n\nSpecify if:\n\nWith asphyxiophilia: If the individual engages in the practice of achieving sexual\narousal related to restriction of breathing.\n\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living\nin institutional or other settings where opportunities to engage in masochistic sexual\nbehaviors are restricted.\n\nIn full remission: There has been no distress or impairment in social, occupational,\nor other areas of functioning for at last 5 years while in an uncontrolled environment.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The diagnostic criteria for sexual masochism disorder are intended to apply to individuals\nwho freely admit to having such paraphilic interests. Such individuals openly acknowl-\nedge intense sexual arousal from the act of being humiliated, beaten, bound, or otherwise\nmade to suffer, as manifested by fantasies, urges, or behaviors. If these individuals also re-\nport psychosocial difficulties because of their sexual attractions or preferences for being\nhumiliated, beaten, bound, or otherwise made to suffer, they may be diagnosed with sex-\nual masochism disorder. In contrast, if they declare no distress, exemplified by anxiety, ob-\nsessions, guilt, or shame, about these paraphilic impulses, and are not hampered by them\nin pursuing other personal goals, they could be ascertained as having masochistic sexual\ninterest but should not be diagnosed with sexual masochism disorder.\nThe Criterion A time frame, indicating that the signs or symptoms of sexual masoch-\nism must have persisted for at least 6 months, should be understood as a general guideline,\nnot a strict threshold, to ensure that the sexual interest in being humiliated, beaten, bound,\nor otherwise made to suffer is not merely transient. However, the disorder can be diag-\nnosed in the context of a clearly sustained but shorter time period.\n\n\n###",
+  "associatedFeatures": "The extensive use of pornography involving the act of being humiliated, beaten, bound, or oth-\nerwise made to suffer is sometimes an associated feature of sexual masochism disorder.",
+  "prevalence": "The population prevalence of sexual masochism disorder is unknown. In Australia, it has\nbeen estimated that 2.2% of males and 1.3% of females had been involved in bondage and\ndiscipline, sadomasochism, or dominance and submission in the past 12 months.\nSexual Sadism Disorder 695\n\n\n###",
+  "developmentAndCourse": "Community individuals with paraphilias have reported a mean age at onset for masoch-\nism of 19.3 years, although earlier ages, including puberty and childhood, have also been\nreported for the onset of masochistic fantasies. Very little is known about persistence over\ntime. Sexual masochism disorder per definition requires one or more contributing factors,\nwhich may change over time with or without treatment. These include subjective distress\n(e.g., guilt, shame, intense sexual frustration, loneliness), psychiatric morbidity, hypersex-\nuality and sexual impulsivity, and psychosocial impairment. Therefore, the course of sex-\nual masochism disorder is likely to vary with age. Advancing age is likely to have the same\nreducing effect on sexual preference involving sexual masochism as it has on other para-\nphilic or normophilic sexual behavior.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "[No data available for this section]",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "The functional consequences of sexual masochism disorder are unknown. However, mas-\nochists are at risk of accidental death while practicing asphyxiophilia or other autoerotic\nprocedures.\n\n\n###",
+  "differentialDiagnosis": [
+    "Many of the conditions that could be differential diagnoses for sexual masochism disorder\n(e.g., transvestic fetishism, sexual sadism disorder, hypersexuality, alcohol and substance\nuse disorders) sometimes occur also as comorbid diagnoses. Therefore, it is necessary to\ncarefully evaluate the evidence for sexual masochism disorder, keeping the possibility of\nother paraphilias or other mental disorders as part of the differential diagnosis. Sexual\nmasochism in the absence of distress (i.e., no disorder) is also included in the differential,\nas individuals who conduct the behaviors may be satisfied with their masochistic interest.\n\n\n###"
+  ],
+  "comorbidity": "Known comorbidities with sexual masochism disorder are largely based on individuals in\ntreatment. Disorders that occur comorbidly with sexual masochism disorder typically in-\nclude other paraphilic disorders, such as transvestic fetishism.\nSexual Sadism Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 739-740 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:22:12.8100554Z",
+  "extractionMetadata": null
+}

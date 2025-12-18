@@ -1,0 +1,56 @@
+{
+  "id": "b4a67c68-9d2b-4df6-8430-217dac8442f5",
+  "name": "Male Hypoactive Sexual Desire Disorder",
+  "code": "302.71 (F52.0)",
+  "category": "Male Hypoactive Sexual Desire Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Persistently or recurrently deficient (or absent) sexual/erotic thoughts or fantasies and\ndesire for sexual activity. The judgment of deficiency is made by the clinician, taking\nInto account factors that affect sexual functioning, such as age and general and socio-\ncultural contexts of the individual\u0027s life.\n\nB. The symptoms in Criterion A have persisted for a minimum duration of approximately\n6 months.\n\nC. The symptoms in Criterion A cause clinically significant distress in the individual.\nD. The sexual dysfunction is not better explained by a nonsexual mental disorder or as a\nconsequence of severe relationship distress or other significant stressors and is not at-\ntributable to thes effects of a substance/medication or another medical condition.\nMale Hypoactive Sexual Desire Disorder 441\n\nSpecify whether:\n\nLifelong: The disturbance has been present since the individual became sexually\nactive.\n\nAcquired: The disturbance began after a period of relatively normal sexual function.\nSpecify whether:\n\nGeneralized: Not limited to certain types of stimulation, situations, or partners.\nSituational: Only occurs with certain types of stimulation, situations, or partners.\nSpecify current severity:\n\nMild: Evidence of mild distress over the symptoms in Criterion A.\nModerate: Evidence of moderate distress over the symptoms in Criterion A.\nSevere: Evidence of severe or extreme distress over the symptoms in Criterion A.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "When an assessment for male hypoactive sexual desire disorder is being made, Inter-\npersonal context must be taken into account. A \u0022desire discrepancy,\u0022 in which a man has\nlower desire for sexual activity than his partner, is not sufficient to diagnose male hypo-\nactive sexual desire disorder. Both lowabsent desire for sex and deficient/absent sexual\nthoughts or fantasies are required for a diagnosis of the disorder. There may be variation\nacross men in how sexual desire is expressed.\n\nThe lack of desire for sex and deficient/absent erotic thoughts or fantasies must be per-\nsistent or recurrent and must occur for a minimum duration of approximately 6 months.\nThe inclusion of this duration criterion is meant to safeguard against making a diagnosis in\ncases in which a man\u0027s low sexual desire may represent an adaptive response to adverse\nlife conditions (e.g., concem about a partner\u0027s pregnancy when the man is considering ter-\nminating the relationship). The introduction of \u0022approximately\u0022 in Criterion B allows for\nclinician judgment in cases in which symptom duration does not meet the recommended\n6-month threshold.\n\n\n###",
+  "associatedFeatures": "Male hypoactive sexual desire disorder is sometimes associated with erectile and/or ejac-\nulatory concerns. For example, persistent difficulties obtaining an erection may lead a man\nto lose interest in sexual activity. Men with hypoactive sexual desire disorder often report\nthat they no longer initiate sexual activity and that they are minimally receptive to a part-\nner\u0027s attempt to initiate. Sexual activities (e.g., masturbation or partnered sexual activity)\nmay sometimes occur even in the presence of low sexual desire. Relationship-specific pref-\nerences regarding patterns of sexual initiation must be taken into account when making a\ndiagnosis of male hypoactive sexual desire disorder. Although men are more likely to ini-\ntiate sexual activity, and thus low desire may be characterized by a pattern of non-initiation,\nmany men may prefer to have their partner initiate sexual activity. In such situations, the\nman\u0027s lack of receptivity to a partner\u0027s initiation should be considered when evaluating low\ndesire.\n\nIn addition to the subtypes \u0022lifelong/acquired\u0022 and \u0022generalized/situational,\u0022 the fol-\nlowing five factors must be considered during assessment and diagnosis of male hypo-\nactive sexual desire disorder given that they may be relevant to etiology and/or treatment:\n1\\) partner factors (e.g., partner\u0027s sexual problems, partner\u0027s health status); 2) relationship\nfactors (e.g., poor communication, discrepancies in desire for sexual activity); 3) individ-\nual vulnerability factors (e.g., poor body image, history of sexual or emotional abuse), psy-\nchiatric",
+  "prevalence": "The prevalence of male hypoactive sexual desire disorder varies depending on country of\norigin and method of assessment. Approximately 6% of younger men (ages 18-24 years)\nand 41% of older men (ages 66-74 years) have problems with sexual desire. However, a\npersistent lack of interest in sex, lasting 6 months or more, affects only a small proportion\nof men ages 16-44 (1.8%).\n\n\n###",
+  "developmentAndCourse": "By definition, lifelong male hypoactive sexual desire disorder indicates that low or no sex-\nual desire has always been present, whereas the acquired subtype would be assigned if the\nman\u0027s low desire developed after a period of normal sexual desire. There is a requirement\nthat low desire persist for approximately 6 months or more; thus, short-term changes in\nsexual desire should not be diagnosed as male hypoactive sexual desire disorder.\nThere is a normative age-related decline in sexual desire. Like women, men identify a\nvariety of triggers for their sexual desire, and they describe a wide range of reasons that\nthey choose to engage in sexual activity. Although erotic visual cues may be more potent\nelicitors of desire in younger men, the potency of sexual cues may decrease with age and\nmust be considered when evaluating men for hypoactive sexual desire disorder.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Mood and anxiety symptoms appear to be strong predictors of low de-\nsire in men. Up to half of men with a past history of psychiatric symptoms may have mod-\nerate or severe loss of desire, compared with only 15% of those without such a history. A\nman\u0027s feelings about himself, his perception of his partner\u0027s sexual desire toward him,\nfeelings of being emotionally connected, and contextual variables may all negatively (as\nwell as positively) affect sexual desire.\n\nEnvironmental. Alcohol use may increase the occurrence of low desire. Among gay men,\nself-directed homophobia, Interpersonal problems, attitudes, lack of adequate sex educa-\ntion, and trauma resulting from early life experiences must be taken into account in ex-\nplaining the low desire. Social and cultural contextual factors should also be considered.\nGenetic and physiological. Endocrine disorders such as hyperprolactinemia signifi-\ncantly affect sexual desire in men. Age is a significant risk factor for low desire in men. It is\nunclear whether or not men with low desire also have abnormally low levels of testoster-\none; however, among hypogonadal men, low desire is common. There also may be a crit-\nical threshold below which testosterone will affect sexual desire in men and above which\nthere is little effect of testosterone on men\u0027s desire.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "There Is marked variability in prevalence rates of low desire across cultures, ranging from\n12.5% in Northern European men to 28% in Southeast Asian men ages 40-80 years. Just as\nthere are higher rates of low desire among East Asian subgroups of women, men of East\nAsian ancestry also have higher rates of low desire. Guilt about sex may mediate this as-\nsociation between East Asian ethnicity and sexual desire in men.\n\n\n###",
+  "genderRelatedIssues": "In contrast to the classification of sexual disorders in women, desire and arousal disorders\nhave been retained as separate constructs in men. Despite some similarities in the experi-\nPremature (Early) Ejaculation 443\n\nence of desire across men and women, and the fact that desire fluctuates over time and is\ndependent on contextual factors, men do report a significantly higher intensity and fre-\nquency of sexual desire compared with women.\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]\n\n\n###",
+  "differentialDiagnosis": [
+    "Nonsexual mental disorders. Nonsexual mental disorders, such as major depressive\ndisorder, which is characterized by \u0022markedly diminished interest or pleasure in all, or al-\nmost all, activities,\u0022 may explain the lack of sexual desire. If the lack of desire is better\nexplained by another mental disorder, then a diagnosis of male hypoactive sexual desire\ndisorder would not be made.\n\nSubstance/medication use. Substance/medication use may explain the lack of sexual\ndesire.\n\nAnother medical condition. If the lowabsent desire and deficient/absent erotic thoughts\nor fantasies are better explained by the effects of another medical condition (e.g., hypogo-\nnadism, diabetes mellitus, thyroid dysfunction, central nervous system disease), then a di-\nagnosis of male hypoactive sexual desire disorder would not be made.\n\nInterpersonal factors. If interpersonal or significant contextual factors, such as severe\nrelationship distress or other significant stressors, are associated with the loss of desire in\nthe man, then a diagnosis of male hypoactive sexual desire disorder would not be made.\nOther sexual dysfunctions. The presence of another sexual dysfunction does not rule out a\ndiagnosis of male hypoactive sexual desire disorder; there is some evidence that up to one-half\nof men with low sexual desire also have erectile difficulties, and slightly fewer may also have\nearly ejaculation difficulties. If the man\u0027s low desire is explained by self-identification as an\nasexual, then a diagnosis of male hypoactive sexual desire disorder is not made."
+  ],
+  "comorbidity": "Depression and other mental disorders, as well as endocrinological factors, are often co-\nmorbid with male hypoactive sexual desire disorder.\nPremature (Early) Ejaculation\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 485-488 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:04:15.9381525Z",
+  "extractionMetadata": null
+}

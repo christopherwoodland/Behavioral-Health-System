@@ -1,75 +1,58 @@
 {
   "IsEncrypted": false,
-  // ============================================================================
-  // EXAMPLE LOCAL SETTINGS - FOR REFERENCE ONLY
-  // ============================================================================
-  // This shows what a complete local.settings.json might look like
-  // with placeholder values. DO NOT use directly in development.
-  // Copy local.settings.json.template instead and fill in your keys.
-  // ============================================================================
-
-  "Values": {
-    // Storage Configuration
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",  // Use local emulator for dev
-
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",  // .NET isolated runtime
-
-    // ========================================================================
-    // KINTSUGI HEALTH API CONFIGURATION
-    // ========================================================================
-    // Contact Kintsugi Health for API credentials
-    "KINTSUGI_API_KEY": "your-kintsugi-api-key-here",  // Required: Your Kintsugi API key
-    "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",  // Kintsugi API endpoint
-    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",  // Automatically provide consent
-    "KINTSUGI_TIMEOUT_SECONDS": "300",  // API request timeout
-    "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",  // Max retry attempts
-    "KINTSUGI_RETRY_DELAY_MS": "1000",  // Delay between retries
-
-    // ========================================================================
-    // AZURE OPENAI - PRIMARY GPT-4 (For general conversational AI)
-    // ========================================================================
-    // Standard Azure OpenAI resource for general-purpose AI tasks
-    "AZURE_OPENAI_ENDPOINT": "https://your-openai-resource.openai.azure.com/",  // Your Azure OpenAI endpoint
-    "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key",  // Your API key
-    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o",  // Deployment name (model identifier)
-    "AZURE_OPENAI_ENABLED": "true",  // Enable/disable GPT-4
-
-    // ========================================================================
-    // AZURE OPENAI - EXTENDED ASSESSMENT (For advanced DSM-5 analysis)
-    // ========================================================================
-    // Advanced AI resource for comprehensive disorder assessment
-    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "https://your-gpt5-resource.openai.azure.com/",  // Separate endpoint for advanced analysis
-    "EXTENDED_ASSESSMENT_OPENAI_API_KEY": "your-gpt5-api-key",  // Separate API key if using different resource
-    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5-turbo",  // Advanced model deployment
-    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION": "2024-08-01-preview",  // Advanced API version
-    "EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS": "4000",  // Larger token limit for detailed analysis
-    "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",  // Lower temperature for consistency
-    "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",  // Longer timeout for complex analysis
-    "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",  // Disabled by default - enable when ready
-    "EXTENDED_ASSESSMENT_USE_FALLBACK": "true",  // Fall back to GPT-4 if GPT-5 unavailable
-
-    // ========================================================================
-    // AZURE BLOB STORAGE (For DSM-5 data and smart band device data)
-    // ========================================================================
-    // Uses Managed Identity in production; storage account name is required
-    "DSM5_STORAGE_ACCOUNT_NAME": "bhsdevstgjdl4r7ft2nfec",  // Storage account for DSM-5 documents
-    "DSM5_CONTAINER_NAME": "dsm5-data",  // Blob container name for DSM-5 extraction
-
-    // ========================================================================
-    // FEATURE FLAGS
-    // ========================================================================
-    // Control which features are available in the application
-    "AGENT_MODE_ENABLED": "true"
-  },
-
   "ConnectionStrings": {},
-
-  // ============================================================================
-  // HOST CONFIGURATION
-  // ============================================================================
   "Host": {
-    "LocalHttpPort": 7071,  // Port for local Azure Functions host
-    "CORS": "*",  // Allow all origins for local dev (restrict in production)
-    "CORSCredentials": false  // Don't allow credentials with CORS
+    "LocalHttpPort": 80,
+    "CORS": "*",
+    "CORSCredentials": false
+  },
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AzureWebJobsStorage__accountName": "<storage-account-name>",
+    "DSM5_STORAGE_ACCOUNT_NAME": "<storage-account-name>",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "@Microsoft.KeyVault(SecretUri=<keyvault-uri>/secrets/AppInsightsConnectionString/)",
+    "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "https://<your-content-understanding>.services.ai.azure.com/",
+    "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    "AZURE_OPENAI_DEPLOYMENT": "gpt-4.1",
+    "AZURE_OPENAI_ENABLED": "true",
+    "AZURE_OPENAI_ENDPOINT": "https://<your-openai>.openai.azure.com/",
+    "DocumentIntelligenceEndpoint": "https://<your-docintelligence>.cognitiveservices.azure.com/",
+    "DSM5_CONTAINER_NAME": "dsm5-data",
+    "DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT": "https://<your-docintelligence>.cognitiveservices.azure.com/",
+    "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING",
+    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION": "2024-12-01-preview",
+    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5",
+    "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "true",
+    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "https://<your-openai>.openai.azure.com/",
+    "EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS": "4000",
+    "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",
+    "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",
+    "EXTENDED_ASSESSMENT_USE_FALLBACK": "false",
+    "KINTSUGI_API_KEY": "@Microsoft.KeyVault(SecretUri=<keyvault-uri>/secrets/KintsugiApiKey/)",
+    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",
+    "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",
+    "KINTSUGI_TIMEOUT_SECONDS": "300",
+    "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",
+    "KINTSUGI_RETRY_DELAY_MS": "1000",
+    "AGENT_MODE_ENABLED": "false",
+    "AZURE_SPEECH_ENDPOINT": "https://<your-speech>.cognitiveservices.azure.com/",
+    "AZURE_SPEECH_REGION": "eastus2",
+    "AZURE_SPEECH_LOCALE": "en-US",
+    "AZURE_SPEECH_API_VERSION": "2024-11-15",
+    "AZURE_SPEECH_ENHANCED_MODE": "false",
+    "AGENT_ENDPOINT": "https://<your-openai>.openai.azure.com/",
+    "AGENT_MODEL_DEPLOYMENT": "gpt-5",
+    "AGENT_ENABLED": "true",
+    "AGENT_SUPPORTS_TEMPERATURE": "false",
+    "AGENT_SUPPORTS_MAX_TOKENS": "false",
+    "AGENT_TIMEOUT_SECONDS": "60",
+    "GRAMMAR_AGENT_NAME": "GrammarCorrectionAgent",
+    "GRAMMAR_AGENT_INCLUDE_EXPLANATIONS": "false",
+    "GRAMMAR_AGENT_PRESERVE_FORMATTING": "true",
+    "GRAMMAR_AGENT_SUGGEST_ALTERNATIVES": "false",
+    "ENTRA_TENANT_ID": "<tenant-id>",
+    "ENTRA_CLIENT_ID": "<api-client-id>",
+    "AZURE_TENANT_ID": "<tenant-id>",
+    "AZURE_CLIENT_ID": "<user-assigned-managed-identity-client-id>"
   }
 }

@@ -1,0 +1,55 @@
+{
+  "id": "b9c61bc7-04f1-40d8-8756-7b370df788d6",
+  "name": "Illness Anxiety Disorder",
+  "code": "300.7 (F45.21)",
+  "category": "Illness Anxiety Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Preoccupation with having or acquiring a serious illness.\n\nB. Somatic symptoms are not present or, if present, are only mild in intensity. If another\nmedical condition is present or there is a high",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "Because they believe they are medically il, individuals with illness anxiety disorder are\nencountered far more frequently in medical than in mental health settings. The majority of\nindividuals with illness anxiety disorder have extensive yet unsatisfactory medical care,\nthough some may be too anxious to seek medical attention. They generally have elevated\nrates of medical utilization but do not utilize mental health services more than the general\npopulation. They often consult multiple physicians for the same problem and obtain re-\npeatedly negative diagnostic test results. At times, medical attention leads to a paradoxical\nexacerbation of anxiety or to latrogenic complications from diagnostic tests and proce-\ndures. Individuals with the disorder are generally dissatisfied with their medical care and\nfind it unhelpful, often feeling they are not being taken seriously by physicians. At times,\nthese concerns may be justified, since physicians sometimes are dismissive or respond\nwith frustration or hostility. This response can occasionally result in a failure to diagnose\na medical condition that is present.\n\n\n###",
+  "prevalence": "DSM-IV diagnosis hypochondriasis. The 1- to 2-year prevalence of health anxiety and/or\ndisease conviction in community surveys and population-based samples ranges from 1.3%\nto 10%. In ambulatory medical populations, the 6-month/1-year prevalence rates are be-\ntween 3% and 8%. The prevalence of the disorder is similar in males and females.",
+  "developmentAndCourse": "The development and course of illness anxiety disorder are unclear. Illness anxiety disor-\nder is generally thought to be a chronic and relapsing condition with an age at onset in\nearly and middle adulthood. In population-based samples, health-related anxiety in-\ncreases with age, but the ages of individuals with high health anxiety in medical settings\ndo not appear to differ from those of other patients in those settings. In older individuals,\nhealth-related anxiety often focuses on memory loss; the disorder is thought to be rare in\nchildren.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Illness anxiety disorder may sometimes be precipitated by a major life\nstress or a serious but ultimately benign threat to the individual\u0027s health. A history of child-\nIllness Anxiety Disorder 317\n\nhood abuse or of a serious childhood illness may predispose to development of the disor-\nder in adulthood.\n\nCourse modifiers. Approximately one-third to one-half of individuals with illness anx-\nlety disorder have a transient form, which is associated with less psychiatric",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "The diagnosis should be made with caution in individuals whose ideas about disease are\ncongruent with widely held, culturally sanctioned beliefs. Little is known about the phe-\nnomenology of the disorder across cultures, although the prevalence appears to be similar\nacross different countries with diverse cultures.",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Illness anxiety disorder causes substantial role impairment and decrements in physical\nfunction and health-related quality of life. Health concerns often interfere with interper-\nsonal relationships, disrupt family life, and damage occupational performance.",
+  "differentialDiagnosis": [],
+  "comorbidity": "\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 360-363 | Computer-Readable Format\u0022 --\u003E\n\nBecause illness anxiety disorder is a new disorder, exact comorbidities are unknown. Hy-\npochondriasis co-occurs with anxiety disorders (in particular, generalized anxiety disor-\nder, panic disorder, and OCD) and depressive disorders. Approximately two-thirds of\nIndividuals with illness anxiety disorder are likely to have at least one other comorbid ma-\njor mental disorder. Individuals with illness anxiety disorder may have an elevated risk\nfor somatic symptom disorder and personality disorders.\nConversion Disorder\n(Functional Neurological Symptom Disorder)",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features",
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:02:39.3859249Z",
+  "extractionMetadata": null
+}

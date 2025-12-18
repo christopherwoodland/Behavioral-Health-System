@@ -1,0 +1,57 @@
+{
+  "id": "698f45e0-0802-4072-9a17-6b621460bd43",
+  "name": "Exhibitionistic Disorder",
+  "code": "302.4 (F65.2)",
+  "category": "Exhibitionistic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from the ex-\nposure of one\u0027s genitals to an unsuspecting person, as manifested by fantasies, urges,\nor behaviors.\n\nB. The individual has acted on these sexual urges with a nonconsenting person, or the\nsexual urges or fantasies cause clinically significant distress or impairment in social,\noccupational, or other important areas of functioning.\n\nSpecify whether:\n\nSexually aroused by exposing genitals to prepubertal children\nSexually aroused by exposing genitals to physically mature individuals\nSexually aroused by exposing genitals to prepubertal children and to physically\nmature individuals\n\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living in\ninstitutional or other settings where opportunities to expose one\u0027s genitals are restricted.\nIn full remission: The individual has not acted on the urges with a nonconsenting per-\nson, and there has been no distress or impairment in social, occupational, or other ar-\neas of functioning, for at least 5 years while in an uncontrolled environment.\n\n\n### Subtypes\n\nThe subtypes for exhibitionistic disorder are based on the age or physical maturity of the non-\nconsenting individuals to whom the individual prefers to expose his or her genitals. The non-\nconsenting individuals could be prepubescent children, adults, or both. This specifier should\nhelp draw adequate attention to characteristics of victims of individuals with exhibitionistic\ndisorder to prevent co-occurring pedophilic disorder from being overlooked. However, indi-\ncations that the individual with exhibitionistic disorder is sexually attracted to exposing his or\nher genitals to children should not preclude a diagnosis of pedophilic disorder.\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "[No data available for this section]\n\n\n###",
+  "prevalence": "The prevalence of exhibitionistic disorder is unknown. However, based on exhibitionistic\nsexual acts in nonclinical or general populations, the highest possible prevalence for exhi-\nbitionistic disorder in the male population is 2%-4%. The prevalence of exhibitionistic dis-\norder in females is even more uncertain but is generally believed to be much lower than in\nmales.\n\n\n###",
+  "developmentAndCourse": "Adult males with exhibitionistic disorder often report that they first became aware of sex-\nual interest in exposing their genitals to unsuspecting persons during adolescence, at a\nsomewhat later time than the typical development of normative sexual interest in women\nor men. Although there is no minimum age requirement for the diagnosis of exhibitionis-\ntic disorder, it may be difficult to differentiate exhibitionistic behaviors from age-appro-\npriate sexual curiosity in adolescents. Whereas exhibitionistic impulses appear to emerge\nin adolescence or early adulthood, very little is known about persistence over time. By def-\ninition, exhibitionistic disorder requires one or more contributing factors, which may\nchange over time with or without treatment; subjective distress (e.g., guilt, shame, intense\nsexual frustration, loneliness), mental disorder",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Since exhibitionism is a necessary precondition for exhibitionistic dis-\norder, risk factors for exhibitionism should also increase the rate of exhibitionistic disor-\nder. Antisocial history, antisocial personality disorder, alcohol misuse, and pedophilic\nsexual preference might increase risk of sexual recidivism in exhibitionistic offenders.\nFrotteuristic Disorder 691\n\nHence, antisocial personality disorder, alcohol use disorder, and pedophilic interest may\nbe considered risk factors for exhibitionistic disorder in males with exhibitionistic sexual\npreferences.\n\nEnvironmental. Childhood sexual and emotional abuse and sexual preoccupation/hyper-\nsexuality have been suggested as risk factors for exhibitionism, although the causal rela-\ntionship to exhibitionism is uncertain and the specificity unclear.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "Exhibitionistic disorder is highly unusual in females, whereas single sexually arousing ex-\nhibitionistic acts might occur up to half as often among women compared with men.",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "The functional consequences of exhibitionistic disorder have not been addressed in re-\nsearch involving individuals who have not acted out sexually by exposing their genitals to\nunsuspecting strangers but who fulfill Criterion B by experiencing intense emotional dis-\ntress over these preferences.\n\n\n####",
+  "differentialDiagnosis": [
+    "Potential differential diagnoses for exhibitionistic disorder sometimes occur also as co-\nmorbid disorders. Therefore, it is generally necessary to evaluate the evidence for exhibi-\ntionistic disorder and other possible conditions as separate questions.\nConduct disorder and antisocial personality disorder. Conduct disorder in adolescents\nand antisocial personality disorder would be characterized by additional norm-breaking and\nantisocial behaviors, and the specific sexual interest in exposing the genitals should be lacking.\nSubstance use disorders. Alcohol and substance use disorders might involve single\nexhibitionistic episodes by intoxicated individuals but should not involve the typical sex-\nual interest in exposing the genitals to unsuspecting persons. Hence, recurrent exhibition-\nistic sexual fantasies, urges, or behaviors that occur also when the individual is not\nintoxicated suggest that exhibitionistic disorder might be present.\n\n\n####"
+  ],
+  "comorbidity": "Known comorbidities in exhibitionistic disorder are largely based on research with indi-\nviduals (almost all males) convicted for criminal acts involving genital exposure to non-\nconsenting individuals. Hence, these comorbidities might not apply to all individuals who\nqualify for a diagnosis of exhibitionistic disorder. Conditions that occur comorbidly with\nexhibitionistic disorder at high rates include depressive, bipolar, anxiety, and substance\nuse disorders; hypersexuality; attention-deficit/hyperactivity disorder; other paraphilic\ndisorders; and antisocial personality disorder.\nFrotteuristic Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 734-736 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:03:48.112317Z",
+  "extractionMetadata": null
+}

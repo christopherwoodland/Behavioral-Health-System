@@ -118,6 +118,12 @@ export const env = {
   get JOB_POLL_INTERVAL_MS() { return getEnvVarInt('VITE_JOB_POLL_INTERVAL_MS', 10000); },
   get POLL_INTERVAL_MS() { return getEnvVarInt('VITE_POLL_INTERVAL_MS', 1000); },
 
+  // Audio Processing Configuration
+  get AUDIO_SILENCE_REMOVAL_ENABLED() { return getEnvVarBool('VITE_AUDIO_SILENCE_REMOVAL_ENABLED', true); },
+  get AUDIO_SILENCE_THRESHOLD_DB() { return getEnvVarInt('VITE_AUDIO_SILENCE_THRESHOLD_DB', -50); },
+  get AUDIO_SILENCE_MIN_DURATION() { return parseFloat(getEnvVar('VITE_AUDIO_SILENCE_MIN_DURATION', '0.1')); },
+  get AUDIO_SPEECH_ENHANCEMENT_ENABLED() { return getEnvVarBool('VITE_AUDIO_SPEECH_ENHANCEMENT_ENABLED', true); },
+
   // Band Service
   get BAND_SERVICE_URL() { return getEnvVar('VITE_BAND_SERVICE_URL', 'http://localhost:8765'); },
 } as const;

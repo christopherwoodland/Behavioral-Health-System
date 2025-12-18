@@ -1,0 +1,56 @@
+{
+  "id": "edf7a0fe-d3e4-4470-bdef-bfb915206277",
+  "name": "Rumination Disorder",
+  "code": "307.53 (F98.21)",
+  "category": "Rumination Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Repeated regurgitation of food over a period of at least 1 month. Regurgitated food\nmay be re-chewed, re-swallowed, or spit out.\n\nB. The repeated regurgitation is not attributable to an associated gastrointestinal or other\nmedical condition (e.g., gastroesophageal reflux, pyloric stenosis).\n\nC. The eating disturbance does not occur exclusively during the course of anorexia nervosa,\nbulimia nervosa, binge-eating disorder, or avoidant/restrictive food intake disorder.\n\nD. If the symptoms occur in the context of another mental disorder (e.g., intellectual dis-\nability [intellectual developmental disorder] or another neurodevelopmental disorder),\nthey are sufficiently severe to warrant additional clinical attention.\n\nSpecify if:\n\nIn remission: After full criteria for rumination disorder were previously met, the criteria\nhave not been met for a sustained period of time.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of rumination disorder is the repeated regurgitation of food occur-\nring after feeding or eating over a period of at least 1 month (Criterion A). Previously swal-\nlowed food that may be partially digested is brought up into the mouth without apparent\nnausea, involuntary retching, or disgust. The food may be re-chewed and then ejected\nfrom the mouth or re-swallowed. Regurgitation in rumination disorder should be fre-\nquent, occurring at least several times per week, typically daily. The behavior is not better\nexplained by an associated gastrointestinal or other medical condition (e.g., gastroesoph-\nageal reflux, pyloric stenosis) (Criterion B) and does not occur exclusively during the\ncourse of anorexia nervosa, bulimia nervosa, binge-eating disorder, or avoidant/restric-\ntive food intake disorder (Criterion C). If the symptoms occur in the context of another\nmental disorder (e.g., intellectual disability [intellectual developmental disorder], neuro-\ndevelopmental disorder), they must be sufficiently severe to warrant additional clinical\nattention (Criterion D) and should represent a primary aspect of the individual\u0027s presen-\ntation requiring intervention. The disorder may be diagnosed across the life span, par-\nticularly in individuals who also have intellectual disability. Many individuals with\nrumination disorder can be directly observed engaging in the behavior by the clinician. In\nother instances diagnosis can be made on the basis of self-report or corroborative informa-\ntion from parents or caregivers. Individuals may describe the behavior as habitual or out-\nside of their control.\n\n\n###",
+  "associatedFeatures": "Infants with rumination disorder display a characteristic position of straining and arching\nthe back with the head held back, making sucking movements with their tongue. They\nmay give the impression of gaining satisfaction from the activity. They may be irritable\nand hungry between episodes of regurgitation. Weight loss and failure to make expected\nweight gains are common features in infants with rumination disorder. Malnutrition may\noccur despite the infant\u0027s apparent hunger and the ingestion of relatively large amounts of\nfood, particularly in severe cases, when regurgitation immediately follows each feeding\nepisode and regurgitated food is expelled. Malnutrition might also occur in older children\nand adults, particularly when the regurgitation is accompanied by restriction of intake.\nAdolescents and adults may attempt to disguise the regurgitation behavior by placing a\nRumination Disorder 333\n\nhand over the mouth or coughing. Some will avoid eating with others because of the ac-\nknowledged social undesirability of the behavior. This may extend to an avoidance of eat-\ning prior to social situations, such as work or school (e.g., avoiding breakfast because it\nmay be followed by regurgitation).",
+  "prevalence": "reported to be higher in certain groups, such as individuals with intellectual disability.\n\n\n###",
+  "developmentAndCourse": "Onset of rumination disorder can occur in infancy, childhood, adolescence, or adulthood.\nThe age at onset in infants is usually between ages 3 and 12 months. In infants, the disorder\nfrequently remits spontaneously, but its course can be protracted and can result in medical\nemergencies (e.g., severe malnutrition). It can potentially be fatal, particularly in infancy.\nRumination disorder can have an episodic course or occur continuously until treated. In\ninfants, as well as in older individuals with intellectual disability (intellectual developmen-\ntal disorder) or other neurodevelopmental disorders, the regurgitation and rumination be-\nhavior appears to have a self-soothing or self-stimulating function, similar to that of other\nrepetitive motor behaviors such as head banging.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Psychosocial problems such as lack of stimulation, neglect, stressful life\nsituations, and problems in the parent-child relationship may be predisposing factors in\ninfants and young children.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n####",
+  "suicideRisk": "[No data available for this section]\n\n\n#####",
+  "functionalConsequences": "Malnutrition secondary to repeated regurgitation may be associated with growth delay\nand have a negative effect on development and learning potential. Some older individuals\nwith rumination disorder deliberately restrict their food intake because of the social un-\ndesirability of regurgitation. They may therefore present with weight loss or low weight.\nIn older children, adolescents, and adults, social functioning is more likely to be adversely\naffected.\n\n\n#####",
+  "differentialDiagnosis": [
+    "Gastrointestinal conditions. It is important to differentiate regurgitation in rumination\ndisorder from other conditions characterized by gastroesophageal reflux or vomiting. Con-\nditions such as gastroparesis, pyloric stenosis, hiatal hernia, and Sandifer syndrome in in-\nfants should be ruled out by appropriate physical examinations and laboratory tests.\nAnorexia nervosa and bulimia nervosa. Individuals with anorexia nervosa and bulimia\nnervosa may also engage in regurgitation with subsequent spitting out of food as a means\nof disposing of ingested calories because of concerns about weight gain.\n\n\n#####"
+  ],
+  "comorbidity": "Regurgitation with associated rumination can occur in the context of a concurrent medical\ncondition or another mental disorder (e.g., generalized anxiety disorder). When the regur-\ngitation occurs in this context, a diagnosis of rumination disorder is appropriate only when\nthe severity of the disturbance exceeds that routinely associated with such conditions or\ndisorders and warrants additional clinical attention.\n\n334 Feeding and Eating Disorders\nAvoidant/Restrictive Food Intake Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 377-379 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:24:28.573418Z",
+  "extractionMetadata": null
+}

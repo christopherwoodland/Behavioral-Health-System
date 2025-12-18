@@ -1,0 +1,55 @@
+{
+  "id": "a7dc69d7-899f-4586-86a2-44cae0cf3165",
+  "name": "Transvestic Disorder",
+  "code": "302.3 (F65.1)",
+  "category": "Transvestic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from cross-\ndressing, as manifested by fantasies, urges, or behaviors.\nB. The fantasies, sexual urges, or behaviors cause clinically significant distress or Impair-\nment in social, occupational, or other important areas of functioning.\n\nSpecify if:\nWith fetishism: If sexually aroused by fabrics, materials, or garments.\nWith autogynephilia: If sexually aroused by thoughts or images of self as female.\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living\nin institutional or other settings where opportunities to cross-dress are restricted.\nIn full remission: There has been no distress or impairment in social, occupational,\nor other areas of functioning for at least 5 years while in an uncontrolled environment.\nTransvestic Disorder 703\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of nonsuicidal self-injury is that the Individual repeatedly inflicts\nshallow, yet painful injuries to the surface of his or her body. Most commonly, the purpose\nis to reduce negative emotions, such as tension, anxiety, and self-reproach, and/or to re-\nsolve an interpersonal difficulty. In some cases, the injury is conceived of as a deserved\nself-punishment. The individual will often report an Immediate sensation of relief that oc-\ncurs during the process. When the behavior occurs frequently, it might be associated with\na sense of urgency and craving, the resultant behavioral pattern resembling an addiction.\nThe Inflicted wounds can become deeper and more numerous.\n\nThe injury is most often inflicted with a knife, needle, razor, or other sharp object. Com-\nmon areas for injury include the frontal area of the thighs and the dorsal side of the forearm.\nA single session of injury might involve a series of superficial, parallel cuts-separated by\n1 or 2 centimeters-on a visible or accessible location. The resulting cuts will often bleed and\nwill eventually leave a characteristic pattern of scars.\n\nOther methods used include stabbing an area, most often the upper arm, with a needle\nor sharp, pointed knife; Inflicting a superficial burn with a lit cigarette end; or burning the\nskin by repeated rubbing with an eraser. Engagement in nonsuicidal self-injury with mul-\ntiple methods is associated with more severe psychopathology, including engagement in",
+  "associatedFeatures": "Associated features vary depending on age, degree of alcohol exposure, and the individ-\nual\u0027s environment. An individual can be diagnosed with this disorder regardless of socio-\neconomic or cultural background. However, ongoing parental alcohol/substance misuse,\nparental mental illness, exposure to domestic or community violence, neglect or abuse,\ndisrupted caregiving relationships, multiple out-of-home placements, and lack of conti-\nnuity in medical or mental health care are often present.\n\n800 Conditions for Further Study\n\n\n####",
+  "prevalence": "The prevalence rates of ND-PAE are unknown. However, estimated prevalence rates of clini-\ncal conditions associated with prenatal alcohol exposure are 2%-5% in the United States.",
+  "developmentAndCourse": "Nonsuicidal self-injury most often starts in the early teen years and can continue for many\nyears. Admission to hospital for nonsuicidal self-Injury reaches a peak at 20-29 years of\nage and then declines. However, research that has examined age at hospitalization did not\nprovide information on age at onset of the behavior, and prospective research is needed to\noutline the natural history of nonsuicidal self-injury and the factors that promote or in-\nhibit its course. Individuals often learn of the behavior on the recommendation or observa-\ntion of another. Research has shown that when an individual who engages in nonsuicidal\nself-Injury is admitted to an inpatient unit, other individuals may begin to engage in the\nbehavior.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Male and female prevalence rates of nonsuicidal self-Injury are closer to each other than in\nsuicidal behavior disorder, in which the female-to-male ratio is about 3:1 or 4:1.\nTwo theorles of psychopathology-based on",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Suicidal behavior varies in frequency and form across cultures. Cultural differences might\nbe due to method availability (e.g., poisoning with pesticides in developing countries;\ngunshot wounds in the southwestern United States) or the presence of culturally specific\nsyndromes (e.g., ataques de nervios, which in some Latino groups might lead to behaviors\nthat closely resemble",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n####",
+  "suicideRisk": "Suicide is a high-risk outcome, with rates increasing significantly in late adolescence and\nearly adulthood.",
+  "functionalConsequences": "The act of cutting might be performed with shared implements, raising the possibility of\nblood-borne disease transmission.\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences"
+  ],
+  "missingSections": [
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:03:35.8458832Z",
+  "extractionMetadata": null
+}

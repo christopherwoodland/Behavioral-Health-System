@@ -1,0 +1,57 @@
+{
+  "id": "43b19e7e-c3e8-4512-be67-cf635ad2dfcf",
+  "name": "Female Sexual Interest/Arousal Disorder",
+  "code": "302.72 (F52.22)",
+  "category": "Female Sexual Interest/Arousal Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Lack of, or significantly reduced, sexual interest/arousal, as manifested by at least\nthree of the following:\n\n1\\. Absent/reduced interest in sexual activity.\n\n2\\. Absent/reduced sexual/erotic thoughts or fantasies.\n\n3\\. No/reduced initiation of sexual activity, and typically unreceptive to a partner\u0027s at-\ntempts to initiate.\n\n4\\. Absent/reduced sexual excitement/pleasure during sexual activity in almost all or\nall (approximately 75%-100%) sexual encounters (in identified situational contexts\nor, if generalized, in all contexts).\n\n5\\. Absent/reduced sexual interest/arousal in response to any internal or external sex-\nual/erotic cues (e.g., written, verbal, visual).\n\n6\\. Absent/reduced genital or nongenital sensations during sexual activity in almost all\nor all (approximately 75%-100%) sexual encounters (in identified situational con-\ntexts or, if generalized, in all contexts).\n\nB. The symptoms in Criterion A have persisted for a minimum duration of approximately\n6 months.\n\nC. The symptoms in Criterion A cause clinically significant distress in the individual.\n\nD. The sexual dysfunction is not better explained by a nonsexual mental disorder or as a\nconsequence of severe relationship distress (e.g., partner violence) or other significant\nstressors and is not attributable to the effects of a substance/medication or another\nmedical condition.\n\nSpecify whether:\n\nLifelong: The disturbance has been present since the individual became sexually\nactive.\n\nAcquired: The disturbance began after a period of relatively normal sexual function.\nSpecify whether:\n\nGeneralized: Not limited to certain types of stimulation, situations, or partners.\nSituational: Only occurs with certain types of stimulation, situations, or partners.\nSpecify current severity:\n\nMild: Evidence of mild distress over the symptoms in Criterion A.\nModerate: Evidence of moderate distress over the symptoms in Criterion A.\nSevere: Evidence of severe or extreme distress over the symptoms in Criterion A.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "Female sexual interest/arousal disorder is frequently associated with problems in experi-\nencing orgasm, pain experienced during sexual activity, Infrequent sexual activity, and\ncouple-level discrepancies in desire. Relationship difficulties and mood disorders are also\nfrequently associated features of female sexual interest/arousal disorder. Unrealistic ex-\npectations and norms regarding the \u0022appropriate\u0022 level of sexual interest or arousal, along\nwith poor sexual techniques and lack of information about sexuality, may also be evident\nin women diagnosed with female sexual interest/arousal disorder. The latter, as well as\nnormative beliefs about",
+  "prevalence": "The prevalence of female sexual interest/arousal disorder, as defined in this manual, is\nunknown. The prevalence of low sexual desire and of problems with sexual arousal (with\nand without associated distress), as defined by DSM-IV or ICD-10, may vary markedly in\nrelation to age, cultural setting, duration of symptoms, and presence of distress. Regard-\ning duration of symptoms, there are striking differences in prevalence estimates between\nshort-term and persistent problems related to lack of sexual interest. When distress about\nsexual functioning is required, prevalence estimates are markedly lower. Some older\nwomen report less distress about low sexual desire than younger women, although sexual\ndesire may decrease with age.\n\n\n###",
+  "developmentAndCourse": "By definition, lifelong female sexual interest/arousal disorder suggests that the lack of\nsexual interest or arousal has been present for the woman\u0027s entire sexual life. For Criteria\nA3, A4, and A6, which assess functioning during sexual activity, a subtype of lifelong\nwould mean presence of symptoms since the individual\u0027s first sexual experiences. The ac-\nquired subtype would be assigned if the difficulties with sexual interest or arousal de-\nveloped after a period of nonproblematic sexual functioning. Adaptive and normative\nchanges in sexual functioning may result from partner-related, interpersonal, or personal\nevents and may be transient in nature. However, persistence of symptoms for approxl-\nmately 6 months or more would constitute a sexual dysfunction.\n\nThere are normative changes in sexual interest and arousal across the life span. Fur-\nthermore, women in relationships of longer duration are more likely to report engaging in\nsex despite no obvious feelings of sexual desire at the outset of a sexual encounter com-\npared with women in shorter-duration relationships. Vaginal dryness in older women is\nrelated to age and menopausal status.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Temperamental factors include negative cognitions and attitudes about\nsexuality and past history of mental disorders. Differences in propensity for sexual excitation\nand sexual inhibition may also predict the likelihood of developing sexual problems.\nEnvironmental. Environmental factors include relationship difficulties, partner sexual\nfunctioning, and developmental history, such as early relationships with caregivers and\nchildhood stressors.\n\nGenetic and physiological. Some medical conditions (e.g., diabetes mellitus, thyroid\ndysfunction) can be risk factors for female sexual interest/arousal disorder. There appears\nto be a strong influence of genetic factors on vulnerability to sexual problems in women.\nPsychophysiological research using vaginal photoplethysmography has not found differ-\nences between women with and without perceived lack of genital arousal.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "There is marked variability in prevalence rates of low desire across cultures. Lower rates of\nsexual desire may be more common among East Asian women compared with Euro-\nCanadian women. Although the lower levels of sexual desire and arousal found in men\nand women from East Asian countries compared with Euro-American groups may reflect\nless interest in sex in those cultures, the possibility remains that such group differences are\nan artifact of the measures used to quantify desire. A judgment about whether low sexual\n436 Sexual Dysfunctions\ndesire reported by a woman from a certain ethnocultural group meets criteria for female\nsexual interest/arousal disorder must take into account the fact that different cultures may\npathologize some behaviors and not others.\n\n\n###",
+  "genderRelatedIssues": "By definition, the diagnosis of female sexual interest/arousal disorder is only given to\nwomen. Distressing difficulties with sexual desire in men would be considered under\nmale hypoactive sexual desire disorder.",
+  "suicideRisk": "\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 478-482 | Computer-Readable Format\u0022 --\u003E\n\n\n### [No data available for this section]",
+  "functionalConsequences": "Difficulties in sexual interest/arousal are often associated with decreased relationship sat- Isfaction",
+  "differentialDiagnosis": [
+    "Nonsexual mental disorders. Nonsexual mental disorders, such as major depressive\ndisorder, in which there is \u0022markedly diminished interest or pleasure in all, or almost all,\nactivities most of the day, nearly every day,\u0022 may explain the lack of sexual interest/\narousal. If the lack of interest or arousal is completely attributable to another mental dis-\norder, then a diagnosis of female sexual interest/arousal disorder would not be made.\nSubstance/medication use. Substance or medication use may explain the lack of inter-\nest/arousal.\n\nAnother medical condition. If the sexual symptoms are considered to be almost exclu-\nsively associated with the effects of another medical condition (e.g., diabetes mellitus, en-\ndothelial disease, thyroid dysfunction, central nervous system disease), then a diagnosis\nof female sexual interest/arousal disorder would not be made.\n\nInterpersonal factors. If interpersonal or significant contextual factors, such as severe\nrelationship distress, intimate partner violence, or other significant stressors, explain the\nsexual interest/arousal symptoms, then a diagnosis of female sexual interest/arousal dis-\norder would not be made.\n\nOther sexual dysfunctions. The presence of another sexual dysfunction does not rule\nout a diagnosis of female sexual interest/arousal disorder. It is common for women to ex-\nperience more than one sexual dysfunction. For example, the presence of chronic genital\npain may lead to a lack of desire for the (painful) sexual activity. Lack of interest and\narousal during sexual activity may impair orgasmic ability. For some women, all aspects\nof the sexual response may be unsatisfying and distressing.\n\nInadequate or absent sexual stimuli. When differential diagnoses are being considered,\nit is important to assess the adequacy of sexual stimuli within the woman\u0027s sexual experi-\nence. In cases where inadequate or absent sexual stimuli are contributing to the clinical pic-\nture, there may be evidence for clinical care, but a sexual dysfunction diagnosis would not\nbe made. Similarly, transient and adaptive alterations in sexual functioning that are second-\nary to a significant life or personal event must be considered in the differential diagnosis."
+  ],
+  "comorbidity": "extremely common. Sexual distress and dissatisfaction with sex life are also highly cor-\nrelated in women with low sexual desire. Distressing low desire is associated with depres-\nsion, thyroid problems, anxiety, urinary incontinence, and other medical factors. Arthritis\nand inflammatory or irritable bowel disease are also associated with sexual arousal prob-\nGenito-Pelvic Pain/Penetration Disorder 437\n\nlems. Low desire appears to be comorbid with depression, sexual and physical abuse in\nadulthood, global mental functioning, and use of alcohol.\nGenito-Pelvic Pain/Penetration Disorder",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:04:38.7928761Z",
+  "extractionMetadata": null
+}

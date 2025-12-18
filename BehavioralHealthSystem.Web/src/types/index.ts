@@ -194,10 +194,21 @@ export interface SessionFilter {
 }
 
 // Audio Processing Types
+export interface SilenceRemovalOptions {
+  /** Whether to remove silence from audio */
+  enabled: boolean;
+  /** Threshold in dB below which audio is considered silence (default: -50) */
+  thresholdDb: number;
+  /** Minimum duration of silence to remove in seconds (default: 0.2) */
+  minDuration: number;
+}
+
 export interface AudioConversionOptions {
   outputFormat: 'wav';
   sampleRate: 44100;
   channels: 1;
+  /** Silence removal configuration */
+  silenceRemoval?: SilenceRemovalOptions;
 }
 
 // Error Types

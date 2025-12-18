@@ -1,0 +1,56 @@
+{
+  "id": "05d85968-e0e8-45b6-9fd4-b9d2363bf988",
+  "name": "Excoriation (Skin-Picking) Disorder",
+  "code": "698.4 (L98.1)",
+  "category": "Excoriation (Skin-Picking) Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Recurrent skin picking resulting in skin lesions.\n\nB. Repeated attempts to decrease or stop skin picking.\n\nC. The skin picking causes clinically significant distress or impairment in social, occupa-\ntional, or other important areas of functioning.\n\nD. The skin picking is not attributable to the physiological effects of a substance (e.g., co-\ncaine) or another medical condition (e.g., scabies).\n\nE. The skin picking is not better explained by symptoms of another mental disorder (e.g.,\ndelusions or tactile hallucinations in a psychotic disorder, attempts to improve a per-\nceived defect or flaw in appearance in body dysmorphic disorder, stereotypies in ste-\nreotypic movement disorder, or intention to harm oneself in nonsuicidal self-injury).\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of excoriation (skin-picking) disorder is recurrent picking at one\u0027s\nown skin (Criterion A). The most commonly picked sites are the face, arms, and hands, but\nmany individuals pick from multiple body sites. Individuals may pick at healthy skin, at\nminor skin irregularities, at lesions such as pimples or calluses, or at scabs from previous\npicking. Most individuals pick with their fingernails, although many use tweezers, pins,\nor other objects. In addition to skin picking, there may be skin rubbing, squeezing, lancing,\nand biting. Individuals with excoriation disorder often spend significant amounts of time\non their picking behavior, sometimes several hours per day, and such skin picking may\nExcoriation (Skin-Picking) Disorder 255\n\nendure for months or years. Criterion A requires that skin picking lead to skin lesions, al-\nthough individuals with this disorder often attempt to conceal or camouflage such lesions\n(e.g., with makeup or clothing). Individuals with excoriation disorder have made repeated\nattempts to decrease or stop skin picking (Criterion B).\n\nCriterion C indicates that skin picking causes clinically significant distress or impair-\nment in social, occupational, or other important areas of functioning. The term distress in-\ncludes negative affects that may be experienced by individuals with skin picking, such as\nfeeling a loss of control, embarrassment, and shame. Significant impairment may occur in\nseveral different areas of functioning (e.g., social, occupational, academic, and leisure), in\npart because of avoidance of social situations.\n\n\n###",
+  "associatedFeatures": "Skin picking may be accompanied by a range of behaviors or rituals involving skin or scabs.\nThus, individuals may search for a particular kind of scab to pull, and they may examine,\nplay with, or mouth or swallow the skin after it has been pulled. Skin picking may also be pre-\nceded or accompanied by various emotional states. Skin picking may be triggered by feelings\nof anxiety or boredom, may be preceded by an increasing sense of tension (either immedi-\nately before picking the skin or when attempting to resist the urge to pick), and may lead to\ngratification, pleasure, or a sense of relief when the skin or scab has been picked. Some indi-\nviduals report picking in response to a minor skin irregularity or to relieve an uncomfortable\nbodily sensation. Pain is not routinely reported to accompany skin picking. Some individuals\nengage in skin picking that is more focused (i.e., with preceding tension and subsequent re-\nlief), whereas others engage in more automatic picking (i.e., when skin picking occurs with-\nout preceding tension and without full awareness), and many have a mix of both behavioral\nstyles. Skin picking does not usually occur in the presence of other individuals, except im-\nmediate family members. Some individuals report picking the skin of others.\n\n\n###",
+  "prevalence": "In the general population, the lifetime prevalence for excoriation disorder in adults is 1.4%\nor somewhat higher. Three-quarters or more of individuals with the disorder are female.\nThis likely reflects the true",
+  "developmentAndCourse": "Although individuals with excoriation disorder may present at various ages, the skin pick-\ning most often has onset during adolescence, commonly coinciding with or following the\nonset of puberty. The disorder frequently begins with a dermatological condition, such\nas acne. Sites of skin picking may vary over time. The usual course is chronic, with some\nwaxing and waning if untreated. For some individuals, the disorder may come and go for\nweeks, months, or years at a time.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. Excoriation disorder is more common in individuals with\nobsessive-compulsive disorder (OCD) and their first-degree family members than in the\ngeneral population.\n\n\n### Diagnostic Markers\n\nMost individuals with excoriation disorder admit to skin picking; therefore, dermato-\npathological diagnosis is rarely required. However, the disorder may have characteristic\nfeatures on histopathology.\n\n256 Obsessive-Compulsive and Related Disorders",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Excoriation disorder is associated with distress as well as with social and occupational im-\npairment. The majority of individuals with this condition spend at least 1 hour per day\npicking, thinking about picking, and resisting urges to pick. Many individuals report\navoiding social or entertainment events as well as going out in public. A majority of indi-\nviduals with the disorder also report experiencing work interference from skin picking on\nat least a daily or weekly basis. A significant proportion of students with excoriation disor-\nder report having missed school, having experienced difficulties managing responsibilities\nat school, or having had difficulties studying because of skin picking. Medical complica-\ntions of skin picking include tissue damage, scarring, and infection and can be life-threaten-\ning. Rarely, synovitis of the wrists due to chronic picking has been reported. Skin picking\noften results in significant tissue damage and scarring. It frequently requires antibiotic treat-\nment for infection, and on occasion it may require surgery.\n\n\n###",
+  "differentialDiagnosis": [
+    "Psychotic disorder. Skin picking may occur in response to a delusion (i.e., parasitosis)\nor tactile hallucination (i.e., formication) in a psychotic disorder. In such cases, excoriation\ndisorder should not be diagnosed.\n\nOther obsessive-compulsive and related disorders. Excessive washing compulsions\nin response to contamination obsessions in individuals with OCD may lead to skin lesions,\nand skin picking may occur in individuals with body dysmorphic disorder who pick their\nskin solely because of appearance concerns; in such cases, excoriation disorder should not\nbe diagnosed. The description of body-focused repetitive behavior disorder in other spec-\nified obsessive-compulsive and related disorder excludes individuals whose symptoms\nmeet diagnostic criteria for excoriation disorder.\n\nNeurodevelopmental disorders. While stereotypic movement disorder may be charac-\nterized by repetitive self-injurious behavior, onset is in the early developmental period.\nFor example, individuals with the neurogenetic condition Prader-Willi syndrome may\nhave early onset of skin picking, and their symptoms may meet criteria for stereotypic\nmovement disorder. While tics in individuals with Tourette\u0027s disorder may lead to self-\ninjury, the behavior is not tic-like in excoriation disorder.\n\nSomatic symptom and related disorders. Excoriation disorder is not diagnosed if the\nskin lesion is primarily attributable to deceptive behaviors in factitious disorder.\nOther disorders. Excoriation disorder is not diagnosed if the skin picking is primarily\nattributable to the intention to harm oneself that is characteristic of nonsuicidal self-injury.\nOther medical conditions. Excoriation disorder is not diagnosed if the skin picking is\nprimarily attributable to another medical condition. For example, scabies is a dermatolog-\nical condition invariably associated with severe itching and scratching. However, excori-\nation disorder may be precipitated or exacerbated by an underlying dermatological\ncondition. For example, acne may lead to some scratching and picking, which may also be\nassociated with comorbid excoriation disorder. The differentiation between these two\nclinical situations (acne with some scratching and picking vs. acne with comorbid excori-\nation disorder) requires an assessment of the extent to which the individual\u0027s skin picking\nhas become independent of the underlying dermatological condition.\n\nSubstance/medication-induced disorders. Skin-picking symptoms may also be induced\nby certain substances (e.g., cocaine), in which case excoriation disorder should not be di-\nagnosed. If such skin picking is clinically significant, then a diagnosis of substance/med-\nication-induced obsessive-compulsive and related disorder should be considered.\nSubstance/Medication-Induced Obsessive-Compulsive and Related Disorder 257\n\n\n###"
+  ],
+  "comorbidity": "Excoriation disorder is often accompanied by other mental disorders. Such disorders in-\nclude OCD and trichotillomania (hair-pulling disorder), as well as major depressive dis-\norder. Repetitive body-focused symptoms other than skin picking and hair pulling (e.g.,\nnail biting) occur in many individuals with excoriation disorder and may deserve an ad-\nditional diagnosis of other specified obsessive-compulsive and related disorder (i.e.,\nbody-focused repetitive behavior disorder).\n\nSubstance/Medication-Induced\nObsessive-Compulsive and Related Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 299-302 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-05T01:46:41.2243317Z",
+  "extractionMetadata": null
+}

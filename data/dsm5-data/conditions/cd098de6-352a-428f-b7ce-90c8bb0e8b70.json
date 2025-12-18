@@ -1,0 +1,47 @@
+{
+  "id": "cd098de6-352a-428f-b7ce-90c8bb0e8b70",
+  "name": "Bipolar II Disorder",
+  "code": "296.89 (F31.81)",
+  "category": "Bipolar II Disorder",
+  "description": "",
+  "diagnosticCriteria": [],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "A common feature of bipolar II disorder is impulsivity, which can contribute to",
+  "prevalence": "The 12-month prevalence of bipolar II disorder, internationally, is 0.3%. In the United\nStates, 12-month prevalence is 0.8%. The prevalence rate of pediatric bipolar Il disorder is\ndifficult to establish. DSM-IV bipolar I, bipolar II, and bipolar disorder not otherwise spec-\nified yield a combined prevalence rate of 1.8% in U.S. and non-U.S. community samples,\nwith higher rates (2.7% inclusive) in youths age 12 years or older.\n\n\n###",
+  "developmentAndCourse": "Although bipolar II disorder can begin in late adolescence and throughout adulthood, av-\nerage age at onset is the mid-20s, which is slightly later than for bipolar I disorder but ear-\nlier than for major depressive disorder. The illness most often begins with a depressive\nepisode and is not recognized as bipolar Il disorder until a hypomanic episode occurs; this\nhappens in about 12% of individuals with the initial diagnosis of major depressive disor-\nder. Anxiety, substance use, or eating disorders may also precede the diagnosis, compli-\ncating its detection. Many individuals experience several episodes of major depression\nprior to the first recognized hypomanic episode.\n\nThe number of lifetime episodes (both hypomanic and major depressive episodes)\ntends to be higher for bipolar II disorder than for major depressive disorder or bipolar I\ndisorder. However, Individuals with bipolar I disorder are actually more likely to experi-\nence hypomanic symptoms than are individuals with bipolar Il disorder. The interval\nbetween mood episodes in the course of bipolar Il disorder tends to decrease as the indi-\nvidual ages. While the hypomanic episode is the feature that defines bipolar Il disorder,\ndepressive episodes are more enduring and disabling over time. Despite the predomi-\nnance of depression, once a hypomanic episode has occurred, the diagnosis becomes bi-\npolar II disorder and never reverts to major depressive disorder.\n\nApproximately 5%-15% of individuals with bipolar II disorder have multiple (four or\nmore) mood episodes (hypomanic or major depressive) within the previous 12 months. If\nBipolar II Disorder 137\n\nthis pattern is present, it is noted by the specifier \u0022with rapid cycling.\u0022 By definition, psy-\nchotic symptoms do not occur in hypomanic episodes, and they appear to be less frequent\nin the major depressive episodes in bipolar II disorder than in those of bipolar I disorder.\nSwitching from a depressive episode to a manic or hypomanic episode (with or with-\nout mixed features) may occur, both spontaneously and during treatment for depression.\nAbout 5%-15% of individuals with bipolar II disorder will ultimately develop a manic ep-\nIsode, which changes the diagnosis to bipolar I disorder, regardless of subsequent course.\nMaking the diagnosis in children is often a challenge, especially in those with irritabil-\nity and hyperarousal that is nonepisodic (Le., lacks the well-demarcated periods of altered\nmood). Nonepisodic irritability in youth is associated with an elevated",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. The risk of bipolar II disorder tends to be highest among rel-\natives of individuals with bipolar II disorder, as opposed to individuals with bipolar I dis-\norder or major depressive disorder. There may be genetic factors Influencing the age at\nonset for bipolar disorders.\n\nCourse modifiers. A rapid-cycling pattem is associated with a poorer prognosis. Return\nto previous level of social function for individuals with bipolar II disorder is more likely\nfor individuals of younger age and with less severe depression, suggesting adverse effects\nof prolonged illness on recovery. More education, fewer years of illness, and being mar-\nried are independently associated with",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "#### [No data available for this section]\n\n\n####",
+  "genderRelatedIssues": "Whereas the gender ratio for bipolar I disorder is equal, findings on gender differences in\nbipolar II disorder are mixed, differing by type of sample (i.e., registry, community, or\nclinical) and country of origin. There is little to no evidence of bipolar gender differences,\nwhereas some, but not all, clinical samples suggest that bipolar II disorder is more com-\nmon in females than in males, which may reflect gender differences in treatment seeking\nor other factors.\n\nPattems of illness and",
+  "suicideRisk": "polar II disorder report a lifetime history of suicide attempt. The prevalence rates of life-\ntime attempted suicide in bipolar Il and bipolar I disorder appear to be similar (32.4% and\n36.3%, respectively). However, the lethality of attempts, as defined by a lower ratio of at-\ntempts to completed suicides, may be higher in individuals with bipolar II disorder com-\npared with individuals with bipolar I disorder. There may be an association between\ngenetic markers and increased risk for suicidal behavior in individuals with bipolar dis-\norder, including a 6.5-fold higher risk of suicide among first-degree relatives of bipolar Il\nprobands compared with those with bipolar I disorder.\n\n\n####",
+  "functionalConsequences": "Although many individuals with bipolar II disorder return to a fully functional level be-\ntween mood episodes, at least 15% continue to have some inter-episode dysfunction, and\n20% transition directly into another mood episode without inter-episode recovery. Func-\ntional recovery lags substantially behind recovery from symptoms of bipolar II disorder,\nespecially in regard to occupational recovery, resulting in lower socioeconomic status de-\nspite equivalent levels of education with the general population. Individuals with bipolar\nIl disorder perform more poorly than healthy individuals on cognitive tests and, with the\nexception of memory and semantic fluency, have similar cognitive impairment as do in-\ndividuals with bipolar I disorder. Cognitive impairments associated with bipolar II disor-\nder may contribute to vocational difficulties. Prolonged unemployment in individuals\nwith bipolar disorder is associated with more episodes of depression, older age, Increased\nrates of current panic disorder, and lifetime history of alcohol use disorder.\n\n\n####",
+  "differentialDiagnosis": [
+    "Major depressive disorder. Perhaps the most challenging differential diagnosis to con-\nsider is major depressive disorder, which may be accompanied by hypomanic or manic\nsymptoms that do not meet full criteria (i.e., either fewer symptoms or a shorter duration\nthan required for a hypomanic episode). This is especially true in evaluating individuals\nwith symptoms of irritability, which may be associated with either major depressive dis-\norder or bipolar II disorder.\n\nCyclothymic disorder. In cyclothymic disorder, there are numerous periods of hypo-\nmanic symptoms and numerous periods of depressive symptoms that do not meet symp-\ntom or duration criteria for a major depressive episode. Bipolar II disorder is distinguished\nfrom cyclothymic disorder by the presence of one or more major depressive episodes. If a\nmajor depressive episode occurs after the first 2 years of cyclothymic disorder, the addi-\ntional diagnosis of bipolar II disorder is given.\n\nSchizophrenia spectrum and other related psychotic disorders. Bipolar II disorder must\nbe distinguished from psychotic disorders (e.g., schizoaffective disorder, schizophrenia,\nand delusional disorder). Schizophrenia, schizoaffective disorder, and delusional disor-\nder are all characterized by periods of psychotic symptoms that occur in the absence of\nprominent mood symptoms. Other helpful considerations include the accompanying\nsymptoms, previous course, and family history.\n\nPanic disorder or other anxiety disorders. Anxiety disorders need to be considered in\nthe differential diagnosis and may frequently be present as co-occurring disorders.\nSubstance use disorders. Substance use disorders are included in the differential diag-\nnosis.\n\nAttention-deficit/hyperactivity disorder. Attention-deficit/hyperactivity disorder (ADHD)\nmay be misdiagnosed as bipolar II disorder, especially in adolescents and children. Many\nCyclothymic Disorder 139\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 177-184 | Computer-Readable Format\u0022 --\u003E"
+  ],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis"
+  ],
+  "missingSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:00:08.5164089Z",
+  "extractionMetadata": null
+}

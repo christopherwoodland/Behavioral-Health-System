@@ -1,0 +1,55 @@
+{
+  "id": "c2424af7-4cf1-4afd-9c6e-08e927061980",
+  "name": "Posttraumatic Stress Disorder",
+  "code": "309.81 (F43.10)",
+  "category": "Posttraumatic Stress Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "are not met until at least\n6 months after the event (although the onset and expression of some symptoms may\nbe immediate).",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of posttraumatic stress disorder (PTSD) is the development of char-\nacteristic symptoms following exposure to one or more traumatic events. Emotional re-\nactions to the traumatic event (e.g., fear, helplessness, horror) are no longer a part of\nCriterion A. The clinical presentation of PTSD varies. In some individuals, fear-based re-\nexperiencing, emotional, and behavioral symptoms may predominate. In others, anhe-\ndonic or dysphoric mood states and negative cognitions may be most distressing. In some\nother individuals, arousal and reactive-externalizing symptoms are prominent, while in\nothers, dissociative symptoms predominate. Finally, some individuals exhibit combina-\ntions of these symptom patterns.\n\nThe directly experienced traumatic events in Criterion A include, but are not limited\nto, exposure to war as a combatant or civilian, threatened or actual physical assault (e.g.,\n\nphysical attack, robbery, mugging, childhood physical abuse), threatened or actual sexual\nviolence (e.g., forced sexual penetration, alcohol/drug-facilitated sexual penetration, abu-\nsive sexual contact, noncontact sexual abuse, sexual trafficking), being kidnapped, being\ntaken hostage, terrorist attack, torture, incarceration as a prisoner of war, natural or hu-\nman-made disasters, and severe motor vehicle accidents. For children, sexually violent\nevents may include developmentaly inappropriate sexual experiences without physical\nviolence or injury. A life-threatening illness or debilitating medical condition is not neces-\nsarily considered a traumatic event. Medical incidents that qualify as traumatic events in-\nvolve sudden, catastrophic events (e.g., waking during surgery, anaphylactic shock).\nWitnessed events include, but are not limited to, observing threatened or serious injury,\nunnatural death, physical or sexual abuse of another person due to violent assault, domes-\ntic violence, accident, war or disaster, or a medical catastrophe in one\u0027s child (e.g., a life-\nthreatening hemorrhage). Indirect exposure through learning about an event is limited to\nexperiences affecting close relatives or friends and experiences that are violent or acciden-\ntal (e.g., death due to natural causes does not qualify). Such events include violent per-\nPosttraumatic Stress Disorder 275\n\nsonal assault,",
+  "associatedFeatures": "Developmental regression, such as loss of language in young children, may occur. Audi-\ntory pseudo-hallucinations, such as having the sensory experience of hearing one\u0027s\nthoughts spoken in one or more different voices, as well as paranoid ideation, can be pres-\nent. Following prolonged, repeated, and severe traumatic events (e.g., childhood abuse,\ntorture), the individual may additionally experience difficulties in regulating emotions or\nmaintaining stable interpersonal relationships, or dissociative symptoms. When the trau-\nmatic event produces violent death, symptoms of both problematic bereavement and PTSD\nmay be present.\n\n\n###",
+  "prevalence": "In the United States, projected lifetime",
+  "developmentAndCourse": "PTSD can occur at any age, beginning after the first year of life. Symptoms usualy begin\nwithin the first 3 months after the trauma, although there may be a delay of months, or\neven years, before criteria for the diagnosis are met. There is abundant evidence for what\nDSM-IV called \u0022delayed onset\u0022 but is now called \u0022delayed expression,\u0022 with the recogni-\ntion that some symptoms typically appear immediately and that the delay is in meeting\nfull criteria.\n\nPosttraumatic Stress Disorder 277\n\nFrequently, an individual\u0027s reaction to a trauma initially meets criteria for acute stress\ndisorder in the immediate aftermath of the trauma. The symptoms of PTSD and the rela-\ntive predominance of different symptoms may vary over time. Duration of the symptoms\nalso varies, with complete recovery within 3 months occurring in approximately one-half\nof adults, while some individuals remain symptomatic for longer than 12 months and\nsometimes for more than 50 years. Symptom recurrence and intensification may occur in\nresponse to reminders of the original trauma, ongoing life stressors, or newly experienced\ntraumatic events. For older individuals, declining health, worsening cognitive function-\ning, and social isolation may exacerbate PTSD symptoms.\n\nThe clinical expression of reexperiencing can vary across development. Young children\nmay report new onset of frightening dreams without content specific to the traumatic event.\nBefore age 6 years (see criteria for preschool subtype), young children are more likely to ex-\npress reexperiencing symptoms through play that refers directly or symbolically to the\ntrauma. They may not manifest fearful reactions at the time of the exposure or during reex-\nperiencing. Parents may report a wide range of emotional or behavioral changes in young\nchildren. Children may focus on imagined interventions in their play or storytelling. In ad-\ndition to avoidance, children may become preoccupied with reminders. Because of young\nchildren\u0027s limitations in expressing thoughts or labeling emotions, negative alterations in\nmood or cognition tend to involve primarily mood changes. Children may experience co-\n\ncumstances may not be able to identify onset of symptomatology. Avoidant behavior may\nbe associated with restricted play or exploratory behavior in young children; reduced par-\nticipation in new activities in school-age children; or reluctance to pursue developmental op.\nportunities in adolescents (e.g., dating, driving). Older children and adolescents may judge\nthemselves as cowardly. Adolescents may harbor beliefs of being changed in ways that\nmake them socially undesirable and estrange them from peers (e.g., \u0022Now I\u0027ll never fit in\u0022)\nand lose aspirations for the future. Irritable or aggressive behavior in children and adoles.\ncents can interfere with peer relationships and school behavior. Reckless behavior may lead\nto accidental injury to self or others, thrill-seeking, or high-",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Risk (and protective) factors are generally divided into pretraumatic, peritraumatic, and\nposttraumatic factors.\nPretraumatic factors\n\nTemperamental. These include childhood emotional problems by age 6 years (e.g., prior\ntraumatic exposure, externalizing or anxiety problems) and prior mental disorders (e.g ..\npanic disorder, depressive disorder, PTSD, or obsessive compulsive disorder [OCD]).\nEnvironmental. These include lower socioeconomic status; lower education; exposure to\nprior trauma (especially during childhood); childhood adversity (e.g., economic depriva-\ntion, family dysfunction, parental separation or death); cultural characteristics (e.g., fatal-\nistic or self-blaming coping strategies); lower intelligence; minority racial/ethnic status;\nand a family psychiatric history. Social support prior to event exposure is protective.\nGenetic and physiological. These include female",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": null,
+  "genderRelatedIssues": null,
+  "suicideRisk": null,
+  "functionalConsequences": null,
+  "differentialDiagnosis": [],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors"
+  ],
+  "missingSections": [
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:25:18.9483285Z",
+  "extractionMetadata": null
+}

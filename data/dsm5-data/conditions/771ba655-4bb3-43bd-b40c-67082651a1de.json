@@ -1,0 +1,57 @@
+{
+  "id": "771ba655-4bb3-43bd-b40c-67082651a1de",
+  "name": "Binge-Eating Disorder",
+  "code": "307.51 (F50.8)",
+  "category": "Binge-Eating Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Recurrent episodes of binge eating. An episode of binge eating is characterized\nby both of the following:\n\n1\\. Eating, In a discrete period of time (e.g., within any 2-hour period), an amount of\nfood that is definitely larger than what most people would eat in a similar period of\ntime under similar circumstances.\n\n2\\. A sense of lack of control over eating during the episode (e.g., a feeling that one\ncannot stop eating or control what or how much one is eating).\n\nB. The binge-eating episodes are associated with three (or more) of the following:\n\n1\\. Eating much more rapidly than normal.\n\n2\\. Eating until feeling uncomfortably full\n\n3\\. Eating large amounts of food when not feeling physically hungry.\n\n4\\. Eating alone because of feeling embarrassed by how much one is eating.\n\n5\\. Feeling disgusted with oneself, depressed, or very guilty afterward.\n\nC. Marked distress regarding binge eating is present.\n\nD. The binge eating occurs, on average, at least once a week for 3 months.\n\nE. The binge eating is not associated with the recurrent use of inappropriate compensa-\ntory behavior as in bulimia nervosa and does not occur exclusively during the course\nof bulimia nervosa or anorexia nervosa.\n\nSpecify if:\n\nIn partial remission: After full criteria for binge-eating disorder were previously met,\nbinge eating occurs at an average frequency of less than one episode per week for a\nsustained period of time.\n\nIn full remission: After full criteria for binge-eating disorder were previously met, none\nof the criteria have been met for a sustained period of time.\nSpecify current severity:\n\nThe minimum level of severity is based on the frequency of episodes of binge eating (see\nbelow). The level of severity may be Increased to reflect other symptoms and the degree\nof",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "Binge-eating disorder occurs in normal-weight/overweight and obese individuals. It is re-\nliably associated with overweight and obesity in treatment-seeking individuals. Never-\ntheless, binge-eating disorder is distinct from obesity. Most obese individuals do not\nengage in recurrent binge eating. In addition, compared with weight-matched obese indi-\nviduals without binge-eating disorder, those with the disorder consume more calories in\nlaboratory studies of eating behavior and have greater",
+  "prevalence": "Twelve-month prevalence of binge-eating disorder among U.S. adult (age 18 or older) fe-\nmales and males is 1.6% and 0.8%, respectively. The",
+  "developmentAndCourse": "Little is known about the development of binge-eating disorder. Both binge eating and\nloss-of-control eating without objectively excessive consumption occur in children and are\nassociated with increased body fat, weight gain, and increases in psychological symptoms.\nBinge eating is common in adolescent and college-age samples. Loss-of-control eating or\nepisodic binge eating may represent a prodromal phase of eating disorders for some indi-\nviduals.\n\nDieting follows the development of binge eating in many individuals with binge-\neating disorder. (This is in contrast to bulimia nervosa, in which dysfunctional dieting\nusually precedes the onset of binge eating.) Binge-eating disorder typically begins in ad-\nolescence or young adulthood but can begin in later adulthood. Individuals with binge-\neating disorder who seek treatment usually are older than individuals with either bulimia\nnervosa or anorexia nervosa who seek treatment.\n\nRemission rates in both natural course and treatment outcome studies are higher for\nbinge-eating disorder than for bulimia nervosa or anorexia nervosa. Binge-eating disorder\nappears to be relatively persistent, and the course is comparable to that of bulimia nervosa\nin terms of severity and duration. Crossover from binge-eating disorder to other eating\ndisorders is uncommon.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. Binge-eating disorder appears to run in families, which may\nreflect additive genetic influences.",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Binge-eating disorder occurs with roughly similar frequencies in most industrialized\ncountries, Including the United States, Canada, many European countries, Australia, and\nNew Zealand. In the United States, the prevalence of binge-eating disorder appears com-\nparable among non-Latino whites, Latinos, Aslans, and African Americans.",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Binge-eating disorder is associated with a range of functional consequences, including so-\ncial role adjustment problems, impaired health-related quality of life and life satisfaction,\nIncreased medical morbidity and mortality, and associated increased health care utiliza-\ntion compared with body mass index (BMI)-matched control subjects. It may also be as-\nsoclated with an increased risk for weight gain and the development of obesity.\n\n\n###",
+  "differentialDiagnosis": [
+    "Bulimia nervosa. Binge-eating disorder has recurrent binge eating in common with bu-\nlimia nervosa but differs from the latter disorder in some fundamental respects. In terms of\nclinical presentation, the recurrent inappropriate compensatory behavior (e.g., purging,\ndriven exercise) seen in bulimia nervosa is absent in binge-eating disorder. Unlike in-\ndividuals with bulimia nervosa, individuals with binge-eating disorder typically do not\nshow marked or sustained dietary restriction designed to influence body weight and\nshape between binge-eating episodes. They may, however, report frequent attempts at\ndieting. Binge-eating disorder also differs from bulimia nervosa in terms of response to treat-\nment. Rates of improvement are consistently higher among individuals with binge-eating\ndisorder than among those with bulimia nervosa.\n\nObesity. Binge-eating disorder is associated with overweight and obesity but has\nseveral key features that are distinct from obesity. First, levels of overvaluation of body\nOther Specified Feeding or Eating Disorder 353\n\nweight and shape are higher in obese individuals with the disorder than in those without\nthe disorder. Second, rates of psychiatric"
+  ],
+  "comorbidity": null,
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis"
+  ],
+  "missingSections": [
+    "Diagnostic Features",
+    "Comorbidity"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:24:17.3961378Z",
+  "extractionMetadata": null
+}

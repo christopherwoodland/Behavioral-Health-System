@@ -1,0 +1,55 @@
+{
+  "id": "63fae310-9d93-41be-8fe2-d00fa18e5e65",
+  "name": "Intermittent Explosive Disorder",
+  "code": "312.34 (F63.81)",
+  "category": "Intermittent Explosive Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Recurrent behavioral outbursts representing a failure to control aggressive impulses\nas manifested by either of the following:\n\n1\\. Verbal aggression (e.g., temper tantrums, tirades, verbal arguments or fights) or\nphysical aggression toward property, animals, or other individuals, occurring twice\nweekly, on average, for a period of 3 months. The physical aggression does not re-\nsult in damage or destruction of property and does not result in physical injury to\nanimals or other individuals.\n\n2\\. Three behavioral outbursts involving damage or destruction of property and/or\nphysical assault involving physical injury against animals or other individuals occur-\nring within a 12-month period.\n\nB. The magnitude of aggressiveness expressed during the recurrent outbursts is grossly\nout of proportion to the provocation or to any precipitating psychosocial stressors.\nC. The recurrent aggressive outbursts are not premeditated (I.e., they are impulsive and/\nor anger-based) and are not committed to achieve some tangible objective (e.g.,\nmoney, power, intimidation).\n\nD. The recurrent aggressive outbursts cause either marked distress in the individual or\nImpairment in occupational or Interpersonal functioning, or are associated with finan-\ncial or legal consequences.\n\nE. Chronological age is at least 6 years (or equivalent developmental level).\n\nF. The recurrent aggressive outbursts are not better explained by another mental disor-\nder (e.g., major depressive disorder, bipolar disorder, disruptive mood dysregulation\ndisorder, a psychotic disorder, antisocial personality disorder, borderline personality\ndisorder) and are not attributable to another medical condition (e.g., head trauma, Alz-\nheimer\u0027s disease) or to the physiological effects of a substance (e.g., a drug of abuse,\na medication). For children ages 6-18 years, aggressive behavior that occurs as part\nof an adjustment disorder should not be considered for this diagnosis.\n\nNote: This diagnosis can be made in addition to the diagnosis of attention-deficit/hyper-\nactivity disorder, conduct disorder, oppositional defiant disorder, or autism spectrum dis-\norder when recurrent impulsive aggressive outbursts are in excess of those usually seen\nin these disorders and warrant independent clinical attention.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The impulsive (or anger-based) aggressive outbursts in intermittent explosive disorder have\na rapid onset and, typically, little or no prodromal period. Outbursts typically last for less\nIntermittent Explosive Disorder 467\n\nthan 30 minutes and commonly occur in response to a minor provocation by a close intimate\nor associate. Individuals with intermittent explosive disorder often have less severe epi-\nsodes of verbal and/or nondamaging, nondestructive, or noninjurious physical assault (Cri-\nterion A1) in between more severe destructive/assaultive episodes (Criterion A2). Criterion\nA1 defines frequent (Le., twice weekly, on average, for a period of 3 months) aggressive out-\nbursts characterized by temper tantrums, tirades, verbal arguments or fights, or assault\nwithout damage to objects or without injury to animals or other individuals. Criterion A2\ndefines infrequent (i.e., three in a 1-year period) impulsive aggressive outbursts character-\nized by damaging or destroying an object, regardless of its tangible value, or by assaulting/\nstriking or otherwise causing physical injury to an animal or to another individual. Regard-\nless of the nature of the impulsive aggressive outburst, the core feature of Intermittent\nexplosive disorder is failure to control impulsive aggressive behavior in response to subjec-\ntively experienced provocation (I.e., psychosocial stressor) that would not typically result in\n\nan aggressive outburst (Criterion B). The aggressive outbursts are generally impulsive and/\nor anger-based, rather than premeditated or instrumental (Criterion C) and are associated\nwith significant distress or impairment in psychosocial function (Criterion D). A diagnosis\nof intermittent explosive disorder should not be given to individuals younger than 6 years,\nor the equivalent developmental level (Criterion E), or to individuals whose aggressive out-\nbursts are better explained by another mental disorder (Criterion F). A diagnosis of intermit-\ntent explosive disorder should not be given to individuals with disruptive mood\ndysregulation disorder or to individuals whose impulsive aggressive outbursts are attribut-\nable to another medical condition or to the physiological effects of a substance (Criterion F).\nIn addition, children ages 6-18 years should not receive this diagnosis when impulsive ag-\ngressive outbursts occur in the context of an adjustment disorder (Criterion F).\n\n\n###",
+  "associatedFeatures": "Mood disorders (unipolar), anxiety disorders, and substance use disorders are associated\nwith intermittent explosive disorder, although onset of these disorders is typically later\nthan that of intermittent explosive disorder.\n\n\n####",
+  "prevalence": "One-year prevalence data for intermittent explosive disorder in the United States is about\n2.7% (narrow definition). Intermittent explosive disorder is more prevalent among\nyounger individuals (e.g., younger than 35-40 years), compared with older individuals\n(older than 50 years), and in individuals with a high school education or less.\n\n\n####",
+  "developmentAndCourse": "The onset of recurrent, problematic, Impulsive aggressive behavior is most common in late\nchildhood or adolescence and rarely begins for the first time after age 40 years. The core\nfeatures of intermittent explosive disorder, typically, are persistent and continue for many\nyears.\n\nThe course of the disorder may be episodic, with recurrent periods of impulsive ag-\ngressive outbursts. Intermittent explosive disorder appears to follow a chronic and persis-\ntent course over many years. It also appears to be quite common regardless of the presence\nor absence of attention-deficit/hyperactivity disorder (ADHD) or disruptive, impulse-\ncontrol, and conduct disorders (e.g., conduct disorder, oppositional defiant disorder).\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Individuals with a history of physical and emotional trauma during the\nfirst two decades of life are at increased risk for intermittent explosive disorder.\n468 Disruptive, Impulse-Control, and Conduct Disorders\nGenetic and physiological. First-degree relatives of individuals with intermittent ex-\nplosive disorder are at increased risk for intermittent explosive disorder, and twin studies\nhave demonstrated a substantial genetic influence for impulsive aggression.\nResearch provides neurobiological support for the presence of serotonergic abnormal-\nities, globally and in the brain, specifically in areas of the limbic system (anterior cingulate)\nand orbitofrontal cortex in individuals with intermittent explosive disorder. Amygdala\nresponses to anger stimuli, during",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "The lower prevalence of intermittent explosive disorder in some regions (Asla, Middle\nEast) or countries (Romania, Nigeria), compared with the United States, suggests that in-\nformation about recurrent, problematic, impulsive aggressive behaviors either is not elic-\nited on questioning or is less likely to be present, because of cultural factors.\n\n\n###",
+  "genderRelatedIssues": "In some studies the prevalence of intermittent explosive disorder is greater in males than\nin females (odds ratio = 1.4-2.3); other studies have found no gender difference.",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Social (e.g., loss of friends, relatives, marital instability), occupational (e.g., demotion, loss\nof employment), financial (e.g., due to value of objects destroyed), and legal (e.g., civil\nsuits as a result of aggressive behavior against person or property, criminal charges for as-\nsault) problems often develop as a result of intermittent explosive disorder.\n\n\n###",
+  "differentialDiagnosis": [],
+  "comorbidity": "Depressive disorders, anxiety disorders, and substance use disorders are most commonly\ncomorbid with intermittent explosive disorder. In addition, individuals with antisocial\npersonality disorder or borderline personality disorder, and individuals with a history of\ndisorders with disruptive behaviors (e.g., ADHD, conduct disorder, oppositional defiant\ndisorder), are at greater risk for comorbid intermittent explosive disorder.\nConduct Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 511-514 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:26:14.6309482Z",
+  "extractionMetadata": null
+}

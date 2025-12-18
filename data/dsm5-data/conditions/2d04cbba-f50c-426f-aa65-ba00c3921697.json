@@ -1,0 +1,56 @@
+{
+  "id": "2d04cbba-f50c-426f-aa65-ba00c3921697",
+  "name": "Caffeine Intoxication",
+  "code": "305.90 (F15.929)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Recent consumption of caffeine (typically a high dose well in excess of 250 mg).\n\nB. Five (or more) of the following signs or symptoms developing during, or shortly after,\n\ncaffeine use:\n\n1\\. Restlessness.\n\n2\\. Nervousness.\n\n504 Substance-Related and Addictive Disorders\n\n3\\. Excitement.\n\n4\\. Insomnia.\n\n5\\. Flushed face.\n\n6\\. Diuresis.\n\n7\\. Gastrointestinal disturbance.\n\n8\\. Muscle twitching.\n\n9\\. Rambling flow of thought and speech.\n\n10\\. Tachycardia or cardiac arrhythmia.\n\n11\\. Periods of inexhaustibility.\n\n12\\. Psychomotor agitation.\n\nC. The signs or symptoms in Criterion B cause clinically significant distress or impairment\nin social, occupational, or other important areas of functioning.\n\nD. The signs or symptoms are not attributable to another medical condition and are not bet-\nter explained by another mental disorder, including intoxication with another substance.\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Caffeine can be consumed from a number of different sources, including coffee, tea, caf-\nfeinated soda, \u0022energy\u0022 drinks, over-the-counter analgesics and cold remedies, energy\naids (e.g., drinks), weight-loss aids, and chocolate. Caffeine is also increasingly being used\nas an additive to vitamins and to food products. More than 85% of children and adults con-\nsume caffeine regularly. Some caffeine users display symptoms consistent with problem-\natic use, including tolerance and withdrawal (see \u0022Caffeine Withdrawal\u0022 later in this\nchapter); the data are not available at this time to determine the clinical significance of a\ncaffeine use disorder and its",
+  "associatedFeatures": "Mild sensory disturbances (e.g., ringing in the ears and flashes of light) may occur with high\ndoses of caffeine. Although large doses of caffeine can increase heart rate, smaller doses can\nslow heart rate. Whether excess caffeine intake can cause headaches is unclear. On physical\nexamination, agitation, restlessness, sweating, tachycardia, flushed face, and increased\nbowel motility may be seen. Caffeine blood levels may provide important information for\ndiagnosis, particularly when the individual is a poor historian, although these levels are not\ndiagnostic by themselves in view of the individual variation in response to caffeine.\nCaffeine Intoxication 505\n\n\n####",
+  "prevalence": ". In contrast, there is evidence that caffeine with-\ndrawal and caffeine intoxication are clinically significant and sufficiently prevalent.\nThe essential feature of caffeine intoxication is recent consumption of caffeine and five\nor more signs or symptoms that develop during or shortly after caffeine use (Criteria A\nand B). Symptoms include restlessness, nervousness, excitement, insomnia, flushed face,\ndiuresis, and gastrointestinal complaints, which can occur with low doses (e.g., 200 mg) in\nvulnerable individuals such as children, the elderly, or individuals who have not been ex-\nposed to caffeine previously. Symptoms that generally appear at levels of more than 1 g/\nday include muscle twitching, rambling flow of thought and speech, tachycardia or car-\ndiac arrhythmia, periods of inexhaustibility, and psychomotor agitation. Caffeine intoxi-\ncation may not occur despite high caffeine intake because of the development of tolerance.\nThe signs or symptoms must cause clinically significant distress or impairment in social,\noccupational, or other important areas of functioning (Criterion C). The signs or symp-\ntoms must not be attributable to another medical condition and are not better explained by\nanother mental disorder (e.g., an anxiety disorder) or intoxication with another substance\n(Criterion D).\n\n\n### Associated Features Supporting Diagnosis\n\nMild sensory disturbances (e.g., ringing in the ears and flashes of light) may occur with high\ndoses of caffeine. Although large doses of caffeine can increase heart rate, smaller doses can\nslow heart rate. Whether excess caffeine intake can cause headaches is unclear. On physical\nexamination, agitation, restlessness, sweating, tachycardia, flushed face, and increased\nbowel motility may be seen. Caffeine blood levels may provide important information for\ndiagnosis, particularly when the individual is a poor historian, although these levels are not\ndiagnostic by themselves in view of the individual variation in response to caffeine.\nCaffeine Intoxication 505\n\n\n#### Prevalence\n\nThe prevalence of caffeine intoxication in the general population is unclear. In the United\nStates, approximately 7% of individuals in the population may experience five or more symp-\ntoms along with",
+  "developmentAndCourse": "Consistent with a half-life of caffeine of approximately 4-6 hours, caffeine intoxication\nsymptoms usually remit within the first day or so and do not have any known long-lasting\nconsequences. However, individuals who consume very high doses of caffeine (i.e., 5-10\ng) may require immediate medical attention, as such doses can be lethal.\nWith advancing age, individuals are likely to demonstrate increasingly intense reac-\ntions to caffeine, with greater complaints of interference with sleep or feelings of hyper-\narousal. Caffeine intoxication among young individuals after consumption of highly\ncaffeinated products, including energy drinks, has been observed. Children and adoles-\ncents may be at increased",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Caffeine intoxication is often seen among individuals who use caffeine\nless frequently or in those who have recently increased their caffeine intake by a substan-\ntial amount. Furthermore, oral contraceptives significantly decrease the elimination of caf-\nfeine and consequently may increase the risk of intoxication.\n\nGenetic and physiological. Genetic factors may affect risk of caffeine intoxication.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Impairment from caffeine intoxication may have serious consequences, including dys-\nfunction at work or school, social indiscretions, or failure to fulfill role obligations. More-\nover, extremely high doses of caffeine can be fatal. In some cases, caffeine intoxication may\nprecipitate a caffeine-induced disorder.\n\n\n####",
+  "differentialDiagnosis": [
+    "Other mental disorders. Caffeine intoxication may be characterized by symptoms (e.g.,\npanic attacks) that resemble primary mental disorders. To meet criteria for caffeine intoxica-\ntion, the symptoms must not be associated with another medical condition or another mental\ndisorder, such as an anxiety disorder, that could better explain them. Manic episodes; panic\ndisorder; generalized anxiety disorder; amphetamine intoxication; sedative, hypnotic, or anx-\niolytic withdrawal or tobacco withdrawal; sleep disorders; and medication-induced side ef-\nfects (e.g., akathisia) can cause a clinical picture that is similar to that of caffeine intoxication.\nOther caffeine-induced disorders. The temporal relationship of the symptoms to increased\ncaffeine use or to abstinence from caffeine helps to establish the diagnosis. Caffeine intoxica-\ntion is differentiated from caffeine-induced anxiety disorder, with onset during intoxication\n(see \u0022Substance/Medication-Induced Anxiety Disorder\u0022 in the chapter \u0022Anxiety Disorders\u0022),\nand caffeine-induced sleep disorder, with onset during intoxication (see \u0022Substance/Medica-\ntion-Induced Sleep Disorder\u0022 in the chapter \u0022Sleep-Wake Disorders\u0022), by the fact that the\nsymptoms in these latter disorders are in excess of those usually associated with caffeine in-\ntoxication and are severe enough to warrant independent clinical attention.\n506 Substance-Related and Addictive Disorders\n\n\n####"
+  ],
+  "comorbidity": "Typical dietary doses of caffeine have not been consistently associated with medical prob-\nlems. However, heavy use (e.g., \u003E400 mg) can cause or exacerbate anxiety and somatic\nsymptoms and gastrointestinal distress. With acute, extremely high doses of caffeine,\ngrand mal seizures and respiratory failure may result in death. Excessive caffeine use is as-\nsociated with depressive disorders, bipolar disorders, eating disorders, psychotic disor-\nders, sleep disorders, and substance-related disorders, whereas individuals with anxiety\ndisorders are more likely to avoid caffeine.\nCaffeine Withdrawal\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 548-551 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:22:47.5231629Z",
+  "extractionMetadata": null
+}

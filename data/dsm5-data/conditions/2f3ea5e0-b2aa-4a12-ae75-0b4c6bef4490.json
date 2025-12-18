@@ -1,0 +1,55 @@
+{
+  "id": "2f3ea5e0-b2aa-4a12-ae75-0b4c6bef4490",
+  "name": "Reactive Attachment Disorder",
+  "code": "313.89 (F94.1)",
+  "category": "Reactive Attachment Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. A consistent pattern of inhibited, emotionally withdrawn behavior toward adult caregiv-\ners, manifested by both of the following:\n\n1\\. The child rarely or minimally seeks comfort when distressed.\n\n2\\. The child rarely or minimally responds to comfort when distressed.\n\nB. A persistent social and emotional disturbance characterized by at least two of the following:\n\n1\\. Minimal social and emotional responsiveness to others.\n\n2\\. Limited positive affect.\n\n3\\. Episodes of unexplained imitability, sadness, or fearfulness that are evident even\nduring nonthreatening interactions with adult caregivers.\n\nC. The child has experienced a pattern of extremes of insufficient care as evidenced by\nat least one of the following:\n\n1\\. Social neglect or deprivation in the form of persistent lack of having basic emotional\nneeds for comfort, stimulation, and affection met by caregiving adults.\n\n265\n\n266 Trauma- and Stressor-Related Disorders\n\n2\\. Repeated changes of primary caregivers that limit opportunities to form stable at-\n\ntachments (e.g., frequent changes in foster care).\n\n3\\. Rearing in unusual settings that severely limit opportunities to form selective at-\n\ntachments (e.g., Institutions with high child-to-caregiver ratios).\n\nD. The care in Criterion C Is presumed to be responsible for the disturbed behavior in Cri-\nterion A (e.g., the disturbances in Criterion A began following the lack of adequate care\nin Criterion C).\n\nE. The criteria are not met for autism spectrum disorder.\n\nF. The disturbance is evident before age 5 years.\n\nG. The child has a developmental age of at least 9 months.\n\nSpecify if:\n\nPersistent: The disorder has been present for more than 12 months.\nSpecify current severity:\n\nReactive attachment disorder is specified as severe when a child exhibits all symp-\ntoms of the disorder, with each symptom manifesting at relatively high levels.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Reactive attachment disorder of infancy or early childhood is characterized by a pattern of\nmarkedly disturbed and developmentally Inappropriate attachment behaviors, in which a\nchild rarely or minimally turns preferentially to an attachment figure for comfort, support,\nprotection, and nurturance. The essential feature is absent or grossly underdeveloped at-\ntachment between the child and putative caregiving adults. Children with reactive attach-\nment disorder are believed to have the capacity to form selective attachments. However,\nbecause of limited opportunities during early development, they fail to show the behavioral\nmanifestations of selective attachments. That is, when distressed, they show no consistent\neffort to obtain comfort, support, nurturance, or protection from caregivers. Furthermore,\nwhen distressed, children with this disorder do not respond more than minimally to com-\nforting efforts of caregivers. Thus, the disorder is associated with the absence of expected\ncomfort seeking and response to comforting behaviors. As such, children with reactive\nattachment disorder show diminished or absent expression of positive emotions during\nroutine Interactions with caregivers. In addition, their emotion regulation capacity is com-\npromised, and they display episodes of negative emotions of fear, sadness, or irritability\nthat are not readily explained. A diagnosis of reactive attachment disorder should not be\nmade in children who are developmentally unable to form selective attachments. For this\nreason, the child must have a developmental age of at least 9 months.\n\n\n###",
+  "associatedFeatures": "Because of the shared etiological association with social neglect, reactive attachment dis-\norder often co-occurs with developmental delays, especially in delays in cognition and\nlanguage. Other associated features include stereotyples and other signs of severe neglect\n(e.g., malnutrition or signs of poor care).\n\n\n###",
+  "prevalence": "The prevalence of reactive attachment disorder is unknown, but the disorder is seen rela-\ntively rarely in clinical settings. The disorder has been found in young children exposed to\nsevere neglect before being placed in foster care or raised in Institutions. However, even in\npopulations of severely neglected children, the disorder is uncommon, occurring in less\nthan 10% of such children.\n\n\n### Reactive Attachment Disorder 267",
+  "developmentAndCourse": "Conditions of social neglect are often present in the first months of life in children diag-\nnosed with reactive attachment disorder, even before the disorder is diagnosed. The clin-\nical features of the disorder manifest in a similar fashion between the ages of 9 months and\n5 years. That is, signs of absent-to-minimal attachment behaviors and associated emotion-\nally aberrant behaviors are evident in children throughout this age range, although differ-\ning cognitive and motor abilities may affect how these behaviors are expressed. Without\nremediation and recovery through normative caregiving environments, it appears that signs\nof the disorder may persist, at least for several years.\n\nIt is unclear whether reactive attachment disorder occurs in older children and, if so, how\nIt differs from its presentation in young children. Because of this, the diagnosis should be\nmade with caution in children older than 5 years.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Serious social neglect is a diagnostic requirement for reactive attach-\nment disorder and is also the only known risk factor for the disorder. However, the ma-\njority of severely neglected children do not develop the disorder. Prognosis appears to\ndepend on the quality of the caregiving environment following serious neglect.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Similar attachment behaviors have been described in young children in many different\ncultures around the world. However, caution should be exercised in making the diagnosis\nof reactive attachment disorder in cultures in which attachment has not been studied.",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Reactive attachment disorder significantly impairs young children\u0027s abilities to relate in-\nterpersonally to adults or peers and is associated with functional impairment across many\ndomains of early childhood.\n\n\n###",
+  "differentialDiagnosis": [],
+  "comorbidity": "Conditions associated with neglect, including cognitive delays, language delays, and ste-\nreotypies, often co-occur with reactive attachment disorder. Medical conditions, such as\nsevere malnutrition, may accompany signs of the disorder. Depressive symptoms also\nmay co-occur with reactive attachment disorder.\nDisinhibited Social Engagement Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 310-313 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:26:59.4197184Z",
+  "extractionMetadata": null
+}

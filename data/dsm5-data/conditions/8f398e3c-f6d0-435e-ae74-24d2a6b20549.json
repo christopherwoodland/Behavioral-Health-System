@@ -1,0 +1,56 @@
+{
+  "id": "8f398e3c-f6d0-435e-ae74-24d2a6b20549",
+  "name": "Caffeine Withdrawal",
+  "code": "292.0 (F15.93)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Prolonged daily use of caffeine.\n\nB. Abrupt cessation of or reduction in caffeine use, followed within 24 hours by three (or\n\nmore) of the following signs or symptoms:\n\n1\\. Headache.\n\n2\\. Marked fatigue or drowsiness.\n\n3\\. Dysphoric mood, depressed mood, or irritability.\n\n4\\. Difficulty concentrating.\n\n5\\. Flu-like symptoms (nausea, vomiting, or muscle pain/stiffness).\n\nC. The signs or symptoms in Criterion B cause clinically significant distress or impairment\nin social, occupational, or other important areas of functioning.\n\nD. The signs or symptoms are not associated with the physiological effects of another\nmedical condition (e.g., migraine, viral illness) and are not better explained by another\nmental disorder, including intoxication or withdrawal from another substance.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of caffeine withdrawal is the presence of a characteristic withdrawal\nsyndrome that develops after the abrupt cessation of (or substantial reduction in) pro-\nlonged daily caffeine ingestion (Criterion B). The caffeine withdrawal syndrome is indi-\ncated by three or more of the following (Criterion B): headache; marked fatigue or\ndrowsiness; dysphoric mood, depressed mood, or Imitability; difficulty concentrating;\nand flu-like symptoms (nausea, vomiting, or muscle pain/stiffness). The withdrawal syn-\ndrome causes clinical significant distress or impairment in social, occupational, or other\nimportant areas of functioning (Criterion C). The symptoms must not be associated with\nthe physiological effects of another medical condition and are not better explained by an-\nother mental disorder (Criterion D).\n\nHeadache is the hallmark feature of caffeine withdrawal and may be diffuse, gradual\nin development, throbbing, severe, and sensitive to movement. However, other symptoms\nof caffeine withdrawal can occur in the absence of headache. Caffeine is the most widely\nused behaviorally active drug in the world and is present in many different types of bev-\nerages (e.g., coffee, tea, mat\u00E9, soft drinks, energy drinks), foods, energy alds, medications,\nand dietary supplements. Because caffeine ingestion is often integrated into social customs\nand daily rituals (e.g., coffee break, tea time), some caffeine consumers may be unaware of\ntheir physical dependence on caffeine. Thus, caffeine withdrawal symptoms could be un-\nexpected and misattributed to other causes (e.g., the flu, migraine). Furthermore, caffeine\nwithdrawal symptoms may occur when individuals are required to abstain from foods\nand beverages prior to medical procedures or when a usual caffeine dose is missed be-\ncause of a change in routine (e.g., during travel, weekends).\nCaffeine Withdrawal 507\n\nThe probability and severity of caffeine withdrawal generally increase as a function of\nusual daily caffeine dose. However, there is large variability among individuals and\nwithin individuals across different episodes in the incidence, severity, and time course of\nwithdrawal symptoms. Caffeine withdrawal symptoms may occur after abrupt cessation\nof relatively low chronic daily doses of caffeine (i.e., 100 mg).\n\n\n###",
+  "associatedFeatures": "Caffeine abstinence has been shown to be associated with impaired behavioral and cogni-\ntive performance (e.g., sustained attention). Electroencephalographic studies have shown\nthat caffeine withdrawal symptoms are significantly associated with increases in theta\npower and decreases in beta-2 power. Decreased motivation to work and decreased socia-\nbility have also been reported during caffeine withdrawal. Increased analgesic use during\ncaffeine withdrawal has been documented.\n\n\n###",
+  "prevalence": "the United States, headache may occur in approximately 50% of cases of caffeine absti-\nnence. In attempts to permanently stop caffeine use, more than 70% of individuals may ex-\nperience at least one caffeine withdrawal symptom (47% may experience headache), and\n24% may experience headache plus one or more other symptoms as well as",
+  "developmentAndCourse": "Symptoms usually begin 12-24 hours after the last caffeine dose and peak after 1-2 days\nof abstinence. Caffeine withdrawal symptoms last for 2-9 days, with the possibility of\nwithdrawal headaches occurring for up to 21 days. Symptoms usually remit rapidly\n(within 30-60 minutes) after re-Ingestion of caffeine.\n\nCaffeine is unique in that it is a behaviorally active drug that is consumed by individ-\nuals of nearly all ages. Rates of caffeine consumption and overall level of caffeine con-\nsumption increase with age until the early to mid-30s and then level off. Although caffeine\nwithdrawal among children and adolescents has been documented, relatively little is\nknown about",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Heavy caffeine use has been observed among individuals with mental\ndisorders, including eating disorders; smokers; prisoners; and drug and alcohol abusers.\nThus, these individuals could be at higher risk for caffeine withdrawal upon acute caffeine\nabstinence.\n\nEnvironmental. The unavailability of caffeine is an environmental risk factor for incipi-\nent withdrawal symptoms. While caffeine is legal and usually widely available, there are\nconditions in which caffeine use may be restricted, such as during medical procedures,\npregnancy, hospitalizations, religious observances, wartime, travel, and research partici-\n508 Substance-Related and Addictive Disorders\n\npation. These external environmental circumstances may precipitate a withdrawal syn-\ndrome in vulnerable individuals.\n\nGenetic and physiological factors. Genetic factors appear to increase vulnerability to\ncaffeine withdrawal, but no specific genes have been identified.\n\nCourse modifiers. Caffeine withdrawal symptoms usually remit within 30-60 minutes\nof reexposure to caffeine. Doses of caffeine significantly less than one\u0027s usual daily dose\nmay be sufficient to prevent or attenuate caffeine withdrawal symptoms (e.g., consump-\ntion of 25 mg by an individual who typically consumes 300 mg).\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Habitual caffeine consumers who fast for religious reasons may be at increased risk for caf-\nfeine withdrawal.",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Caffeine Withdrawal Disorder\n\nCaffeine withdrawal symptoms can vary from mild to extreme, at times causing functional\nimpairment in normal daily activities. Rates of functional impairment range from 10% to\n55% (median 13%), with rates as high as 73% found among individuals who also show\nother problematic features of caffeine use. Examples of functional impairment include be-\ning unable to work, exercise, or care for children; staying in bed all day; missing religious\nservices; ending a vacation early; and cancelling a social gathering. Caffeine withdrawal\nheadaches may be described by individuals as \u0022the worst headaches\u0022 ever experienced.\nDecrements in cognitive and motor performance have also been observed.\n\n\n###",
+  "differentialDiagnosis": [
+    "Other medical disorders and medical side effects. Several disorders should be consid-\nered in the differential diagnosis of caffeine withdrawal. Caffeine withdrawal can mimic\nmigraine and other headache disorders, viral illnesses, sinus conditions, tension, other\ndrug withdrawal states (e.g., from amphetamines, cocaine), and medication side effects.\nThe final determination of caffeine withdrawal should rest on a determination of the pat-\ntern and amount consumed, the time interval between caffeine abstinence and onset of\nsymptoms, and the particular clinical features presented by the individual. A challenge\ndose of caffeine followed by symptom remission may be used to confirm the diagnosis.\n\n\n###"
+  ],
+  "comorbidity": "Caffeine withdrawal may be associated with major depressive disorder, generalized anx-\nlety disorder, panic disorder, antisocial personality disorder in adults, moderate to severe\nalcohol use disorder, and cannabis and cocaine use.\nOther Caffeine-Induced Disorders\n\nThe following caffeine-Induced disorders are described in other chapters of the manual\nwith disorders with which they share phenomenology (see the substance/medication-\ninduced mental disorders in these chapters): caffeine-Induced anxiety disorder (\u0022Anxiety\nDisorders\u0022) and caffeine-Induced sleep disorder (\u0022Sleep-Wake Disorders\u0022). These caf-\nfeine-Induced disorders are diagnosed instead of caffeine intoxication or caffeine with-\ndrawal only when the symptoms are sufficiently severe to warrant independent clinical\nattention.\n\nUnspecified Caffeine-Related Disorder 509\n\nUnspecified Caffeine-Related Disorder\n292.9 (F15.99)\n\nThis category applies to presentations in which symptoms characteristic of a caffeine-\nrelated disorder that cause clinically significant distress or impairment in social, occupa-\ntional, or other important areas of functioning predominate but do not meet the full criteria\nfor any specific caffeine-related disorder or any of the disorders in the substance-related\nand addictive disorders diagnostic class.\nCannabis-Related Disorders\nCannabis Use Disorder\nCannabis Intoxication\nCannabis Withdrawal\n\nOther Cannabis-Induced Disorders\n\nUnspecified Cannabis-Related Disorder\nCannabis Use Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 551-554 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T20:59:12.9645995Z",
+  "extractionMetadata": null
+}

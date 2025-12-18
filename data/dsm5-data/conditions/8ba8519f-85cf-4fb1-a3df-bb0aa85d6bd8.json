@@ -1,0 +1,56 @@
+{
+  "id": "8ba8519f-85cf-4fb1-a3df-bb0aa85d6bd8",
+  "name": "Central Sleep Apnea",
+  "code": "327.21 (G47.31)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Evidence by polysomnography of five or more central apneas per hour of sleep.\nB. The disorder is not better explained by another current sleep disorder.\nSpecify whether:\n\n327.21 (G47.31) Idiopathic central sleep apnea: Characterized by repeated epl-\nsodes of apneas and hypopneas during sleep caused by variability in respiratory effort\nbut without evidence of airway obstruction.\n\n786.04 (R06.3) Cheyne-Stokes breathing: A pattem of periodic crescendo-\ndecrescendo variation in tidal volume that results in central apneas and hypopneas at\na frequency of at least five events per hour, accompanied by frequent arousal.\n780.57 (G47.37) Central sleep apnea comorbid with oploid use: The pathogenesis\nof this subtype is attributed to the effects of opioids on the respiratory rhythm genera-\ntors in the medulla as well as the",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "\u0022 in text.\nSpecify current severity:\n\nSeverity of central sleep apnea is graded according to the frequency of the breathing\ndisturbances as well as the extent of associated oxygen desaturation and sleep frag-\nmentation that occur as a consequence of repetitive respiratory disturbances.\n\n\n### Subtypes\n\nIdiopathic central sleep apnea and Cheyne-Stokes breathing are characterized by Increased\ngain of the ventilatory control system, also referred to as high loop gain, which leads to in-\nstability in ventilation and PaCO levels. This instability is termed periodic breathing and\n2\n\ncan be recognized by hyperventilation alternating with hypoventilation. Individuals with\nthese disorders typically have pCO levels while awake that are slightly hypocapneic or\n2\n\nnormocapnelc. Central sleep apnea may also manifest during initiation of treatment of ob-\nstructive sleep apnea hypopnea or may occur in association with obstructive sleep apnea\nhypopnea syndrome (termed complex sleep apnea). The occurrence of central sleep apnea in\nassociation with obstructive sleep apnea is also considered to be due to high loop gain. In\ncontrast, the pathogenesis of central sleep apnea comorbid with opioid use has been at-\ntributed to the effects of opioids on the respiratory rhythm generators in the medulla as\nwell as to its",
+  "associatedFeatures": "Individuals with central sleep apnea hypopneas can manifest with sleepiness or insomnia.\nThere can be complaints of sleep fragmentation, Including awakening with dyspnea.\nSome individuals are asymptomatic. Obstructive sleep apnea hypopnea can coexist with\nCheyne-Stokes breathing, and thus snoring and abruptly terminating apneas may be ob-\nserved during sleep.\n\n\n####",
+  "prevalence": "tricular ejection fraction. In individuals with an ejection fraction of less than 45%, the prev-\nalence has been reported to be 20% or higher. The male-to-female ratio for prevalence is\neven more highly skewed toward males than for obstructive sleep apnea hypopnea. Prev-\nalence Increases with age, and most patients are older than 60 years. Cheyne-Stokes breath-\ning occurs in approximately 20% of individuals with acute stroke. Central sleep apnea\ncomorbid with opioid use occurs in approximately 30% of individuals taking chronic opl-\nolds for nonmalignant pain and similarly in individuals receiving methadone mainte-\nnance therapy.\n\n\n####",
+  "developmentAndCourse": "The onset of Cheyne-Stokes breathing appears tied to the development of heart failure. The\nCheyne-Stokes breathing pattern is associated with oscillations in heart rate, blood pres-\nsure and oxygen desaturation, and elevated sympathetic nervous system activity that can\npromote progression of heart failure. The clinical significance of Cheyne-Stokes breathing\nin the setting of stroke is not known, but Cheyne-Stokes breathing may be a transient find-\ning that resolves with time after acute stroke. Central sleep apnea comorbid with oploid\nuse has been documented with chronic use (i.e., several months).\n\n\n####",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. Cheyne-Stokes breathing is frequently present in individu-\nals with heart failure. The coexistence of atrial fibrillation further increases risk, as do older\nage and male",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Idiopathic central sleep apnea has been reported to cause symptoms of disrupted sleep, in-\ncluding insomnia and sleepiness. Cheyne-Stokes breathing with comorbid heart failure\nhas been associated with excessive sleepiness, fatigue, and insomnia, although many in-\ndividuals may be asymptomatic. Coexistence of heart failure and Cheyne-Stokes breath-\ning may be associated with increased cardiac arrhythmias and increased mortality or\ncardiac transplantation. Individuals with central sleep apnea comorbid with oploid use\nmay present with symptoms of sleepiness or insomnia.\n\n\n######",
+  "differentialDiagnosis": [
+    "Idiopathic central sleep apnea must be distinguished from other breathing-related sleep\ndisorders, other sleep disorders, and medical conditions and mental disorders that cause\nsleep fragmentation, sleepiness, and fatigue. This is achieved using polysomnography.\nOther breathing-related sleep disorders and sleep disorders. Central sleep apnea can\nbe distinguished from obstructive sleep apnea hypopnea by the presence of at least five\ncentral apneas per hour of sleep. These conditions may co-occur, but central sleep apnea is\nconsidered to predominate when the ratio of central to obstructive respiratory events ex-\nceeds 50%.\n\nCheyne-Stokes breathing can be distinguished from other mental disorders, including\nother sleep disorders, and other medical conditions that cause sleep fragmentation, sleep-\nIness, and fatigue based on the presence of a predisposing condition (e.g., heart failure or\nstroke) and signs and polysomnographic evidence of the characteristic breathing pattern.\nPolysomnographic respiratory findings can help distinguish Cheyne-Stokes breathing\nfrom insomnia due to other medical conditions. High-altitude periodic breathing has a\npattern that resembles Cheyne-Stokes breathing but has a shorter cycle time, occurs only\nat high altitude, and is not associated with heart failure.\n\nCentral sleep apnea comorbid with opioid use can be differentiated from other types of\nbreathing-related sleep disorders based on the use of long-acting oploid medications in\nconjunction with polysomnographic evidence of central apneas and periodic or ataxic\nbreathing. It can be distinguished from insomnia due to drug or substance use based on\npolysomnographic evidence of central sleep apnea.\n\n\n##"
+  ],
+  "comorbidity": "Central sleep apnea disorders are frequently present in users of long-acting oploids, such\nas methadone. Individuals taking these medications have a sleep-related breathing disor-\nder that could contribute to sleep disturbances and symptoms such as sleepiness, confu-\nsion, and depression. While the Individual is asleep, breathing patterns such as central\napneas, periodic apneas, and ataxic breathing may be observed. Obstructive sleep apnea\nhypopnea may coexist with central sleep apnea, and features consistent with this condi-\ntion can also be present (see \u0022Obstructive Sleep Apnea Hypopnea\u0022 earlier in this chapter).\nCheyne-Stokes breathing is more commonly observed in association with conditions that\nInclude heart failure, stroke, and renal failure and is seen more frequently in individuals\nwith atrial fibrillation. Individuals with Cheyne-Stokes breathing are more likely to be\nolder, to be male, and to have lower weight than individuals with obstructive sleep apnea\nhypopnea.\n\nSleep-Related Hypoventilation 387\nSleep-Related Hypoventilation\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 428-432 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-05T01:48:11.387559Z",
+  "extractionMetadata": null
+}

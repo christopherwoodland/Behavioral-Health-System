@@ -1,0 +1,56 @@
+{
+  "id": "72897478-ae9b-46fe-90cc-075589e80c49",
+  "name": "Gender Dysphoria",
+  "code": "302.6 (F64.2)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "Gender Dysphoria in Children 302.6 (F64.2)\n\nA. A marked incongruence between one\u0027s experienced/expressed",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Individuals with gender dysphoria have a marked incongruence between the",
+  "associatedFeatures": "When visible signs of puberty develop, natal boys may shave their legs at the first signs of\nhair growth. They sometimes bind their genitals to make erections less visible. Girls may\nbind their breasts, walk with a stoop, or use loose sweaters to make breasts less visible. In-\ncreasingly, adolescents request, or may obtain without medical prescription and supervi-\nsion, hormonal suppressors (\u0022blockers\u0022) of gonadal steroids (e.g., gonadotropin-releasing\nhormone [GnRH] analog, spironolactone). Clinically referred adolescents often want hor-\nmone treatment and many also wish for",
+  "prevalence": "For natal adult males, prevalence ranges from 0.005% to 0.014%, and for natal females,\nfrom 0.002% to 0.003%. Since not all adults seeking hormone treatment and surgical reas.\nsignment attend specialty clinics, these rates are likely modest underestimates. Sex differ-\nences in rate of referrals to specialty clinics vary by age group. In children, sex ratios of\nnatal boys to girls range from 2:1 to 4.5:1. In adolescents, the sex ratio is close to parity; in\nadults, the sex ratio favors natal males, with ratios ranging from 1:1 to 6.1:1. In two count-\ntries, the sex ratio appears to favor natal females (Japan: 2.2:1; Poland: 3.4:1).\n\n\n###",
+  "developmentAndCourse": "Because expression of",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. For individuals with",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Individuals with gender dysphoria have been reported across many countries and cul-\ntures. The equivalent of",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Preoccupation with cross-gender wishes may develop at all ages after the first 2-3 years of\nchildhood and often interfere with daily activities. In older children, failure to develop\nage-typical same-sex peer relationships and skills may lead to isolation from peer groups\nand to distress. Some children may refuse to attend school because of teasing and harass.\n458 Gender Dysphoria\n\nment or pressure to dress in attire associated with their assigned sex. Also in adolescents\nand adults, preoccupation with cross-gender wishes often interferes with daily activities.\nRelationship difficulties, including sexual relationship problems, are common, and func-\ntioning at school or at work may be impaired. Gender dysphoria, along with atypical\ngender expression, is associated with high levels of stigmatization, discrimination, and\nvictimization, leading to negative self-concept, increased rates of mental disorder comor-\nbidity, school dropout, and economic marginalization, including unemployment, with at-\ntendant social and mental health risks, especialy in individuals from resource-poor family\nbackgrounds. In addition, these individuals\u0027 access to health services and mental health\nservices may be impeded by structural barriers, such as institutional discomfort or inex-\nperience in working with this patient population.\n\n\n####",
+  "differentialDiagnosis": [
+    "Nonconformity to gender roles. Gender dysphoria should be distinguished from sim-\nple nonconformity to stereotypical gender role behavior by the strong desire to be of an-\nother gender than the assigned one and by the extent and pervasiveness of gender variant\nactivities and interests. The diagnosis is not meant to merely describe nonconformity to\nstereotypical gender role behavior (e.g., \u0022tomboyism\u0022 in girls, \u0022girly-boy\u0022 behavior in\nboys, occasional cross-dressing in adult men). Given the increased openness of atypical\ngender expressions by individuals across the entire range of the transgender spectrum, it\nis important that the clinical diagnosis be limited to those individuals whose distress and\nimpairment meet the specified criteria.\n\nTransvestic disorder. Transvestic disorder occurs in heterosexual (or bisexual) adoles-\ncent and adult males (rarely in females) for whom cross-dressing behavior generates sex-\nual excitement and causes distress and/or impairment without drawing their primary\ngender into question. It is occasionally accompanied by gender dysphoria. An individual\nwith transvestic disorder who also has clinicaly significant gender dysphoria can be given\nboth diagnoses. In many cases of late onset gender dysphoria in gynephilic natal males,\ntransvestic behavior with sexual excitement is a precursor.\n\nBody dysmorphic disorder. An individual with body dysmorphic disorder focuses on\nthe alteration or removal of a specific body part because it is perceived as abnormally formed,\nnot because it represents a repudiated assigned gender. When an individual\u0027s presenta-\ntion meets criteria for both gender dysphoria and body dysmorphic disorder, both diag-\nnoses can be given. Individuals wishing to have a healthy limb amputated (termed by\nsome body integrity identity disorder) because it makes them feel more \u0022complete\u0022 usualy\ndo not wish to change gender, but rather desire to live as an amputee or a disabled person.\nSchizophrenia and other psychotic disorders. In schizophrenia, there may rarely be\ndelusions of belonging to some other gender. In the absence of psychotic symptoms, in-\nsistence by an individual with gender dysphoria that he or she is of some other gender is\nnot considered a delusion. Schizophrenia (or other psychotic disorders) and gender dys-\nphoria may co-occur.\n\nOther dinical presentations. Some individuals with an emasculinization desire who\ndevelop an alternative, nonmale/nonfemale gender identity do have a presentation that\nmeets criteria for gender dysphoria. However, some males seek castration and/or penec-\ntomy for aesthetic reasons or to remove psychological effects of androgens without chang.\ning male identity, in these cases, the criteria for gender dysphoria are not met."
+  ],
+  "comorbidity": "Clinically referred children with gender dysphoria show elevated levels of emotional and\nbehavioral problems-most commonly, anxiety, disruptive and impulse-control, and de-\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 497-507 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:04:04.5375332Z",
+  "extractionMetadata": null
+}

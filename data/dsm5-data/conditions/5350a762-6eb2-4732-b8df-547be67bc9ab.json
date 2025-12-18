@@ -1,0 +1,57 @@
+{
+  "id": "5350a762-6eb2-4732-b8df-547be67bc9ab",
+  "name": "Frotteuristic Disorder",
+  "code": "302.89 (F65.81)",
+  "category": "Frotteuristic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from touching\nor rubbing against a nonconsenting person, as manifested by fantasies, urges, or be-\nhaviors.\n\nB. The individual has acted on these sexual urges with a nonconsenting person, or the\nsexual urges or fantasies cause clinically significant distress or impairment in social,\noccupational, or other important areas of functioning.\n692 Paraphilic Disorders\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living\nin institutional or other settings where opportunities to touch or rub against a noncon-\nsenting person are restricted.\n\nIn full remission: The individual has not acted on the urges with a nonconsenting per-\nson, and there has been no distress or impairment in social, occupational, or other ar-\neas of functioning, for at least 5 years while in an uncontrolled environment.\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "[No data available for this section]\n\n\n###",
+  "prevalence": "Frotteuristic acts, including the uninvited sexual touching of or rubbing against another\nindividual, may occur in up to 30% of adult males in the general population. Approximately\nFrotteuristic Disorder 693\n\n10%-14% of adult males seen in outpatient settings for paraphilic disorders and hypersex-\nuality have a presentation that meets diagnostic criteria for frotteuristic disorder. Hence,\nwhereas the population prevalence of frotteuristic disorder is unknown, it is not likely that\nit exceeds the rate found in selected clinical settings.\n\n\n###",
+  "developmentAndCourse": "Adult males with frotteuristic disorder often report first becoming aware of their sexual in-\nterest in surreptitiously touching unsuspecting persons during late adolescence or emerging\nadulthood. However, children and adolescents may also touch or rub against unwilling oth-\ners in the absence of a diagnosis of frotteuristic disorder. Although there is no minimum age\nfor the diagnosis, frotteuristic disorder can be difficult to differentiate from conduct-disor-\ndered behavior without sexual motivation in individuals at younger ages. The persistence of\nfrotteurism over time is unclear. Frotteuristic disorder, however, by definition requires one\nor more contributing factors that may change over time with or without treatment: subjec-\ntive distress (e.g., guilt, shame, intense sexual frustration, loneliness); psychiatric morbidity;\nhypersexuality and sexual impulsivity; psychosocial impairment; and/or the propensity to\nact out sexually by touching or rubbing against unconsenting persons. Therefore, the course\nof frotteuristic disorder is likely to vary with age. As with other sexual preferences, advanc-\ning age may be associated with decreasing frotteuristic sexual preferences and behavior.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Nonsexual antisocial behavior and sexual preoccupation/hypersexuality\nmight be nonspecific risk factors, although the causal relationship to frotteurism is uncertain\nand the specificity unclear. However, frotteurism is a necessary precondition for frotteuristic\ndisorder, so risk factors for frotteurism should also increase the rate of frotteuristic disorder.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "There appear to be substantially fewer females with frotteuristic sexual preferences than\nmales.\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]\n\n\n###",
+  "differentialDiagnosis": [
+    "Conduct disorder and antisocial personality disorder. Conduct disorder in adolescents\nand antisocial personality disorder would be characterized by additional norm-breaking\nand antisocial behaviors, and the specific sexual interest in touching or rubbing against a\nnonconsenting individual should be lacking.\n\nSubstance use disorders. Substance use disorders, particularly those involving stimu-\nlants such as cocaine and amphetamines, might involve single frotteuristic episodes by in-\ntoxicated individuals but should not involve the typical sustained sexual interest in\ntouching or rubbing against unsuspecting persons. Hence, recurrent frotteuristic sexual\nfantasies, urges, or behaviors that occur also when the individual is not intoxicated sug-\ngest that frotteuristic disorder might be present."
+  ],
+  "comorbidity": "Known comorbidities in frotteuristic disorder are largely based on research with males\nsuspected of or convicted for criminal acts involving sexually motivated touching of or\nrubbing against a nonconsenting individual. Hence, these comorbidities might not apply\nto other individuals with a diagnosis of frotteuristic disorder based on subjective distress\nover their sexual interest. Conditions that occur comorbidly with frotteuristic disorder in-\nclude hypersexuality and other paraphilic disorders, particularly exhibitionistic disorder\nand voyeuristic disorder. Conduct disorder, antisocial personality disorder, depressive\n694 Paraphilic Disorders\n\ndisorders, bipolar disorders, anxiety disorders, and substance use disorders also co-occur.\nPotential differential diagnoses for frotteuristic disorder sometimes occur also as comor-\nbid disorders. Therefore, it is generally necessary to evaluate the evidence for frotteuristic\ndisorder and possible comorbid conditions as separate questions.\nSexual Masochism Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 736-739 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:22:36.2545484Z",
+  "extractionMetadata": null
+}

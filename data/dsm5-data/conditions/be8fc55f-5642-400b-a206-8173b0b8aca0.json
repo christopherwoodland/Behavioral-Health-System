@@ -1,0 +1,45 @@
+{
+  "id": "be8fc55f-5642-400b-a206-8173b0b8aca0",
+  "name": "Persistent Depressive Disorder (Dysthymia)",
+  "code": "300.4 (F34.1)",
+  "category": "Persistent Depressive Disorder",
+  "description": "",
+  "diagnosticCriteria": [],
+  "diagnosticFeatures": "The essential feature of persistent depressive disorder (dysthymia) is a depressed mood\nthat occurs for most of the day, for more days than not, for at least 2 years, or at least 1 year\nfor children and adolescents (Criterion A). This disorder represents a consolidation of\nDSM-IV-defined chronic major depressive disorder and dysthymic disorder. Major de-\npression may precede persistent depressive disorder, and major depressive episodes may\noccur during persistent depressive disorder. Individuals whose symptoms meet major de-\npressive disorder criteria for 2 years should be given a diagnosis of persistent depressive\ndisorder as well as major depressive disorder.\n\nIndividuals with persistent depressive disorder describe their mood as sad or \u0022down\nin the dumps.\u0022 During periods of depressed mood, at least two of the six symptoms from\nCriterion B are present. Because these symptoms have become a part of the individual\u0027s\nday-to-day experience, particularly in the case of early onset (e.g., \u0022I\u0027ve always been this\n170 Depressive Disorders\n\nway\u0022), they may not be reported unless the individual is directly prompted. During the 2-year\nperiod (1 year for children or adolescents), any symptom-free intervals last no longer than\n2 months (Criterion C).\n\n\n##",
+  "associatedFeatures": "[No data available for this section]\n\n\n###",
+  "prevalence": "Persistent depressive disorder is effectively an amalgam of DSM-IV dysthymic disorder and\nchronic major depressive episode. The 12-month prevalence in the United States is approxl-\nmately 0.5% for persistent depressive disorder and 1.5% for chronic major depressive disorder.",
+  "developmentAndCourse": "Persistent depressive disorder often has an early and insidious onset (i.e., in childhood,\nadolescence, or early adult life) and, by definition, a chronic course. Among individuals\nwith both persistent depressive disorder and borderline personality disorder, the covari-\nance of the corresponding features over time suggests the operation of a common mecha-\nnism. Early onset (ie., before age 21 years) is associated with a higher likelihood of\ncomorbid personality disorders and substance use disorders.\n\nWhen symptoms rise to the level of a major depressive episode, they are likely to sub-\nsequently revert to a lower level. However, depressive symptoms are much less likely to\nresolve in a given period of time in the context of persistent depressive disorder than they\nare in a major depressive episode.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Factors predictive of poorer long-term outcome include higher levels\nof neuroticism (negative affectivity), greater symptom severity, poorer global functioning.\nand presence of anxiety disorders or conduct disorder.\n\nEnvironmental. Childhood risk factors include parental loss or separation.\n\nGenetic and physiological. There are no clear differences in illness development, course,\nor family history between DSM-IV dysthymic disorder and chronic major depressive dis-\norder. Earlier findings pertaining to either disorder are therefore likely to apply to per-\nsistent depressive disorder. It is thus likely that individuals with persistent depressive\ndisorder will have a higher proportion of first-degree relatives with persistent depressive\ndisorder than do individuals with major depressive disorder, and more depressive disor-\nders in general.\n\nA number of brain regions (e.g., prefrontal cortex, anterior cingulate, amygdala, hip-\npocampus) have been implicated in persistent depressive disorder. Possible polysomno-\ngraphic abnormalities exist as well.",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": ")\n\nPersistent Depressive Disorder\nThe degree to which persistent depressive disorder impacts social and occupational func-\ntioning is likely to vary widely, but effects can be as great as or greater than those of major\ndepressive disorder.\n\n\n###",
+  "differentialDiagnosis": [],
+  "comorbidity": "In comparison to individuals with major depressive disorder, those with persistent de-\npressive disorder are at higher risk for psychiatric comorbidity in general, and for anxiety\ndisorders and substance use disorders in particular. Early-onset persistent depressive dis-\norder is strongly associated with DSM-IV Cluster B and C personality disorders.\nPremenstrual Dysphoric Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 213-216 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Criteria",
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:02:11.449069Z",
+  "extractionMetadata": null
+}

@@ -1,0 +1,56 @@
+{
+  "id": "1c63e1d4-0c35-4681-b619-ff9d2ea84797",
+  "name": "Sexual Sadism Disorder",
+  "code": "302.84 (F65.52)",
+  "category": "Sexual Sadism Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from the phys-\nical or psychological suffering of another person, as manifested by fantasies, urges, or\nbehaviors.\n\nB. The individual has acted on these sexual urges with a nonconsenting person, or the\nsexual urges or fantasies cause clinically significant distress or impairment in social,\noccupational, or other important areas of functioning.\n\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living\nin institutional or other settings where opportunities to engage in sadistic sexual behav-\niors are restricted.\n\nIn full remission: The individual has not acted on the urges with a nonconsenting per-\nson, and there has been no distress or impairment in social, occupational, or other ar-\neas of functioning, for at least 5 years while in an uncontrolled environment.\n\n696 Paraphilic Disorders",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The diagnostic criteria for sexual sadism disorder are intended to apply both to individuals\nwho freely admit to having such paraphilic interests and to those who deny any sexual interest\nin the physical or psychological suffering of another individual despite substantial objective\nevidence to the contrary. Individuals who openly acknowledge intense sexual interest in the\nphysical or psychological suffering of others are referred to as \u0022admitting individuals.\u0022 If these\nindividuals also report psychosocial difficulties because of their sexual attractions or prefer-\nences for the physical or psychological suffering of another individual, they may be diagnosed\nwith sexual sadism disorder. In contrast, if admitting individuals declare no distress, exempli-\nfied by anxiety, obsessions, guilt, or shame, about these paraphilic impulses, and are not ham-\npered by them in pursuing other goals, and their self-reported, psychiatric, or legal histories\nindicate that they do not act on them, then they could be ascertained as having sadistic sexual\ninterest but they would not meet criteria for sexual sadism disorder.\n\nExamples of individuals who deny any interest in the physical or psychological suffering\nof another individual include individuals known to have inflicted pain or suffering on mul-\ntiple victims on separate occasions but who deny any urges or fantasies about such sexual\nbehavior and who may further claim that known episodes of sexual assault were either un-\nintentional or nonsexual. Others may admit past episodes of sexual behavior involving the\ninfliction of pain or suffering on a nonconsenting individual but do not report any significant\nor sustained sexual interest in the physical or psychological suffering of another individual.\nSince these individuals deny having urges or fantasies involving sexual arousal to pain and\nsuffering, it follows that they would also deny feeling subjectively distressed or socially im-\npaired by such impulses. Such individuals may be diagnosed with sexual sadism disorder\ndespite their negative self-report. Their recurrent behavior constitutes clinical support for\nthe presence of the paraphilia of sexual sadism (by satisfying Criterion A) and simultane-\nously demonstrates that their paraphilically motivated behavior is causing clinically signif-\nicant distress, harm, or",
+  "associatedFeatures": "The extensive use of pornography involving the infliction of pain and suffering is some-\ntimes an associated feature of sexual sadism disorder.\n\n\n####",
+  "prevalence": "The population prevalence of sexual sadism disorder is unknown and is largely based on\nindividuals in forensic settings. Depending on the criteria for sexual sadism, prevalence\nvaries widely, from 2% to 30%. Among civilly committed sexual offenders in the United\nStates, less than 10% have sexual sadism. Among individuals who have committed sexu-\nally motivated homicides, rates of sexual sadism disorder range from 37% to 75%.\nPedophilic Disorder 697\n\n\n####",
+  "developmentAndCourse": "Individuals with sexual sadism in forensic samples are almost exclusively male, but a rep-\nresentative sample of the population in Australia reported that 2.2% of men and 1.3% of\nwomen said they had been involved in bondage and discipline, \u0022sadomasochism,\u0022 or dom-\ninance and submission in the previous year. Information on the development and course\nof sexual sadism disorder is extremely limited. One study reported that females became\naware of their sadomasochistic interest as young adults, and another reported that the\nmean age at onset of sadism in a group of males was 19.4 years. Whereas sexual sadism per\nse is probably a lifelong characteristic, sexual sadism disorder may fluctuate according to\nthe individual\u0027s subjective distress or his or her propensity to harm nonconsenting others.\nAdvancing age is likely to have the same reducing effect on this disorder as it has on other\nparaphilic or normophilic sexual behavior.\n\n\n####",
+  "riskAndPrognosticFactors": {
+    "temperamental": "[No data available for this section]",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]",
+  "differentialDiagnosis": [
+    "Many of the conditions that could be differential diagnoses for sexual sadism disorder\n(e.g., antisocial personality disorder, sexual masochism disorder, hypersexuality, sub-\nstance use disorders) sometimes occur also as comorbid diagnoses. Therefore, it is neces-\nsary to carefully evaluate the evidence for sexual sadism disorder, keeping the possibility\nof other paraphilias or mental disorders as part of the differential diagnosis. The majority\nof individuals who are active in community networks that practice sadistic and masoch-\nistic behaviors do not express any dissatisfaction with their sexual interests, and their be-\nhavior would not meet DSM-5 criteria for sexual sadism disorder. Sadistic interest, but not\nthe disorder, may be considered in the differential diagnosis.\n\n\n####"
+  ],
+  "comorbidity": "Known comorbidities with sexual sadism disorder are largely based on individuals (al-\nmost all males) convicted for criminal acts involving sadistic acts against nonconsenting\nvictims. Hence, these comorbidities might not apply to all individuals who never engaged\nin sadistic activity with a nonconsenting victim but who qualify for a diagnosis of sexual\nsadism disorder based on subjective distress over their sexual interest. Disorders that are\ncommonly comorbid with sexual sadism disorder include other paraphilic disorders.\nPedophilic Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 740-742 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:22:24.9437984Z",
+  "extractionMetadata": null
+}

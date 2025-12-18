@@ -1,0 +1,55 @@
+{
+  "id": "bb9831f5-9d8a-4598-81df-a2cd73af2d8a",
+  "name": "Oppositional Defiant Disorder",
+  "code": "313.81 (F91.3)",
+  "category": "Oppositional Defiant Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. A pattern of angry/irritable mood, argumentative/defiant behavior, or vindictiveness lasting\nat least 6 months as evidenced by at least four symptoms from any of the following cate-\ngorles, and exhibited during interaction with at least one individual who is not a sibling.\nAngry/Irritable Mood\n\n1\\. Often loses temper.\n\n2\\. Is often touchy or easily annoyed.\n\n3\\. Is often angry and resentful.\nArgumentative/Defiant Behavior\n\n4\\. Often argues with authority figures or, for children and adolescents, with adults.\n\n5\\. Often actively defies or refuses to comply with requests from authority figures or\nwith rules.\n\n6\\. Often deliberately annoys others.\n\n7\\. Often blames others for his or her mistakes or misbehavior.\n\nVindictiveness\n\n8\\. Has been spiteful or vindictive at least twice within the past 6 months.\n\nNote: The persistence and frequency of these behaviors should be used to distinguish\na behavior that is within normal limits from a behavior that is symptomatic. For children\nyounger than 5 years, the behavior should occur on most days for a period of at least\n6 months unless otherwise noted (Criterion A8). For individuals 5 years or older, the\nbehavior should occur at least once per week for at least 6 months, unless otherwise\nnoted (Criterion A8). While these frequency criteria provide guidance on a minimal lev-\nel of frequency to define symptoms, other factors should also be considered, such as\nwhether the frequency and intensity of the behaviors are outside a range that is nor-\nmative for the individual\u0027s developmental level,",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of oppositional defiant disorder is a frequent and persistent pattern\nof angry/irritable mood, argumentative/defiant behavior, or vindictiveness (Criterion\nA). It is not unusual for individuals with oppositional defiant disorder to show the behav-\nloral features of the disorder without problems of negative mood. However, Individuals\nwith the disorder who show the angryirritable mood symptoms typically show the be-\nhavioral features as well.\n\nThe symptoms of oppositional defiant disorder may be confined to only one setting,\nand this is most frequently the home. Individuals who show enough symptoms to meet\nthe diagnostic threshold, even if it is only at home, may be significantly impaired in their\nsocial functioning. However, in more severe cases, the symptoms of the disorder are pres-\nent in multiple settings. Given that the pervasiveness of symptoms is an indicator of the\nseverity of the disorder, it is critical that the individual\u0027s behavior be assessed across mul-\ntiple settings and relationships. Because these behaviors are common among siblings, they\nmust be observed during interactions with persons other than siblings. Also, because\nsymptoms of the disorder are typically more evident in interactions with adults or peers\nwhom the individual knows well, they may not be apparent during a clinical examination.\nThe symptoms of oppositional defiant disorder can occur to some degree in individu-\nals without this disorder. There are several key considerations for determining if the be-\nhaviors are symptomatic of oppositional defiant disorder. First, the diagnostic threshold\nof four or more symptoms within the preceding 6 months must be met. Second, the per-\nsistence and frequency of the symptoms should exceed what is normative for an individ-\nual\u0027s age,",
+  "associatedFeatures": "In children and adolescents, oppositional defiant disorder is more prevalent in families in\nwhich child care is disrupted by a succession of different caregivers or in families in which\nharsh, inconsistent, or neglectful child-rearing practices are common. Two of the most\ncommon co-occurring conditions with oppositional defiant disorder are attention-deficit/\nhyperactivity disorder (ADHD) and conduct disorder (see the section \u0022",
+  "prevalence": "depending on the age and",
+  "developmentAndCourse": "The first symptoms of oppositional defiant disorder usually appear during the preschool\nyears and rarely later than early adolescence. Oppositional defiant disorder often precedes\nthe development of conduct disorder, especially for those with the childhood-onset type\nof conduct disorder. However, many children and adolescents with oppositional defiant\ndisorder do not subsequently develop conduct disorder. Oppositional defiant disorder\nalso conveys",
+  "riskAndPrognosticFactors": {
+    "temperamental": "[No data available for this section]",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "The prevalence of the disorder in children and adolescents is relatively consistent across\ncountries that differ in race and ethnicity.",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "When oppositional defiant disorder is persistent throughout development, individuals\nwith the disorder experience frequent conflicts with parents, teachers, supervisors, peers,\nand romantic partners. Such problems often result in significant impairments in the indi-\nvidual\u0027s emotional, social, academic, and occupational adjustment.\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": "Rates of oppositional defiant disorder are much higher in samples of children, adoles-\ncents, and adults with ADHD, and this may be the result of shared temperamental risk fac-\ntors. Also, oppositional defiant disorder often precedes conduct disorder, although this\nappears to be most common in children with the childhood-onset subtype. Individuals\nwith oppositional defiant disorder are also at increased risk for anxiety disorders and ma-\njor depressive disorder, and this seems largely attributable to the presence of the angry-\nIrritable mood symptoms. Adolescents and adults with oppositional defiant disorder also\nshow a higher rate of substance use disorders, although it is unclear if this association is in-\ndependent of the comorbidity with conduct disorder.\nIntermittent Explosive Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 507-511 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:26:48.2189103Z",
+  "extractionMetadata": null
+}

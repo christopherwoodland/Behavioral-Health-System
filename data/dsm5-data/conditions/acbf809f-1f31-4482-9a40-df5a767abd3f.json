@@ -1,0 +1,56 @@
+{
+  "id": "acbf809f-1f31-4482-9a40-df5a767abd3f",
+  "name": "Rapid Eye Movement Sleep Behavior Disorder",
+  "code": "327.42 (G47.52)",
+  "category": "Rapid Eye Movement Sleep Behavior Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Repeated episodes of arousal during sleep associated with vocalization and/or com-\nplex motor behaviors.\n\nB. These behaviors arise during rapid eye movement (REM) sleep and therefore usually\noccur more than 90 minutes after sleep onset, are more frequent during the later por-\ntions of the sleep period, and uncommonly occur during daytime naps.\n\n408 Sleep-Wake Disorders\n\nC. Upon awakening from these episodes, the individual is completely awake, alert, and\nnot confused or disoriented.\n\nD. Either of the following:\n\n1\\. REM sleep without atonia on polysomnographic recording.\n\n2\\. A history suggestive of REM sleep behavior disorder and an established synuclein-\nopathy diagnosis (e.g., Parkinson\u0027s disease, multiple system atrophy).\n\nE. The behaviors cause clinically significant distress or impairment in social, occupa-\ntional, or other important areas of functioning (which may include injury to self or the\nbed partner).\n\nF. The disturbance is not attributable to the physiological effects of a substance (e.g., a\ndrug of abuse, a medication) or another medical condition.\n\nG. Coexisting mental and medical disorders do not explain the episodes.\n\n\n##",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential feature of rapid eye movement (REM) sleep behavior disorder is repeated\nepisodes of arousal, often associated with vocalizations and/or complex motor behaviors\narising from REM sleep (Criterion A). These behaviors often reflect motor responses to the\ncontent of action-filled or violent dreams of being attacked or trying to escape from a\nthreatening situation, which may be termed dream enacting behaviors. The vocalizations are\noften loud, emotion-filled, and profane. These behaviors may be very bothersome to the\nindividual and the bed partner and may result in significant injury (e.g., falling, jumping,\nor flying out of bed; running, punching, thrusting, hitting, or kicking). Upon awakening,\nthe individual is immediately awake, alert, and oriented (Criterion C) and is often able to\nrecall dream mentation, which closely correlates with the observed behavior. The eyes\ntypically remain closed during these events. The diagnosis of REM sleep behavior disor-\nder requires clinically significant distress or impairment (Criterion E); this determination\nwill depend on a number of factors, including the frequency of events, the potential for vi-\nolence or injurious behaviors, embarrassment, and distress in other household members.\n\n\n###",
+  "associatedFeatures": "Severity determination is best made based on the nature or consequence of the behavior\nrather than simply on frequency. Although the behaviors are typically prominent and vi-\nolent, lesser behaviors may also occur.\n\n\n###",
+  "prevalence": "The prevalence of REM sleep behavior disorder is approximately 0.38%-0.5% in the gen-\neral population. Prevalence in patients with psychiatric disorders may be greater, possibly\nrelated to medications prescribed for the psychiatric disorder.\n\n\n###",
+  "developmentAndCourse": "The onset of REM sleep behavior disorder may be gradual or rapid, and the course is usu-\nally progressive. REM sleep behavior disorder associated with neurodegenerative disor-\nders may improve as the underlying neurodegenerative disorder progresses. Because of\nthe very high association with the later appearance of an underlying neurodegenerative\ndisorder, most notably one of the synucleinopathies (Parkinson\u0027s disease, multiple system\natrophy, or major or mild neurocognitive disorder with Lewy bodies), the neurological\nstatus of individuals with REM sleep behavior disorder should be closely monitored.\nREM sleep behavior disorder overwhelmingly affects males older than 50 years, but in-\ncreasingly this disorder is being identified in females and in younger individuals. Symp-\nRapid Eye Movement Sleep Behavior Disorder 409\n\ntoms in young individuals, particularly young females, should raise the possibility of\nnarcolepsy or medication-induced REM sleep behavior disorder.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. Many widely prescribed medications, including tricyclic\nantidepressants, selective serotonin reuptake inhibitors, serotonin-norepinephrine reup-\ntake inhibitors, and beta-blockers, may result in polysomnographic evidence of REM sleep\nwithout atonia and in frank REM sleep behavior disorder. It is not known whether the\nmedications per se result in REM sleep behavior disorder or they unmask an underlying\npredisposition.\n\n\n### Diagnostic Markers\n\nAssociated laboratory findings from polysomnography indicate increased tonic and/or\nphasic electromyographic activity during REM sleep that is normally associated with mus-\ncle atonia. The increased muscle activity variably affects different muscle groups, mandating\nmore extensive electromyographic monitoring than is employed in conventional sleep stud-\nies. For this reason, it is suggested that electromyographic monitoring include the submen-\ntalis, bilateral extensor digitorum, and bilateral anterior tibialis muscle groups. Continuous\nvideo monitoring is mandatory. Other polysomnographic findings may include very fre-\nquent periodic and aperiodic extremity electromyography activity during non-REM\n(NREM) sleep. This polysomnography observation, termed REM sleep without atonia, is pres-\nent in virtually all cases of REM sleep behavior disorder but may also be an asymptomatic\npolysomnographic finding. Clinical dream-enacting behaviors coupled with the polysom-\nnographic finding of REM without atonia is necessary for the diagnosis of REM sleep behav-\nior disorder. REM sleep without atonia without a clinical history of dream-enacting\nbehaviors is simply an asymptomatic polysomnographic observation. It is not known\nwhether isolated REM sleep without atonia is a precursor to REM sleep behavior disorder.\n\n\n####",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n#####",
+  "suicideRisk": "[No data available for this section]\n\n\n######",
+  "functionalConsequences": "REM sleep behavior disorder may occur in isolated occasions in otherwise unaffected in-\ndividuals. Embarrassment concerning the episodes can impair social relationships. Indi-\nviduals may avoid situations in which others might become aware of the disturbance,\nvisiting friends overnight, or sleeping with bed partners. Social isolation or occupational\ndifficulties can result. Uncommonly, REM sleep behavior disorder may result in serious\ninjury to the victim or to the bed partner.\n\n\n#####",
+  "differentialDiagnosis": [
+    "Other parasomnias. Confusional arousals, sleepwalking, and sleep terrors can easily be\nconfused with REM sleep behavior disorder. In general, these disorders occur in younger\nindividuals. Unlike REM sleep behavior disorder, they arise from deep NREM sleep and\ntherefore tend to occur in the early portion of the sleep period. Awakening from a confu-\nsional arousal is associated with confusion, disorientation, and incomplete recall of dream\nmentation accompanying the behavior. Polysomnographic monitoring in the disorders of\narousal reveals normal REM atonia.\n\nNocturnal seizures. Nocturnal seizures may perfectly mimic REM sleep behavior disor-\nder, but the behaviors are generally more stereotyped. Polysomnographic monitoring em-\nploying a full electroencephalographic seizure montage may differentiate the two. REM\nsleep without atonia is not present on polysomnographic monitoring.\n410 Sleep-Wake Disorders\n\nObstructive sleep apnea. Obstructive sleep apnea may result in behaviors indistin-\nguishable from REM sleep behavior disorder. Polysomnographic monitoring is necessary\nto differentiate between the two. In this case, the symptoms resolve following effective\ntreatment of the obstructive sleep apnea, and REM sleep without atonia is not present on\npolysomnography monitoring.\n\nOther specified dissociative disorder (sleep-related psychogenic dissociative disorder).\nUnlike virtually all other parasomnias, which arise precipitously from NREM or REM\nsleep, psychogenic dissociative behaviors arise from a period of well-defined wakefulness\nduring the sleep period. Unlike REM sleep behavior disorder, this condition is more prev-\nalent in young females.\n\nMalingering. Many cases of malingering in which the individual reports problematic\nsleep movements perfectly mimic the clinical features of REM sleep behavior disorder,\nand polysomnographic documentation is mandatory.\n\n\n###"
+  ],
+  "comorbidity": "REM sleep behavior disorder is present concurrently in approximately 30% of patients\nwith narcolepsy. When it occurs in narcolepsy, the demographics reflect the younger age\nrange of narcolepsy, with equal frequency in males and females. Based on findings from\nindividuals presenting to sleep clinics, most individuals (\u003E50%) with initially \u0022idiopathic\u0022\nREM sleep behavior disorder will eventually develop a neurodegenerative disease-most\nnotably, one of the synucleinopathies (Parkinson\u0027s disease, multiple system atrophy, or\nmajor or mild neurocognitive disorder with Lewy bodies). REM sleep behavior disorder\noften predates any other sign of these disorders by many years (often more than a decade).\nRelationship to International Classification of\nSleep Disorders\n\nREM sleep behavior disorder is virtually identical to REM sleep behavior disorder in the\nInternational Classification of Sleep Disorders, 2nd Edition (ICSD-2).\nRestless Legs Syndrome\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 452-455 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-05T01:46:07.3248464Z",
+  "extractionMetadata": null
+}

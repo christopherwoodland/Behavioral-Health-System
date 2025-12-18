@@ -1,0 +1,56 @@
+{
+  "id": "1412bc12-82dd-409d-80b6-d32d4fb7b401",
+  "name": "Fetishistic Disorder",
+  "code": "302.81 (F65.0)",
+  "category": "Fetishistic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from either\nthe use of nonliving objects or a highly specific focus on nongenital body part(s), as\nmanifested by fantasies, urges, or behaviors.\n\nB. The fantasies, sexual urges, or behaviors cause clinically significant distress or impair-\nment in social, occupational, or other important areas of functioning.\n\nC. The fetish objects are not limited to articles of clothing used in cross-dressing (as in\ntransvestic disorder) or devices specifically designed for the purpose of tactile genital\nstimulation (e.g., vibrator).\n\nSpecify:\n\nBody part(s)\nNonliving object(s)\n\nOther\n\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living\nin institutional or other settings where opportunities to engage in fetishistic behaviors\nare restricted.\n\nIn full remission: There has been no distress or impairment in social, occupational,\nor other areas of functioning for at least 5 years while in an uncontrolled environment.\n\nFetishistic Disorder 701\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The paraphilic focus of fetishistic disorder involves the persistent and repetitive use of or de-\npendence on nonliving objects or a highly specific focus on a (typically nongenital) body part\nas primary elements associated with sexual arousal (Criterion A). A diagnosis of fetishistic dis-\norder must include clinically significant personal distress or psychosocial role impairment\n(Criterion B). Common fetish objects include female undergarments, male or female footwear,\nrubber articles, leather clothing, or other wearing apparel. Highly eroticized body parts asso-\nciated with fetishistic disorder include feet, toes, and hair. It is not uncommon for sexualized\nfetishes to include both inanimate objects and body parts (e.g., dirty socks and feet), and for\nthis reason the definition of fetishistic disorder now re-incorporates partialism (i.e., an exclusive\nfocus on a body part) into its boundaries. Partialism, previously considered a paraphilia not\notherwise specified disorder, had historically been subsumed in fetishism prior to DSM-III.\nMany individuals who self-identify as fetishist practitioners do not necessarily report\nclinical impairment in association with their fetish-associated behaviors. Such individuals\ncould be considered as having a fetish but not fetishistic disorder. A diagnosis of fetishistic\ndisorder requires concurrent fulfillment of both the behaviors in Criterion A and the clin-\nically significant distress or impairment in functioning noted in Criterion B.\n\n\n###",
+  "associatedFeatures": "Fetishistic disorder can be a multisensory experience, including holding, tasting, rubbing,\ninserting, or smelling the fetish object while masturbating, or preferring that a sexual part-\nner wear or utilize a fetish object during sexual encounters. Some individuals may acquire\nextensive collections of highly desired fetish objects.\n\n\n###",
+  "prevalence": "[No data available for this section]",
+  "developmentAndCourse": "Usually paraphilias have an onset during puberty, but fetishes can develop prior to ado-\nlescence. Once established, fetishistic disorder tends to have a continuous course that fluc-\ntuates in intensity and frequency of urges or behavior.",
+  "riskAndPrognosticFactors": {
+    "temperamental": "[No data available for this section]\n\n\n####",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Knowledge of and appropriate consideration for normative aspects of sexual behavior are\nimportant factors to explore to establish a clinical diagnosis of fetishistic disorder and to\ndistinguish a clinical diagnosis from a socially acceptable sexual behavior.",
+  "genderRelatedIssues": "Fetishistic disorder has not been systematically reported to occur in females. In clinical\nsamples, fetishistic disorder is nearly exclusively reported in males.\n\n\n####",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "Typical impairments associated with fetishistic disorder include sexual dysfunction\nduring romantic reciprocal relationships when the preferred fetish object or body part is\n702 Paraphilic Disorders\n\nunavailable during foreplay or coitus. Some individuals with fetishistic disorder may pre-\nfer solitary sexual activity associated with their fetishistic preference(s) even while in-\nvolved in a meaningful reciprocal and affectionate relationship.\n\nAlthough fetishistic disorder is relatively uncommon among arrested sexual offenders\nwith paraphilias, males with fetishistic disorder may steal and collect their particular fe-\ntishistic objects of desire. Such individuals have been arrested and charged for nonsexual\nantisocial behaviors (e.g., breaking and entering, theft, burglary) that are primarily moti-\nvated by the fetishistic disorder.\n\n\n####",
+  "differentialDiagnosis": [
+    "Transvestic disorder. The nearest diagnostic neighbor of fetishistic disorder is transves-\ntic disorder. As noted in the diagnostic criteria, fetishistic disorder is not diagnosed when\nfetish objects are limited to articles of clothing exclusively worn during cross-dressing (as\nin transvestic disorder), or when the object is genitally stimulating because it has been de-\nsigned for that purpose (e.g., a vibrator).\n\nSexual masochism disorder or other paraphilic disorders. Fetishes can co-occur with\nother paraphilic disorders, especially \u0022sadomasochism\u0022 and transvestic disorder. When\nan individual fantasizes about or engages in \u0022forced cross-dressing\u0022 and is primarily sex-\nually aroused by the domination or humiliation associated with such fantasy or repetitive\nactivity, the diagnosis of sexual masochism disorder should be made.\n\nFetishistic behavior without fetishistic disorder. Use of a fetish object for sexual arousal\nwithout any associated distress or psychosocial role impairment or other adverse conse-\nquence would not meet criteria for fetishistic disorder, as the threshold required by Crite-\nrion B would not be met. For example, an individual whose sexual partner either shares or\ncan successfully incorporate his interest in caressing, smelling, or licking feet or toes as an\nimportant element of foreplay would not be diagnosed with fetishistic disorder; nor\nwould an individual who prefers, and is not distressed or impaired by, solitary sexual be-\nhavior associated with wearing rubber garments or leather boots.\n\n\n#####"
+  ],
+  "comorbidity": "Fetishistic disorder may co-occur with other paraphilic disorders as well as hypersexual-\nity. Rarely, fetishistic disorder may be associated with neurological conditions.\nTransvestic Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 745-747 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:05:34.7518653Z",
+  "extractionMetadata": null
+}

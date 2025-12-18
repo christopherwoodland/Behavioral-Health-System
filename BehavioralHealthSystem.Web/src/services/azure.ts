@@ -37,6 +37,29 @@ export const uploadToAzureBlob = async (
     ? file
     : new File([file], fileName, { type: file.type || 'audio/wav' });
 
+  // Validate file has content
+  if (fileToUpload.size === 0) {
+    console.error('🔴 uploadToAzureBlob: File is empty!', {
+      originalType: file instanceof File ? 'File' : 'Blob',
+      originalSize: file.size,
+      fileName,
+      fileType: fileToUpload.type
+    });
+    throw createAppError(
+      'UPLOAD_ERROR',
+      'Cannot upload empty file. Audio conversion may have failed.',
+      { fileName, fileSize: 0 }
+    );
+  }
+
+  console.log('🟢 uploadToAzureBlob: Uploading file', {
+    fileName,
+    fileSize: fileToUpload.size,
+    fileType: fileToUpload.type,
+    userId: effectiveUserId,
+    sessionId
+  });
+
   onProgress?.(20);
 
   // Build upload URL with query parameters

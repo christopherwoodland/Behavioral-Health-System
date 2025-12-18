@@ -1,0 +1,56 @@
+{
+  "id": "37de013f-f8fa-4f79-95f9-2ccf74ac1dbe",
+  "name": "Delayed Ejaculation",
+  "code": "302.74 (F52.32)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Either of the following symptoms must be experienced on almost all or all occasions\n(approximately 75%-100%) of partnered sexual activity (in identified situational con-\ntexts or, if generalized, in all contexts), and without the individual desiring delay:\n\n1\\. Marked delay in ejaculation.\n\n2\\. Marked infrequency or absence of ejaculation.\n\nB. The symptoms in Criterion A have persisted for a minimum duration of approximately\n6 months.\n\nC. The symptoms in Criterion A cause clinically significant distress in the individual.\n\nD. The sexual dysfunction is not better explained by a nonsexual mental disorder or as a\nconsequence of severe relationship distress or other significant stressors and is not at-\ntributable to the effects of a substance/medication or another medical condition.\n\nSpecify whether:\n\nLifelong: The disturbance has been present since the individual became sexually active.\nAcquired: The disturbance began after a period of relatively normal sexual function.\nSpecify whether:\n\nGeneralized: Not limited to certain types of stimulation, situations, or partners.\nSituational: Only occurs with certain types of stimulation, situations, or partners.\nSpecify current severity:\n\nMild: Evidence of mild distress over the symptoms in Criterion A.\nModerate: Evidence of moderate distress over the symptoms in Criterion A.\nSevere: Evidence of severe or extreme distress over the symptoms in Criterion A.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The distinguishing feature of delayed ejaculation is a marked delay in or inability to\nachieve ejaculation (Criterion A). The man reports difficulty or inability to ejaculate de-\nspite the presence of adequate sexual stimulation and the desire to ejaculate. The present-\ning complaint usually involves partnered sexual activity. In most cases, the diagnosis will\nbe made by self-report of the individual. The definition of \u0022delay\u0022 does not have precise\nboundaries, as there is noconsensus as to what constitutes a reasonable time to reach or-\ngasm or what is unacceptably long for most men and their sexual partners.\n\n\n###",
+  "associatedFeatures": "The man and his partner may report prolonged thrusting to achieve orgasm to the point of\nexhaustion or genital discomfort and then ceasing efforts. Some men may report avoiding\nDelayed Ejaculation 425\n\nsexual activity because of a repetitive pattern of difficulty ejaculating. Some sexual partners\nmay report feeling less sexually attractive because their partner cannot ejaculate easily.\n\nIn addition to the subtypes \u0022lifelong/acquired\u0022 and \u0022generalized/situational,\u0022 the fol-\n\nlowing five factors must be considered during assessment and diagnosis of delayed ejacu-\nlation, given that they may be relevant to etiology and/or treatment: 1) partner factors (e.g.,\npartner\u0027s sexual problems, partner\u0027s health status); 2) relationship factors (e.g., poor com-\nmunication, discrepancies in desire for sexual activity); 3) individual vulnerability factors\n(e.g., poor body image; history of sexual or emotional abuse), psychiatric",
+  "prevalence": "least common male sexual complaint. Only 75% of men report always ejaculating during\nsexual activity, and less than 1% of men will complain of problems with reaching ejacula-\ntion that last more than 6 months.\n\n\n###",
+  "developmentAndCourse": "Lifelong delayed ejaculation begins with early sexual experiences and continues through-\nout life. By definition, acquired delayed ejaculation begins after a period of normal sexual\nfunction. There is minimal evidence concerning the course of acquired delayed ejacula-\ntion. The prevalence of delayed ejaculation appears to remain relatively constant until\naround age 50 years, when the incidence begins to increase significantly. Men in their 80s\nreport twice as much difficulty ejaculating as men younger than 59 years.\n\n\n####",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. Age-related loss of the fast-conducting peripheral sensory\nnerves and age-related decreased sex steroid secretion may be associated with the increase\nin delayed ejaculation in men older than 50 years.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Complaints of ejaculatory delay vary across countries and cultures. Such complaints are\nmore common among men in Asian populations than in men living in Europe, Australia,\nor the United States. This variation may be attributable to cultural or genetic differences\nbetween cultures.\n\n\n###",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n####",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "##### Difficulty with ejaculation may contribute to difficulties in conception. Delayed ejacula- tion is often associated with considerable psychological distress in one or both partners.",
+  "differentialDiagnosis": [
+    "Another medical condition. The major differential diagnosis is between delayed ejacu-\nlation fully explained by another medical illness or injury and delayed ejaculation with a\npsychogenic, idiopathic, or combined psychological and medical etiology. A situational\naspect to the complaint is suggestive of a psychological basis for the problem (e.g., men\nwho can ejaculate during sexual activity with one sex but not the other; men who can ejac-\nulate with one partner but not another of the same sex; men with paraphilic arousal pat-\n426 Sexual Dysfunctions\n\nters; men who require highly ritualized activity to ejaculate during partnered sexual\nactivity). Another medical illness or injury may produce delays in ejaculation independent\nof psychological issues. For example, inability to ejaculate can be caused by interruption of\nthe nerve supply to the genitals, such as can occur after traumatic surgical injury to the\nlumbar sympathetic ganglia, abdominoperitoneal surgery, or lumbar sympathectomy.\nEjaculation is thought to be under autonomic nervous system control involving the hypo-\ngastric (sympathetic) and pudendal (parasympathetic) nerves. A number of neurodegen-\nerative diseases, such as multiple sclerosis and diabetic and alcoholic neuropathy, can\ncause inability to ejaculate. Delayed ejaculation should also be differentiated from retro-\ngrade ejaculation (i.e., ejaculation into the bladder), which may follow transurethral pros-\ntatic resection.\n\nSubstance/medication use. A number of pharmacological agents, such as antidepres-\nsants, antipsychotics, alpha sympathetic drugs, and opioid drugs, can cause ejaculatory\nproblems.\n\nDysfunction with orgasm. It is important in the history to ascertain whether the com-\nplaint concerns delayed ejaculation or the sensation of orgasm, or both. Ejaculation occurs\nin the genitals, whereas the experience of orgasm is believed to be primarily subjective.\nEjaculation and orgasm usually occur together but not always. For example, a man with a\nnormal ejaculatory pattern may complain of decreased pleasure (i.e., anhedonic ejacula-\ntion). Such a complaint would not be coded as delayed ejaculation but could be coded as\nother specified sexual dysfunction or unspecified sexual dysfunction."
+  ],
+  "comorbidity": "There is some evidence to suggest that delayed ejaculation may be more common in severe\nforms of major depressive disorder.\nErectile Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 469-471 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:05:01.2196061Z",
+  "extractionMetadata": null
+}

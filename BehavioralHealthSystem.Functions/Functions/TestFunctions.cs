@@ -455,6 +455,14 @@ public class TestFunctions
                 return badRequestResponse;
             }
 
+            // Log detailed request information for debugging
+            _logger.LogInformation("[{FunctionName}] Received request body: {RequestBody}", nameof(SubmitPrediction), requestBody);
+            _logger.LogInformation("[{FunctionName}] Deserialized request - SessionId: {SessionId}, AudioFileUrl: '{AudioFileUrl}', AudioData length: {AudioDataLength}",
+                nameof(SubmitPrediction),
+                predictionRequest.SessionId ?? "(null)",
+                predictionRequest.AudioFileUrl ?? "(null/empty)",
+                predictionRequest.AudioData?.Length ?? 0);
+
             if (string.IsNullOrEmpty(predictionRequest.SessionId))
             {
                 _logger.LogWarning("[{FunctionName}] SessionId is required for prediction submission", nameof(SubmitPrediction));

@@ -1,0 +1,56 @@
+{
+  "id": "18e5a257-fb36-44b6-957d-26620dfea1a2",
+  "name": "Pedophilic Disorder",
+  "code": "302.2 (F65.4)",
+  "category": "Pedophilic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent, intense sexually arousing fantasies, sex-\nual urges, or behaviors involving sexual activity with a prepubescent child or children\n(generally age 13 years or younger).\n\nB. The Individual has acted on these sexual urges, or the sexual urges or fantasies cause\nmarked distress or interpersonal difficulty.\n\nC. The individual is at least age 16 years and at least 5 years older than the child or chil-\ndren in Criterion A.\n\nNote: Do not include an individual in late adolescence involved in an ongoing sexual\nrelationship with a 12- or 13-year-old.\n\nSpecify whether.\n\nExclusive type (attracted only to children)\n\nNonexclusive type\n698 Paraphilic Disorders\nSpecify if:\nSexually attracted to males\nSexually attracted to females\nSexually attracted to both\nSpecify if:\nLimited to Incest",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The diagnostic criteria for pedophilic disorder are intended to apply both to individuals who\nfreely disclose this paraphilia and to individuals who deny any sexual attraction to prepuber-\ntal children (generally age 13 years or younger), despite substantial objective evidence to the\ncontrary. Examples of disclosing this paraphilia include candidly acknowledging an Intense\nsexual interest in children and indicating that sexual interest in children is greater than or equal\nto sexual interest in physically mature individuals. If individuals also complain that their sex-\nual attractions or preferences for children are causing psychosocial difficulties, they may be di-\nagnosed with pedophilic disorder. However, if they report an absence of feelings of guilt,\nshame, or anxiety about these impulses and are not",
+  "associatedFeatures": "The extensive use of pornography depicting prepubescent children is a useful diagnostic\nIndicator of pedophilic disorder. This is a specific instance of the general case that individ-\nuals are likely to choose the kind of pornography that corresponds to their sexual interests.\n\n\n###",
+  "prevalence": "The population prevalence of pedophilic disorder is unknown. The highest possible prev-\nalence for pedophilic disorder in the male population is approximately 3%-5%. The pop-\nulation prevalence of pedophilic disorder in females is even more uncertain, but it is likely\na small fraction of the prevalence in males.\n\nPedophilic Disorder 699\n\n\n##",
+  "developmentAndCourse": "Adult males with pedophilic disorder may indicate that they become aware of strong or\npreferential sexual interest in children around the time of puberty-the same time frame\nin which males who later prefer physically mature partners became aware of their sexual\nInterest in women or men. Attempting to diagnose pedophilic disorder at the age at which\nit first manifests is problematic because of the difficulty during adolescent development in\ndifferentiating it from age-appropriate sexual interest in peers or from sexual curiosity.\nHence, Criterion C requires for diagnosis a minimum age of 16 years and at least 5 years\nolder than the child or children in Criterion A.\n\nPedophilia per se appears to be a lifelong condition. Pedophilic disorder, however,\nnecessarily includes other elements that may change over time with or without treatment:\nsubjective distress (e.g., guilt, shame, intense sexual frustration, or feelings of isolation) or\npsychosocial impairment, or the propensity to act out sexually with children, or both.\nTherefore, the course of pedophilic disorder may fluctuate, Increase, or decrease with age.\nAdults with pedophilic disorder may report an awareness of sexual interest in children\nthat preceded engaging in sexual behavior involving children or self-Identification as a pedo-\nphile. Advanced age is as likely to similarly diminish the frequency of sexual behavior involv-\ning children as it does other paraphilically motivated and normophilic sexual behavior.\n\n\n##",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. There appears to be an interaction between pedophilia and antisocial-\nity, such that males with both traits are more likely to act out sexually with children. Thus,\nantisocial personality disorder may be considered a risk factor for pedophilic disorder in\nmales with pedophilia.\n\nEnvironmental. Adult males with pedophilia often report that they were sexually abused\nas children. It is unclear, however, whether this correlation reflects a causal influence of\nchildhood sexual abuse on adult pedophilia.\n\nGenetic and physiological. Since pedophilia is a necessary condition for pedophilic dis-\norder, any factor that increases the probability of pedophilia also increases the risk of pe-\ndophilic disorder. There is some evidence that neurodevelopmental perturbation in utero\nincreases the probability of development of a pedophilic Interest.\n\n\n##",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]\n\n\n###",
+  "genderRelatedIssues": "Psychophysiological laboratory measures of sexual interest, which are sometimes useful in di-\nagnosing pedophilic disorder in males, are not necessarily useful in diagnosing this disorder in\nfemales, even when an identical procedure (e.g., viewing time) or analogous procedures (e.g.,\npenile plethysmography and vaginal photoplethysmography) are available.\n\n\n### Diagnostic Markers\n\nPsychophysiological measures of sexual interest may sometimes be useful when an indi-\nvidual\u0027s history suggests the possible presence of pedophilic disorder but the individual\ndenies strong or preferential attraction to children. The most thoroughly researched and\nlongest used of such measures is penile plethysmography, although the sensitivity and spec-\nificity of diagnosis may vary from one site to another. Viewing time, using photographs of\nnude or minimally clothed persons as visual stimuli, is also used to diagnose pedophilic\ndisorder, especially in combination with self-report measures. Mental health professionals\nin the United States, however, should be aware that possession of such visual stimuli, even\nfor diagnostic purposes, may violate American law regarding possession of child pornog-\nraphy and leave the mental health professional susceptible to criminal prosecution.\n\n700 Paraphilic Disorders\n\n\n###",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]\n\n\n###",
+  "differentialDiagnosis": [
+    "Many of the conditions that could be differential diagnoses for pedophilic disorder also\nsometimes occur as comorbid diagnoses. It is therefore generally necessary to evaluate the\nevidence for pedophilic disorder and other possible conditions as separate questions.\nAntisocial personality disorder. This disorder increases the likelihood that a person who\nis primarily attracted to the mature physique will approach a child, on one or a few occa-\nsions, on the basis of relative availability. The individual often shows other signs of this\npersonality disorder, such as recurrent law-breaking.\n\nAlcohol and substance use disorders. The disinhibiting effects of intoxication may also\nincrease the likelihood that a person who is primarily attracted to the mature physique will\nsexually approach a child.\n\nObsessive-compulsive disorder. There are occasional individuals who complain about\nego-dystonic thoughts and worries about possible attraction to children. Clinical inter-\nviewing usually reveals an absence of sexual thoughts about children during high states of\nsexual arousal (e.g., approaching orgasm during masturbation) and sometimes additional\nego-dystonic, intrusive sexual ideas (e.g., concerns about homosexuality).\n\n\n###"
+  ],
+  "comorbidity": "Psychiatric comorbidity of pedophilic disorder includes substance use disorders; depres-\nsive, bipolar, and anxiety disorders; antisocial personality disorder, and other paraphilic\ndisorders. However, findings on comorbid disorders are largely among individuals con-\nvicted for sexual offenses involving children (almost all males) and may not be general-\nizable to other individuals with pedophilic disorder (e.g., Individuals who have never\napproached a child sexually but who qualify for the diagnosis of pedophilic disorder on\nthe basis of subjective distress).\n\nFetishistic Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 742-745 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:03:24.6355774Z",
+  "extractionMetadata": null
+}

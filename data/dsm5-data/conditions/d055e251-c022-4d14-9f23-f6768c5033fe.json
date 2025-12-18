@@ -1,0 +1,56 @@
+{
+  "id": "d055e251-c022-4d14-9f23-f6768c5033fe",
+  "name": "Restless Legs Syndrome",
+  "code": "333.94 (G25.81)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. An urge to move the legs, usually accompanied by or in response to uncomfortable and\nunpleasant sensations in the legs, characterized by all of the following:\n\n1\\. The urge to move the legs begins or worsens during periods of rest or Inactivity.\n\n2\\. The urge to move the legs is partially or totally relieved by movement.\n3\\. The urge to move the legs is worse in the evening or at night than during the day.\nor occurs only in the evening or at night.\n\nB. The symptoms in Criterion A occur at least three times per week and have persisted\nfor at least 3 months.\n\nC. The symptoms in Criterion A are accompanied by significant distress or impairment in\nsocial, occupational, educational, academic, behavioral, or other important areas of\nfunctioning.\n\nD. The symptoms in Criterion A are not attributable to another mental disorder or medical\ncondition (e.g., arthritis, leg edema, peripheral ischemia, leg cramps) and are not better\nexplained by a behavioral condition (e.g., positional discomfort, habitual foot tapping).\nE. The symptoms are not attributable to the physiological effects of a drug of abuse or\nmedication (e.g., akathisia).\n\nRestless Legs Syndrome 411",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Restless legs syndrome (RLS) is a sensorimotor, neurological sleep disorder characterized\nby a desire to move the legs or arms, usually associated with uncomfortable sensations\ntypically described as creeping, crawling, tingling, burning, or itching (Criterion A). The\ndiagnosis of RLS is based primarily on patient self-report and history. Symptoms are\nworse when the individual is at rest, and frequent movements of the legs occur in an effort\nto relieve the uncomfortable sensations. Symptoms are worse in the evening or night, and\nin some individuals they occur only in the evening or night. Evening worsening occurs in-\ndependently of any differences in activity. It is Important to differentiate RLS from other\nconditions such as positional discomfort and leg cramps (Criterion D).\nThe symptoms of RLS can delay sleep onset and awaken the individual from sleep and\nare associated with significant sleep fragmentation. The relief obtained from moving the\nlegs may no longer be apparent in severe cases. RLS is associated with daytime sleepiness\nand is frequently accompanied by significant clinical distress or",
+  "associatedFeatures": "Periodic leg movements in sleep (PLMS) can serve as corroborating evidence for RLS, with\nup to 90% of individuals diagnosed with RLS demonstrating PLMS when recordings are\ntaken over multiple nights. Periodic leg movements during wakefulness are supportive of\nan RLS diagnosis. Reports of difficulty initiating and maintaining sleep and of excessive\ndaytime sleepiness may also support the diagnosis of RLS. Additional supportive features\ninclude a family history of RLS among first-degree relatives and a reduction in symptoms,\nat least initially, with dopaminergic treatment.\n\n\n###",
+  "prevalence": "remaining stable or decreasing slightly in older age groups. Compared with nonfamilial\ncases, familial RLS usually has a younger age at onset and a slower progressive course. The\nclinical course of RLS differs by age at onset. When onset occurs before age 45, there is of-\nten a slow progression of symptoms. In late-onset RLS, rapid progression is typical, and\naggravating factors are common. Symptoms of RLS appear similar across the lifespan, re-\nmaining stable or decreasing slightly in older age groups.\n\nDiagnosis of RLS in children can be difficult because of the self-report component.\nWhile Criterion A for adults assumes that the description of \u0022urge to move\u0022 is by the pa-\ntient, pediatric diagnosis requires a description in the child\u0027s own words rather than by a\nparent or caretaker. Typically children age 6 years or older are able to provide detailed, ad-\nequate descriptors of RLS. However, children rarely use or understand the word \u0022urge,\u0022\nreporting instead that their legs \u0022have to\u0022 or \u0022got to\u0022 move. Also, potentially related to\nprolonged periods of sitting during class, two-thirds of children and adolescents report\ndaytime leg sensations. Thus, for diagnostic Criterion A3, it is Important to compare equal\n412 Sleep-Wake Disorders\n\nduration of sitting or lying down in the day to sitting or lying down in the evening or night.\nNocturnal worsening tends to persist even in the context of pediatric RLS. As with RLS in\nadults, there is a significant negative impact on sleep, mood, cognition, and function. Im-\npairment in children and adolescents is manifested more often in behavioral and educa-\ntional domains.\n\n\n###",
+  "developmentAndCourse": "The onset of RLS typically occurs in the second or third decade. Approximately 40% of in-\ndividuals diagnosed with RLS during adulthood report having experienced symptoms\nbefore age 20 years, and 20% report having experienced symptoms before age 10 years.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Genetic and physiological. Predisposing factors include female",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]\n\n\n####",
+  "genderRelatedIssues": "Although RLS is more prevalent in females than in males, there are no diagnostic differ-\nences according to gender. However, the prevalence of RLS during pregnancy is two to\nthree times greater than in the general population. RLS associated with pregnancy peaks\nduring the third trimester and improves or resolves in most cases soon after delivery. The\ngender difference in prevalence of RLS is explained at least in part by parity, with nullipa-\nrous females being at the same risk of RLS as age-matched males.\n\n\n#### Diagnostic Markers\n\nPolysomnography demonstrates significant abnormalities in RLS, commonly Increased\nlatency to sleep, and higher arousal index. Polysomnography with a preceding immobili-\nzation test may provide an indicator of the motor sign of RLS, periodic limb movements,\nunder standard conditions of sleep and during quiet resting, both of which can provoke RLS\nsymptoms.\n\n\n####",
+  "suicideRisk": "[No data available for this section]\n\n\n#####",
+  "functionalConsequences": "Forms of RLS severe enough to significantly impair functioning or associated with mental dis-\norders, including depression and anxiety, occur in approximately 2%-3% of the population.\nAlthough the impact of milder symptoms is less well characterized, individuals with\nRLS complain of disruption in at least one activity of daily living, with up to 50% reporting\nSubstance/Medication-Induced Sleep Disorder 413\n\na negative impact on mood, and 47.6% reporting a lack of energy. The most common conse-\nquences of RLS are sleep disturbance, Including reduced sleep time, sleep fragmentation,\nand overall disturbance; depression, generalized anxiety disorder, panic disorder, and post-\ntraumatic stress disorder; and quality-of-life impairments. RLS can result in daytime sleep-\nIness or fatigue and is frequently accompanied by significant distress or impairment in\naffective, social, occupational, educational, academic, behavioral, or cognitive functioning.\n\n\n####",
+  "differentialDiagnosis": [
+    "The most important conditions in the differential diagnosis of RLS are leg cramps, posi-\ntional discomfort, arthralgias/arthritis, myalgias, positional ischemia (numbness), leg\nedema, peripheral neuropathy, radiculopathy, and habitual foot tapping. \u0022Knotting\u0022 of\nthe muscle (cramps), relief with a single postural shift, limitation to joints, soreness to pal-\npation (myalgias), and other abnormalities on physical examination are not characteristic\nof RLS. Unlike RLS, nocturnal leg cramps do not typically present with the desire to move\nthe limbs nor are there frequent limb movements. Less common conditions to be differen-\ntiated from RLS Include neuroleptic-Induced akathisia, myelopathy, symptomatic venous\nInsufficiency, peripheral artery disease, eczema, other orthopedic problems, and anxiety-\nInduced restlessness. Worsening at night and periodic limb movements are more common\nin RLS than in medication-Induced akathisla or peripheral neuropathy.\n\nWhile is it important that RLS symptoms not be solely accounted for by another medical\nor behavioral condition, it should also be appreciated that any of these similar conditions can\noccur in an individual with RLS. This necessitates a separate focus on each possible condi-\ntion in the diagnostic process and when assessing impact. For cases in which the diagnosis of\nRLS is not certain, evaluation for the supportive features of RLS, particularly PLMS or a fam-\nily history of RLS, may be helpful. Clinical features, such as response to a dopaminergic\nagent and positive family history for RLS, can help with the differential diagnosis."
+  ],
+  "comorbidity": "Depressive disorders, anxiety disorders, and attentional disorders are commonly comor-\nbid with RLS and are discussed in the section \u0022Functional Consequences of Restless Legs\nSyndrome.\u0022 The main medical disorder comorbid with RLS is cardiovascular disease.\nThere may be an association with numerous other medical disorders, Including hyperten-\nsion, narcolepsy, migraine, Parkinson\u0027s disease, multiple sclerosis, peripheral neuropathy,\nobstructive sleep apnea, diabetes mellitus, fibromyalgia, osteoporosis, obesity, thyroid\ndisease, and cancer. Iron deficiency, pregnancy, and chronic renal failure are also comor-\nbid with RLS.\n\nRelationship to International Classification of\nSleep Disorders\n\nThe International Classification of Sleep Disorders, 2nd Edition (ICSD-2), presents similar diag-\nnostic criteria for RLS but does not contain a criterion specifying frequency or duration of\nsymptoms.\n\nSubstance/Medication-Induced Sleep Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 455-458 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-05T01:46:18.6670411Z",
+  "extractionMetadata": null
+}

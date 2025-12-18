@@ -1,0 +1,77 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "appName": {
+      "value": "bhs"
+    },
+    "resourceGroupName": {
+      "value": "bhs-development-private"
+    },
+    "tags": {
+      "value": {
+        "Application": "Behavioral Health System",
+        "Environment": "prod",
+        "ManagedBy": "Bicep",
+        "NetworkMode": "Private",
+        "DeploymentMode": "ContainerApps-PrivateLink",
+        "CostCenter": "Engineering",
+        "Project": "BHS"
+      }
+    },
+    "azureAdClientId": {
+      "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b"
+    },
+    "azureAdApiClientId": {
+      "value": "7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b"
+    },
+    "azureAdTenantId": {
+      "value": "36584371-2a86-4e03-afee-c2ba00e5e30e"
+    },
+    "containerImageTag": {
+      "value": "latest"
+    },
+    "openaiEndpoint": {
+      "value": ""
+    },
+    "azureOpenAIRealtimeDeployment": {
+      "value": "gpt-realtime"
+    },
+    "azureOpenAIRealtimeApiVersion": {
+      "value": "2025-04-01-preview"
+    },
+    "azureOpenAIResourceName": {
+      "value": "cwood-mgsuknv5-eastus2"
+    },
+    "azureOpenAIWebRTCRegion": {
+      "value": "eastus2"
+    },
+    "azureOpenAIRealtimeKey": {
+      "value": ""
+    },
+    "extendedAssessmentDeployment": {
+      "value": "gpt-5.2"
+    },
+    "agentModelDeployment": {
+      "value": "gpt-5.2"
+    },
+    "kintsugiApiKey": {
+      "value": ""
+    },
+    "kintsugiBaseUrl": {
+      "value": "https://api.kintsugihealth.com/v2"
+    },
+    "bandServiceUrl": {
+      "value": ""
+    },
+    "enableSmartBand": {
+      "value": false
+    }
+  }
+}

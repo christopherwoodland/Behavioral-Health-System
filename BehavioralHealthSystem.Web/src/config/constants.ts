@@ -20,10 +20,18 @@ export const config = {
     enableDebugLogging: env.ENABLE_DEBUG_LOGGING,
   },
   audio: {
-    acceptedFormats: ['.wav', '.mp3', '.m4a', '.aac', '.flac'],
+    acceptedFormats: ['.wav', '.mp3', '.m4a', '.aac', '.flac', '.mp4', '.webm', '.ogg'],
     maxFileSizeMB: 100,
     targetSampleRate: 44100,
     targetChannels: 1,
+    speechEnhancement: {
+      enabled: env.AUDIO_SPEECH_ENHANCEMENT_ENABLED,
+    },
+    silenceRemoval: {
+      enabled: env.AUDIO_SILENCE_REMOVAL_ENABLED,
+      thresholdDb: env.AUDIO_SILENCE_THRESHOLD_DB,
+      minDuration: env.AUDIO_SILENCE_MIN_DURATION,
+    },
   },
 } as const;
 

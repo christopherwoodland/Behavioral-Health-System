@@ -1,0 +1,56 @@
+{
+  "id": "550db06d-f950-4086-9a13-85b1fd92aac9",
+  "name": "Female Orgasmic Disorder",
+  "code": "302.73 (F52.31)",
+  "category": "Female Orgasmic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Presence of either of the following symptoms and experienced on almost all or all (ap-\nproximately 75%-100%) occasions of sexual activity (in identified situational contexts\n\nor, if generalized, in all contexts):\n\n1\\. Marked delay in, marked infrequency of, or absence of orgasm.\n2\\. Markedly reduced intensity of orgasmic sensations.\n\nB. The symptoms In Criterion A have persisted for a minimum duration of approximately\n6 months.\n\nC. The symptoms in Criterion A cause clinically significant distress in the individual.\n\nD. The sexual dysfunction is not better explained by a nonsexual mental disorder or as a\nconsequence of severe relationship distress (e.g., partner violence) or other significant\n430 Sexual Dysfunctions\n\nstressors and is not attributable to the effects of a substance/medication or another\nmedical condition.\n\nSpecify whether:\n\nLifelong: The disturbance has been present since the individual became sexually active.\nAcquired: The disturbance began after a period of relatively normal sexual function.\nSpecify whether.\n\nGeneralized: Not limited to certain types of stimulation, situations, or partners.\nSituational: Only occurs with certain types of stimulation, situations, or partners.\n\nSpecify if:\nNever experienced an orgasm under any situation.\n\nSpecify current severity:\n\nMild: Evidence of mild distress over the symptoms in Criterion A.\nModerate: Evidence of moderate distress over the symptoms in Criterion A.\nSevere: Evidence of severe or extreme distress over the symptoms in Criterion A.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Female orgasmic disorder is characterized by difficulty experiencing orgasm and/or\nmarkedly reduced intensity of orgasmic sensations (Criterion A). Women show wide varl-\nability in the type or intensity of stimulation that elicits orgasm. Similarly, subjective descrip-\ntions of orgasm are extremely varied, suggesting that it is experienced in very different\nways, both across women and on different occasions by the same woman. For a diagnosis\nof female orgasmic disorder, symptoms must be experienced on almost all or all (approx-\nimately 75%-100%) occasions of sexual activity (in identified situational contexts or, if\ngeneralized, in all contexts) and have a minimum duration of approximately 6 months.\nThe use of the minimum severity and duration criteria is intended to distinguish transient\norgasm difficulties from more persistent orgasmic dysfunction. The inclusion of \u0022approx-\nimately\u0022 in Criterion B allows for clinician judgment in cases in which symptom duration\ndoes not meet the recommended 6-month threshold.\n\nFor a woman to have a diagnosis of female orgasmic disorder, clinically significant dis-\ntress must accompany the symptoms (Criterion C). In many cases of orgasm problems, the\ncauses are multifactorial or cannot be determined. If female orgasmic disorder is deemed\nto be better explained by another mental disorder, the effects of a substance/medication,\nor a medical condition, then a diagnosis of female orgasmic disorder would not be made.\nFinally, if interpersonal or significant contextual factors, such as severe relationship dis-\ntress, intimate partner violence, or other significant stressors, are present, then a diagnosis\nof female orgasmic disorder would not be made.\n\nMany women require clitoral stimulation to reach orgasm, and a relatively small pro-\nportion of women report that they always experience orgasm during penile-vaginal inter-\ncourse. Thus, a woman\u0027s experiencing orgasm through clitoral stimulation but not during\nintercourse does not meet criteria for a clinical diagnosis of female orgasmic disorder. It is\nalso important to consider whether orgasmic difficulties are the result of inadequate sex-\nual stimulation; in these cases, there may still be a need for care, but a diagnosis of female\norgasmic disorder would not be made.\n\n\n###",
+  "associatedFeatures": "Associations between specific patterns of personality traits or psychopathology and orgas-\nmic dysfunction have generally not been supported. Compared with women without the\ndisorder, some women with female orgasmic disorder may have greater difficulty com-\nmunicating about sexual issues. Overall sexual satisfaction, however, is not strongly cor-\nrelated with orgasmic experience. Many women report high levels of sexual satisfaction\nFemale Orgasmic Disorder 431\n\ndespite rarely or never experiencing orgasm. Orgasmic difficulties in women often co-\noccur with problems related to sexual interest and arousal.\n\nIn addition to the subtypes \u0022lifelong/acquired\u0022 and \u0022generalized/situational,\u0022 the fol-\nlowing five factors must be considered during assessment and diagnosis of female orgas-\nmic disorder given that they may be relevant to etiology and/or treatment: 1) partner\nfactors (e.g., partner\u0027s sexual problems, partner\u0027s health status); 2) relationship factors\n(e.g., poor communication, discrepancies in desire for sexual activity); 3) individual vul-\nnerability factors (e.g., poor body image, history of sexual or emotional abuse), psychiatric\n\n\n###",
+  "prevalence": "Reported prevalence rates for female orgasmic problems in women vary widely, from 10%\nto 42%, depending on multiple factors (e.g., age,",
+  "developmentAndCourse": "By definition, lifelong female orgasmic disorder indicates that the orgasmic difficulties have\nalways been present, whereas the acquired subtype would be assigned if the woman\u0027s or-\ngasmic difficulties developed after a period of normal orgasmic functioning.\nA woman\u0027s first experience of orgasm can occur any time from the prepubertal period\nto well into adulthood. Women show a more variable pattern in age at first orgasm than do\nmen, and women\u0027s reports of having experienced orgasm increase with age. Many women\nlearn to experience orgasm as they experience a wide variety of stimulation and acquire\nmore knowledge about their bodies. Women\u0027s rates of orgasm consistency (defined as\n\u0022usually or always\u0022 experiencing orgasm) are higher during masturbation than during\nsexual activity with a partner.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. A wide range of psychological factors, such as anxiety and concerns\nabout pregnancy, can potentially interfere with a woman\u0027s ability to experience orgasm.\nEnvironmental. There is a strong association between relationship problems, physical\nhealth, and mental health and orgasm difficulties in women. Sociocultural factors (e.g.,",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "The degree to which lack of orgasm in women is regarded as a problem that requires treat-\nment may vary depending on cultural context. In addition, women differ in how Important\norgasm is to their sexual satisfaction. There may be marked sociocultural and generational\ndifferences in women\u0027s orgasmic ability. For example, the prevalence of inability to reach or-\ngasm has ranged from 17.7% (in Northern Europe) to 42.2% (in Southeast Asia).\n\n\n### Diagnostic Markers\n\nAlthough measurable physiological changes occur during female orgasm, including\nchanges in hormones, pelvic floor musculature, and brain activation, there is significant\nvariability in these indicators of orgasm across women. In clinical situations, the diagnosis\nof female orgasmic disorder is based on a woman\u0027s self-report.\n\n\n###",
+  "genderRelatedIssues": "[No data available for this section]\n\n\n####",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "The functional consequences of female orgasmic disorder are unclear. Although there is a\nstrong association between relationship problems and orgasmic difficulties in women, it is\nunclear whether relationship factors are risk factors for orgasmic difficulties or are conse-\nquences of those difficulties.\n\n\n####",
+  "differentialDiagnosis": [
+    "Nonsexual mental disorders. Nonsexual mental disorders, such as major depressive\ndisorder, which is characterized by markedly diminished interest or pleasure in all, or al-\nmost all, activities, may explain female orgasmic disorder. If the orgasmic difficulties are\nbetter explained by another mental disorder, then a diagnosis of female orgasmic disorder\nwould not be made.\n\nSubstance/medication-Induced sexual dysfunction. Substance/medication use may\nexplain the orgasmic difficulties.\n\nAnother medical condition. If the disorder is due to another medical condition (e.g.,\nmultiple sclerosis, spinal cord injury), then a diagnosis of female orgasmic disorder would\nnot be made.\n\nInterpersonal factors. If Interpersonal or significant contextual factors, such as severe\nrelationship distress, Intimate partner violence, or other significant stressors, are associ-\nated with the orgasmic difficulties, then a diagnosis of female orgasmic disorder would\nnot be made.\n\nOther sexual dysfunctions. Female orgasmic disorder may occur in association with other\nsexual dysfunctions (e.g., female sexual interest/arousal disorder). The presence of another\nsexual dysfunction does not rule out a diagnosis of female orgasmic disorder. Occasional or-\ngasmic difficulties that are short-term or infrequent and are not accompanied by clinically sig-\nnificant distress or Impairment are not diagnosed as female orgasmic disorder. A diagnosis is\nalso not appropriate if the problems are the result of inadequate sexual stimulation.\n\n\n#####"
+  ],
+  "comorbidity": "Women with female orgasmic disorder may have co-occurring sexual interest/arousal\ndifficulties. Women with diagnoses of other nonsexual mental disorders, such as major de-\npressive disorder, may experience lower sexual interest/arousal, and this may indirectly\n\nIncrease the likelihood of orgasmic difficulties.\nFemale Sexual Interest/Arousal Disorder 433\nFemale Sexual Interest/Arousal Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 474-478 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:04:50.0538768Z",
+  "extractionMetadata": null
+}

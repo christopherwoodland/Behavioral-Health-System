@@ -1,0 +1,56 @@
+{
+  "id": "7dac6ca1-5128-487b-b2c4-07d30233c38d",
+  "name": "Premenstrual Dysphoric Disorder",
+  "code": "625.4 (N94.3)",
+  "category": "Premenstrual Dysphoric Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. In the majority of menstrual cycles, at least five symptoms must be present in the final\nweek before the onset of menses, start to improve within a few days after the onset of\nmenses, and become minimal or absent in the week postmenses.\n\nB. One (or more) of the following symptoms must be present\n1\\. Marked affective lability (e.g., mood swings; feeling suddenly sad or tearful, or in-\ncreased sensitivity to rejection).\n\n172 Depressive Disorders\n\n2\\. Marked irritability or anger or increased interpersonal conflicts.\n\n3\\. Marked depressed mood, feelings of hopelessness, or self-deprecating thoughts.\n\n4\\. Marked anxiety, tension, and/or feelings of being keyed up or on edge.\n\nC. One (or more) of the following symptoms must additionally be present, to reach a total\nof five symptoms when combined with symptoms from Criterion B above.\n\n1\\. Decreased interest in usual activities (e.g., work, school, friends, hobbies).\n\n2\\. Subjective difficulty in concentration.\n\n3\\. Lethargy, easy fatigability, or marked lack of energy.\n\n4\\. Marked change in appetite; overeating; or specific food cravings.\n\n5\\. Hypersomnia or insomnia.\n\n6\\. A sense of being overwhelmed or out of control.\n\n7\\. Physical symptoms such as breast tenderness or swelling, joint or muscle pain, a\nsensation of \u0022bloating.\u0022 or weight gain.\n\nNote: The symptoms in Criteria A-C must have been met for most menstrual cycles that\noccurred in the preceding year.\n\nD. The symptoms are associated with clinically significant distress or Interference with\nwork, school, usual social activities, or relationships with others (e.g., avoidance of so-\ncial activities; decreased productivity and efficiency at work, school, or home).\n\nE. The disturbance is not merely an exacerbation of the symptoms of another disorder,\nsuch as major depressive disorder, panic disorder, persistent depressive disorder\n(dysthymia), or a personality disorder (although it may co-occur with any of these dis-\norders).\n\nF. Criterion A should be confirmed by prospective daily ratings during at least two symptom-\natic cycles. (Note: The diagnosis may be made provisionally prior to this confirmation.)\nG. The symptoms are not attributable to the physiological effects of a substance (e.g., a\ndrug of abuse, a medication, other treatment) or another medical condition (e.g., hy-\nperthyroidism).\n\n\n### Recording Procedures\n\nIf symptoms have not been confirmed by prospective daily ratings of at least two symp-\ntomatic cycles, \u0022provisional\u0022 should be noted after the name of the diagnosis (i.e., \u0022pre-\nmenstrual dysphoric disorder, provisional\u0022).",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "The essential features of premenstrual dysphoric disorder are the expression of mood la-\nbility, Irritability, dysphoria, and anxiety symptoms that occur repeatedly during the pre-\nmenstrual phase of the cycle and remit around the onset of menses or shortly thereafter.\nThese symptoms may be accompanied by behavioral and physical symptoms. Symptoms\nmust have occurred in most of the menstrual cycles during the past year and must have an\nadverse effect on work or social functioning. The intensity and/or expressivity of the ac-\ncompanying symptoms may be closely related to social and cultural background charac-\nteristics of the affected female, family perspectives, and more specific factors such as\nreligious beliefs, social tolerance, and female",
+  "associatedFeatures": "Delusions and hallucinations have been described in the late luteal phase of the menstrual\ncycle but are rare. The premenstrual phase has been considered by some to be a",
+  "prevalence": "feature of symptom expression during the premenstrual phase of the menstrual cycle, it is\ngenerally considered to be less severe than premenstrual dysphoric disorder. The pres-\nence of physical or behavioral symptoms in the premenstruum, without the required\naffective symptoms, likely meets criteria for premenstrual syndrome and not for premen-\nstrual dysphoric disorder.\n\nDysmenorrhea. Dysmenorrhea is a syndrome of painful menses, but this is distinct from a\nsyndrome characterized by affective changes. Moreover, symptoms of dysmenorrhea begin\nwith the onset of menses, whereas symptoms of premenstrual dysphoric disorder, by defini-\ntion, begin before the onset of menses, even if they linger into the first few days of menses.\nBipolar disorder, major depressive disorder, and persistent depressive disorder\n(dysthymia). Many women with (either naturally occurring or substance/medication-\nInduced) bipolar or major depressive disorder or persistent depressive disorder believe\nthat they have premenstrual dysphoric disorder. However, when they chart symptoms,\nthey realize that the symptoms do not follow a premenstrual pattem. Women with an-\nother mental disorder may experience chronic symptoms or intermittent symptoms that\nare unrelated to menstrual cycle phase. However, because the onset of menses constitutes\na memorable event, they may report that symptoms occur only during the premenstruum\nor that symptoms worsen premenstrually. This is one of the rationales for the requirement\nthat symptoms be confirmed by daily prospective ratings. The process of",
+  "developmentAndCourse": "Onset of premenstrual dysphoric disorder can occur at any point after menarche. Incl-\ndence of new cases over a 40-month follow-up period is 2.5% (95% confidence interval =\n1.7-3.7). Anecdotally, many individuals, as they approach menopause, report that symp-\ntoms worsen. Symptoms cease after menopause, although cyclical hormone replacement\ncan trigger the re-expression of symptoms.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Environmental. Environmental factors associated with the expression of premenstrual\ndysphoric disorder include stress, history of interpersonal trauma, seasonal changes, and\nsociocultural aspects of female sexual behavior in general, and female",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Premenstrual dysphoric disorder is not a culture-bound syndrome and has been observed\nin individuals in the United States, Europe, India, and Asia. It is unclear as to whether rates\ndiffer by race. Nevertheless, frequency, Intensity, and expressivity of symptoms and help-\nseeking patterns may be significantly influenced by cultural factors.\n\n\n### Diagnostic Markers\n\nAs Indicated earlier, the diagnosis of premenstrual dysphoric disorder is appropriately\nconfirmed by 2 months of prospective symptom ratings. A number of scales, Including the\n174 Depressive Disorders\n\nDaily Rating of Severity of Problems and the Visual Analogue Scales for Premenstrual\nMood Symptoms, have undergone validation and are commonly used in clinical trials for\npremenstrual dysphoric disorder. The Premenstrual Tension Syndrome Rating Scale has a\nself-report and an observer version, both of which have been validated and used widely to\nmeasure illness severity in women who have premenstrual dysphoric disorder.\n\n\n###",
+  "genderRelatedIssues": "[No data available for this section]",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Symptoms must be associated with clinically meaningful distress and/or an obvious and\nmarked impairment in the ability to function socially or occupationally in the week prior\nto menses. Impairment in social functioning may be manifested by marital discord and\nproblems with children, other family members, or friends. Chronic marital or job prob-\nlems should not be confused with dysfunction that occurs only in association with pre-\nmenstrual dysphoric disorder.\n\n\n####",
+  "differentialDiagnosis": [
+    "Premenstrual syndrome. Premenstrual syndrome differs from premenstrual dysphoric\ndisorder in that a minimum of five symptoms is not required, and there is no stipulation of\naffective symptoms for individuals who have premenstrual syndrome. This condition\nmay be more common than premenstrual dysphoric disorder, although the estimated\n\n\n####"
+  ],
+  "comorbidity": "A major depressive episode is the most frequently reported previous disorder in individuals\npresenting with premenstrual dysphoric disorder. A wide range of medical (e.g., migraine,\nasthma, allergies, seizure disorders) or other mental disorders (e.g., depressive and bipolar\ndisorders, anxiety disorders, bulimia nervosa, substance use disorders) may worsen in the\npremenstrual phase; however, the absence of a symptom-free period during the postmen-\nstrual interval obviates a diagnosis of premenstrual dysphoric disorder. These conditions\n\nare better considered premenstrual exacerbation of a current mental or medical disorder. Al-\nthough the diagnosis of premenstrual dysphoric disorder should not be assigned in situa-\ntions in which an individual only experiences a premenstrual exacerbation of another\nmental or physical disorder, it can be considered in addition to the diagnosis of another men-\ntal or physical disorder if the individual experiences symptoms and changes in level of func-\ntioning that are characteristic of premenstrual dysphoric disorder and markedly different\nfrom the symptoms experienced as part of the ongoing disorder.\nSubstance/Medication-Induced\nDepressive Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 216-220 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-05T01:46:30.0088809Z",
+  "extractionMetadata": null
+}

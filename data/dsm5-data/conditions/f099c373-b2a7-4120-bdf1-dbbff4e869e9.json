@@ -1,0 +1,56 @@
+{
+  "id": "f099c373-b2a7-4120-bdf1-dbbff4e869e9",
+  "name": "Premature (Early) Ejaculation",
+  "code": "302.75 (F52.4)",
+  "category": "",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. A persistent or recurrent pattern of ejaculation occurring during partnered sexual activ-\nity within approximately 1 minute following vaginal penetration and before the individ-\nual wishes it.\n\nNote: Although the diagnosis of premature (early) ejaculation may be applied to indi-\nviduals engaged in nonvaginal sexual activities, specific duration criteria have not been\nestablished for these activities.\n\nB. The symptom in Criterion A must have been present for at least 6 months and must be\nexperienced on almost all or all (approximately 75%-100%) occasions of sexual activ-\nity (in identified situational contexts or, if generalized, in all contexts).\n\nC. The symptom in Criterion A causes clinically significant distress in the individual.\nD. The sexual dysfunction is not better explained by a nonsexual mental disorder or as a\nconsequence of severe relationship distress or other significant stressors and is not at-\ntributable to the effects of a substance/medication or another medical condition.\n\nSpecify whether:\n\nLifelong: The disturbance has been present since the individual became sexually active.\nAcquired: The disturbance began after a period of relatively normal sexual function.\n444 Sexual Dysfunctions\n\nSpecify whether:\n\nGeneralized: Not limited to certain types of stimulation, situations, or partners.\nSituational: Only occurs with certain types of stimulation, situations, or partners.\nSpecify current severity:\n\nMild: Ejaculation occurring within approximately 30 seconds to 1 minute of vaginal\npenetration.\n\nModerate: Ejaculation occurring within approximately 15-30 seconds of vaginal pen-\netration.\n\nSevere: Ejaculation occurring prior to sexual activity, at the start of sexual activity, or\nwithin approximately 15 seconds of vaginal penetration.",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Premature (early) ejaculation is manifested by ejaculation that occurs prior to or shortly af-\nter vaginal penetration, operationalized by an individual\u0027s estimate of ejaculatory latency\n(i.e., elapsed time before ejaculation) after vaginal penetration. Estimated and measured\nintravaginal ejaculatory latencies are highly correlated as long as the ejaculatory latency is\nof short duration; therefore, self-reported estimates of ejaculatory latency are sufficient for\ndiagnostic purposes. A 60-second intravaginal ejaculatory latency time is an appropriate\ncutoff for the diagnosis of lifelong premature (early) ejaculation in heterosexual men.\nThere are insufficient data to determine if this duration criterion can be applied to ac-\nquired premature (early) ejaculation. The durational definition may apply to males of\nvarying sexual orientations, since ejaculatory latencies appear to be similar across men of\ndifferent sexual orientations and across different sexual activities.\n\n\n###",
+  "associatedFeatures": "Many males with premature (early) ejaculation complain of a sense of lack of control over\nejaculation and report apprehension about their anticipated inability to delay ejaculation\non future sexual encounters.\n\nThe following factors may be relevant in the evaluation of any sexual dysfunction:\n1)partner factors (e.g., partner\u0027s sexual problems, partner\u0027s health status); 2) relationship fac-\ntors (e.g., poor communication, discrepancies in desire for sexual activity); 3) individual\nvulnerability factors (e.g., poor body image, history of sexual or emotional abuse), psychiatric\n\n\n###",
+  "prevalence": "Estimates of the prevalence of premature (early) ejaculation vary widely depending on the\ndefinition utilized. Internationally, more than 20%-30% of men ages 18-70 years report\nconcern about how rapidly they ejaculate. With the new definition of premature (early)\nejaculation (i.e., ejaculation occurring within approximately 1 minute of vaginal penetra-\ntion), only 1%-3% of men would be diagnosed with the disorder. Prevalence of premature\n(early) ejaculation may increase with age.\n\n\n###",
+  "developmentAndCourse": "By definition, lifelong premature (early) ejaculation starts during a male\u0027s initial sexual ex-\nperiences and persists thereafter. Some men may experience premature (early) ejaculation\nduring their initial sexual encounters but gain ejaculatory control over time. It is the persis-\ntence of ejaculatory problems for longer than 6 months that determines the diagnosis of pre-\nmature (early) ejaculation. In contrast, some men develop the disorder after a period of\nPremature (Early) Ejaculation 445\n\nhaving a normal ejaculatory latency, known as acquired premature (early) ejaculation. There is\nfar less known about acquired premature (early) ejaculation than about lifelong premature\n(early) ejaculation. The acquired form likely has a later onset, usually appearing during or af-\nter the fourth decade of life. Lifelong is relatively stable throughout life. Little is known about\nthe course of acquired premature (early) ejaculation. Reversal of medical conditions such as\nhyperthyroidism and prostatitis appears to restore ejaculatory latencies to baseline values.\nLifelong premature (early) ejaculation begins with early sexual experiences and persists\nthroughout an individual\u0027s life. In approximately 20% of men with premature (early) ejacu-\nlation, ejaculatory latencies decrease further with age. Age and relationship length have been\nfound to be negatively associated with prevalence of premature (early) ejaculation.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Premature (early) ejaculation may be more common in men with anx-\niety disorders, especially social anxiety disorder (social phobia).\n\nGenetic and physiological. There is a moderate genetic contribution to lifelong prema-\nture (early) ejaculation. Premature (early) ejaculation may be associated with dopamine\ntransporter gene polymorphism or serotonin transporter gene polymorphism. Thyroid\ndisease, prostatitis, and drug withdrawal are associated with acquired premature (early)\nejaculation. Positron emission tomography measures of regional cerebral blood flow dur-\ning ejaculation have shown primary activation in the mesocephalic transition zone, includ-\ning the ventral tegmental area.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "Perception of what constitutes a normal ejaculatory latency is different in many cultures.\nMeasured ejaculatory latencies may differ in some countries. Such differences may be ex-\nplained by cultural or religious factors as well as genetic differences between populations.",
+  "genderRelatedIssues": "Premature (early) ejaculation is a sexual disorder in males. Males and their sexual partners\nmay differ in their perception of what constitutes an acceptable ejaculatory latency. There\nmay be increasing concerns in females about early ejaculation in their sexual partners,\nwhich may be a reflection of changing societal attitudes concerning female sexual activity.\n\n\n### Diagnostic Markers\n\nEjaculatory latency is usually monitored in research settings by the sexual partner utilizing\na timing device (e.g., stopwatch), though this is not ideal in real-life sexual situations. For\nvaginal intercourse, the time between intravaginal penetration and ejaculation is measured.",
+  "suicideRisk": "[No data available for this section]\n\n\n####",
+  "functionalConsequences": "A pattern of premature (early) ejaculation may be associated with decreased self-esteem, a\nsense of lack of control, and adverse consequences for partner relationships. It may also\ncause personal distress in the sexual partner and decreased sexual satisfaction in the sexual\npartner. Ejaculation prior to penetration may be associated with difficulties in conception.\n\n\n#####",
+  "differentialDiagnosis": [
+    "Substance/medication-induced sexual dysfunction. When problems with premature\nejaculation are due exclusively to substance use, intoxication, or withdrawal, substance/\nmedication-induced sexual dysfunction should be diagnosed.\n446 Sexual Dysfunctions\n\nEjaculatory concerns that do not meet diagnostic criteria. It is necessary to identify\nmales with normal ejaculatory latencies who desire longer ejaculatory latencies and males\nwho have episodic premature (early) ejaculation (e.g., during the first sexual encounter\nwith a new partner when a short ejaculatory latency may be common or normative). Neither\nof these situations would lead to a diagnosis of premature (early) ejaculation, even though\nthese situations may be distressing to some males.\n\n\n#####"
+  ],
+  "comorbidity": "Premature (early) ejaculation may be associated with erectile problems. In many cases, it\nmay be difficult to determine which difficulty preceded the other. Lifelong premature\n(early) ejaculation may be associated with certain anxiety disorders. Acquired premature\n(early) ejaculation may be associated with prostatitis, thyroid disease, or drug withdrawal\n(e.g., during opioid withdrawal).\n\nSubstance/Medication-Induced\nSexual Dysfunction\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 488-491 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:05:12.4137552Z",
+  "extractionMetadata": null
+}

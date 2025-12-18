@@ -1,0 +1,57 @@
+{
+  "id": "974aedbf-03c4-4121-b015-3f69ab979d04",
+  "name": "Voyeuristic Disorder",
+  "code": "302.82 (F65.3)",
+  "category": "Voyeuristic Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Over a period of at least 6 months, recurrent and intense sexual arousal from observ-\ning an unsuspecting person who is naked, in the process of disrobing, or engaging in\nsexual activity, as manifested by fantasies, urges, or behaviors.\n\nB. The individual has acted on these sexual urges with a nonconsenting person, or the\nsexual urges or fantasies cause clinically significant distress or impairment in social,\noccupational, or other important areas of functioning.\n\nC. The individual experiencing the arousal and/or acting on the urges is at least 18 years\nof age.\n\nSpecify if:\n\nIn a controlled environment: This specifier is primarily applicable to individuals living\nin institutional or other settings where opportunities to engage in voyeuristic behavior\nare restricted.\n\nVoyeuristic Disorder 687\n\nIn full remission: The individual has not acted on the urges with a nonconsenting per-\nson, and there has been no distress or impairment in social, occupational, or other ar-\neas of functioning, for at least 5 years while in an uncontrolled environment.\n\n\n###",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": null,
+  "associatedFeatures": "[No data available for this section]\n\n\n###",
+  "prevalence": "Voyeuristic acts are the most common of potentially law-breaking sexual behaviors. The\npopulation prevalence of voyeuristic disorder is unknown. However, based on voyeuris-\n688 Paraphilic Disorders\n\ntic sexual acts in nonclinical samples, the highest possible lifetime prevalence for voyeuris-\ntic disorder is approximately 12% in males and 4% in females.\n\n\n###",
+  "developmentAndCourse": "Adult males with voyeuristic disorder often first become aware of their sexual interest in\nsecretly watching unsuspecting persons during adolescence. However, the minimum age\nfor a diagnosis of voyeuristic disorder is 18 years because there is substantial difficulty in\ndifferentiating it from age-appropriate puberty-related sexual curiosity and activity. The\npersistence of voyeurism over time is unclear. Voyeuristic disorder, however, per defini-\ntion requires one or more contributing factors that may change over time with or without\ntreatment: subjective distress (e.g., guilt, shame, intense sexual frustration, loneliness),\npsychiatric morbidity, hypersexuality, and sexual impulsivity; psychosocial impairment;\nand/or the propensity to act out sexually by spying on unsuspecting naked or sexually ac-\ntive persons. Therefore, the course of voyeuristic disorder is likely to vary with age.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Voyeurism is a necessary precondition for voyeuristic disorder; hence,\nrisk factors for voyeurism should also increase the rate of voyeuristic disorder.\nEnvironmental. Childhood sexual abuse, substance misuse, and sexual preoccupation/\nhypersexuality have been suggested as risk factors, although the causal relationship to\nvoyeurism is uncertain and the specificity unclear.\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "[No data available for this section]",
+  "genderRelatedIssues": "Voyeuristic disorder is very uncommon among females in clinical settings, while the male-\nto-female ratio for single sexually arousing voyeuristic acts might be 3:1.",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "[No data available for this section]\n\n\n###",
+  "differentialDiagnosis": [
+    "Conduct disorder and antisocial personality disorder. Conduct disorder in adolescents\nand antisocial personality disorder would be characterized by additional norm-breaking\nand antisocial behaviors, and the specific sexual interest in secretly watching unsuspect-\ning others who are naked or engaging in sexual activity should be lacking.\nSubstance use disorders. Substance use disorders might involve single voyeuristic ep-\nisodes by intoxicated individuals but should not involve the typical sexual interest in se-\ncretly watching unsuspecting persons being naked or engaging in sexual activity. Hence,\nrecurrent voyeuristic sexual fantasies, urges, or behaviors that occur also when the indi-\nvidual is not intoxicated suggest that voyeuristic disorder might be present.\n\n\n###"
+  ],
+  "comorbidity": "Known comorbidities in voyeuristic disorder are largely based on research with males\nsuspected of or convicted for acts involving the secret watching of unsuspecting nude or\nsexually active persons. Hence, these comorbidities might not apply to all individuals with\nvoyeuristic disorder. Conditions that occur comorbidly with voyeuristic disorder include\nhypersexuality and other paraphilic disorders, particularly exhibitionistic disorder. De-\npressive, bipolar, anxiety, and substance use disorders; attention-deficit/hyperactivity\ndisorder; and conduct disorder and antisocial personality disorder are also frequent co-\nmorbid conditions.\n\nExhibitionistic Disorder 689\nExhibitionistic Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 731-734 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Differential Diagnosis",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Diagnostic Features"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:05:45.9191464Z",
+  "extractionMetadata": null
+}

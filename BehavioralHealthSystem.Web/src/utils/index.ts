@@ -19,13 +19,13 @@ export const getUserId = (): string => {
 
   // Fallback to local storage for non-authenticated users
   let userId = localStorage.getItem(STORAGE_KEYS.USER_ID);
-  
+
   // If no User ID exists, generate a new UUID
   if (!userId || userId.trim().length === 0) {
     userId = uuidv4();
     localStorage.setItem(STORAGE_KEYS.USER_ID, userId);
   }
-  
+
   return userId;
 };
 
@@ -61,14 +61,14 @@ export const getStoredTheme = (): Theme => {
   if (stored === 'light' || stored === 'dark') {
     return stored;
   }
-  
+
   // Default to system preference
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
 export const setStoredTheme = (theme: Theme): void => {
   localStorage.setItem(STORAGE_KEYS.THEME, theme);
-  
+
   // Apply theme to document
   if (theme === 'dark') {
     document.documentElement.classList.add('dark');
@@ -80,12 +80,12 @@ export const setStoredTheme = (theme: Theme): void => {
 // Processing mode management
 export const getStoredProcessingMode = (): string => {
   const stored = localStorage.getItem(STORAGE_KEYS.PROCESSING_MODE);
-  
+
   // Handle new format with explicit mode values
   if (stored === 'single' || stored === 'batch-files' || stored === 'batch-csv') {
     return stored;
   }
-  
+
   // Handle legacy boolean format for backward compatibility
   if (stored === 'true') {
     return 'batch-files';
@@ -93,7 +93,7 @@ export const getStoredProcessingMode = (): string => {
   if (stored === 'false') {
     return 'single';
   }
-  
+
   // Default to single file mode
   return 'single';
 };
@@ -111,11 +111,11 @@ export const getStoredProcessingModeBoolean = (): boolean => {
 // File utilities
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 B';
-  
+
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
@@ -129,17 +129,17 @@ export const getAudioDuration = (file: File): Promise<number> => {
   return new Promise((resolve, reject) => {
     const audio = new Audio();
     const url = URL.createObjectURL(file);
-    
+
     audio.addEventListener('loadedmetadata', () => {
       URL.revokeObjectURL(url);
       resolve(audio.duration);
     });
-    
+
     audio.addEventListener('error', () => {
       URL.revokeObjectURL(url);
       reject(new Error('Unable to load audio metadata'));
     });
-    
+
     audio.src = url;
   });
 };
@@ -152,12 +152,12 @@ export const formatRelativeTime = (date: string): string => {
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  
+
   if (diffMinutes < 1) return 'Just now';
   if (diffMinutes < 60) return `${diffMinutes}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return target.toLocaleDateString();
 };
 
@@ -177,13 +177,13 @@ export const isNetworkError = (error: unknown): boolean => {
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return true;
   }
-  
+
   if (error instanceof Error) {
-    return error.message.includes('Network') || 
+    return error.message.includes('Network') ||
            error.message.includes('connection') ||
            error.message.includes('timeout');
   }
-  
+
   return false;
 };
 
@@ -201,16 +201,19 @@ export const isValidAudioFile = (file: File): { valid: boolean; error?: string }
       error: `File size exceeds maximum limit of ${formatFileSize(VALIDATION.MAX_FILE_SIZE_BYTES)}`
     };
   }
-  
-  // Check file type
-  const validTypes = ['audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/flac', 'audio/x-m4a'];
-  if (!validTypes.includes(file.type) && !file.name.match(/\.(wav|mp3|m4a|aac|flac)$/i)) {
+
+  // Check file type - support audio and video files (video files will have audio extracted)
+  const validTypes = [
+    'audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/aac', 'audio/flac', 'audio/x-m4a',
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'
+  ];
+  if (!validTypes.includes(file.type) && !file.name.match(/\.(wav|mp3|m4a|aac|flac|mp4|webm|ogg|mov)$/i)) {
     return {
       valid: false,
-      error: 'Please select a valid audio file (WAV, MP3, M4A, AAC, or FLAC)'
+      error: 'Please select a valid audio or video file (WAV, MP3, M4A, AAC, FLAC, MP4, WebM)'
     };
   }
-  
+
   return { valid: true };
 };
 
@@ -221,9 +224,9 @@ export const announceToScreenReader = (message: string, priority: 'polite' | 'as
   announcement.setAttribute('aria-atomic', 'true');
   announcement.className = 'sr-only';
   announcement.textContent = message;
-  
+
   document.body.appendChild(announcement);
-  
+
   // Remove after announcement
   setTimeout(() => {
     document.body.removeChild(announcement);
@@ -243,13 +246,13 @@ export const trapFocus = (container: HTMLElement): { release: () => void } => {
   const focusableElements = container.querySelectorAll(
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
   );
-  
+
   const firstFocusable = focusableElements[0] as HTMLElement;
   const lastFocusable = focusableElements[focusableElements.length - 1] as HTMLElement;
-  
+
   const handleTabKey = (e: KeyboardEvent) => {
     if (e.key !== 'Tab') return;
-    
+
     if (e.shiftKey) {
       if (document.activeElement === firstFocusable) {
         lastFocusable?.focus();
@@ -262,10 +265,10 @@ export const trapFocus = (container: HTMLElement): { release: () => void } => {
       }
     }
   };
-  
+
   container.addEventListener('keydown', handleTabKey);
   firstFocusable?.focus();
-  
+
   return {
     release: () => {
       container.removeEventListener('keydown', handleTabKey);
@@ -279,7 +282,7 @@ export const debounce = <T extends (...args: unknown[]) => void>(
   delay: number
 ): ((...args: Parameters<T>) => void) => {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (...args: Parameters<T>) => {
     clearTimeout(timeoutId);
     timeoutId = setTimeout(() => fn(...args), delay);

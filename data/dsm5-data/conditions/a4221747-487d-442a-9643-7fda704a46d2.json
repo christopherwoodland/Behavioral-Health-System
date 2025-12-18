@@ -1,0 +1,55 @@
+{
+  "id": "a4221747-487d-442a-9643-7fda704a46d2",
+  "name": "Nightmare Disorder",
+  "code": "307.47 (F51.5)",
+  "category": "Nightmare Disorder",
+  "description": "",
+  "diagnosticCriteria": [
+    {
+      "criterionId": "A",
+      "title": "Diagnostic Criteria",
+      "description": "A. Repeated occurrences of extended, extremely dysphoric, and well-remembered\ndreams that usually involve efforts to avoid threats to survival, security, or physical in-\ntegrity and that generally occur during the second half of the major sleep episode.\nB. On awakening from the dysphoric dreams, the individual rapidly becomes orlented and\nalert.\n\nC. The sleep disturbance causes clinically significant distress or impairment in social, oc-\ncupational, or other important areas of functioning.\n\nD. The nightmare symptoms are not attributable to the physiological effects of a sub-\nstance (e.g., a drug of abuse, a medication).\n\nE. Coexisting mental and medical disorders do not adequately explain the predominant\ncomplaint of dysphoric dreams.\n\nSpecify if:\n\nDuring sleep onset\nSpecify if:\n\nWith associated non-sleep disorder, including substance use disorders\nWith associated other medical condition\nWith associated other sleep disorder\n\nCoding note: The code 307.47 (F51.5) applies to all three",
+      "subCriteria": [],
+      "isRequired": true,
+      "minimumRequired": null,
+      "durationRequirement": null
+    }
+  ],
+  "diagnosticFeatures": "Nightmares are typically lengthy, elaborate, storylike sequences of dream imagery that\nseem real and that incite anxiety, fear, or other dysphoric emotions. Nightmare content\ntypically focuses on attempts to avoid or cope with imminent danger but may involve\nthemes that evoke other negative emotions. Nightmares occurring after traumatic experi-\nences may replicate the threatening situation (\u0022replicative nightmares\u0022), but most do not.\nOn awakening, nightmares are well remembered and can be described in detail. They arise\nNightmare Disorder 405\n\nalmost exclusively during rapid eye movement (REM) sleep and can thus occur through-\nout sleep but are more likely in the second half of the major sleep episode when dreaming\nis longer and more intense. Factors that increase early-night REM intensity, such as sleep\nfragmentation or deprivation, jet lag, and REM-sensitive medications, might facilitate\nnightmares earlier in the night, including at sleep onset.\n\nNightmares usually terminate with awakening and rapid retum of full alertness. How-\never, the dysphoric emotions may persist into wakefulness and contribute to difficulty re-\nturning to sleep and lasting daytime distress. Some nightmares, known as \u0022bad dreams,\u0022\nmay not induce awakening and are recalled only later. If nightmares occur during sleep-\nonset REM periods (hypnagogic), the dysphoric emotion is frequently accompanied by a\nsense of being both awake and unable to move voluntarily (isolated sleep paralysis).\n\n\n###",
+  "associatedFeatures": "Mild autonomic arousal, including sweating, tachycardia, and tachypnea, may character-\nize nightmares. Body movements and vocalizations are not characteristic because of REM\nsleep-related loss of skeletal muscle tone, but such behaviors may occur under situations\nof emotional stress or sleep fragmentation and in posttraumatic stress disorder (PTSD).\nWhen talking or emoting occurs, it is typically a brief event terminating the nightmare.\nIndividuals with frequent nightmares are at substantially greater",
+  "prevalence": "crease to ages 20-29 for females (while decreasing for males), when it can be twice as high\nfor females as for males. Prevalence decreases steadily with age for both sexes, but the gen-\nder difference remains. Among adults, prevalence of nightmares at least monthly is 6%,\nwhereas prevalence for frequent nightmares is 1%-2%. Estimates often combine idio-\npathic and posttraumatic nightmares indiscriminately.\n\n\n###",
+  "developmentAndCourse": "Nightmares often begin between ages 3 and 6 years but reach a peak prevalence and se-\nverity in late adolescence or early adulthood. Nightmares most likely appear in children\nexposed to acute or chronic psychosocial stressors and thus may not resolve spontane-\nously. In a minority, frequent nightmares persist into adulthood, becoming virtually a life-\nlong disturbance. Although specific nightmare content may reflect the individual\u0027s age,\nthe essential features of the disorder are the same across age groups.\n\n\n###",
+  "riskAndPrognosticFactors": {
+    "temperamental": "Temperamental. Individuals who experience nightmares report more frequent past ad-\nverse events, but not necessarily trauma, and often display personality disturbances or\npsychiatric diagnosis.\n\nEnvironmental. Sleep deprivation or fragmentation, and irregular sleep-wake schedules\nthat alter the timing, Intensity, or quantity of REM sleep, can put individuals at risk for\nnightmares.\n\nGenetic and physiological. Twin studies have identified genetic effects on the disposi-\ntion to nightmares and their co-occurrence with other parasomnias (e.g., sleeptalking).\nCourse modifiers. Adaptive parental bedside behaviors, such as soothing the child fol-\nlowing nightmares, may protect against developing chronic nightmares.\n\n406 Sleep-Wake Disorders\n\n\n###",
+    "environmental": null,
+    "geneticAndPhysiological": null,
+    "courseModifiers": null
+  },
+  "cultureRelatedIssues": "The significance attributed to nightmares may vary by culture, and sensitivity to such be-\nlefs may facilitate disclosure.\n\n\n####",
+  "genderRelatedIssues": "Adult females report having nightmares more frequently than do adult males. Nightmare\ncontent differs by sex, with adult females tending to report themes of sexual harassment or\nof loved ones disappearing/dying, and adult males tending to report themes of physical\naggression or war/terror.\n\n\n#### Diagnostic Markers\n\nPolysomnographic studies demonstrate abrupt awakenings from REM sleep, usually during\nthe second half of the night, prior to report of a nightmare. Heart, respiratory, and eye move-\nment rates may quicken or increase in varlability before awakening. Nightmares following\ntraumatic events may also arise during non-REM (NREM), particularly stage 2, sleep. The typ-\nical sleep of individuals with nightmares is mildly impalred (e.g., reduced efficiency, less slow-\nwave sleep, more awakenings), with more frequent periodic leg movements in sleep and rel-\native sympathetic nervous system activation after REM sleep deprivation.\n\n\n####",
+  "suicideRisk": "[No data available for this section]",
+  "functionalConsequences": "Nightmares cause more significant subjective distress than demonstrable social or occu-\npational impairment. However, if awakenings are frequent or result in sleep avoidance,\nindividuals may experience excessive daytime sleepiness, poor concentration, depression,\nanxiety, or irritability. Frequent childhood nightmares (e.g., several per week), may cause\nsignificant distress to parents and child.\n\n\n####",
+  "differentialDiagnosis": [],
+  "comorbidity": "Nightmares may be comorbid with several medical conditions, Including coronary heart\ndisease, cancer, parkinsonism, and pain, and can accompany medical treatments, such as he-\n\nmodialysis, or withdrawal from medications or substances of abuse. Nightmares frequently\nare comorbid with other mental disorders, including PTSD; Insomnia disorder; schizophrenia;\npsychosis; mood, anxiety, adjustment, and personality disorders; and grief during be-\nreavement. A concurrent nightmare disorder diagnosis should only be considered when in-\ndependent clinical attention is warranted (i.e., Criteria A-C are met). Otherwise, no separate\ndiagnosis is necessary. These conditions should be listed under the appropriate comorbid\ncategory specifier. However, nightmare disorder may be diagnosed as a separate disorder in\nindividuals with PTSD if the nightmares are temporally unrelated to PTSD (Le., preceding\nother PTSD symptoms or persisting after other PTSD symptoms have resolved).\nNightmares are normally characteristic of REM sleep behavior disorder, PTSD, and acute\nstress disorder, but nightmare disorder may be independently coded if nightmares preceded\nthe condition and their frequency or severity necessitates independent clinical attention. The\nlatter may be determined by asking whether nightmares were a problem before onset of the\nother disorder and whether they continued after other symptoms had remitted.\nRelationship to International Classification of\nSleep Disorders\n\nThe International Classification of Sleep Disorders, 2nd Edition (ICSD-2), presents similar di-\nagnostic criteria for nightmare disorder.\nRapid Eye Movement Sleep Behavior Disorder\n\n\u003C!-- PageFooter=\u0022DSM-5 Diagnostic Item | Pages 449-452 | Computer-Readable Format\u0022 --\u003E",
+  "specifiers": [],
+  "pageNumbers": [],
+  "presentSections": [
+    "Diagnostic Criteria",
+    "Diagnostic Features",
+    "Associated Features",
+    "Prevalence",
+    "Development and Course",
+    "Risk and Prognostic Factors",
+    "Culture-Related Diagnostic Issues",
+    "Gender-Related Diagnostic Issues",
+    "Suicide Risk",
+    "Functional Consequences",
+    "Comorbidity"
+  ],
+  "missingSections": [
+    "Differential Diagnosis"
+  ],
+  "isAvailableForAssessment": true,
+  "lastUpdated": "2025-10-04T21:23:54.8109316Z",
+  "extractionMetadata": null
+}

@@ -1,114 +1,56 @@
 {
   "IsEncrypted": false,
-  // ============================================================================
-  // AZURE FUNCTIONS CONFIGURATION
-  // ============================================================================
-  // This file is used for LOCAL DEVELOPMENT ONLY
-  // DO NOT commit to source control - contains sensitive API keys
-  // Copy from local.settings.json.template and update with your actual keys
-  // ============================================================================
-
-  "Values": {
-    // Storage Configuration
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",  // Use local emulator for dev
-    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",  // .NET isolated runtime
-
-    // ========================================================================
-    // KINTSUGI HEALTH API CONFIGURATION
-    // ========================================================================
-    // Contact Kintsugi Health for API credentials
-    "KINTSUGI_API_KEY": "your-kintsugi-api-key",  // Required: Your Kintsugi API key
-    "KINTSUGI_BASE_URL": "https://api.kintsugihealth.com/v2",  // API endpoint
-    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",  // Automatically provide consent
-    "KINTSUGI_TIMEOUT_SECONDS": "300",  // API request timeout
-    "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",  // Max retry attempts
-    "KINTSUGI_RETRY_DELAY_MS": "1000",  // Delay between retries
-
-    // ========================================================================
-    // APPLICATION INSIGHTS (Optional)
-    // ========================================================================
-    // Leave blank for local development, set for production monitoring
-    "APPLICATIONINSIGHTS_CONNECTION_STRING": "your-app-insights-connection-string-here-optional",
-
-    // ========================================================================
-    // AZURE OPENAI - PRIMARY GPT-4 (For general conversational AI)
-    // ========================================================================
-    // Standard Azure OpenAI resource for general-purpose AI tasks
-    "AZURE_OPENAI_ENDPOINT": "https://your-openai-resource.openai.azure.com/",  // Your Azure OpenAI endpoint
-    "AZURE_OPENAI_API_KEY": "your-azure-openai-api-key",  // Your API key
-    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o",  // Deployment name (model identifier)
-    "AZURE_OPENAI_API_VERSION": "2024-02-01",  // API version to use
-    "AZURE_OPENAI_MAX_TOKENS": "1500",  // Max tokens for response
-    "AZURE_OPENAI_TEMPERATURE": "0.3",  // Creativity level (0=deterministic, 1=creative)
-    "AZURE_OPENAI_ENABLED": "true",  // Enable/disable GPT-4
-
-    // ========================================================================
-    // AZURE OPENAI - EXTENDED ASSESSMENT (GPT-5 for advanced DSM-5 analysis)
-    // ========================================================================
-    // Advanced AI resource for comprehensive disorder assessment
-    // This can be the same resource as primary GPT-4 or a separate one
-    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "https://your-gpt5-resource.openai.azure.com/",  // Separate endpoint for advanced analysis
-    "EXTENDED_ASSESSMENT_OPENAI_API_KEY": "your-gpt5-api-key",  // Separate API key if using different resource
-    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-5-turbo",  // Advanced model deployment
-    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION": "2024-08-01-preview",  // Advanced API version
-    "EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS": "4000",  // Larger token limit for detailed analysis
-    "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",  // Lower temperature for consistency
-    "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",  // Longer timeout for complex analysis
-    "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",  // Disabled by default - enable when ready
-    "EXTENDED_ASSESSMENT_USE_FALLBACK": "true",  // Fall back to GPT-4 if GPT-5 unavailable
-
-    // ========================================================================
-    // AZURE BLOB STORAGE (For DSM-5 data and smart band device data)
-    // ========================================================================
-    // Uses Managed Identity in production; storage account name is required
-    "DSM5_STORAGE_ACCOUNT_NAME": "your-storage-account-name",  // Storage account for DSM-5 documents
-    "DSM5_CONTAINER_NAME": "dsm5-data",  // Blob container name
-    "AZURE_STORAGE_ACCOUNT_NAME": "your-storage-account-name",  // Alternative storage account name (optional)
-
-    // ========================================================================
-    // OPTIONAL: AZURE SIGNALR (For real-time features)
-    // ========================================================================
-    // Leave blank if not using real-time features
-    "AzureSignalRConnectionString": "Endpoint=https://your-signalr-service.service.signalr.net;AccessKey=your-access-key;Version=1.0;",
-
-    // ========================================================================
-    // FEATURE FLAGS
-    // ========================================================================
-    // Control which features are available in the application
-    "AGENT_MODE_ENABLED": "true",
-
-    // ========================================================================
-    // ENTRA ID / AZURE AD AUTHENTICATION (For API token validation)
-    // ========================================================================
-    // Configure these values to enable Entra ID bearer token validation
-    // The ENTRA_CLIENT_ID should match the API app registration (backend)
-    // Frontend acquires tokens with scope: api://{ENTRA_CLIENT_ID}/user_impersonation
-    "ENTRA_TENANT_ID": "your-tenant-id",  // Azure AD Tenant ID
-    "ENTRA_CLIENT_ID": "your-api-client-id",  // API App Registration Client ID (backend)
-    // Optional: Override audience validation (defaults to ENTRA_CLIENT_ID)
-    // "ENTRA_AUDIENCE": "api://your-api-client-id",
-
-    // ========================================================================
-    // AZURE SPEECH SERVICE (For audio transcription - Fast Transcription API)
-    // ========================================================================
-    // Azure Speech Service for real-time and fast transcription
-    // Uses Managed Identity (DefaultAzureCredential) - no API key needed
-    // Ensure your identity has "Cognitive Services Speech User" role on the Speech resource
-    // IMPORTANT: Must use custom subdomain endpoint for managed identity auth
-    // Docs: https://learn.microsoft.com/en-us/azure/ai-services/speech-service/fast-transcription-create
-    "AZURE_SPEECH_ENDPOINT": "https://your-speech-resource.cognitiveservices.azure.com/",  // Your Speech resource endpoint (custom subdomain required for managed identity)
-    "AZURE_SPEECH_LOCALE": "en-US",  // Default locale for transcription
-    "AZURE_SPEECH_API_VERSION": "2025-10-15"  // Fast Transcription API version
-  },
-
   "ConnectionStrings": {},
-
-  // ============================================================================
-  // HOST CONFIGURATION
-  // ============================================================================
   "Host": {
-    "LocalHttpPort": 7071,  // Port for local Azure Functions host
-    "CORS": "*",  // Allow all origins for local dev (restrict in production)
-    "CORSCredentials": false  // Don't allow credentials with CORS
+    "LocalHttpPort": 7071,
+    "CORS": "http://localhost:5173,http://localhost:5174,https://localhost:5173,https://localhost:5174",
+    "CORSCredentials": false
+  },
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "DSM5_STORAGE_ACCOUNT_NAME": "",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
+    "AZURE_OPENAI_ENABLED": "false",
+    "AZURE_OPENAI_ENDPOINT": "http://localhost:11434",
+    "AZURE_OPENAI_DEPLOYMENT": "gpt-4o-mini",
+    "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+    "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",
+    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "http://localhost:11434",
+    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-4o-mini",
+    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION": "2024-12-01-preview",
+    "EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS": "4000",
+    "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",
+    "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",
+    "EXTENDED_ASSESSMENT_USE_FALLBACK": "false",
+    "KINTSUGI_API_KEY": "",
+    "KINTSUGI_BASE_URL": "http://localhost:8080/mock/kintsugi/v2",
+    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",
+    "KINTSUGI_TIMEOUT_SECONDS": "300",
+    "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",
+    "KINTSUGI_RETRY_DELAY_MS": "1000",
+    "AZURE_SPEECH_ENDPOINT": "",
+    "AZURE_SPEECH_KEY": "",
+    "AZURE_SPEECH_REGION": "",
+    "AZURE_SPEECH_LOCALE": "en-US",
+    "AZURE_SPEECH_API_VERSION": "2024-11-15",
+    "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "",
+    "DocumentIntelligenceEndpoint": "",
+    "DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT": "",
+    "DSM5_CONTAINER_NAME": "dsm5-data",
+    "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING",
+    "AGENT_MODE_ENABLED": "false",
+    "AGENT_ENABLED": "false",
+    "AGENT_ENDPOINT": "http://localhost:11434",
+    "AGENT_MODEL_DEPLOYMENT": "gpt-4o-mini",
+    "AGENT_SUPPORTS_TEMPERATURE": "false",
+    "AGENT_SUPPORTS_MAX_TOKENS": "false",
+    "AGENT_TIMEOUT_SECONDS": "60",
+    "GRAMMAR_AGENT_NAME": "GrammarCorrectionAgent",
+    "GRAMMAR_AGENT_INCLUDE_EXPLANATIONS": "false",
+    "GRAMMAR_AGENT_PRESERVE_FORMATTING": "true",
+    "GRAMMAR_AGENT_SUGGEST_ALTERNATIVES": "false",
+    "ENTRA_TENANT_ID": "",
+    "ENTRA_CLIENT_ID": ""
   }
 }

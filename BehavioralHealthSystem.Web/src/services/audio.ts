@@ -2,7 +2,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { config } from '@/config/constants';
 import { createAppError } from '@/utils';
-import type { AudioConversionOptions } from '@/types';
+import type { AudioConversionOptions, SilenceRemovalOptions } from '@/types';
 // import type { AppError } from '@/types'; // Commented out until used
 
 export interface ConversionProgress {
@@ -22,7 +22,7 @@ export class AudioProcessor {
 
   private async loadFFmpeg(): Promise<void> {
     if (this.isLoaded) return;
-    
+
     if (this.loadingPromise) {
       return this.loadingPromise;
     }
@@ -42,7 +42,7 @@ export class AudioProcessor {
     try {
       // Load FFmpeg with CDN URLs for better reliability
       const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-      
+
       await this.ffmpeg.load({
         coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
@@ -65,6 +65,11 @@ export class AudioProcessor {
       outputFormat: 'wav',
       sampleRate: 44100,
       channels: 1,
+      silenceRemoval: {
+        enabled: config.audio.silenceRemoval.enabled,
+        thresholdDb: config.audio.silenceRemoval.thresholdDb,
+        minDuration: config.audio.silenceRemoval.minDuration,
+      },
     },
     onProgress?: (progress: ConversionProgress) => void
   ): Promise<File> {
@@ -98,32 +103,107 @@ export class AudioProcessor {
       });
 
       // Write input file
-      const inputName = 'input.' + this.getFileExtension(file.name);
+      const inputExtension = this.getFileExtension(file.name);
+      const inputName = 'input.' + inputExtension;
       await this.ffmpeg.writeFile(inputName, await fetchFile(file));
+
+      // Check if this is a video format that needs audio extraction
+      const videoFormats = ['mp4', 'webm', 'mkv', 'avi', 'mov'];
+      const isVideoFormat = videoFormats.includes(inputExtension.toLowerCase());
+
+      if (isVideoFormat) {
+        onProgress?.({
+          stage: 'converting',
+          progress: 5,
+          message: 'Extracting audio from video file...',
+        });
+      }
 
       // Build FFmpeg command
       const outputName = `output.${options.outputFormat}`;
       const command = [
         '-i', inputName,
-        '-ac', options.channels.toString(),
-        '-ar', options.sampleRate.toString(),
-        '-f', options.outputFormat,
-        outputName
       ];
 
+      // For video formats, explicitly extract only the audio stream
+      if (isVideoFormat) {
+        command.push('-vn'); // No video - extract audio only
+        command.push('-acodec', 'pcm_s16le'); // Use PCM codec for WAV output
+      }
+
+      // Set audio channels and sample rate
+      command.push(
+        '-ac', options.channels.toString(),
+        '-ar', options.sampleRate.toString()
+      );
+
+      // Build audio filter chain for speech enhancement and cleanup
+      // NOTE: FFmpeg.wasm 0.12.6 has limited filter support - complex filters like
+      // anlmdn (non-local means denoising) and equalizer cause empty output.
+      // Using only simple, compatible filters.
+      const audioFilters: string[] = [];
+
+      // Simple filters that work with FFmpeg.wasm:
+      // - highpass/lowpass: basic frequency filtering
+      // - silenceremove: silence detection and removal
+
+      // 1. Basic frequency cleanup (if speech enhancement enabled)
+      if (config.audio.speechEnhancement.enabled) {
+        // highpass: Remove low frequency rumble (below 80Hz)
+        audioFilters.push('highpass=f=80');
+
+        // lowpass: Remove high frequency hiss (above 12kHz)
+        audioFilters.push('lowpass=f=12000');
+      }
+
+      // 2. Silence removal filter (if enabled)
+      if (options.silenceRemoval?.enabled) {
+        const thresholdDb = options.silenceRemoval.thresholdDb;
+        const minDuration = options.silenceRemoval.minDuration;
+        // silenceremove filter: stop_periods=-1 means remove all silence periods
+        audioFilters.push(`silenceremove=stop_periods=-1:stop_threshold=${thresholdDb}dB:stop_duration=${minDuration}`);
+      }
+
+      // Apply combined filter chain
+      if (audioFilters.length > 0) {
+        command.push('-af', audioFilters.join(','));
+      }
+
+      command.push('-f', options.outputFormat, outputName);
+
       // Execute conversion
+      console.log('🔵 FFmpeg: Executing command:', command.join(' '));
       await this.ffmpeg.exec(command);
 
       // Read output file
       const outputData = await this.ffmpeg.readFile(outputName);
+      console.log('🔵 FFmpeg: Output data type:', typeof outputData, 'Length:', (outputData as Uint8Array).length || 'N/A');
+
       const outputBlob = new Blob([outputData as unknown as ArrayBuffer], { type: `audio/${options.outputFormat}` });
-      
+      console.log('🔵 FFmpeg: Output blob size:', outputBlob.size, 'bytes');
+
+      // Validate output is not empty
+      if (outputBlob.size === 0) {
+        console.error('🔴 FFmpeg: Conversion produced empty output!', {
+          inputFile: file.name,
+          inputSize: file.size,
+          inputType: file.type,
+          command: command.join(' ')
+        });
+        throw createAppError(
+          'AUDIO_CONVERSION_ERROR',
+          'Audio conversion produced empty output. The file may not contain valid audio.',
+          { fileName: file.name, fileSize: file.size }
+        );
+      }
+
       // Create new File object with converted audio
       const convertedFile = new File(
         [outputBlob],
         `${this.getFileNameWithoutExtension(file.name)}.${options.outputFormat}`,
         { type: `audio/${options.outputFormat}` }
       );
+      console.log('🟢 FFmpeg: Conversion successful, output file size:', convertedFile.size, 'bytes');
 
       // Clean up temporary files
       await this.ffmpeg.deleteFile(inputName);
@@ -141,7 +221,7 @@ export class AudioProcessor {
       throw createAppError(
         'AUDIO_CONVERSION_ERROR',
         'Failed to convert audio file. Please try with a different file.',
-        { 
+        {
           originalError: error,
           fileName: file.name,
           fileSize: file.size,
@@ -164,11 +244,11 @@ export class AudioProcessor {
   async isFormatSupported(file: File): Promise<boolean> {
     try {
       await this.loadFFmpeg();
-      
-      // Check if file extension is in supported formats
-      const supportedFormats = ['wav', 'mp3', 'mp4', 'm4a', 'aac', 'flac', 'ogg'];
+
+      // Check if file extension is in supported formats (audio + video with audio tracks)
+      const supportedFormats = ['wav', 'mp3', 'mp4', 'm4a', 'aac', 'flac', 'ogg', 'webm', 'mkv', 'avi', 'mov'];
       const extension = this.getFileExtension(file.name);
-      
+
       return supportedFormats.includes(extension);
     } catch {
       return false;
@@ -227,16 +307,25 @@ export const convertAudioOnServer = async (
 // Convenience function for the Upload & Analyze page
 export const convertAudioToWav = async (
   file: File,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  silenceRemovalOverride?: Partial<SilenceRemovalOptions>
 ): Promise<Blob> => {
   const processor = getAudioProcessor();
-  
+
+  // Use config defaults for silence removal, allow override
+  const silenceRemoval: SilenceRemovalOptions = {
+    enabled: silenceRemovalOverride?.enabled ?? config.audio.silenceRemoval.enabled,
+    thresholdDb: silenceRemovalOverride?.thresholdDb ?? config.audio.silenceRemoval.thresholdDb,
+    minDuration: silenceRemovalOverride?.minDuration ?? config.audio.silenceRemoval.minDuration,
+  };
+
   const convertedFile = await processor.convertAudio(
     file,
     {
       outputFormat: 'wav',
       sampleRate: 44100,
       channels: 1,
+      silenceRemoval,
     },
     onProgress ? (progress) => onProgress(progress.progress) : undefined
   );

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Activity, 
-  Brain, 
-  Heart, 
-  BarChart3, 
-  PieChart, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Brain,
+  Heart,
+  BarChart3,
+  PieChart,
   Clock,
   AlertCircle,
   RefreshCw,
@@ -148,60 +148,60 @@ const Predictions: React.FC = () => {
   const loadGroupAnalytics = useCallback(async () => {
     try {
       setLoadingGroups(true);
-      
+
       // Get all groups
             const groupsResponse = await fileGroupService.getFileGroups();
       const allGroups = groupsResponse.fileGroups || [];
       setGroups(allGroups);
-      
+
       // Calculate analytics for each group that has sessions
       const analytics: GroupAnalytics[] = [];
-      
+
       for (const group of allGroups) {
         const groupSessions = sessions.filter(s => s.groupId === group.groupId);
         if (groupSessions.length === 0) continue;
-        
+
         // Get sessions with predictions
         const sessionsWithPredictions = groupSessions.filter(s => s.prediction || s.analysisResults);
-        
+
         // Calculate depression scores
         const depressionScores = sessionsWithPredictions
           .map(session => getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression'))
           .filter((score): score is number => score !== null);
-        
+
         // Calculate anxiety scores
         const anxietyScores = sessionsWithPredictions
           .map(session => getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety'))
           .filter((score): score is number => score !== null);
-        
+
         // Calculate trends
         const depressionTrend = depressionScores.length >= 2 ? {
           direction: depressionScores[depressionScores.length - 1] > depressionScores[0] ? 'worsening' as const : 'improving' as const,
           change: Math.abs(depressionScores[depressionScores.length - 1] - depressionScores[0]),
           period: `${depressionScores.length} sessions`
         } : null;
-        
+
         const anxietyTrend = anxietyScores.length >= 2 ? {
           direction: anxietyScores[anxietyScores.length - 1] > anxietyScores[0] ? 'worsening' as const : 'improving' as const,
           change: Math.abs(anxietyScores[anxietyScores.length - 1] - anxietyScores[0]),
           period: `${anxietyScores.length} sessions`
         } : null;
-        
+
         analytics.push({
           groupId: group.groupId,
           groupName: group.groupName,
           groupDescription: group.description,
           sessionsCount: groupSessions.length,
-          avgDepression: depressionScores.length > 0 ? 
+          avgDepression: depressionScores.length > 0 ?
             depressionScores.reduce((a, b) => a + b, 0) / depressionScores.length : null,
-          avgAnxiety: anxietyScores.length > 0 ? 
+          avgAnxiety: anxietyScores.length > 0 ?
             anxietyScores.reduce((a, b) => a + b, 0) / anxietyScores.length : null,
           depressionTrend,
           anxietyTrend,
           latestSession: groupSessions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.createdAt || ''
         });
       }
-      
+
       setGroupAnalytics(analytics);
     } catch (err) {
       console.error('Failed to load group analytics:', err);
@@ -215,15 +215,15 @@ const Predictions: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
       const response = await apiService.getUserSessions(userId);
-      
+
       // Filter sessions that have analysis results or predictions
       const sessionsWithPredictions = response.sessions.filter(session => {
         return session.analysisResults || session.prediction;
       });
-      
+
       setSessions(sessionsWithPredictions);
       announceToScreenReader(`${sessionsWithPredictions.length} prediction sessions loaded`);
     } catch (err) {
@@ -254,7 +254,7 @@ const Predictions: React.FC = () => {
     if (filters.dateRange !== 'all') {
       const now = new Date();
       const startDate = new Date();
-      
+
       switch (filters.dateRange) {
         case 'week':
           startDate.setDate(now.getDate() - 7);
@@ -269,8 +269,8 @@ const Predictions: React.FC = () => {
           startDate.setFullYear(now.getFullYear() - 1);
           break;
       }
-      
-      filtered = filtered.filter(session => 
+
+      filtered = filtered.filter(session =>
         new Date(session.createdAt) >= startDate
       );
     }
@@ -373,7 +373,7 @@ const Predictions: React.FC = () => {
   // Calculate trend analysis for categorical data
   const trendAnalysis = useMemo((): Record<string, TrendAnalysis> => {
     const trends: Record<string, TrendAnalysis> = {};
-    
+
     // Analyze depression trend
     const depressionScores = filteredSessions
       .map(session => getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression'))
@@ -388,7 +388,7 @@ const Predictions: React.FC = () => {
       const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
       const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
       const change = secondAvg - firstAvg;
-      
+
       trends.depression = {
         direction: Math.abs(change) < 0.5 ? 'stable' : change < 0 ? 'improving' : 'worsening',
         change: Math.abs(change),
@@ -410,7 +410,7 @@ const Predictions: React.FC = () => {
       const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
       const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
       const change = secondAvg - firstAvg;
-      
+
       trends.anxiety = {
         direction: Math.abs(change) < 0.5 ? 'stable' : change < 0 ? 'improving' : 'worsening',
         change: Math.abs(change),
@@ -441,7 +441,7 @@ const Predictions: React.FC = () => {
     const depressionCategories = filteredSessions
       .map(s => getSessionScoreValue(s, 'depression'))
       .filter((s): s is string | number => hasScoreValue(s));
-    
+
     const anxietyCategories = filteredSessions
       .map(s => getSessionScoreValue(s, 'anxiety'))
       .filter((s): s is string | number => hasScoreValue(s));
@@ -469,8 +469,8 @@ const Predictions: React.FC = () => {
         .sort(([,a], [,b]) => b - a)[0][0];
       stats.avgAnxiety = anxietyCounts[mostCommonAnxiety];
     }
-    
-    stats.latestSession = filteredSessions.sort((a, b) => 
+
+    stats.latestSession = filteredSessions.sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )[0];
 
@@ -491,7 +491,7 @@ const Predictions: React.FC = () => {
     const dataStr = JSON.stringify(filteredSessions, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = `predictions-${new Date().toISOString().split('T')[0]}.json`;
@@ -499,13 +499,13 @@ const Predictions: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     announceToScreenReader('Predictions data download started');
   }, [filteredSessions, announceToScreenReader]);
 
   // Trend indicator component
   const TrendIndicator: React.FC<{ trend: TrendAnalysis; label: string }> = ({ trend, label }) => {
-    const Icon = trend.direction === 'improving' ? TrendingDown : 
+    const Icon = trend.direction === 'improving' ? TrendingDown :
                  trend.direction === 'worsening' ? TrendingUp : Activity;
     const colorClass = trend.direction === 'improving' ? 'text-green-600 dark:text-green-400' :
                        trend.direction === 'worsening' ? 'text-red-600 dark:text-red-400' :
@@ -517,9 +517,9 @@ const Predictions: React.FC = () => {
         <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
         <span className={`text-sm font-medium ${colorClass} capitalize`}>
           {trend.direction}
-          {trend.period === 'insufficient data' 
+          {trend.period === 'insufficient data'
             ? ' (need more sessions)'
-            : trend.period === 'coming soon' 
+            : trend.period === 'coming soon'
               ? ' (analysis coming soon)'
               : ` (${trend.period})`
           }
@@ -529,8 +529,8 @@ const Predictions: React.FC = () => {
   };
 
   // Simple line chart component
-  const SimpleLineChart: React.FC<{ 
-    data: ChartDataPoint[]; 
+  const SimpleLineChart: React.FC<{
+    data: ChartDataPoint[];
     type: 'depression' | 'anxiety' | 'overall';
     onBarClick: (sessionId: string) => void;
   }> = ({ data, type, onBarClick }) => {
@@ -589,7 +589,7 @@ const Predictions: React.FC = () => {
         { score: 4, label: 'Mod-Severe' },
         { score: 5, label: 'Severe' }
       ];
-      
+
       return baseItems.map(item => ({
         ...item,
         color: getCategoryColor(item.score, chartType)
@@ -607,12 +607,12 @@ const Predictions: React.FC = () => {
           {data.map((dataPoint, index) => {
             const score = dataPoint[type];
             if (score === null) return null;
-            
+
             const height = ((score - minScore) / range) * 100;
             const categoryColor = getCategoryColor(score, type);
             const categoryName = getScoreCategoryName(score);
             const dateStr = new Date(dataPoint.date).toLocaleDateString();
-            
+
             return (
               <div
                 key={index}
@@ -710,7 +710,7 @@ const Predictions: React.FC = () => {
             Analyze your mental health trends and insights over time
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -723,7 +723,7 @@ const Predictions: React.FC = () => {
             Filters
             {showFilters ? <ChevronUp className="w-4 h-4 ml-2" /> : <ChevronDown className="w-4 h-4 ml-2" />}
           </button>
-          
+
           <button
             type="button"
             onClick={loadPredictions}
@@ -733,7 +733,7 @@ const Predictions: React.FC = () => {
             <RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />
             Refresh
           </button>
-          
+
           <button
             type="button"
             onClick={downloadPredictions}
@@ -768,7 +768,7 @@ const Predictions: React.FC = () => {
                 <option value="year">Past Year</option>
               </select>
             </div>
-            
+
             <div>
               <label htmlFor="score-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Focus Score
@@ -807,7 +807,7 @@ const Predictions: React.FC = () => {
                 ))}
               </select>
             </div>
-            
+
             <div className="flex items-end">
               <label className="flex items-center">
                 <input
@@ -830,7 +830,7 @@ const Predictions: React.FC = () => {
             No Prediction Data Available
           </h3>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            {sessions.length === 0 
+            {sessions.length === 0
               ? "You haven't completed any analysis sessions yet."
               : "No sessions found for the selected date range."
             }
@@ -850,18 +850,18 @@ const Predictions: React.FC = () => {
                 </h2>
                 <Users className="w-6 h-6 text-blue-600" aria-hidden="true" />
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {Object.entries(groupAnalytics).map(([groupId, analytics]) => {
                   const group = groups.find(g => g.groupId === groupId);
                   if (!group) return null;
-                  
+
                   return (
                     <div key={groupId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                       <h3 className="font-medium text-gray-900 dark:text-white mb-3">
                         {group.groupName}
                       </h3>
-                      
+
                       {analytics.avgDepression !== null && analytics.depressionTrend && (
                         <div className="mb-3">
                           <div className="flex items-center justify-between text-sm mb-1">
@@ -890,7 +890,7 @@ const Predictions: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       {analytics.avgAnxiety !== null && analytics.anxietyTrend && (
                         <div className="mb-3">
                           <div className="flex items-center justify-between text-sm mb-1">
@@ -919,7 +919,7 @@ const Predictions: React.FC = () => {
                           </div>
                         </div>
                       )}
-                      
+
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                         {analytics.sessionsCount} session{analytics.sessionsCount !== 1 ? 's' : ''}
                       </div>
@@ -956,18 +956,18 @@ const Predictions: React.FC = () => {
                       const depressionCategories = filteredSessions
                         .map(s => getSessionScoreValue(s, 'depression'))
                         .filter((s): s is string | number => hasScoreValue(s));
-                      
+
                       if (depressionCategories.length === 0) return '—';
-                      
+
                       const counts: Record<string, number> = {};
                       depressionCategories.forEach(cat => {
                         const key = String(cat);
                         counts[key] = (counts[key] || 0) + 1;
                       });
-                      
+
                       const mostCommon = Object.entries(counts)
                         .sort(([,a], [,b]) => b - a)[0][0];
-                      
+
                       return formatQuantizedScoreLabel(mostCommon, 'depression');
                     })()}
                   </p>
@@ -987,18 +987,18 @@ const Predictions: React.FC = () => {
                       const anxietyCategories = filteredSessions
                         .map(s => getSessionScoreValue(s, 'anxiety'))
                         .filter((s): s is string | number => hasScoreValue(s));
-                      
+
                       if (anxietyCategories.length === 0) return '—';
-                      
+
                       const counts: Record<string, number> = {};
                       anxietyCategories.forEach(cat => {
                         const key = String(cat);
                         counts[key] = (counts[key] || 0) + 1;
                       });
-                      
+
                       const mostCommon = Object.entries(counts)
                         .sort(([,a], [,b]) => b - a)[0][0];
-                      
+
                       return formatQuantizedScoreLabel(mostCommon, 'anxiety');
                     })()}
                   </p>
@@ -1066,7 +1066,7 @@ const Predictions: React.FC = () => {
               <BarChart3 className="w-5 h-5 mr-2" aria-hidden="true" />
               Score Distribution
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {Object.entries(scoreDistribution).map(([scoreType, distribution]) => (
                 <div key={scoreType}>
@@ -1128,7 +1128,7 @@ const Predictions: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center space-x-4">
                     {hasScoreValue(getSessionScoreValue(session, 'depression')) && (
                       <div className="text-right">

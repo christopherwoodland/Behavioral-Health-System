@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  RefreshCw, 
-  AlertCircle, 
-  CheckCircle, 
-  Clock, 
+import {
+  ArrowLeft,
+  RefreshCw,
+  AlertCircle,
+  CheckCircle,
+  Clock,
   XCircle,
   Eye,
   Users,
@@ -147,13 +147,13 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
     try {
       setLoading(true);
       setError(null);
-      
+
       const userId = getAuthenticatedUserId();
       const response = await apiService.getUserSessions(userId);
-      
+
       // Filter sessions that belong to this group
       const groupSessions = response.sessions.filter(session => session.groupId === groupId);
-      
+
       setSessions(groupSessions);
       announceToScreenReader(`${groupSessions.length} sessions loaded for this group`);
     } catch (err) {
@@ -179,7 +179,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
     setDeleting(true);
     try {
       const response = await fileGroupService.deleteFileGroup(groupId);
-      
+
       if (response.success) {
         // Navigate back to sessions list after successful deletion
         navigate('/sessions');
@@ -214,18 +214,18 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
   const groupAnalytics = useMemo(() => {
     const completedSessions = sessions.filter(s => s.status === 'succeeded' || s.status === 'completed');
     const withPredictions = completedSessions.filter(s => s.prediction || s.analysisResults);
-    
+
     // Extract depression categories (categorical data, not numeric)
     const depressionCategories = withPredictions.map(session => {
       const prediction = session.prediction as any;
-      return prediction?.predicted_score_depression || 
+      return prediction?.predicted_score_depression ||
              prediction?.predictedScoreDepression;
     }).filter(category => category !== undefined && category !== null);
 
     // Extract anxiety categories (categorical data, not numeric)
     const anxietyCategories = withPredictions.map(session => {
       const prediction = session.prediction as any;
-      return prediction?.predicted_score_anxiety || 
+      return prediction?.predicted_score_anxiety ||
              prediction?.predictedScoreAnxiety;
     }).filter(category => category !== undefined && category !== null);
 
@@ -265,10 +265,10 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
   // Sort sessions based on current sort configuration
   const sortedSessions = useMemo(() => {
     const sessionsCopy = [...sessions];
-    
+
     sessionsCopy.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortConfig.sortBy) {
         case 'date':
           comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
@@ -282,10 +282,10 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
         case 'depressionScore':
           const predictionA = a.prediction as any;
           const predictionB = b.prediction as any;
-          const depressionA = predictionA?.predicted_score_depression || 
+          const depressionA = predictionA?.predicted_score_depression ||
                              predictionA?.predictedScoreDepression ||
                              a.analysisResults?.depressionScore;
-          const depressionB = predictionB?.predicted_score_depression || 
+          const depressionB = predictionB?.predicted_score_depression ||
                              predictionB?.predictedScoreDepression ||
                              b.analysisResults?.depressionScore;
           comparison = getSeverityLevel(depressionA) - getSeverityLevel(depressionB);
@@ -293,16 +293,16 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
         case 'anxietyScore':
           const predictionA2 = a.prediction as any;
           const predictionB2 = b.prediction as any;
-          const anxietyA = predictionA2?.predicted_score_anxiety || 
+          const anxietyA = predictionA2?.predicted_score_anxiety ||
                           predictionA2?.predictedScoreAnxiety ||
                           a.analysisResults?.anxietyScore;
-          const anxietyB = predictionB2?.predicted_score_anxiety || 
+          const anxietyB = predictionB2?.predicted_score_anxiety ||
                           predictionB2?.predictedScoreAnxiety ||
                           b.analysisResults?.anxietyScore;
           comparison = getSeverityLevel(anxietyA) - getSeverityLevel(anxietyB);
           break;
       }
-      
+
       return sortConfig.sortOrder === 'desc' ? -comparison : comparison;
     });
 
@@ -398,7 +398,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
             <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
             Back to Sessions
           </button>
-          
+
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               {group ? group.groupName : 'Group Sessions'}
@@ -410,7 +410,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -422,7 +422,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
             <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </button>
-          
+
           <button
             type="button"
             onClick={() => setShowDeleteConfirm(true)}
@@ -461,8 +461,8 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
             <Brain className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {groupAnalytics.mostCommonDepression ? 
-              formatQuantizedScoreLabel(groupAnalytics.mostCommonDepression, 'depression') : 
+            {groupAnalytics.mostCommonDepression ?
+              formatQuantizedScoreLabel(groupAnalytics.mostCommonDepression, 'depression') :
               '—'
             }
           </div>
@@ -488,8 +488,8 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
             <Heart className="w-4 h-4 text-red-600 dark:text-red-400" aria-hidden="true" />
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
-            {groupAnalytics.mostCommonAnxiety ? 
-              formatQuantizedScoreLabel(groupAnalytics.mostCommonAnxiety, 'anxiety') : 
+            {groupAnalytics.mostCommonAnxiety ?
+              formatQuantizedScoreLabel(groupAnalytics.mostCommonAnxiety, 'anxiety') :
               '—'
             }
           </div>
@@ -518,7 +518,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
             {groupAnalytics.withPredictions}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {groupAnalytics.totalSessions > 0 ? 
+            {groupAnalytics.totalSessions > 0 ?
               Math.round((groupAnalytics.withPredictions / groupAnalytics.totalSessions) * 100) : 0}% analyzed
           </div>
         </div>
@@ -532,7 +532,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
               Sessions in This Group ({sessions.length})
             </h2>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full" role="table" aria-label="Group sessions">
               <thead className="bg-gray-50 dark:bg-gray-700">
@@ -611,10 +611,10 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                 {sortedSessions.map((session) => {
                   const prediction = session.prediction as any;
                   const analysisResults = session.analysisResults;
-                  const depressionScore = prediction?.predicted_score_depression || 
+                  const depressionScore = prediction?.predicted_score_depression ||
                                         prediction?.predictedScoreDepression ||
                                         analysisResults?.depressionScore;
-                  const anxietyScore = prediction?.predicted_score_anxiety || 
+                  const anxietyScore = prediction?.predicted_score_anxiety ||
                                      prediction?.predictedScoreAnxiety ||
                                      analysisResults?.anxietyScore;
 
@@ -714,7 +714,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                   </h3>
                 </div>
               </div>
-              
+
               <div className="mb-4">
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   Are you sure you want to delete the group "{group?.groupName}"?

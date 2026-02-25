@@ -95,17 +95,17 @@ const Sessions: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
       const response = await apiService.getUserSessions(userId);
-      
+
       // Transform session data to include computed UI fields
       const transformedSessions: SessionWithUI[] = await Promise.all(
         response.sessions.map(async (session) => {
           // Handle both camelCase and snake_case property names from API
           const prediction = session.prediction as any;
           const analysisResults = session.analysisResults;
-          
+
           // Fetch group information if session has a groupId
           let groupName: string | undefined;
           let groupDescription: string | undefined;
@@ -120,7 +120,7 @@ const Sessions: React.FC = () => {
               console.warn(`Failed to fetch group info for session ${session.sessionId}:`, error);
             }
           }
-          
+
           return {
             ...session,
             uploadedAt: session.createdAt,
@@ -128,11 +128,11 @@ const Sessions: React.FC = () => {
             fileSize: Math.floor(Math.random() * 5000000) + 1000000, // Mock file size for now
             riskLevel: analysisResults?.riskLevel || 'unknown',
             // Prioritize descriptive string values from prediction over numeric values from analysisResults
-            depressionScore: prediction?.predicted_score_depression || 
+            depressionScore: prediction?.predicted_score_depression ||
                             prediction?.predictedScoreDepression ||
                             (analysisResults?.depressionScore?.toString()) ||
                             undefined,
-            anxietyScore: prediction?.predicted_score_anxiety || 
+            anxietyScore: prediction?.predicted_score_anxiety ||
                          prediction?.predictedScoreAnxiety ||
                          (analysisResults?.anxietyScore?.toString()) ||
                          undefined,
@@ -165,7 +165,7 @@ const Sessions: React.FC = () => {
     // Search filter
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
-      filtered = filtered.filter(session => 
+      filtered = filtered.filter(session =>
         session.sessionId.toLowerCase().includes(searchLower) ||
         session.fileName?.toLowerCase().includes(searchLower) ||
         session.groupName?.toLowerCase().includes(searchLower) ||
@@ -182,7 +182,7 @@ const Sessions: React.FC = () => {
     if (filters.dateRange !== 'all') {
       const now = new Date();
       const startDate = new Date();
-      
+
       switch (filters.dateRange) {
         case 'today':
           startDate.setHours(0, 0, 0, 0);
@@ -197,8 +197,8 @@ const Sessions: React.FC = () => {
           startDate.setFullYear(now.getFullYear() - 1);
           break;
       }
-      
-      filtered = filtered.filter(session => 
+
+      filtered = filtered.filter(session =>
         new Date(session.uploadedAt) >= startDate
       );
     }
@@ -206,7 +206,7 @@ const Sessions: React.FC = () => {
     // Sort
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (filters.sortBy) {
         case 'date':
           comparison = new Date(a.uploadedAt).getTime() - new Date(b.uploadedAt).getTime();
@@ -231,7 +231,7 @@ const Sessions: React.FC = () => {
           comparison = anxietyA - anxietyB;
           break;
       }
-      
+
       return filters.sortOrder === 'desc' ? -comparison : comparison;
     });
 
@@ -259,8 +259,8 @@ const Sessions: React.FC = () => {
     if (filters.sortBy !== column) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
     }
-    return filters.sortOrder === 'asc' ? 
-      <ChevronUp className="w-4 h-4 text-blue-600" /> : 
+    return filters.sortOrder === 'asc' ?
+      <ChevronUp className="w-4 h-4 text-blue-600" /> :
       <ChevronDown className="w-4 h-4 text-blue-600" />;
   };
 
@@ -298,17 +298,17 @@ const Sessions: React.FC = () => {
 
     try {
       await apiService.deleteSessionData(sessionId);
-      
+
       // Remove from local state after successful API call
       setSessions(prev => prev.filter(session => session.sessionId !== sessionId));
-      
+
       // Remove from selection if it was selected
       setSelectedSessions(prev => {
         const newSelection = new Set(prev);
         newSelection.delete(sessionId);
         return newSelection;
       });
-      
+
       announceToScreenReader('Session deleted successfully');
     } catch (err) {
       const appError = err as AppError;
@@ -333,7 +333,7 @@ const Sessions: React.FC = () => {
       }
 
       announceToScreenReader('Redirecting to upload page for re-run...');
-      
+
       // Navigate to upload page with session data
       navigate('/upload', {
         state: {
@@ -353,7 +353,7 @@ const Sessions: React.FC = () => {
   // Handle bulk actions
   const handleBulkDelete = useCallback(async () => {
     if (selectedSessions.size === 0) return;
-    
+
     const confirmed = window.confirm(`Are you sure you want to delete ${selectedSessions.size} session(s)? This action cannot be undone.`);
     if (!confirmed) return;
 
@@ -408,7 +408,7 @@ const Sessions: React.FC = () => {
     // For any unknown status that contains "error" or "fail", treat as error
     const normalizedStatus = status.toLowerCase();
     let config = statusConfig[status as keyof typeof statusConfig];
-    
+
     if (!config) {
       if (normalizedStatus.includes('error') || normalizedStatus.includes('fail')) {
         config = statusConfig.error;
@@ -417,9 +417,9 @@ const Sessions: React.FC = () => {
         config = statusConfig.queued;
       }
     }
-    
+
     const Icon = config.icon;
-    
+
     return (
       <span
         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -485,7 +485,7 @@ const Sessions: React.FC = () => {
             View and manage your audio analysis sessions
           </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <button type="button"
             onClick={loadSessions}
@@ -496,7 +496,7 @@ const Sessions: React.FC = () => {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
             Refresh
           </button>
-          
+
           <Link
             to="/upload"
             className="btn btn--primary"
@@ -638,7 +638,7 @@ const Sessions: React.FC = () => {
               {selectedSessions.size > 0 && ` • ${selectedSessions.size} selected`}
             </p>
           </div>
-          
+
           {selectedSessions.size > 0 && (
             <div className="flex items-center gap-2">
               <button type="button"
@@ -955,7 +955,7 @@ const Sessions: React.FC = () => {
             No sessions found
           </h3>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            {sessions.length === 0 
+            {sessions.length === 0
               ? "You haven't created any analysis sessions yet."
               : "No sessions match your current filters."
             }

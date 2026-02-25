@@ -32,7 +32,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BehavioralHealthSystem.Helpers\BehavioralHealthSystem.Helpers.csproj" />
-    <ProjectReference Include="..\BehavioralHealthSystem.Agents\BehavioralHealthSystem.Agents.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

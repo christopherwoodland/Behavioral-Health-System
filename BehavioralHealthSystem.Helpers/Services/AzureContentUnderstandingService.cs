@@ -335,7 +335,7 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
 
     private async Task<JsonElement> AnalyzeDocumentAsync(
         byte[] pdfData,
-        object schema,
+        object? schema,
         int startPage,
         int? endPage)
     {

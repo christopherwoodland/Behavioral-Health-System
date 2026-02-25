@@ -1,0 +1,96 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "appName": {
+      "value": "bhs"
+    },
+    "resourceGroupName": {
+      "value": "bhs"
+    },
+    "landingZoneResourceGroup": {
+      "value": "rg-demo-network-landing"
+    },
+    "appsVNetName": {
+      "value": "vnet-demo-apps-paarq"
+    },
+    "aiSpokeVNetName": {
+      "value": "vnet-ai-spoke-paarq"
+    },
+    "privateEndpointsSubnetName": {
+      "value": "snet-pe-17"
+    },
+    "aiServicesSubnetName": {
+      "value": "snet-09"
+    },
+    "containerAppsSubnetName": {
+      "value": "snet-cae-20"
+    },
+    "containerAppsSubnetPrefix": {
+      "value": "10.0.20.0/23"
+    },
+    "sharedResourceGroup": {
+      "value": "shared"
+    },
+    "frontDoorProfileName": {
+      "value": "shared-fd-eastus2-001"
+    },
+    "frontDoorEndpointName": {
+      "value": "bhs-dev"
+    },
+    "containerImageTag": {
+      "value": "latest"
+    },
+    "azureAdClientId": {
+      "value": ""
+    },
+    "azureAdApiClientId": {
+      "value": ""
+    },
+    "azureOpenAIRealtimeDeployment": {
+      "value": "gpt-4o-realtime-preview"
+    },
+    "azureOpenAIRealtimeApiVersion": {
+      "value": "2025-04-01-preview"
+    },
+    "azureOpenAIResourceName": {
+      "value": ""
+    },
+    "azureOpenAIWebRTCRegion": {
+      "value": "eastus2"
+    },
+    "extendedAssessmentDeployment": {
+      "value": "gpt-4o"
+    },
+    "agentModelDeployment": {
+      "value": "gpt-4o"
+    },
+    "kintsugiApiKey": {
+      "value": ""
+    },
+    "kintsugiBaseUrl": {
+      "value": "https://api.kintsugihealth.com/v2"
+    },
+    "bandServiceUrl": {
+      "value": ""
+    },
+    "enableSmartBand": {
+      "value": false
+    },
+    "tags": {
+      "value": {
+        "Application": "Behavioral Health System",
+        "Environment": "dev",
+        "ManagedBy": "Bicep",
+        "NetworkMode": "LandingZone-Private",
+        "DeploymentMode": "ContainerApps-FrontDoor"
+      }
+    }
+  }
+}

@@ -289,10 +289,33 @@ export const debounce = <T extends (...args: unknown[]) => void>(
   };
 };
 
-// Utility function to format score categories consistently across all components
-export const formatScoreCategory = (category?: string): string => {
-  if (!category) return '—';
-  return category
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (l: string) => l.toUpperCase());
+export const formatQuantizedScoreLabel = (
+  value: string | number | null | undefined,
+  type: 'depression' | 'anxiety'
+): string => {
+  if (value === undefined || value === null || value === '') return '—';
+
+  const normalized = String(value).trim().toLowerCase();
+
+  if (type === 'depression') {
+    if (normalized === '0') return 'no depression';
+    if (normalized === '1') return 'mild to moderate depression';
+    if (normalized === '2') return 'severe depression';
+    if (normalized === 'no_to_mild') return 'no to mild depression';
+    if (normalized === 'mild_to_moderate') return 'mild to moderate depression';
+    if (normalized === 'moderate_to_severe') return 'moderate to severe depression';
+  }
+
+  if (type === 'anxiety') {
+    if (normalized === '0') return 'no anxiety';
+    if (normalized === '1') return 'mild anxiety';
+    if (normalized === '2') return 'moderate anxiety';
+    if (normalized === '3') return 'severe anxiety';
+    if (normalized === 'no_or_minimal') return 'no or minimal anxiety';
+    if (normalized === 'moderate') return 'moderate anxiety';
+    if (normalized === 'moderately_severe') return 'moderately severe anxiety';
+    if (normalized === 'severe') return 'severe anxiety';
+  }
+
+  return normalized.replace(/_/g, ' ');
 };

@@ -137,7 +137,7 @@ public class StandardSuccessResponse : StandardSuccessResponse<object>
     /// <summary>
     /// Create a basic success response
     /// </summary>
-    public static new StandardSuccessResponse Create(string message = "Operation completed successfully")
+    public static StandardSuccessResponse Create(string message = "Operation completed successfully")
     {
         return new StandardSuccessResponse
         {

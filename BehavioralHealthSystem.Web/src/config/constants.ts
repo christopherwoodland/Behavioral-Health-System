@@ -47,8 +47,8 @@ export const STORAGE_KEYS = {
 // API endpoints
 export const API_ENDPOINTS = {
   HEALTH: '/health',
-  SESSIONS_INITIATE: '/sessions/initiate',
-  PREDICTIONS_SUBMIT: '/predictions/submit',
+  SESSIONS_INITIATE: '/sessions/initiate-selected',
+  PREDICTIONS_SUBMIT: '/predictions/submit-selected',
   PREDICTIONS_BY_USER: '/predictions',
   PREDICTIONS_BY_SESSION: '/predictions/sessions',
 } as const;

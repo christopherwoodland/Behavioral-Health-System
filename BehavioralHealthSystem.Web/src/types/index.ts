@@ -40,26 +40,82 @@ export interface PredictionSubmitRequest {
 export interface PredictionSubmitResponse {
   success: boolean;
   sessionId: string;
-  status: string;
+  status: PredictionResult['status'];
   message: string;
-}
-
-export interface PredictionResult {
-  sessionId: string;
-  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'processing' | 'success';
   predictedScore?: string;
   predictedScoreAnxiety?: string;
   predictedScoreDepression?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
+  modelCategory?: string;
+  modelGranularity?: string;
+  isCalibrated?: boolean;
+  model?: string;
   actualScore?: {
-    anxietyBinary: string;
-    depressionBinary: string;
+    anxietyBinary?: string;
+    depressionBinary?: string;
   };
   predictError?: {
     error: string;
     message: string;
     additionalData?: Record<string, unknown>;
+  };
+  predicted_score?: string;
+  predicted_score_anxiety?: string;
+  predicted_score_depression?: string;
+  created_at?: string;
+  updated_at?: string;
+  model_category?: string;
+  model_granularity?: string;
+  is_calibrated?: boolean;
+  actual_score?: {
+    anxiety_binary?: string;
+    depression_binary?: string;
+  };
+  predict_error?: {
+    error: string;
+    message: string;
+    additional_data?: Record<string, unknown>;
+  };
+}
+
+export interface PredictionResult {
+  sessionId: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'processing' | 'success' | 'completed' | 'submitted';
+  predictedScore?: string;
+  predictedScoreAnxiety?: string;
+  predictedScoreDepression?: string;
+  createdAt: string;
+  updatedAt: string;
+  modelCategory?: string;
+  modelGranularity?: string;
+  isCalibrated?: boolean;
+  model?: string;
+  predicted_score?: string;
+  predicted_score_anxiety?: string;
+  predicted_score_depression?: string;
+  created_at?: string;
+  updated_at?: string;
+  model_category?: string;
+  model_granularity?: string;
+  is_calibrated?: boolean;
+  actualScore?: {
+    anxietyBinary?: string;
+    depressionBinary?: string;
+  };
+  actual_score?: {
+    anxiety_binary?: string;
+    depression_binary?: string;
+  };
+  predictError?: {
+    error: string;
+    message: string;
+    additionalData?: Record<string, unknown>;
+  };
+  predict_error?: {
+    error: string;
+    message: string;
+    additional_data?: Record<string, unknown>;
   };
 }
 
@@ -205,7 +261,7 @@ export interface SilenceRemovalOptions {
 
 export interface AudioConversionOptions {
   outputFormat: 'wav';
-  sampleRate: 44100;
+  sampleRate: 16000 | 44100;
   channels: 1;
   /** Silence removal configuration */
   silenceRemoval?: SilenceRemovalOptions;

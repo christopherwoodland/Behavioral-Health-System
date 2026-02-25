@@ -63,7 +63,7 @@ export class AudioProcessor {
     file: File,
     options: AudioConversionOptions = {
       outputFormat: 'wav',
-      sampleRate: 44100,
+      sampleRate: 16000,
       channels: 1,
       silenceRemoval: {
         enabled: config.audio.silenceRemoval.enabled,

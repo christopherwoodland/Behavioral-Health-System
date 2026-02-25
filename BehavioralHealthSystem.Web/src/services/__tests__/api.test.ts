@@ -233,7 +233,7 @@ describe('API Service', () => {
         const result = await apiService.initiateSession(mockRequest);
 
         expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions/initiate',
+          'http://localhost:7071/api/sessions/initiate-selected',
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

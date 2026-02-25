@@ -5,7 +5,7 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory } from '../utils';
+import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel } from '../utils';
 import type { SessionData, AppError } from '../types';
 
 // Session interface for UI with additional computed fields
@@ -737,7 +737,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('date')}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="sticky right-0 z-20 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                     Actions
                   </th>
                 </tr>
@@ -746,7 +746,7 @@ const Sessions: React.FC = () => {
                 {filteredAndSortedSessions.map((session) => (
                   <tr
                     key={session.sessionId}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    className="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
                     <td className="px-6 py-4">
                       <input
@@ -793,9 +793,9 @@ const Sessions: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">
-                        {session.depressionScore ? (
+                        {session.depressionScore !== undefined && session.depressionScore !== null && session.depressionScore !== '' ? (
                           <span className="text-gray-900 dark:text-white font-medium">
-                            {formatScoreCategory(session.depressionScore)}
+                            {formatQuantizedScoreLabel(session.depressionScore, 'depression')}
                           </span>
                         ) : (
                           <span className="text-gray-400 dark:text-gray-500">—</span>
@@ -804,9 +804,9 @@ const Sessions: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm">
-                        {session.anxietyScore ? (
+                        {session.anxietyScore !== undefined && session.anxietyScore !== null && session.anxietyScore !== '' ? (
                           <span className="text-gray-900 dark:text-white font-medium">
-                            {formatScoreCategory(session.anxietyScore)}
+                            {formatQuantizedScoreLabel(session.anxietyScore, 'anxiety')}
                           </span>
                         ) : (
                           <span className="text-gray-400 dark:text-gray-500">—</span>
@@ -821,7 +821,7 @@ const Sessions: React.FC = () => {
                         {formatDateTime(session.uploadedAt)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="sticky right-0 z-10 px-6 py-4 text-right bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/sessions/${session.sessionId}`}
@@ -893,16 +893,16 @@ const Sessions: React.FC = () => {
                   <StatusBadge status={session.status} />
                 </div>
 
-                {(session.depressionScore || session.anxietyScore) && (
+                {(session.depressionScore !== undefined && session.depressionScore !== null && session.depressionScore !== '') || (session.anxietyScore !== undefined && session.anxietyScore !== null && session.anxietyScore !== '') ? (
                   <div className="text-sm">
-                    {session.depressionScore && (
-                      <div>Depression: {formatScoreCategory(session.depressionScore)}</div>
+                    {session.depressionScore !== undefined && session.depressionScore !== null && session.depressionScore !== '' && (
+                      <div>Depression: {formatQuantizedScoreLabel(session.depressionScore, 'depression')}</div>
                     )}
-                    {session.anxietyScore && (
-                      <div>Anxiety: {formatScoreCategory(session.anxietyScore)}</div>
+                    {session.anxietyScore !== undefined && session.anxietyScore !== null && session.anxietyScore !== '' && (
+                      <div>Anxiety: {formatQuantizedScoreLabel(session.anxietyScore, 'anxiety')}</div>
                     )}
                   </div>
-                )}
+                ) : null}
 
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span>{formatRelativeTime(session.uploadedAt)}</span>

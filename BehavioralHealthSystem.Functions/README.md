@@ -102,7 +102,11 @@ Create and configure `local.settings.json`:
 {
   "IsEncrypted": false,
   "Values": {
-    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AzureWebJobsStorage": "",
+    "AzureWebJobsStorage__accountName": "your-storage-account-name",
+    "AzureWebJobsStorage__blobServiceUri": "https://your-storage-account-name.blob.core.windows.net",
+    "AzureWebJobsStorage__queueServiceUri": "https://your-storage-account-name.queue.core.windows.net",
+    "AzureWebJobsStorage__tableServiceUri": "https://your-storage-account-name.table.core.windows.net",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     
     "KINTSUGI_API_KEY": "your-kintsugi-api-key",

@@ -9,10 +9,10 @@ A **production-ready** full-stack behavioral health assessment platform featurin
 This application supports three distinct environments for different use cases:
 
 | Environment | Purpose | Setup Guide |
-|------------|---------|-------------|
-| **🏠 Local** | Offline development with local models | [Quick Start](#local-offline-mode) |
-| **🧪 Development** | Azure dev/test with Managed Identity | [Development Setup](#development-environment) |
-| **🚀 Production** | Production deployment on Azure | [Production Deployment](#production-deployment) |
+| ------------ | --------- | ------------- |
+| **🏠 Local** | Offline development with local models | [Quick Start](ENVIRONMENTS.md) |
+| **🧪 Development** | Azure dev/test with Managed Identity | [Development Setup](ENVIRONMENTS.md) |
+| **🚀 Production** | Production deployment on Azure | [Production Deployment](ENVIRONMENTS.md) |
 
 **👉 See [ENVIRONMENTS.md](ENVIRONMENTS.md) for detailed environment configuration guide**
 
@@ -112,7 +112,8 @@ For complete sections on any topic, please review the relevant section below.
 
 ### **🔑 API Credentials**
 
-- **Valid Kintsugi Health API credentials** - Contact Kintsugi Health for API access
+- **Valid Kintsugi Health API credentials** - Contact Kintsugi Health for API access (only required when not using local DAM mode)
+- **Optional local DAM model service** - Hugging Face model: <https://huggingface.co/KintsugiHealth/dam>
 - **Application Insights connection string** - For telemetry and monitoring (optional for local development)
 
 ### **🌐 Browser Requirements**
@@ -321,10 +322,84 @@ Create a `local.settings.json` file from the template:
     "KINTSUGI_TIMEOUT_SECONDS": "300",
     "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",
     "KINTSUGI_RETRY_DELAY_MS": "1000",
+      "USE_LOCAL_DAM_MODEL": "false",
+      "LOCAL_DAM_BASE_URL": "http://localhost:8000",
+      "LOCAL_DAM_INITIATE_PATH": "initiate",
+      "LOCAL_DAM_PREDICTION_PATH": "predict",
+      "LOCAL_DAM_MODEL_ID": "KintsugiHealth/dam",
+      "LOCAL_DAM_TIMEOUT_SECONDS": "300",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "your-app-insights-connection-string"
   }
 }
 ```
+
+### Local DAM Model (Hugging Face)
+
+This project supports a self-hosted local model path using the Kintsugi DAM model:
+
+- Model: <https://huggingface.co/KintsugiHealth/dam>
+- Backend switch flag: `USE_LOCAL_DAM_MODEL`
+- Self-hosted DAM API service (real model, no mock): `services/dam-selfhost`
+- New local-only routes:
+  - `POST /api/sessions/initiate-local`
+  - `POST /api/predictions/submit-local`
+- New switchable routes (recommended for UI):
+  - `POST /api/sessions/initiate-selected`
+  - `POST /api/predictions/submit-selected`
+
+`*-selected` routes automatically choose provider:
+
+- `USE_LOCAL_DAM_MODEL=false` → Kintsugi API
+- `USE_LOCAL_DAM_MODEL=true` → local DAM service
+
+The request shape is kept compatible with existing UI payloads.
+
+#### Run the self-hosted DAM API
+
+The DAM model is hosted from the Hugging Face repo and exposed locally as:
+
+- `POST http://localhost:8000/initiate`
+- `POST http://localhost:8000/predict`
+
+Start it with Docker Compose:
+
+```powershell
+docker compose -f docker-compose.local.yml up -d dam-selfhost
+```
+
+Or use the helper script:
+
+```powershell
+.\services\dam-selfhost\scripts\run-local.ps1 -Rebuild
+```
+
+Then run Functions with local DAM enabled:
+
+```json
+{
+   "Values": {
+      "USE_LOCAL_DAM_MODEL": "true",
+      "LOCAL_DAM_BASE_URL": "http://localhost:8000",
+      "LOCAL_DAM_INITIATE_PATH": "initiate",
+      "LOCAL_DAM_PREDICTION_PATH": "predict",
+      "LOCAL_DAM_MODEL_ID": "KintsugiHealth/dam"
+   }
+}
+```
+
+With these settings, existing UI calls to `*-selected` endpoints route to the self-hosted DAM API instead of the online Kintsugi endpoint.
+
+### Local Storage for Function Host
+
+For local runs you can use either Azurite or real Azure Blob storage:
+
+- **Azurite (default):**
+  - `AzureWebJobsStorage=UseDevelopmentStorage=true`
+- **Azure Storage account (recommended when Azurite is unavailable):**
+  - `AZURE_STORAGE_CONNECTION_STRING=<your-connection-string>`
+  - or managed identity style settings such as `AZURE_STORAGE_ACCOUNT_NAME` / `DSM5_STORAGE_ACCOUNT_NAME`
+
+Using real Azure storage works for local Function host execution when properly authenticated.
 
 ### Application Settings
 
@@ -423,7 +498,7 @@ The `Deploy-With-VNet-Integration.ps1` script orchestrates complete infrastructu
 
 ### **Deployment Flow**
 
-```
+```text
 1. Prerequisites Check
    ├─ Verify Azure CLI installed
    └─ Verify logged into Azure account
@@ -461,7 +536,8 @@ The `Deploy-With-VNet-Integration.ps1` script orchestrates complete infrastructu
 
 #### ✅ Deployed Services
 
-**Backend APIs**
+##### Backend APIs
+
 - Flex Consumption Function App (FC1)
   - .NET 8 isolated runtime
   - VNet integration on delegated subnet
@@ -469,36 +545,42 @@ The `Deploy-With-VNet-Integration.ps1` script orchestrates complete infrastructu
   - System-assigned managed identity
   - Auto-scaling up to 100 instances
 
-**AI & ML Services**
+##### AI & ML Services
+
 - Azure OpenAI (GPT-4 models with private endpoint)
 - Document Intelligence (form processing with private endpoint)
 - Content Understanding API (private endpoint)
 
-**Security & Storage**
+##### Security & Storage
+
 - Key Vault (private endpoint, firewall restricted)
 - Storage Account (private endpoint, HTTPS only)
 
-**Networking**
+##### Networking
+
 - Virtual Network (10.0.0.0/16)
 - App subnet (10.0.1.0/24) - delegated for Function App
 - Private endpoint subnet (10.0.2.0/24) - for services
 - Container Apps subnet (10.0.4.0/23) - reserved for future
 
-**Monitoring & Logging**
+##### Monitoring & Logging
+
 - Application Insights
 - Log Analytics Workspace
 - Private DNS Zones
 
 #### ❌ Not Deployed (Deploy Separately)
 
-**Static Web App (React Frontend)**
+##### Static Web App (React Frontend)
+
 - Status: Commented out in `main.bicep`
 - Reason: Temporary disable due to JSON parsing issues
 - Network: NOT VNet-integrated (fully managed SaaS)
 - Authentication: MSAL
 - To deploy: Uncomment module in main.bicep
 
-**Container Apps (GitHub Runners)**
+##### Container Apps (GitHub Runners)
+
 - Status: Commented out in `main.bicep`
 - Reason: Deploy after core infrastructure is stable
 - Purpose: Self-hosted GitHub Actions runners
@@ -608,16 +690,19 @@ The project includes **comprehensive unit tests** covering:
 ### **Manual API Testing**
 
 1. **Health Check:**
+
    ```bash
    curl http://localhost:7071/api/health
    ```
 
 2. **Kintsugi Connection Test:**
+
    ```bash
    curl -X POST http://localhost:7071/api/TestKintsugiConnection
    ```
 
 3. **Start Workflow:**
+
    ```bash
    curl -X POST http://localhost:7071/api/sessions/initiate \
      -H "Content-Type: application/json" \

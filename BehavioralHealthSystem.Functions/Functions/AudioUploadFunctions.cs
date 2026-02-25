@@ -154,8 +154,12 @@ public class AudioUploadFunctions
 
             await blobClient.UploadAsync(memoryStream, uploadOptions);
 
+            var blobPath = $"audio-uploads/{blobName}";
             var blobUrl = blobClient.Uri.ToString();
             _logger.LogInformation("✅ Audio file uploaded successfully to: {BlobUrl}", blobUrl);
+            _logger.LogInformation("✅ Audio blob path: {BlobPath}", blobPath);
+            _logger.LogInformation("UPLOAD_SUCCESS BLOB_PATH={BlobPath} BLOB_URL={BlobUrl} USER_ID={UserId} SESSION_ID={SessionId}",
+                blobPath, blobUrl, userId, sessionId);
 
             // Return success response
             var response = req.CreateResponse(HttpStatusCode.OK);
@@ -167,7 +171,7 @@ public class AudioUploadFunctions
                 sessionId,
                 fileName = sanitizedFileName,
                 blobUrl,
-                blobPath = $"audio-uploads/{blobName}",
+                blobPath,
                 fileSize = memoryStream.Length,
                 contentType,
                 uploadedAt = DateTime.UtcNow

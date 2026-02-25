@@ -100,6 +100,7 @@ export const env = {
   get ENABLE_JEKYLL_AGENT() { return getEnvVarBool('VITE_ENABLE_JEKYLL_AGENT', true); },
   get ENABLE_SESSION_VOICE_RECORDING() { return getEnvVarBool('VITE_ENABLE_SESSION_VOICE_RECORDING', true); },
   get ENABLE_SMART_BAND() { return getEnvVarBool('VITE_ENABLE_SMART_BAND', false); },
+  get OFFLINE_MODE() { return getEnvVarBool('VITE_OFFLINE_MODE', false); },
 
   // Timing Configuration
   get BIOMETRIC_SAVE_DELAY_MS() { return getEnvVarInt('VITE_BIOMETRIC_SAVE_DELAY_MS', 2000); },

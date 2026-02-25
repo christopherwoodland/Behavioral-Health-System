@@ -21,7 +21,7 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime, formatDateTime, formatScoreCategory, createAppError } from '../utils';
+import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel, createAppError } from '../utils';
 import type { SessionData, AppError, FileGroup } from '../types';
 
 // Sort configuration interface
@@ -462,7 +462,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {groupAnalytics.mostCommonDepression ? 
-              formatScoreCategory(groupAnalytics.mostCommonDepression) : 
+              formatQuantizedScoreLabel(groupAnalytics.mostCommonDepression, 'depression') : 
               '—'
             }
           </div>
@@ -489,7 +489,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
           </div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">
             {groupAnalytics.mostCommonAnxiety ? 
-              formatScoreCategory(groupAnalytics.mostCommonAnxiety) : 
+              formatQuantizedScoreLabel(groupAnalytics.mostCommonAnxiety, 'anxiety') : 
               '—'
             }
           </div>
@@ -638,9 +638,9 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm">
-                          {depressionScore ? (
+                          {depressionScore !== undefined && depressionScore !== null && depressionScore !== '' ? (
                             <span className="text-gray-900 dark:text-white font-medium">
-                              {typeof depressionScore === 'string' ? formatScoreCategory(depressionScore) : depressionScore.toFixed(1)}
+                              {formatQuantizedScoreLabel(depressionScore as string | number, 'depression')}
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">—</span>
@@ -649,9 +649,9 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm">
-                          {anxietyScore ? (
+                          {anxietyScore !== undefined && anxietyScore !== null && anxietyScore !== '' ? (
                             <span className="text-gray-900 dark:text-white font-medium">
-                              {typeof anxietyScore === 'string' ? formatScoreCategory(anxietyScore) : anxietyScore.toFixed(1)}
+                              {formatQuantizedScoreLabel(anxietyScore as string | number, 'anxiety')}
                             </span>
                           ) : (
                             <span className="text-gray-400 dark:text-gray-500">—</span>

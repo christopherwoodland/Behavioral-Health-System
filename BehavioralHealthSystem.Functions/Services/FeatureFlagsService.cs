@@ -68,7 +68,8 @@ public class FeatureFlagsService
             // Define all known feature flags
             var knownFlags = new[]
             {
-                "AGENT_MODE_ENABLED"
+                "AGENT_MODE_ENABLED",
+                "USE_LOCAL_DAM_MODEL"
             };
 
             foreach (var flagName in knownFlags)

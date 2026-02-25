@@ -1152,7 +1152,7 @@ const UploadAnalyze: React.FC = () => {
             message: `Row ${i + 1}: Analyzing with Kintsugi...`
           }));
 
-          await apiService.submitPrediction({
+          const submitResponse = await apiService.submitPrediction({
             userId: row.userId.trim(),
             sessionId: sessionId,
             audioFileUrl: audioUrl,
@@ -1160,7 +1160,9 @@ const UploadAnalyze: React.FC = () => {
           });
 
           // Poll for results
-          const poller = new PredictionPoller(sessionId);
+          const poller = new PredictionPoller(sessionId, {
+            initialResult: submitResponse,
+          });
           kintsugiResult = await new Promise<PredictionResult>((resolve, reject) => {
             poller.start(
               () => {}, // progress callback
@@ -1384,6 +1386,47 @@ const UploadAnalyze: React.FC = () => {
     const parsed = parseFloat(value);
     return isNaN(parsed) ? defaultValue : parsed;
   }, []);
+
+  const mapDepressionQuantizedLabel = useCallback((value: string | number | undefined | null): string | null => {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const normalized = String(value).trim();
+    if (normalized === '0') return 'no depression';
+    if (normalized === '1') return 'mild to moderate depression';
+    if (normalized === '2') return 'severe depression';
+    return null;
+  }, []);
+
+  const mapAnxietyQuantizedLabel = useCallback((value: string | number | undefined | null): string | null => {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+
+    const normalized = String(value).trim();
+    if (normalized === '0') return 'no anxiety';
+    if (normalized === '1') return 'mild anxiety';
+    if (normalized === '2') return 'moderate anxiety';
+    if (normalized === '3') return 'severe anxiety';
+    return null;
+  }, []);
+
+  const formatQuantizedScore = useCallback((
+    value: string | number | undefined | null,
+    type: 'depression' | 'anxiety'
+  ): string => {
+    if (value === undefined || value === null || value === '') {
+      return 'N/A';
+    }
+
+    const normalized = String(value).trim();
+    const label = type === 'depression'
+      ? mapDepressionQuantizedLabel(normalized)
+      : mapAnxietyQuantizedLabel(normalized);
+
+    return label ?? normalized;
+  }, [mapAnxietyQuantizedLabel, mapDepressionQuantizedLabel]);
 
   const validateMetadata = useCallback(() => {
     const errors: string[] = [];
@@ -1975,7 +2018,7 @@ const UploadAnalyze: React.FC = () => {
         }));
 
         // Submit prediction with URL to /predictions/submit endpoint
-        await apiService.submitPrediction({
+        const submitResponse = await apiService.submitPrediction({
           userId: userMetadata.userId.trim(),
           sessionId: sessionData.sessionId,
           audioFileUrl: audioUrl,
@@ -1983,7 +2026,9 @@ const UploadAnalyze: React.FC = () => {
         });
 
         // Poll for Kintsugi results
-        const poller = new PredictionPoller(sessionData.sessionId);
+        const poller = new PredictionPoller(sessionData.sessionId, {
+          initialResult: submitResponse,
+        });
 
         kintsugiResult = await new Promise<PredictionResult>((resolve, reject) => {
           poller.start(
@@ -2719,7 +2764,7 @@ const UploadAnalyze: React.FC = () => {
         console.log('🎵 processSingleFile: KINTSUGI SECTION - Starting Kintsugi assessment');
 
         // Step 5: Submit prediction with URL to /predictions/submit endpoint
-        await apiService.submitPrediction({
+        const submitResponse = await apiService.submitPrediction({
           userId: userMetadata.userId.trim(),
           sessionId: sessionData.sessionId,
           audioFileUrl: audioUrl,
@@ -2730,7 +2775,9 @@ const UploadAnalyze: React.FC = () => {
         announceToScreenReader('Prediction submitted, analysis in progress');
 
         // Step 6: Poll for results
-        const poller = new PredictionPoller(sessionData.sessionId);
+        const poller = new PredictionPoller(sessionData.sessionId, {
+          initialResult: submitResponse,
+        });
 
         await new Promise<void>((resolve, reject) => {
           poller.start(
@@ -3730,12 +3777,19 @@ const UploadAnalyze: React.FC = () => {
                     </div>
                     <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2 mb-2">
                       <div
-                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0}%` }}
+                        className="bg-blue-600 dark:bg-blue-400 h-2 rounded-full transition-all duration-300 progress--dynamic"
+                        ref={(el) => {
+                          if (el) {
+                            const pct = csvProcessingProgress.totalFiles > 0 ? (csvProcessingProgress.currentFile / csvProcessingProgress.totalFiles) * 100 : 0;
+                            el.style.setProperty('--progress-width', `${pct}%`);
+                            el.setAttribute('aria-valuenow', String(Number(csvProcessingProgress.currentFile) || 0));
+                            el.setAttribute('aria-valuemin', '0');
+                            el.setAttribute('aria-valuemax', String(Number(csvProcessingProgress.totalFiles) || 0));
+                          }
+                        }}
                         role="progressbar"
-                        aria-valuenow={csvProcessingProgress.currentFile}
-                        aria-valuemin={0}
-                        aria-valuemax={csvProcessingProgress.totalFiles}
+                        title="CSV batch processing progress"
+                        aria-label="CSV batch processing progress"
                       ></div>
                     </div>
                     <p className="text-sm text-blue-700 dark:text-blue-300">{csvProcessingProgress.message}</p>
@@ -3945,12 +3999,17 @@ const UploadAnalyze: React.FC = () => {
                     <div className="audio-progress">
                       <div
                         className="audio-progress__fill progress-animated progress--dynamic"
-                        style={{ '--progress-width': `${(currentTime / audioFile.duration) * 100}%` } as React.CSSProperties}
+                        ref={(el) => {
+                          if (el && audioFile.duration) {
+                            el.style.setProperty('--progress-width', `${(currentTime / audioFile.duration) * 100}%`);
+                            el.setAttribute('aria-valuenow', String(Math.round(currentTime)));
+                            el.setAttribute('aria-valuemin', '0');
+                            el.setAttribute('aria-valuemax', String(Math.round(audioFile.duration)));
+                          }
+                        }}
                         role="progressbar"
+                        title="Audio playback progress"
                         aria-label="Audio playback progress"
-                        aria-valuenow={Math.round(currentTime)}
-                        aria-valuemin={0}
-                        aria-valuemax={Math.round(audioFile.duration)}
                       />
                     </div>
                   )}
@@ -4072,7 +4131,7 @@ const UploadAnalyze: React.FC = () => {
                             <div className="processing-progress mt-1">
                               <div
                                 className={`processing-progress__fill progress--dynamic ${getProgressColor(progress.stage)}`}
-                                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
+                                ref={(el) => el?.style.setProperty('--progress-width', `${progress.progress}%`)}
                               />
                             </div>
                           </div>
@@ -4126,12 +4185,17 @@ const UploadAnalyze: React.FC = () => {
             <div className="processing-progress">
               <div
                 className={`processing-progress__fill progress-animated progress--dynamic ${getProgressColor(progress.stage)}`}
-                style={{ '--progress-width': `${progress.progress}%` } as React.CSSProperties}
+                ref={(el) => {
+                  if (el) {
+                    el.style.setProperty('--progress-width', `${progress.progress}%`);
+                    el.setAttribute('aria-valuenow', String(Math.round(progress.progress)));
+                    el.setAttribute('aria-valuemin', '0');
+                    el.setAttribute('aria-valuemax', '100');
+                  }
+                }}
                 role="progressbar"
+                title="Processing progress"
                 aria-label="Processing progress"
-                aria-valuenow={Math.round(progress.progress)}
-                aria-valuemin={0}
-                aria-valuemax={100}
               />
             </div>
             {progress.stage === 'analyzing' && (
@@ -4166,11 +4230,11 @@ const UploadAnalyze: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Depression:</span>
-                        <span className="font-mono text-gray-900 dark:text-white">{result.rawApiResponse.predicted_score_depression || 'N/A'}</span>
+                        <span className="font-mono text-gray-900 dark:text-white">{formatQuantizedScore(result.rawApiResponse.predicted_score_depression || result.rawApiResponse.predictedScoreDepression, 'depression')}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Anxiety:</span>
-                        <span className="font-mono text-gray-900 dark:text-white">{result.rawApiResponse.predicted_score_anxiety || 'N/A'}</span>
+                        <span className="font-mono text-gray-900 dark:text-white">{formatQuantizedScore(result.rawApiResponse.predicted_score_anxiety || result.rawApiResponse.predictedScoreAnxiety, 'anxiety')}</span>
                       </div>
                       {/* Note: Overall predicted_score is deprecated and no longer displayed */}
                       <div className="flex justify-between">
@@ -4188,16 +4252,16 @@ const UploadAnalyze: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Category:</span>
-                        <span className="font-mono text-gray-900 dark:text-white">{result.rawApiResponse.model_category || 'N/A'}</span>
+                        <span className="font-mono text-gray-900 dark:text-white">{result.rawApiResponse.model_category || result.rawApiResponse.modelCategory || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Granularity:</span>
-                        <span className="font-mono text-gray-900 dark:text-white">{result.rawApiResponse.model_granularity || 'N/A'}</span>
+                        <span className="font-mono text-gray-900 dark:text-white">{result.rawApiResponse.model_granularity || result.rawApiResponse.modelGranularity || 'N/A'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Calibrated:</span>
-                        <span className={`font-mono ${result.rawApiResponse.is_calibrated ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
-                          {result.rawApiResponse.is_calibrated ? 'Yes' : 'No'}
+                        <span className={`font-mono ${(result.rawApiResponse.is_calibrated ?? result.rawApiResponse.isCalibrated) ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>
+                          {(result.rawApiResponse.is_calibrated ?? result.rawApiResponse.isCalibrated) ? 'Yes' : 'No'}
                         </span>
                       </div>
                     </div>
@@ -4368,11 +4432,17 @@ const UploadAnalyze: React.FC = () => {
                   <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2 mb-2">
                     <div
                       className="bg-green-600 dark:bg-green-400 h-2 rounded-full transition-all duration-300 progress--dynamic"
-                      style={{ '--progress-width': `${batchProcessingProgress.totalFiles > 0 ? (batchProcessingProgress.currentFile / batchProcessingProgress.totalFiles) * 100 : 0}%` } as React.CSSProperties}
+                      ref={(el) => {
+                        if (el) {
+                          const pct = batchProcessingProgress.totalFiles > 0 ? (batchProcessingProgress.currentFile / batchProcessingProgress.totalFiles) * 100 : 0;
+                          el.style.setProperty('--progress-width', `${pct}%`);
+                          el.setAttribute('aria-valuenow', String(Number(batchProcessingProgress.currentFile) || 0));
+                          el.setAttribute('aria-valuemin', '0');
+                          el.setAttribute('aria-valuemax', String(Number(batchProcessingProgress.totalFiles) || 0));
+                        }
+                      }}
                       role="progressbar"
-                      aria-valuenow={batchProcessingProgress.currentFile}
-                      aria-valuemin={0}
-                      aria-valuemax={batchProcessingProgress.totalFiles}
+                      title="Batch processing progress"
                       aria-label="Batch processing progress"
                     ></div>
                   </div>
@@ -4515,13 +4585,13 @@ const UploadAnalyze: React.FC = () => {
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Depression:</span>
                           <span className="font-mono text-gray-900 dark:text-white">
-                            {result.rawApiResponse.predicted_score_depression || 'N/A'}
+                            {formatQuantizedScore(result.rawApiResponse.predicted_score_depression || result.rawApiResponse.predictedScoreDepression, 'depression')}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-gray-600 dark:text-gray-400">Anxiety:</span>
                           <span className="font-mono text-gray-900 dark:text-white">
-                            {result.rawApiResponse.predicted_score_anxiety || 'N/A'}
+                            {formatQuantizedScore(result.rawApiResponse.predicted_score_anxiety || result.rawApiResponse.predictedScoreAnxiety, 'anxiety')}
                           </span>
                         </div>
                       </div>

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiService, PredictionPoller } from '@/services/api';
+import { env } from '@/utils/env';
 import { getUserId } from '@/utils';
 import type {
   SessionInitiateRequest,
@@ -23,6 +24,7 @@ export const useHealthCheck = () => {
   return useQuery<HealthCheckResponse, AppError>({
     queryKey: QUERY_KEYS.health,
     queryFn: () => apiService.checkHealth(),
+    enabled: !env.OFFLINE_MODE,
     retry: 2,
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,

@@ -21,42 +21,72 @@ if ($SubscriptionId) {
 Write-Host "Deploying environment variables to Function App: $FunctionAppName" -ForegroundColor Green
 Write-Host "Resource Group: $ResourceGroupName" -ForegroundColor Green
 
-# Define all environment variables from local.settings.json
+function Get-RequiredEnvVar {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Name
+    )
+
+    $value = [Environment]::GetEnvironmentVariable($Name)
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        throw "Required environment variable is missing: $Name"
+    }
+
+    return $value
+}
+
+function Get-OptionalEnvVar {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Name,
+        [Parameter(Mandatory=$false)]
+        [string]$DefaultValue = ""
+    )
+
+    $value = [Environment]::GetEnvironmentVariable($Name)
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        return $DefaultValue
+    }
+
+    return $value
+}
+
+# Define environment variables from process environment (no hardcoded secrets)
 $environmentVariables = @(
-    "AzureWebJobsStorage=DefaultEndpointsProtocol=https;AccountName=aistgvi;AccountKey=BdeUlkAARVe/ZvpBz+diTgN2yiW8szxtStXRfVsd/Kc5AsgIbXFvoUZb2BDL2YWq03/GVHqsOixJ+ASts4wA8Q==;EndpointSuffix=core.windows.net",
+    "AzureWebJobsStorage=$(Get-RequiredEnvVar -Name 'AZURE_WEBJOBS_STORAGE')",
     "FUNCTIONS_WORKER_RUNTIME=dotnet-isolated",
-    "KINTSUGI_API_KEY=87ea6a21350e42c5bf60eb6eb30cbb8e",
-    "KINTSUGI_BASE_URL=https://api.kintsugihealth.com/v2",
-    "WORKFLOW_MAX_RETRIES=100",
-    "WORKFLOW_RETRY_DELAY_SECONDS=30",
-    "KINTSUGI_AUTO_PROVIDE_CONSENT=false",
-    "AZURE_OPENAI_ENDPOINT=https://openai-sesame-eastus-001.openai.azure.com/",
-    "AZURE_OPENAI_API_KEY=89a35462495b4448b433e57d092397e3",
-    "AZURE_OPENAI_DEPLOYMENT=gpt-4.1",
-    "AZURE_OPENAI_ENABLED=true",
-    "AZURE_OPENAI_API_VERSION=2024-12-01-preview",
-    "AUDIO_SAMPLE_RATE=24000",
-    "AUDIO_BITS_PER_SAMPLE=16",
-    "AUDIO_CHANNELS=1",
-    "AUDIO_ENABLE_VAD=true",
-    "AUDIO_SILENCE_THRESHOLD=0.01",
-    "AUDIO_SILENCE_DURATION_MS=1000",
-    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT=https://openai-sesame-eastus-001.openai.azure.com/",
-    "EXTENDED_ASSESSMENT_OPENAI_API_KEY=89a35462495b4448b433e57d092397e3",
-    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT=gpt-5",
-    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION=2024-12-01-preview",
-    "EXTENDED_ASSESSMENT_OPENAI_ENABLED=true",
-    "EXTENDED_ASSESSMENT_USE_FALLBACK=false",
-    "DocumentIntelligenceEndpoint=https://doc-intel-behavioral-health.cognitiveservices.azure.com/",
-    "DocumentIntelligenceKey=7iu1BRT94gZM6wdg0g6FOkWiqOAaalKrVRUDzUxgwULm7mVA3Hg7JQQJ99BJACYeBjFXJ3w3AAALACOGFbH7",
-    "DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT=https://doc-intel-behavioral-health.cognitiveservices.azure.com/",
-    "DSM5_DOCUMENT_INTELLIGENCE_KEY=7iu1BRT94gZM6wdg0g6FOkWiqOAaalKrVRUDzUxgwULm7mVA3Hg7JQQJ99BJACYeBjFXJ3w3AAALACOGFbH7",
-    "DSM5_STORAGE_ACCOUNT_NAME=aistgvi",
-    "DSM5_CONTAINER_NAME=dsm5-data",
-    "AZURE_CONTENT_UNDERSTANDING_ENDPOINT=https://csaifcontentunderstanding.services.ai.azure.com/",
-    "AZURE_CONTENT_UNDERSTANDING_KEY=DnmuyhZo4jNfj9Mrzas1qinOY6XQbwa4OGfJp6piii0yfFvIsvYOJQQJ99BJAC4f1cMXJ3w3AAAAACOGHFZS",
-    "DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING",
-    "VITE_API_BASE_URL=https://cwbhieastus001.azurewebsites.net/api"
+    "KINTSUGI_API_KEY=$(Get-RequiredEnvVar -Name 'KINTSUGI_API_KEY')",
+    "KINTSUGI_BASE_URL=$(Get-OptionalEnvVar -Name 'KINTSUGI_BASE_URL' -DefaultValue 'https://api.kintsugihealth.com/v2')",
+    "WORKFLOW_MAX_RETRIES=$(Get-OptionalEnvVar -Name 'WORKFLOW_MAX_RETRIES' -DefaultValue '100')",
+    "WORKFLOW_RETRY_DELAY_SECONDS=$(Get-OptionalEnvVar -Name 'WORKFLOW_RETRY_DELAY_SECONDS' -DefaultValue '30')",
+    "KINTSUGI_AUTO_PROVIDE_CONSENT=$(Get-OptionalEnvVar -Name 'KINTSUGI_AUTO_PROVIDE_CONSENT' -DefaultValue 'false')",
+    "AZURE_OPENAI_ENDPOINT=$(Get-RequiredEnvVar -Name 'AZURE_OPENAI_ENDPOINT')",
+    "AZURE_OPENAI_API_KEY=$(Get-RequiredEnvVar -Name 'AZURE_OPENAI_API_KEY')",
+    "AZURE_OPENAI_DEPLOYMENT=$(Get-OptionalEnvVar -Name 'AZURE_OPENAI_DEPLOYMENT' -DefaultValue 'gpt-4.1')",
+    "AZURE_OPENAI_ENABLED=$(Get-OptionalEnvVar -Name 'AZURE_OPENAI_ENABLED' -DefaultValue 'true')",
+    "AZURE_OPENAI_API_VERSION=$(Get-OptionalEnvVar -Name 'AZURE_OPENAI_API_VERSION' -DefaultValue '2024-12-01-preview')",
+    "AUDIO_SAMPLE_RATE=$(Get-OptionalEnvVar -Name 'AUDIO_SAMPLE_RATE' -DefaultValue '24000')",
+    "AUDIO_BITS_PER_SAMPLE=$(Get-OptionalEnvVar -Name 'AUDIO_BITS_PER_SAMPLE' -DefaultValue '16')",
+    "AUDIO_CHANNELS=$(Get-OptionalEnvVar -Name 'AUDIO_CHANNELS' -DefaultValue '1')",
+    "AUDIO_ENABLE_VAD=$(Get-OptionalEnvVar -Name 'AUDIO_ENABLE_VAD' -DefaultValue 'true')",
+    "AUDIO_SILENCE_THRESHOLD=$(Get-OptionalEnvVar -Name 'AUDIO_SILENCE_THRESHOLD' -DefaultValue '0.01')",
+    "AUDIO_SILENCE_DURATION_MS=$(Get-OptionalEnvVar -Name 'AUDIO_SILENCE_DURATION_MS' -DefaultValue '1000')",
+    "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT=$(Get-RequiredEnvVar -Name 'EXTENDED_ASSESSMENT_OPENAI_ENDPOINT')",
+    "EXTENDED_ASSESSMENT_OPENAI_API_KEY=$(Get-RequiredEnvVar -Name 'EXTENDED_ASSESSMENT_OPENAI_API_KEY')",
+    "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT=$(Get-OptionalEnvVar -Name 'EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT' -DefaultValue 'gpt-5')",
+    "EXTENDED_ASSESSMENT_OPENAI_API_VERSION=$(Get-OptionalEnvVar -Name 'EXTENDED_ASSESSMENT_OPENAI_API_VERSION' -DefaultValue '2024-12-01-preview')",
+    "EXTENDED_ASSESSMENT_OPENAI_ENABLED=$(Get-OptionalEnvVar -Name 'EXTENDED_ASSESSMENT_OPENAI_ENABLED' -DefaultValue 'true')",
+    "EXTENDED_ASSESSMENT_USE_FALLBACK=$(Get-OptionalEnvVar -Name 'EXTENDED_ASSESSMENT_USE_FALLBACK' -DefaultValue 'false')",
+    "DocumentIntelligenceEndpoint=$(Get-RequiredEnvVar -Name 'DOCUMENT_INTELLIGENCE_ENDPOINT')",
+    "DocumentIntelligenceKey=$(Get-RequiredEnvVar -Name 'DOCUMENT_INTELLIGENCE_KEY')",
+    "DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT=$(Get-RequiredEnvVar -Name 'DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT')",
+    "DSM5_DOCUMENT_INTELLIGENCE_KEY=$(Get-RequiredEnvVar -Name 'DSM5_DOCUMENT_INTELLIGENCE_KEY')",
+    "DSM5_STORAGE_ACCOUNT_NAME=$(Get-RequiredEnvVar -Name 'DSM5_STORAGE_ACCOUNT_NAME')",
+    "DSM5_CONTAINER_NAME=$(Get-OptionalEnvVar -Name 'DSM5_CONTAINER_NAME' -DefaultValue 'dsm5-data')",
+    "AZURE_CONTENT_UNDERSTANDING_ENDPOINT=$(Get-RequiredEnvVar -Name 'AZURE_CONTENT_UNDERSTANDING_ENDPOINT')",
+    "AZURE_CONTENT_UNDERSTANDING_KEY=$(Get-RequiredEnvVar -Name 'AZURE_CONTENT_UNDERSTANDING_KEY')",
+    "DSM5_EXTRACTION_METHOD=$(Get-OptionalEnvVar -Name 'DSM5_EXTRACTION_METHOD' -DefaultValue 'CONTENT_UNDERSTANDING')",
+    "VITE_API_BASE_URL=$(Get-RequiredEnvVar -Name 'VITE_API_BASE_URL')"
 )
 
 Write-Host "Setting environment variables..." -ForegroundColor Yellow

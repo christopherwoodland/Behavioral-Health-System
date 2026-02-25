@@ -23,7 +23,7 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime } from '../utils';
+import { getUserId, formatRelativeTime, formatQuantizedScoreLabel } from '../utils';
 import type { SessionData, AppError, FileGroup } from '../types';
 
 // Chart data interfaces
@@ -88,6 +88,50 @@ const Predictions: React.FC = () => {
   const { announceToScreenReader } = useAccessibility();
   const navigate = useNavigate();
 
+  const hasScoreValue = useCallback((value: unknown): boolean => {
+    return value !== undefined && value !== null && value !== '';
+  }, []);
+
+  const getSessionScoreValue = useCallback((
+    session: SessionData,
+    type: 'depression' | 'anxiety'
+  ): string | number | undefined => {
+    const prediction = session.prediction as any;
+    const analysisResults = session.analysisResults;
+
+    if (type === 'depression') {
+      const predictionValue = prediction?.predicted_score_depression ?? prediction?.predictedScoreDepression;
+      if (hasScoreValue(predictionValue)) return predictionValue;
+      return analysisResults?.depressionScore;
+    }
+
+    const predictionValue = prediction?.predicted_score_anxiety ?? prediction?.predictedScoreAnxiety;
+    if (hasScoreValue(predictionValue)) return predictionValue;
+    return analysisResults?.anxietyScore;
+  }, [hasScoreValue]);
+
+  const getScoreSeverity = useCallback((
+    value: string | number | undefined,
+    type: 'depression' | 'anxiety'
+  ): number | null => {
+    if (!hasScoreValue(value)) return null;
+
+    const normalized = String(value).trim().toLowerCase();
+
+    if (type === 'depression') {
+      if (normalized === '0' || normalized === 'no_to_mild') return 0;
+      if (normalized === '1' || normalized === 'mild_to_moderate') return 1;
+      if (normalized === '2' || normalized === 'moderate_to_severe') return 2;
+      return null;
+    }
+
+    if (normalized === '0' || normalized === 'no_or_minimal') return 0;
+    if (normalized === '1' || normalized === 'moderate') return 1;
+    if (normalized === '2' || normalized === 'moderately_severe') return 2;
+    if (normalized === '3' || normalized === 'severe') return 3;
+    return null;
+  }, [hasScoreValue]);
+
   // Get authenticated user ID for API calls (matches blob storage folder structure)
   const getAuthenticatedUserId = useCallback((): string => {
     // Use authenticated user ID if available, otherwise fall back to getUserId utility
@@ -121,24 +165,14 @@ const Predictions: React.FC = () => {
         const sessionsWithPredictions = groupSessions.filter(s => s.prediction || s.analysisResults);
         
         // Calculate depression scores
-        const depressionScores = sessionsWithPredictions.map(session => {
-          const prediction = session.prediction as any;
-          const analysisResults = session.analysisResults;
-          const score = prediction?.predicted_score_depression || 
-                       prediction?.predictedScoreDepression ||
-                       analysisResults?.depressionScore;
-          return typeof score === 'string' ? parseFloat(score) : score;
-        }).filter(score => !isNaN(score));
+        const depressionScores = sessionsWithPredictions
+          .map(session => getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression'))
+          .filter((score): score is number => score !== null);
         
         // Calculate anxiety scores
-        const anxietyScores = sessionsWithPredictions.map(session => {
-          const prediction = session.prediction as any;
-          const analysisResults = session.analysisResults;
-          const score = prediction?.predicted_score_anxiety || 
-                       prediction?.predictedScoreAnxiety ||
-                       analysisResults?.anxietyScore;
-          return typeof score === 'string' ? parseFloat(score) : score;
-        }).filter(score => !isNaN(score));
+        const anxietyScores = sessionsWithPredictions
+          .map(session => getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety'))
+          .filter((score): score is number => score !== null);
         
         // Calculate trends
         const depressionTrend = depressionScores.length >= 2 ? {
@@ -174,7 +208,7 @@ const Predictions: React.FC = () => {
     } finally {
       setLoadingGroups(false);
     }
-  }, [sessions]);
+  }, [sessions, getScoreSeverity, getSessionScoreValue]);
 
   // Load user sessions with prediction data
   const loadPredictions = useCallback(async () => {
@@ -260,33 +294,8 @@ const Predictions: React.FC = () => {
   const chartData = useMemo((): ChartDataPoint[] => {
     return filteredSessions
       .map(session => {
-        // Since we now have categorical data, we'll map categories to numbers for visualization
-        const mapCategoryToNumber = (category?: string): number | null => {
-          if (!category) return null;
-          switch (category.toLowerCase()) {
-            // Depression categories
-            case 'no_to_mild':
-              return 1;
-            case 'mild_to_moderate':
-              return 2;
-            case 'moderate_to_severe':
-              return 3;
-            // Anxiety categories
-            case 'no_or_minimal':
-              return 1;
-            case 'moderate':
-              return 2;
-            case 'moderately_severe':
-              return 3;
-            case 'severe':
-              return 4;
-            default:
-              return null;
-          }
-        };
-
-        const depression = mapCategoryToNumber((session.prediction as any)?.predicted_score_depression);
-        const anxiety = mapCategoryToNumber((session.prediction as any)?.predicted_score_anxiety);
+        const depression = getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression');
+        const anxiety = getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety');
         // Note: predicted_score is deprecated, no longer using overall score
 
         return {
@@ -298,7 +307,7 @@ const Predictions: React.FC = () => {
         };
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [filteredSessions]);
+  }, [filteredSessions, getScoreSeverity, getSessionScoreValue]);
 
   // Calculate score distributions based on categorical data
   const scoreDistribution = useMemo((): Record<string, ScoreDistribution[]> => {
@@ -307,53 +316,51 @@ const Predictions: React.FC = () => {
       anxiety: []
     };
 
-    // Define possible categories and their colors
-    const categories = [
-      // Depression categories
-      { category: 'no_to_mild', label: 'No to Mild', color: 'bg-green-400' },
-      { category: 'mild_to_moderate', label: 'Mild to Moderate', color: 'bg-yellow-500' },
-      { category: 'moderate_to_severe', label: 'Moderate to Severe', color: 'bg-red-600' },
-      // Anxiety categories  
-      { category: 'no_or_minimal', label: 'No or Minimal', color: 'bg-green-400' },
-      { category: 'moderate', label: 'Moderate', color: 'bg-orange-500' },
-      { category: 'moderately_severe', label: 'Moderately Severe', color: 'bg-red-500' },
-      { category: 'severe', label: 'Severe', color: 'bg-red-700' }
+    const depressionScores = filteredSessions
+      .map(session => getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression'))
+      .filter((score): score is number => score !== null);
+
+    const anxietyScores = filteredSessions
+      .map(session => getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety'))
+      .filter((score): score is number => score !== null);
+
+    const depressionBuckets = [
+      { severity: 0, color: 'bg-green-400' },
+      { severity: 1, color: 'bg-yellow-500' },
+      { severity: 2, color: 'bg-red-600' }
     ];
 
-    // Process depression scores
-    const depressionScores = filteredSessions
-      .map(session => (session.prediction as any)?.predicted_score_depression)
-      .filter(score => score !== undefined);
-
-    categories.forEach(cat => {
-      const count = depressionScores.filter(score => score === cat.category).length;
+    depressionBuckets.forEach(bucket => {
+      const count = depressionScores.filter(score => score === bucket.severity).length;
       const percentage = depressionScores.length > 0 ? (count / depressionScores.length) * 100 : 0;
-      
-      if (count > 0) { // Only show categories that have data
+
+      if (count > 0) {
         distributions.depression.push({
-          category: cat.label,
+          category: formatQuantizedScoreLabel(bucket.severity, 'depression'),
           count,
           percentage,
-          color: cat.color
+          color: bucket.color
         });
       }
     });
 
-    // Process anxiety scores
-    const anxietyScores = filteredSessions
-      .map(session => (session.prediction as any)?.predicted_score_anxiety)
-      .filter(score => score !== undefined);
+    const anxietyBuckets = [
+      { severity: 0, color: 'bg-green-400' },
+      { severity: 1, color: 'bg-orange-500' },
+      { severity: 2, color: 'bg-red-500' },
+      { severity: 3, color: 'bg-red-700' }
+    ];
 
-    categories.forEach(cat => {
-      const count = anxietyScores.filter(score => score === cat.category).length;
+    anxietyBuckets.forEach(bucket => {
+      const count = anxietyScores.filter(score => score === bucket.severity).length;
       const percentage = anxietyScores.length > 0 ? (count / anxietyScores.length) * 100 : 0;
-      
-      if (count > 0) { // Only show categories that have data
+
+      if (count > 0) {
         distributions.anxiety.push({
-          category: cat.label,
+          category: formatQuantizedScoreLabel(bucket.severity, 'anxiety'),
           count,
           percentage,
-          color: cat.color
+          color: bucket.color
         });
       }
     });
@@ -361,48 +368,22 @@ const Predictions: React.FC = () => {
     // Note: Overall scores (predicted_score) are deprecated and no longer processed
 
     return distributions;
-  }, [filteredSessions]);
+  }, [filteredSessions, getScoreSeverity, getSessionScoreValue]);
 
   // Calculate trend analysis for categorical data
   const trendAnalysis = useMemo((): Record<string, TrendAnalysis> => {
     const trends: Record<string, TrendAnalysis> = {};
     
-    // For categorical data, we'll analyze if the trend is toward more severe or less severe categories
-    const getCategorySeverity = (category?: string): number => {
-      if (!category) return 0;
-      switch (category.toLowerCase()) {
-        // Depression categories: no_to_mild, mild_to_moderate, moderate_to_severe
-        case 'no_to_mild':
-          return 1;
-        case 'mild_to_moderate':
-          return 2;
-        case 'moderate_to_severe':
-          return 3;
-        // Anxiety categories: no_or_minimal, moderate, moderately_severe, severe
-        case 'no_or_minimal':
-          return 1;
-        case 'moderate':
-          return 2;
-        case 'moderately_severe':
-          return 3;
-        case 'severe':
-          return 4;
-        default:
-          return 0;
-      }
-    };
-
     // Analyze depression trend
-    const depressionCategories = filteredSessions
-      .map(session => (session.prediction as any)?.predicted_score_depression)
-      .filter(cat => cat !== undefined);
+    const depressionScores = filteredSessions
+      .map(session => getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression'))
+      .filter((score): score is number => score !== null);
 
-    if (depressionCategories.length < 2) {
+    if (depressionScores.length < 2) {
       trends.depression = { direction: 'stable', change: 0, period: 'insufficient data' };
     } else {
-      const severityScores = depressionCategories.map(getCategorySeverity);
-      const firstHalf = severityScores.slice(0, Math.floor(severityScores.length / 2));
-      const secondHalf = severityScores.slice(Math.floor(severityScores.length / 2));
+      const firstHalf = depressionScores.slice(0, Math.floor(depressionScores.length / 2));
+      const secondHalf = depressionScores.slice(Math.floor(depressionScores.length / 2));
 
       const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
       const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
@@ -416,16 +397,15 @@ const Predictions: React.FC = () => {
     }
 
     // Analyze anxiety trend
-    const anxietyCategories = filteredSessions
-      .map(session => (session.prediction as any)?.predicted_score_anxiety)
-      .filter(cat => cat !== undefined);
+    const anxietyScores = filteredSessions
+      .map(session => getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety'))
+      .filter((score): score is number => score !== null);
 
-    if (anxietyCategories.length < 2) {
+    if (anxietyScores.length < 2) {
       trends.anxiety = { direction: 'stable', change: 0, period: 'insufficient data' };
     } else {
-      const severityScores = anxietyCategories.map(getCategorySeverity);
-      const firstHalf = severityScores.slice(0, Math.floor(severityScores.length / 2));
-      const secondHalf = severityScores.slice(Math.floor(severityScores.length / 2));
+      const firstHalf = anxietyScores.slice(0, Math.floor(anxietyScores.length / 2));
+      const secondHalf = anxietyScores.slice(Math.floor(anxietyScores.length / 2));
 
       const firstAvg = firstHalf.reduce((a, b) => a + b, 0) / firstHalf.length;
       const secondAvg = secondHalf.reduce((a, b) => a + b, 0) / secondHalf.length;
@@ -442,7 +422,7 @@ const Predictions: React.FC = () => {
     trends.overall = { direction: 'stable', change: 0, period: 'coming soon' };
 
     return trends;
-  }, [filteredSessions]);
+  }, [filteredSessions, getScoreSeverity, getSessionScoreValue]);
 
   // Calculate statistics
   const statistics = useMemo(() => {
@@ -459,18 +439,19 @@ const Predictions: React.FC = () => {
 
     // For categorical data, we'll show the most common category instead of averages
     const depressionCategories = filteredSessions
-      .map(s => s.prediction?.predictedScoreDepression)
-      .filter(s => s !== undefined);
+      .map(s => getSessionScoreValue(s, 'depression'))
+      .filter((s): s is string | number => hasScoreValue(s));
     
     const anxietyCategories = filteredSessions
-      .map(s => s.prediction?.predictedScoreAnxiety)
-      .filter(s => s !== undefined);
+      .map(s => getSessionScoreValue(s, 'anxiety'))
+      .filter((s): s is string | number => hasScoreValue(s));
 
     // Calculate mode (most frequent category) for depression
     if (depressionCategories.length > 0) {
       const depressionCounts: Record<string, number> = {};
       depressionCategories.forEach(cat => {
-        depressionCounts[cat!] = (depressionCounts[cat!] || 0) + 1;
+        const key = String(cat);
+        depressionCounts[key] = (depressionCounts[key] || 0) + 1;
       });
       const mostCommonDepression = Object.entries(depressionCounts)
         .sort(([,a], [,b]) => b - a)[0][0];
@@ -481,7 +462,8 @@ const Predictions: React.FC = () => {
     if (anxietyCategories.length > 0) {
       const anxietyCounts: Record<string, number> = {};
       anxietyCategories.forEach(cat => {
-        anxietyCounts[cat!] = (anxietyCounts[cat!] || 0) + 1;
+        const key = String(cat);
+        anxietyCounts[key] = (anxietyCounts[key] || 0) + 1;
       });
       const mostCommonAnxiety = Object.entries(anxietyCounts)
         .sort(([,a], [,b]) => b - a)[0][0];
@@ -496,7 +478,7 @@ const Predictions: React.FC = () => {
     stats.improvementSessions = 0;
 
     return stats;
-  }, [filteredSessions]);
+  }, [filteredSessions, getSessionScoreValue, hasScoreValue]);
 
   // Handle filter changes
   const updateFilter = useCallback((key: keyof PredictionFilters, value: any) => {
@@ -972,20 +954,21 @@ const Predictions: React.FC = () => {
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">
                     {(() => {
                       const depressionCategories = filteredSessions
-                        .map(s => (s.prediction as any)?.predicted_score_depression)
-                        .filter(s => s !== undefined);
+                        .map(s => getSessionScoreValue(s, 'depression'))
+                        .filter((s): s is string | number => hasScoreValue(s));
                       
                       if (depressionCategories.length === 0) return '—';
                       
                       const counts: Record<string, number> = {};
                       depressionCategories.forEach(cat => {
-                        counts[cat!] = (counts[cat!] || 0) + 1;
+                        const key = String(cat);
+                        counts[key] = (counts[key] || 0) + 1;
                       });
                       
                       const mostCommon = Object.entries(counts)
                         .sort(([,a], [,b]) => b - a)[0][0];
                       
-                      return mostCommon.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                      return formatQuantizedScoreLabel(mostCommon, 'depression');
                     })()}
                   </p>
                 </div>
@@ -1002,20 +985,21 @@ const Predictions: React.FC = () => {
                   <p className="text-lg font-semibold text-gray-900 dark:text-white">
                     {(() => {
                       const anxietyCategories = filteredSessions
-                        .map(s => (s.prediction as any)?.predicted_score_anxiety)
-                        .filter(s => s !== undefined);
+                        .map(s => getSessionScoreValue(s, 'anxiety'))
+                        .filter((s): s is string | number => hasScoreValue(s));
                       
                       if (anxietyCategories.length === 0) return '—';
                       
                       const counts: Record<string, number> = {};
                       anxietyCategories.forEach(cat => {
-                        counts[cat!] = (counts[cat!] || 0) + 1;
+                        const key = String(cat);
+                        counts[key] = (counts[key] || 0) + 1;
                       });
                       
                       const mostCommon = Object.entries(counts)
                         .sort(([,a], [,b]) => b - a)[0][0];
                       
-                      return mostCommon.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase());
+                      return formatQuantizedScoreLabel(mostCommon, 'anxiety');
                     })()}
                   </p>
                 </div>
@@ -1146,19 +1130,19 @@ const Predictions: React.FC = () => {
                   </div>
                   
                   <div className="flex items-center space-x-4">
-                    {(session.prediction as any)?.predicted_score_depression && (
+                    {hasScoreValue(getSessionScoreValue(session, 'depression')) && (
                       <div className="text-right">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Depression</p>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {(session.prediction as any).predicted_score_depression.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {formatQuantizedScoreLabel(getSessionScoreValue(session, 'depression'), 'depression')}
                         </p>
                       </div>
                     )}
-                    {(session.prediction as any)?.predicted_score_anxiety && (
+                    {hasScoreValue(getSessionScoreValue(session, 'anxiety')) && (
                       <div className="text-right">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Anxiety</p>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {(session.prediction as any).predicted_score_anxiety.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {formatQuantizedScoreLabel(getSessionScoreValue(session, 'anxiety'), 'anxiety')}
                         </p>
                       </div>
                     )}

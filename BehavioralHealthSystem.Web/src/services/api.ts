@@ -306,6 +306,7 @@ export class PredictionPoller {
   private intervalMs: number;
   private maxAttempts: number;
   private backoffFactor: number;
+  private initialResult?: Partial<PredictionResult>;
   private currentAttempt = 0;
   private timeoutId: number | null = null;
   private isPolling = false;
@@ -316,12 +317,69 @@ export class PredictionPoller {
       intervalMs?: number;
       maxAttempts?: number;
       backoffFactor?: number;
+      initialResult?: Partial<PredictionResult>;
     } = {}
   ) {
     this.sessionId = sessionId;
     this.intervalMs = options.intervalMs || config.polling.intervalMs;
     this.maxAttempts = options.maxAttempts || config.polling.maxAttempts;
     this.backoffFactor = options.backoffFactor || config.polling.backoffFactor;
+    this.initialResult = options.initialResult;
+  }
+
+  private createLocalCompletedResult(): PredictionResult {
+    const source = this.initialResult || {};
+    const sourceWithSnake = source as PredictionResult & {
+      predicted_score?: string;
+      predicted_score_depression?: string;
+      predicted_score_anxiety?: string;
+      created_at?: string;
+      updated_at?: string;
+      model_category?: string;
+      model_granularity?: string;
+      is_calibrated?: boolean;
+      actual_score?: { anxiety_binary?: string; depression_binary?: string };
+      predict_error?: { error: string; message: string; additional_data?: Record<string, unknown> };
+    };
+
+    const normalizedStatus = source.status === 'submitted' ? 'success' : (source.status || 'success');
+    const createdAt = source.createdAt || sourceWithSnake.created_at || new Date().toISOString();
+    const updatedAt = source.updatedAt || sourceWithSnake.updated_at || new Date().toISOString();
+
+    return {
+      ...sourceWithSnake,
+      sessionId: source.sessionId || this.sessionId,
+      status: normalizedStatus as PredictionResult['status'],
+      predictedScore: source.predictedScore || sourceWithSnake.predicted_score,
+      predictedScoreDepression:
+        source.predictedScoreDepression ||
+        sourceWithSnake.predicted_score_depression,
+      predictedScoreAnxiety:
+        source.predictedScoreAnxiety ||
+        sourceWithSnake.predicted_score_anxiety,
+      modelCategory: source.modelCategory || sourceWithSnake.model_category,
+      modelGranularity: source.modelGranularity || sourceWithSnake.model_granularity,
+      isCalibrated: source.isCalibrated ?? sourceWithSnake.is_calibrated,
+      actualScore:
+        source.actualScore ||
+        (sourceWithSnake.actual_score
+          ? {
+              anxietyBinary: sourceWithSnake.actual_score.anxiety_binary || '',
+              depressionBinary: sourceWithSnake.actual_score.depression_binary || '',
+            }
+          : undefined),
+      predictError:
+        source.predictError ||
+        (sourceWithSnake.predict_error
+          ? {
+              error: sourceWithSnake.predict_error.error,
+              message: sourceWithSnake.predict_error.message,
+              additionalData: sourceWithSnake.predict_error.additional_data,
+            }
+          : undefined),
+      createdAt,
+      updatedAt,
+    };
   }
 
   async start(
@@ -335,6 +393,20 @@ export class PredictionPoller {
 
     this.isPolling = true;
     this.currentAttempt = 0;
+
+    try {
+      const provider = await apiClient.get<{ useLocalDamModel?: boolean }>('/model/provider');
+      if (provider?.useLocalDamModel) {
+        const completedResult = this.createLocalCompletedResult();
+
+        onUpdate(completedResult);
+        this.stop();
+        onComplete(completedResult);
+        return;
+      }
+    } catch {
+      // Continue with regular polling if provider check fails
+    }
 
     const poll = async (): Promise<void> => {
       try {

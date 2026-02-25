@@ -1,7 +1,6 @@
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
-using BehavioralHealthSystem.Agents.DependencyInjection;
 using BehavioralHealthSystem.Configuration;
 using BehavioralHealthSystem.Functions.Services;
 using BehavioralHealthSystem.Helpers.Models;
@@ -90,6 +89,16 @@ var host = new HostBuilder()
             }
         });
 
+        services.Configure<LocalDamModelOptions>(options =>
+        {
+            options.BaseUrl = config["LOCAL_DAM_BASE_URL"] ?? "http://localhost:8000";
+            options.InitiatePath = config["LOCAL_DAM_INITIATE_PATH"] ?? "initiate";
+            options.PredictionPath = config["LOCAL_DAM_PREDICTION_PATH"] ?? "predict";
+            options.ApiKey = config["LOCAL_DAM_API_KEY"];
+            options.ModelId = config["LOCAL_DAM_MODEL_ID"] ?? "KintsugiHealth/dam";
+            options.TimeoutSeconds = config.GetValue<int>("LOCAL_DAM_TIMEOUT_SECONDS", 300);
+        });
+
         // Azure OpenAI Configuration
         services.Configure<AzureOpenAIOptions>(options =>
         {
@@ -117,9 +126,6 @@ var host = new HostBuilder()
             options.Enabled = config.GetValue<bool>("EXTENDED_ASSESSMENT_OPENAI_ENABLED", false);
             options.UseFallbackToStandardConfig = config.GetValue<bool>("EXTENDED_ASSESSMENT_USE_FALLBACK", true);
         });
-
-// Grammar Correction Agent (Microsoft.Agents SDK)
-        services.AddGrammarCorrectionAgent(context.Configuration);
 
         // HTTP Client with policies - Simplified configuration
         services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
@@ -149,6 +155,24 @@ var host = new HostBuilder()
             .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler())
             .AddPolicyHandler((serviceProvider, request) => RetryPolicies.GetRetryPolicy(serviceProvider.GetService<ILogger<KintsugiApiService>>()))
             .AddPolicyHandler(RetryPolicies.GetTimeoutPolicy());
+
+        services.AddHttpClient<ILocalDamModelService, LocalDamModelService>()
+            .ConfigureHttpClient((serviceProvider, client) =>
+            {
+                var options = serviceProvider.GetService<IOptions<LocalDamModelOptions>>()?.Value;
+                if (options != null)
+                {
+                    client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
+                    client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.TimeoutSeconds));
+                    if (!string.IsNullOrWhiteSpace(options.ApiKey))
+                    {
+                        client.DefaultRequestHeaders.Remove("X-API-Key");
+                        client.DefaultRequestHeaders.Add("X-API-Key", options.ApiKey);
+                    }
+                }
+            });
+
+        services.AddHostedService<LocalDamWarmupHostedService>();
 
         // Authentication & Authorization Services
         services.AddSingleton<IEntraIdValidationService, EntraIdValidationService>();
@@ -190,8 +214,8 @@ var host = new HostBuilder()
                 return new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential());
             }
 
-            // Fallback to local development storage emulator (only works on Windows host)
-            return new BlobServiceClient("UseDevelopmentStorage=true");
+            throw new InvalidOperationException(
+                "Azure Blob Storage is required. Configure AZURE_STORAGE_CONNECTION_STRING or DSM5_STORAGE_ACCOUNT_NAME/AZURE_STORAGE_ACCOUNT_NAME.");
         });
         services.AddScoped<ISessionStorageService, SessionStorageService>();
         services.AddScoped<IFileGroupStorageService, FileGroupStorageService>();

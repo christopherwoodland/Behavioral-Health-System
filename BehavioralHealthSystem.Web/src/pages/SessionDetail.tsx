@@ -31,7 +31,7 @@ import { env } from '@/utils/env';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { formatDateTime, formatRelativeTime, formatScoreCategory } from '../utils';
+import { formatDateTime, formatRelativeTime, formatQuantizedScoreLabel } from '../utils';
 import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
 import { ExtendedRiskAssessmentButton } from '../components/ExtendedRiskAssessmentButton';
@@ -272,6 +272,20 @@ const SessionDetail: React.FC = () => {
   const getFileExtension = useCallback((filename: string): string => {
     const ext = filename.split('.').pop()?.toUpperCase() || 'Unknown';
     return ext;
+  }, []);
+
+  const formatInsightScoreText = useCallback((insight: string): string => {
+    const depressionMatch = insight.match(/^Depression score:\s*(.+)$/i);
+    if (depressionMatch) {
+      return `Depression score: ${formatQuantizedScoreLabel(depressionMatch[1], 'depression')}`;
+    }
+
+    const anxietyMatch = insight.match(/^Anxiety score:\s*(.+)$/i);
+    if (anxietyMatch) {
+      return `Anxiety score: ${formatQuantizedScoreLabel(anxietyMatch[1], 'anxiety')}`;
+    }
+
+    return insight;
   }, []);
 
   // Audio controls
@@ -960,7 +974,7 @@ const SessionDetail: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Depression Score */}
-                  {((session.prediction as any)?.predicted_score_depression || session.prediction?.predictedScoreDepression || session.analysisResults?.depressionScore) && (
+                  {(((session.prediction as any)?.predicted_score_depression !== undefined && (session.prediction as any)?.predicted_score_depression !== null && (session.prediction as any)?.predicted_score_depression !== '') || (session.prediction?.predictedScoreDepression !== undefined && session.prediction?.predictedScoreDepression !== null && session.prediction?.predictedScoreDepression !== '') || session.analysisResults?.depressionScore !== undefined) && (
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -970,19 +984,19 @@ const SessionDetail: React.FC = () => {
                       </div>
                       <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">
                         {/* Prioritize descriptive string values over numeric values */}
-                        {(session.prediction as any)?.predicted_score_depression ?
-                           formatScoreCategory((session.prediction as any).predicted_score_depression) :
-                         session.prediction?.predictedScoreDepression ?
-                           formatScoreCategory(session.prediction.predictedScoreDepression) :
-                         session.analysisResults?.depressionScore ?
-                           session.analysisResults.depressionScore.toFixed(2) :
+                        {(session.prediction as any)?.predicted_score_depression !== undefined && (session.prediction as any)?.predicted_score_depression !== null && (session.prediction as any)?.predicted_score_depression !== '' ?
+                           formatQuantizedScoreLabel((session.prediction as any).predicted_score_depression, 'depression') :
+                         session.prediction?.predictedScoreDepression !== undefined && session.prediction?.predictedScoreDepression !== null && session.prediction?.predictedScoreDepression !== '' ?
+                           formatQuantizedScoreLabel(session.prediction.predictedScoreDepression, 'depression') :
+                         session.analysisResults?.depressionScore !== undefined && session.analysisResults?.depressionScore !== null ?
+                           formatQuantizedScoreLabel(session.analysisResults.depressionScore, 'depression') :
                            'N/A'}
                       </div>
                     </div>
                   )}
 
                   {/* Anxiety Score */}
-                  {((session.prediction as any)?.predicted_score_anxiety || session.prediction?.predictedScoreAnxiety || session.analysisResults?.anxietyScore) && (
+                  {(((session.prediction as any)?.predicted_score_anxiety !== undefined && (session.prediction as any)?.predicted_score_anxiety !== null && (session.prediction as any)?.predicted_score_anxiety !== '') || (session.prediction?.predictedScoreAnxiety !== undefined && session.prediction?.predictedScoreAnxiety !== null && session.prediction?.predictedScoreAnxiety !== '') || session.analysisResults?.anxietyScore !== undefined) && (
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
@@ -992,12 +1006,12 @@ const SessionDetail: React.FC = () => {
                       </div>
                       <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
                         {/* Prioritize descriptive string values over numeric values */}
-                        {(session.prediction as any)?.predicted_score_anxiety ?
-                           formatScoreCategory((session.prediction as any).predicted_score_anxiety) :
-                         session.prediction?.predictedScoreAnxiety ?
-                           formatScoreCategory(session.prediction.predictedScoreAnxiety) :
-                         session.analysisResults?.anxietyScore ?
-                           session.analysisResults.anxietyScore.toFixed(2) :
+                        {(session.prediction as any)?.predicted_score_anxiety !== undefined && (session.prediction as any)?.predicted_score_anxiety !== null && (session.prediction as any)?.predicted_score_anxiety !== '' ?
+                           formatQuantizedScoreLabel((session.prediction as any).predicted_score_anxiety, 'anxiety') :
+                         session.prediction?.predictedScoreAnxiety !== undefined && session.prediction?.predictedScoreAnxiety !== null && session.prediction?.predictedScoreAnxiety !== '' ?
+                           formatQuantizedScoreLabel(session.prediction.predictedScoreAnxiety, 'anxiety') :
+                         session.analysisResults?.anxietyScore !== undefined && session.analysisResults?.anxietyScore !== null ?
+                           formatQuantizedScoreLabel(session.analysisResults.anxietyScore, 'anxiety') :
                            'N/A'}
                       </div>
                     </div>
@@ -1020,7 +1034,7 @@ const SessionDetail: React.FC = () => {
                     {session.analysisResults.insights.map((insight, index) => (
                       <li key={index} className="text-sm text-yellow-800 dark:text-yellow-200 flex items-start">
                         <span className="inline-block w-2 h-2 bg-yellow-600 dark:bg-yellow-400 rounded-full mt-2 mr-2 flex-shrink-0" aria-hidden="true"></span>
-                        {insight}
+                        {formatInsightScoreText(insight)}
                       </li>
                     ))}
                   </ul>

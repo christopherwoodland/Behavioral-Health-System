@@ -96,6 +96,14 @@ export const uploadToAzureBlob = async (
 
     const result = await response.json();
 
+    console.log('🟢 uploadToAzureBlob: Upload completed', {
+      blobPath: result.blobPath,
+      blobUrl: result.blobUrl || result.url,
+      fileName: result.fileName,
+      userId: effectiveUserId,
+      sessionId
+    });
+
     onProgress?.(100);
 
     return result.url || result.blobUrl;

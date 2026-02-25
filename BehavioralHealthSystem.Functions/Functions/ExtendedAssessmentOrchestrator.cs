@@ -43,7 +43,7 @@ public class ExtendedAssessmentOrchestrator
                 nameof(ExtendedAssessmentOrchestrator), input.JobId, input.SessionId);
 
             // Step 1: Update job status to processing
-            await context.CallActivityAsync("UpdateJobStatus", new JobStatusUpdate
+            await context.CallActivityAsync<bool>("UpdateJobStatus", new JobStatusUpdate
             {
                 JobId = input.JobId,
                 Status = ExtendedAssessmentJobStatus.Processing,
@@ -64,7 +64,7 @@ public class ExtendedAssessmentOrchestrator
                 result.ErrorMessage = "Session validation failed or extended assessment already exists";
                 result.EndTime = context.CurrentUtcDateTime;
                 
-                await context.CallActivityAsync("FailJob", new JobFailure
+                await context.CallActivityAsync<bool>("FailJob", new JobFailure
                 {
                     JobId = input.JobId,
                     ErrorMessage = result.ErrorMessage
@@ -74,7 +74,7 @@ public class ExtendedAssessmentOrchestrator
             }
 
             // Step 3: Generate the extended assessment (this is the long-running operation)
-            await context.CallActivityAsync("UpdateJobStatus", new JobStatusUpdate
+            await context.CallActivityAsync<bool>("UpdateJobStatus", new JobStatusUpdate
             {
                 JobId = input.JobId,
                 Status = ExtendedAssessmentJobStatus.Processing,
@@ -94,7 +94,7 @@ public class ExtendedAssessmentOrchestrator
                 result.ErrorMessage = "Failed to generate extended assessment";
                 result.EndTime = context.CurrentUtcDateTime;
                 
-                await context.CallActivityAsync("FailJob", new JobFailure
+                await context.CallActivityAsync<bool>("FailJob", new JobFailure
                 {
                     JobId = input.JobId,
                     ErrorMessage = result.ErrorMessage
@@ -104,7 +104,7 @@ public class ExtendedAssessmentOrchestrator
             }
 
             // Step 4: Save results to session
-            await context.CallActivityAsync("UpdateJobStatus", new JobStatusUpdate
+            await context.CallActivityAsync<bool>("UpdateJobStatus", new JobStatusUpdate
             {
                 JobId = input.JobId,
                 Status = ExtendedAssessmentJobStatus.Processing,
@@ -125,7 +125,7 @@ public class ExtendedAssessmentOrchestrator
                 result.ErrorMessage = "Failed to save assessment to session";
                 result.EndTime = context.CurrentUtcDateTime;
                 
-                await context.CallActivityAsync("FailJob", new JobFailure
+                await context.CallActivityAsync<bool>("FailJob", new JobFailure
                 {
                     JobId = input.JobId,
                     ErrorMessage = result.ErrorMessage
@@ -140,7 +140,7 @@ public class ExtendedAssessmentOrchestrator
             result.Assessment = assessmentResult;
             result.Success = true;
 
-            await context.CallActivityAsync("CompleteJob", new JobCompletion
+            await context.CallActivityAsync<bool>("CompleteJob", new JobCompletion
             {
                 JobId = input.JobId,
                 Assessment = assessmentResult,
@@ -162,7 +162,7 @@ public class ExtendedAssessmentOrchestrator
             result.ErrorMessage = ex.Message;
             result.EndTime = context.CurrentUtcDateTime;
 
-            await context.CallActivityAsync("FailJob", new JobFailure
+            await context.CallActivityAsync<bool>("FailJob", new JobFailure
             {
                 JobId = input.JobId,
                 ErrorMessage = ex.Message,

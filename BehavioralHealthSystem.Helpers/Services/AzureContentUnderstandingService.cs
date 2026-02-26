@@ -52,9 +52,15 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
             Timeout = TimeSpan.FromMinutes(10) // Long timeout for large documents
         };
 
-        // Get configuration
-        _endpoint = configuration["AZURE_CONTENT_UNDERSTANDING_ENDPOINT"]
-            ?? throw new InvalidOperationException("AZURE_CONTENT_UNDERSTANDING_ENDPOINT not configured");
+        // Get configuration - endpoint is optional; service will be disabled if not configured
+        var endpointValue = configuration["AZURE_CONTENT_UNDERSTANDING_ENDPOINT"];
+        if (string.IsNullOrWhiteSpace(endpointValue))
+        {
+            _logger.LogWarning("AZURE_CONTENT_UNDERSTANDING_ENDPOINT not configured - Content Understanding service will be disabled");
+            _endpoint = string.Empty;
+            return; // Skip remaining initialization
+        }
+        _endpoint = endpointValue;
 
         // Support both API key (local) and Managed Identity (production)
         _apiKey = configuration["AZURE_CONTENT_UNDERSTANDING_KEY"];
@@ -84,11 +90,22 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         }
     }
 
+    /// <summary>
+    /// Whether the Content Understanding service is configured and available
+    /// </summary>
+    public bool IsEnabled => !string.IsNullOrEmpty(_endpoint);
+
     public async Task<List<DSM5ConditionData>> ExtractDSM5ConditionsAsync(
         byte[] pdfData,
         int startPage = 1,
         int? endPage = null)
     {
+        if (!IsEnabled)
+        {
+            _logger.LogWarning("[{MethodName}] Content Understanding service is not configured - returning empty list", nameof(ExtractDSM5ConditionsAsync));
+            return new List<DSM5ConditionData>();
+        }
+
         try
         {
             _logger.LogInformation(
@@ -119,6 +136,12 @@ public class AzureContentUnderstandingService : IAzureContentUnderstandingServic
         string conditionName,
         List<int> pageNumbers)
     {
+        if (!IsEnabled)
+        {
+            _logger.LogWarning("[{MethodName}] Content Understanding service is not configured - returning null", nameof(ExtractSingleConditionAsync));
+            return null;
+        }
+
         try
         {
             _logger.LogInformation(

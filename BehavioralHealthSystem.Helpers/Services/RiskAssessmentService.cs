@@ -42,9 +42,9 @@ public class RiskAssessmentService : IRiskAssessmentService
                 return null;
             }
 
-            if (string.IsNullOrEmpty(_openAIOptions.Endpoint) || string.IsNullOrEmpty(_openAIOptions.ApiKey))
+            if (string.IsNullOrEmpty(_openAIOptions.Endpoint))
             {
-                _logger.LogError("[{MethodName}] Azure OpenAI configuration is incomplete.", nameof(GenerateRiskAssessmentAsync));
+                _logger.LogError("[{MethodName}] Azure OpenAI configuration is incomplete (endpoint not set). Will use managed identity if no API key provided.", nameof(GenerateRiskAssessmentAsync));
                 return null;
             }
 
@@ -346,9 +346,9 @@ public class RiskAssessmentService : IRiskAssessmentService
         try
         {
             // Check if extended assessment is enabled (either dedicated config or fallback)
+            // Note: ApiKey is not required when using managed identity (DefaultAzureCredential)
             bool isConfigured = (_extendedOpenAIOptions.Enabled &&
-                                !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint) &&
-                                !string.IsNullOrEmpty(_extendedOpenAIOptions.ApiKey)) ||
+                                !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint)) ||
                                (_extendedOpenAIOptions.UseFallbackToStandardConfig && _openAIOptions.Enabled);
 
             if (!isConfigured)
@@ -764,10 +764,9 @@ public class RiskAssessmentService : IRiskAssessmentService
             ExtendedAssessmentOpenAIOptions effectiveConfig;
 
             if (_extendedOpenAIOptions.Enabled &&
-                !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint) &&
-                !string.IsNullOrEmpty(_extendedOpenAIOptions.ApiKey))
+                !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint))
             {
-                // Use dedicated extended assessment configuration
+                // Use dedicated extended assessment configuration (managed identity or API key)
                 effectiveConfig = _extendedOpenAIOptions;
                 _logger.LogInformation("[{MethodName}] Using dedicated extended assessment OpenAI configuration. Endpoint: {Endpoint}, Deployment: {Deployment}",
                     nameof(CallAzureOpenAIForExtendedAssessmentAsync),

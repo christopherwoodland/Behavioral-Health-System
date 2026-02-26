@@ -15,21 +15,33 @@ public class KintsugiApiService : BaseHttpService, IKintsugiApiService
         // Validate and configure HttpClient if not already configured
         if (HttpClient.BaseAddress == null)
         {
-            ValidateConfiguration(new Dictionary<string, string?>
+            // When Kintsugi API key is not configured (e.g., local DAM mode),
+            // skip validation and leave HttpClient unconfigured.
+            // Methods will fail gracefully if called without configuration.
+            if (string.IsNullOrEmpty(_options.KintsugiApiKey) || string.IsNullOrEmpty(_options.KintsugiBaseUrl))
             {
-                ["KINTSUGI_API_KEY"] = _options.KintsugiApiKey,
-                ["KINTSUGI_BASE_URL"] = _options.KintsugiBaseUrl
-            });
+                Logger.LogWarning("[{ClassName}] Kintsugi API is not fully configured (missing API key or base URL). " +
+                    "Service will be available but API calls will fail. This is expected in local DAM mode.",
+                    nameof(KintsugiApiService));
+            }
+            else
+            {
+                ValidateConfiguration(new Dictionary<string, string?>
+                {
+                    ["KINTSUGI_API_KEY"] = _options.KintsugiApiKey,
+                    ["KINTSUGI_BASE_URL"] = _options.KintsugiBaseUrl
+                });
 
-            var defaultHeaders = new Dictionary<string, string>
-            {
-                ["X-API-Key"] = _options.KintsugiApiKey!
-            };
-            
-            ConfigureHttpClient(_options.KintsugiBaseUrl!, defaultHeaders);
-            
-            Logger.LogInformation("[{ClassName}] HttpClient configured with BaseAddress: {BaseAddress}", 
-                nameof(KintsugiApiService), HttpClient.BaseAddress);
+                var defaultHeaders = new Dictionary<string, string>
+                {
+                    ["X-API-Key"] = _options.KintsugiApiKey!
+                };
+                
+                ConfigureHttpClient(_options.KintsugiBaseUrl!, defaultHeaders);
+                
+                Logger.LogInformation("[{ClassName}] HttpClient configured with BaseAddress: {BaseAddress}", 
+                    nameof(KintsugiApiService), HttpClient.BaseAddress);
+            }
         }
         else
         {

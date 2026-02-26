@@ -170,7 +170,9 @@ var host = new HostBuilder()
                         client.DefaultRequestHeaders.Add("X-API-Key", options.ApiKey);
                     }
                 }
-            });
+            })
+            .AddPolicyHandler((serviceProvider, request) =>
+                RetryPolicies.GetRetryPolicy(serviceProvider.GetService<ILogger<LocalDamModelService>>()));
 
         services.AddHostedService<LocalDamWarmupHostedService>();
 

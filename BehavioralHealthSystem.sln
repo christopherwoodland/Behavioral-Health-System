@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -8,6 +8,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Helpers", "BehavioralHealthSystem.Helpers\BehavioralHealthSystem.Helpers.csproj", "{0A8C8870-FE0D-B598-ABE7-AE8288853BD6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Tests", "BehavioralHealthSystem.Tests\BehavioralHealthSystem.Tests.csproj", "{C41A2F4A-A734-4603-8113-596E6EAD7704}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Agents", "BehavioralHealthSystem.Agents\BehavioralHealthSystem.Agents.csproj", "{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -55,6 +57,18 @@ Global
 		{C41A2F4A-A734-4603-8113-596E6EAD7704}.Release|x64.Build.0 = Release|Any CPU
 		{C41A2F4A-A734-4603-8113-596E6EAD7704}.Release|x86.ActiveCfg = Release|Any CPU
 		{C41A2F4A-A734-4603-8113-596E6EAD7704}.Release|x86.Build.0 = Release|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Debug|x64.Build.0 = Debug|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Debug|x86.Build.0 = Debug|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x64.ActiveCfg = Release|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x64.Build.0 = Release|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x86.ActiveCfg = Release|Any CPU
+		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

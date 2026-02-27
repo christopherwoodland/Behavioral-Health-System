@@ -30,6 +30,8 @@ COPY BehavioralHealthSystem.Agents/Services/ ./BehavioralHealthSystem.Agents/Ser
 COPY BehavioralHealthSystem.Agents/Configuration/ ./BehavioralHealthSystem.Agents/Configuration/
 COPY BehavioralHealthSystem.Agents/DependencyInjection/ ./BehavioralHealthSystem.Agents/DependencyInjection/
 COPY BehavioralHealthSystem.Agents/Interfaces/ ./BehavioralHealthSystem.Agents/Interfaces/
+COPY BehavioralHealthSystem.Agents/Models/ ./BehavioralHealthSystem.Agents/Models/
+COPY BehavioralHealthSystem.Agents/Plugins/ ./BehavioralHealthSystem.Agents/Plugins/
 
 # Build and publish with Release configuration
 WORKDIR /src/BehavioralHealthSystem.Functions
@@ -39,6 +41,10 @@ RUN dotnet publish -c Release -o /app/publish \
 
 # Stage 2: Runtime image with Azure Functions runtime
 FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
+
+# Install ffmpeg for server-side audio conversion pipeline
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 # Security: Run as non-root user (Azure Functions base image handles this)
 WORKDIR /home/site/wwwroot

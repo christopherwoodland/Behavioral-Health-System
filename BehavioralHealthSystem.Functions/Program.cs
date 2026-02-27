@@ -1,6 +1,7 @@
 using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
+using BehavioralHealthSystem.Agents.DependencyInjection;
 using BehavioralHealthSystem.Configuration;
 using BehavioralHealthSystem.Functions.Services;
 using BehavioralHealthSystem.Helpers.Models;
@@ -226,6 +227,9 @@ var host = new HostBuilder()
         services.AddValidatorsFromAssemblyContaining<UserMetadataValidator>();
         services.AddHealthChecks().AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
         services.AddSignalR();
+
+        // Semantic Kernel audio processing pipeline (Fetch → Convert → Predict)
+        services.AddAgentServices();
     })
     .Build();
 

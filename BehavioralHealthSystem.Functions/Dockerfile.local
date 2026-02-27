@@ -7,6 +7,7 @@ WORKDIR /src
 COPY BehavioralHealthSystem.sln ./
 COPY BehavioralHealthSystem.Functions/BehavioralHealthSystem.Functions.csproj ./BehavioralHealthSystem.Functions/
 COPY BehavioralHealthSystem.Helpers/BehavioralHealthSystem.Helpers.csproj ./BehavioralHealthSystem.Helpers/
+COPY BehavioralHealthSystem.Agents/BehavioralHealthSystem.Agents.csproj ./BehavioralHealthSystem.Agents/
 
 # Restore dependencies
 RUN dotnet restore BehavioralHealthSystem.Functions/BehavioralHealthSystem.Functions.csproj
@@ -24,6 +25,12 @@ COPY BehavioralHealthSystem.Helpers/Models/ ./BehavioralHealthSystem.Helpers/Mod
 COPY BehavioralHealthSystem.Helpers/Services/ ./BehavioralHealthSystem.Helpers/Services/
 COPY BehavioralHealthSystem.Helpers/Validators/ ./BehavioralHealthSystem.Helpers/Validators/
 COPY BehavioralHealthSystem.Helpers/Deploy/ ./BehavioralHealthSystem.Helpers/Deploy/
+COPY BehavioralHealthSystem.Agents/*.cs ./BehavioralHealthSystem.Agents/
+COPY BehavioralHealthSystem.Agents/Services/ ./BehavioralHealthSystem.Agents/Services/
+COPY BehavioralHealthSystem.Agents/DependencyInjection/ ./BehavioralHealthSystem.Agents/DependencyInjection/
+COPY BehavioralHealthSystem.Agents/Interfaces/ ./BehavioralHealthSystem.Agents/Interfaces/
+COPY BehavioralHealthSystem.Agents/Models/ ./BehavioralHealthSystem.Agents/Models/
+COPY BehavioralHealthSystem.Agents/Plugins/ ./BehavioralHealthSystem.Agents/Plugins/
 
 # Build and publish
 WORKDIR /src/BehavioralHealthSystem.Functions
@@ -31,6 +38,10 @@ RUN dotnet publish -c Release -o /app/publish
 
 # Stage 2: Runtime image with Azure Functions runtime
 FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
+
+# Install ffmpeg for server-side audio conversion pipeline
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /home/site/wwwroot
 

@@ -373,7 +373,7 @@ public class SaveChatTranscriptFunctionTests
         var existingContent = BinaryData.FromString(existingJson);
 
         _mockBlobClient.Setup(x => x.ExistsAsync(default)).ReturnsAsync(Azure.Response.FromValue(true, null!));
-        _mockBlobClient.Setup(x => x.DownloadContentAsync(default))
+        _mockBlobClient.Setup(x => x.DownloadContentAsync())
             .ReturnsAsync(Azure.Response.FromValue(
                 BlobsModelFactory.BlobDownloadResult(content: existingContent),
                 null!));
@@ -397,7 +397,8 @@ public class SaveChatTranscriptFunctionTests
 
         // Assert
         Assert.IsNotNull(capturedData);
-        var savedTranscript = JsonSerializer.Deserialize<ChatTranscriptData>(capturedData.ToString());
+        var deserializeOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        var savedTranscript = JsonSerializer.Deserialize<ChatTranscriptData>(capturedData.ToString(), deserializeOptions);
         Assert.IsNotNull(savedTranscript);
         Assert.AreEqual(2, savedTranscript.Messages.Count);
         Assert.IsTrue(savedTranscript.Messages.Any(m => m.Id == "msg-1"));

@@ -14,10 +14,16 @@ public class AudioProcessingResult
 
     // ── Step 1: Fetch ────────────────────────────────────────
 
-    /// <summary>Blob path of the retrieved audio file.</summary>
+    /// <summary>Where the audio was fetched from ("blob" or "local").</summary>
+    public string AudioSource { get; set; } = "blob";
+
+    /// <summary>Blob path of the retrieved audio file (when source is blob).</summary>
     public string SourceBlobPath { get; set; } = string.Empty;
 
-    /// <summary>Original file name from blob storage.</summary>
+    /// <summary>Local file path of the retrieved audio file (when source is local).</summary>
+    public string SourceLocalPath { get; set; } = string.Empty;
+
+    /// <summary>Original file name.</summary>
     public string OriginalFileName { get; set; } = string.Empty;
 
     /// <summary>Original file size in bytes.</summary>

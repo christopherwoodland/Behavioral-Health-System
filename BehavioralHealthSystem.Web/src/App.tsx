@@ -13,6 +13,7 @@ import { APP_ROLES } from '@/config/authConfig';
 import { Dashboard } from '@/pages/Dashboard';
 import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, AgentExperience, SystemHealth, NotFound } from '@/pages';
 import GroupSessionsDetail from '@/pages/GroupSessionsDetail';
+import DamTestBench from '@/pages/DamTestBench';
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -47,82 +48,85 @@ function App() {
               <Layout>
                 <Routes>
                     {/* Control Panel route - accessible to both Admin and Control Panel roles */}
-                    <Route 
-                      path="/" 
+                    <Route
+                      path="/"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
                           <RoleBasedRedirect />
                           <Dashboard />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    
+
                     {/* Admin-only routes */}
-                    <Route 
-                      path="/upload" 
+                    <Route
+                      path="/upload"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <UploadAnalyze />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/sessions" 
+                    <Route
+                      path="/sessions"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <Sessions />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/sessions/:sessionId" 
+                    <Route
+                      path="/sessions/:sessionId"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <SessionDetail />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/groups/:groupId/sessions" 
+                    <Route
+                      path="/groups/:groupId/sessions"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <GroupSessionsDetail />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/predictions" 
+                    <Route
+                      path="/predictions"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <Predictions />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/summary" 
+                    <Route
+                      path="/summary"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
                           <ControlPanel />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/agent-experience" 
+                    <Route
+                      path="/agent-experience"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
                           <AgentExperience />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    <Route 
-                      path="/health" 
+                    <Route
+                      path="/health"
                       element={
                         <ProtectedRoute requireRoles={[APP_ROLES.ADMIN]}>
                           <SystemHealth />
                         </ProtectedRoute>
-                      } 
+                      }
                     />
-                    
+
+                    {/* DAM test bench — URL-only, not in nav */}
+                    <Route path="/dam-test" element={<DamTestBench />} />
+
                     {/* 404 page */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
@@ -131,7 +135,7 @@ function App() {
             </ApiAuthInitializer>
           </ConditionalAuthProvider>
         </ThemeProvider>
-        
+
         {/* React Query DevTools (only in development) */}
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>

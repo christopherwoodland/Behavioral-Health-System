@@ -34,4 +34,25 @@ public class AudioConversionOptions
 
     /// <summary>Timeout for ffmpeg process in seconds.</summary>
     public int ProcessTimeoutSeconds { get; set; } = 120;
+
+    /// <summary>
+    /// When true, skips filter processing if the input is already a clean WAV
+    /// at the target sample rate, mono, 16-bit PCM (passthrough mode).
+    /// Set via FFMPEG_SKIP_CLEAN_WAV environment variable.
+    /// </summary>
+    public bool SkipFiltersIfCleanWav { get; set; } = true;
+
+    /// <summary>
+    /// Use RAM-backed temp directory (/dev/shm on Linux) for intermediate files
+    /// instead of disk. Falls back to system temp if /dev/shm is unavailable.
+    /// Set via FFMPEG_USE_TMPFS environment variable.
+    /// </summary>
+    public bool UseTmpfs { get; set; } = true;
+
+    /// <summary>
+    /// Use stdin/stdout piping instead of temp files for ffmpeg I/O.
+    /// Avoids disk writes entirely. Takes precedence over UseTmpfs when enabled.
+    /// Set via FFMPEG_USE_PIPE_MODE environment variable.
+    /// </summary>
+    public bool UsePipeMode { get; set; } = true;
 }

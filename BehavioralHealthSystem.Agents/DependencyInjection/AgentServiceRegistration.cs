@@ -36,6 +36,12 @@ public static class AgentServiceRegistration
                     options.MaxDurationSeconds = maxDuration;
                 if (int.TryParse(config["FFMPEG_PROCESS_TIMEOUT_SECONDS"], out var timeout))
                     options.ProcessTimeoutSeconds = timeout;
+                if (bool.TryParse(config["FFMPEG_SKIP_CLEAN_WAV"], out var skipClean))
+                    options.SkipFiltersIfCleanWav = skipClean;
+                if (bool.TryParse(config["FFMPEG_USE_TMPFS"], out var useTmpfs))
+                    options.UseTmpfs = useTmpfs;
+                if (bool.TryParse(config["FFMPEG_USE_PIPE_MODE"], out var usePipe))
+                    options.UsePipeMode = usePipe;
             });
 
         if (configureConversion != null)
@@ -54,6 +60,12 @@ public static class AgentServiceRegistration
                 options.ModelId = config["LOCAL_DAM_MODEL_ID"] ?? "KintsugiHealth/dam";
                 if (int.TryParse(config["LOCAL_DAM_TIMEOUT_SECONDS"], out var timeout))
                     options.TimeoutSeconds = timeout;
+                if (bool.TryParse(config["LOCAL_DAM_USE_GPU"], out var useGpu))
+                    options.UseGpu = useGpu;
+                if (int.TryParse(config["LOCAL_DAM_GPU_DEVICE_ID"], out var gpuDeviceId))
+                    options.GpuDeviceId = gpuDeviceId;
+                if (bool.TryParse(config["LOCAL_DAM_USE_FP16"], out var useFp16))
+                    options.UseFp16 = useFp16;
             });
 
         if (configureDam != null)
@@ -61,10 +73,22 @@ public static class AgentServiceRegistration
             services.PostConfigure(configureDam);
         }
 
+        // Local file retrieval options
+        services.AddOptions<LocalFileRetrievalOptions>()
+            .Configure<IConfiguration>((options, config) =>
+            {
+                options.RecordingsDirectory = config["LOCAL_RECORDINGS_DIRECTORY"] ?? "./recordings";
+                if (bool.TryParse(config["LOCAL_RECORDINGS_SEARCH_SUBDIRS"], out var searchSubdirs))
+                    options.SearchSubdirectories = searchSubdirs;
+            });
+
         // ── Plugins ──────────────────────────────────────────────────────
 
         // AudioRetrievalPlugin — depends on BlobServiceClient (already registered in Functions Program.cs)
         services.AddSingleton<AudioRetrievalPlugin>();
+
+        // LocalFileRetrievalPlugin — reads from local filesystem
+        services.AddSingleton<LocalFileRetrievalPlugin>();
 
         // AudioConversionPlugin — depends on AudioConversionOptions
         services.AddSingleton<AudioConversionPlugin>();
@@ -92,12 +116,14 @@ public static class AgentServiceRegistration
         {
             var builder = Kernel.CreateBuilder();
 
-            // Import the three native plugins
+            // Import the native plugins
             var retrievalPlugin = sp.GetRequiredService<AudioRetrievalPlugin>();
+            var localRetrievalPlugin = sp.GetRequiredService<LocalFileRetrievalPlugin>();
             var conversionPlugin = sp.GetRequiredService<AudioConversionPlugin>();
             var predictionPlugin = sp.GetRequiredService<DamPredictionPlugin>();
 
             builder.Plugins.AddFromObject(retrievalPlugin, "AudioRetrieval");
+            builder.Plugins.AddFromObject(localRetrievalPlugin, "LocalFileRetrieval");
             builder.Plugins.AddFromObject(conversionPlugin, "AudioConversion");
             builder.Plugins.AddFromObject(predictionPlugin, "DamPrediction");
 

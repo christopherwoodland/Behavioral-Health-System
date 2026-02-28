@@ -173,16 +173,26 @@ public class SaveChatTranscriptFunction
 
             // Return success response
             var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(new
+            var responseJson = JsonSerializer.Serialize(new
             {
                 success = true,
                 message = "Chat transcript saved successfully",
                 sessionId = finalTranscript.SessionId,
                 messageCount = finalTranscript.Messages.Count,
                 blobName = fileName
-            });
+            }, jsonOptions);
+            response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+            await response.WriteStringAsync(responseJson);
 
             return response;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Invalid JSON in request body");
+
+            var badResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
+            await badResponse.WriteStringAsync("Invalid request: malformed JSON");
+            return badResponse;
         }
         catch (Exception ex)
         {

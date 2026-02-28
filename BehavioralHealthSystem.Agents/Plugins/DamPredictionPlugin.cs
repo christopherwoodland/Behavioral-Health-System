@@ -116,8 +116,18 @@ public class DamPredictionPlugin
             audioData = Convert.ToBase64String(audioData),
             audioFileName = string.IsNullOrWhiteSpace(audioFileName) ? "audio.wav" : audioFileName,
             modelId = _options.ModelId,
-            quantized = true
+            quantized = true,
+            useGpu = _options.UseGpu,
+            gpuDeviceId = _options.GpuDeviceId,
+            useFp16 = _options.UseFp16
         };
+
+        if (_options.UseGpu)
+        {
+            _logger.LogInformation(
+                "[{PluginName}] [{CorrelationId}] GPU inference requested. Device={DeviceId}, FP16={UseFp16}",
+                nameof(DamPredictionPlugin), correlationId, _options.GpuDeviceId, _options.UseFp16);
+        }
 
         using var response = await _httpClient.PostAsJsonAsync(
             _options.PredictionPath, payload, cancellationToken);
@@ -128,6 +138,10 @@ public class DamPredictionPlugin
         _logger.LogInformation(
             "[{PluginName}] [{CorrelationId}] DAM response: StatusCode={StatusCode}, ElapsedMs={ElapsedMs:F0}",
             nameof(DamPredictionPlugin), correlationId, response.StatusCode, sw.Elapsed.TotalMilliseconds);
+
+        _logger.LogInformation(
+            "[{PluginName}] [{CorrelationId}] Raw DAM response body: {ResponseBody}",
+            nameof(DamPredictionPlugin), correlationId, responseContent);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -145,6 +159,64 @@ public class DamPredictionPlugin
         {
             throw new InvalidOperationException(
                 $"Failed to deserialize DAM prediction response: {responseContent}");
+        }
+
+        // DAM self-host wraps scores inside a "result" object — extract them if present.
+        // The DAM API returns: {"result": {"depression": 0.42, "anxiety": 0.31}}
+        // Map these to the PredictionResponse fields used by the rest of the system.
+        try
+        {
+            using var json = JsonDocument.Parse(responseContent);
+            if (json.RootElement.TryGetProperty("result", out var resultObj)
+                && resultObj.ValueKind == JsonValueKind.Object)
+            {
+                // DAM uses short names: "depression", "anxiety", "score"
+                // Also check the longer predicted_score_* names for forward compat
+                predictionResponse.PredictedScoreDepression =
+                    TryReadScoreValue(resultObj, "depression")
+                    ?? TryReadScoreValue(resultObj, "predicted_score_depression")
+                    ?? predictionResponse.PredictedScoreDepression;
+
+                predictionResponse.PredictedScoreAnxiety =
+                    TryReadScoreValue(resultObj, "anxiety")
+                    ?? TryReadScoreValue(resultObj, "predicted_score_anxiety")
+                    ?? predictionResponse.PredictedScoreAnxiety;
+
+                predictionResponse.PredictedScore =
+                    TryReadScoreValue(resultObj, "score")
+                    ?? TryReadScoreValue(resultObj, "predicted_score")
+                    ?? predictionResponse.PredictedScore;
+
+                // If no overall score but we have depression, use depression as overall
+                if (string.IsNullOrEmpty(predictionResponse.PredictedScore)
+                    && !string.IsNullOrEmpty(predictionResponse.PredictedScoreDepression))
+                {
+                    predictionResponse.PredictedScore = predictionResponse.PredictedScoreDepression;
+                }
+
+                predictionResponse.Status =
+                    TryReadString(resultObj, "status") ?? predictionResponse.Status;
+                predictionResponse.CreatedAt =
+                    TryReadString(resultObj, "created_at") ?? predictionResponse.CreatedAt;
+                predictionResponse.UpdatedAt =
+                    TryReadString(resultObj, "updated_at") ?? predictionResponse.UpdatedAt;
+                predictionResponse.IsCalibrated =
+                    resultObj.TryGetProperty("is_calibrated", out var cal) && cal.ValueKind == JsonValueKind.True;
+                predictionResponse.ModelCategory =
+                    TryReadString(resultObj, "model_category") ?? predictionResponse.ModelCategory;
+                predictionResponse.ModelGranularity =
+                    TryReadString(resultObj, "model_granularity") ?? predictionResponse.ModelGranularity;
+
+                _logger.LogInformation(
+                    "[{PluginName}] [{CorrelationId}] Extracted scores from nested 'result' object",
+                    nameof(DamPredictionPlugin), correlationId);
+            }
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex,
+                "[{PluginName}] [{CorrelationId}] Failed to extract nested result object, using top-level fields",
+                nameof(DamPredictionPlugin), correlationId);
         }
 
         predictionResponse.Provider = "local-dam";
@@ -166,6 +238,23 @@ public class DamPredictionPlugin
             return prop.GetString();
         }
         return null;
+    }
+
+    /// <summary>
+    /// Reads a score value that may be a string or a number in the JSON.
+    /// DAM self-host returns numeric floats; the Kintsugi cloud API returns strings.
+    /// </summary>
+    private static string? TryReadScoreValue(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var prop))
+            return null;
+
+        return prop.ValueKind switch
+        {
+            JsonValueKind.String => prop.GetString(),
+            JsonValueKind.Number => prop.GetDouble().ToString("G"),
+            _ => null
+        };
     }
 }
 
@@ -191,4 +280,24 @@ public class DamPredictionPluginOptions
 
     /// <summary>Timeout in seconds for prediction requests.</summary>
     public int TimeoutSeconds { get; set; } = 300;
+
+    /// <summary>
+    /// Whether to request GPU-accelerated inference from the DAM service.
+    /// Set via LOCAL_DAM_USE_GPU environment variable.
+    /// Requires the DAM service to be running with CUDA/GPU support.
+    /// </summary>
+    public bool UseGpu { get; set; } = false;
+
+    /// <summary>
+    /// GPU device index to use when UseGpu is true (e.g., 0 for first GPU).
+    /// Set via LOCAL_DAM_GPU_DEVICE_ID environment variable.
+    /// </summary>
+    public int GpuDeviceId { get; set; } = 0;
+
+    /// <summary>
+    /// Whether to request FP16 (half-precision) inference for faster GPU processing.
+    /// Only effective when UseGpu is true.
+    /// Set via LOCAL_DAM_USE_FP16 environment variable.
+    /// </summary>
+    public bool UseFp16 { get; set; } = false;
 }

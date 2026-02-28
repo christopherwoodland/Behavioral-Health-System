@@ -145,6 +145,8 @@ public class AudioRetrievalPlugin
             FileName = Path.GetFileName(blobClient.Name),
             ContentType = contentType,
             BlobPath = blobClient.Name,
+            SourcePath = string.Empty,
+            Source = AudioFileSource.BlobStorage,
             UserId = userId,
             SessionId = sessionId
         };

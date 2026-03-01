@@ -41,6 +41,12 @@ export default defineConfig({
     open: true,
     cors: true,
     proxy: {
+      // Proxy API requests to the Azure Functions host to avoid CORS issues
+      '/api': {
+        target: 'http://127.0.0.1:7071',
+        changeOrigin: true,
+        secure: false,
+      },
       // Proxy requests to local Azurite blob storage to avoid CORS issues
       '/devstoreaccount1': {
         target: 'http://127.0.0.1:10000',

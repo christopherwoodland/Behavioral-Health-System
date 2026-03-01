@@ -53,7 +53,9 @@ export const getEnvVarBool = (name: string, defaultValue: boolean = false): bool
 // API Configuration
 export const env = {
   // API Configuration
-  get API_BASE_URL() { return getEnvVar('VITE_API_BASE_URL', 'http://localhost:7071/api'); },
+  // Default to relative '/api' so requests go through the Vite dev proxy to avoid CORS.
+  // In production containers, set VITE_API_BASE_URL to the full Functions URL.
+  get API_BASE_URL() { return getEnvVar('VITE_API_BASE_URL', '/api'); },
   get API_TIMEOUT_MS() { return getEnvVarInt('VITE_API_TIMEOUT_MS', 30000); },
   get API_MAX_RETRIES() { return getEnvVarInt('VITE_API_MAX_RETRIES', 3); },
   get API_RETRY_DELAY_MS() { return getEnvVarInt('VITE_API_RETRY_DELAY_MS', 1000); },
@@ -100,6 +102,7 @@ export const env = {
   get ENABLE_JEKYLL_AGENT() { return getEnvVarBool('VITE_ENABLE_JEKYLL_AGENT', true); },
   get ENABLE_SESSION_VOICE_RECORDING() { return getEnvVarBool('VITE_ENABLE_SESSION_VOICE_RECORDING', true); },
   get ENABLE_SMART_BAND() { return getEnvVarBool('VITE_ENABLE_SMART_BAND', false); },
+  get USE_LOCAL_DAM_MODEL() { return getEnvVarBool('VITE_USE_LOCAL_DAM_MODEL', true); },
   get OFFLINE_MODE() { return getEnvVarBool('VITE_OFFLINE_MODE', false); },
 
   // Timing Configuration

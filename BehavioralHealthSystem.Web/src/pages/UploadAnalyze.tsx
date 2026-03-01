@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import GroupSelector from '../components/GroupSelector';
 import { fileGroupService } from '../services/fileGroupService';
 import GrammarCorrectionModal from '../components/GrammarCorrectionModal';
+import { submitToDam, mapDamResultToPrediction, isDamModeEnabled } from '../services/damService';
 import type { PredictionResult, AppError, SessionMetadata } from '../types';
 
 interface UploadProgress {
@@ -242,6 +243,7 @@ const UploadAnalyze: React.FC = () => {
   // Processing options state
   const [runKintsugiAssessment, setRunKintsugiAssessment] = useState(true); // Default checked
   const [transcribeAudio, setTranscribeAudio] = useState(false); // Default unchecked
+  const [useLocalDam, setUseLocalDam] = useState(() => isDamModeEnabled()); // DAM mode from env
 
   // Group selection state
   const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
@@ -1835,10 +1837,11 @@ const UploadAnalyze: React.FC = () => {
   const processAndAnalyze = useCallback(async () => {
     // Validate processing options (account for disabled transcription)
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
-    if (!runKintsugiAssessment && !effectiveTranscribeAudio) {
+    if (!useLocalDam && !runKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (true) availableOptions.push('Kintsugi Assessment'); // Always available
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      availableOptions.push('Local DAM Model');
 
       const optionsText = availableOptions.length > 1
         ? `Please select at least one processing option (${availableOptions.join(' or ')}).`
@@ -1865,65 +1868,104 @@ const UploadAnalyze: React.FC = () => {
       }
       await processSingleFile();
     }
-  }, [audioFile, audioFiles, userMetadata.userId, processingMode, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, selectedGroupId, addToast]);
+  }, [audioFile, audioFiles, userMetadata.userId, processingMode, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, useLocalDam, selectedGroupId, addToast]);
 
-  const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile, options: { runKintsugiAssessment: boolean; transcribeAudio: boolean }) => {
+  const processSingleFileById = useCallback(async (fileId: string, audioFile: AudioFile, options: { runKintsugiAssessment: boolean; transcribeAudio: boolean; useLocalDam?: boolean }) => {
     try {
-      // Step 1: Initiate session
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'initiating', progress: 5, message: 'Initiating session...' }
-      }));
-
       // Use individual file metadata or fall back to shared metadata
       const fileMetadata = audioFile.userMetadata || userMetadata;
       const metadata = audioFile.userMetadata ? buildMetadataFromUserData(audioFile.userMetadata) : buildMetadata();
 
-      const sessionRequest: any = {
-        userid: fileMetadata.userId.trim(),
-        is_initiated: true
-      };
+      // ── DAM (local model) path ─────────────────────────────────────────
+      // When useLocalDam is true we skip server-side session initiation
+      // (which requires Azure Table Storage) and generate a local session ID.
+      // The entire convert → upload → predict flow is replaced by a single
+      // POST to the SK orchestration endpoint.
+      if (options.useLocalDam) {
+        const localSessionId = crypto.randomUUID();
+        const sessionData: SessionInfo = {
+          sessionId: localSessionId,
+          userId: fileMetadata.userId.trim()
+        };
 
-      // Only include metadata if we have any
-      if (metadata) {
-        sessionRequest.metadata = metadata;
-      }
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'initiating', progress: 10, message: 'Starting DAM analysis...', sessionId: localSessionId }
+        }));
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'analyzing', progress: 30, message: 'Uploading to local DAM model for analysis...' }
+        }));
 
-      const sessionResponse = await apiService.initiateSession(sessionRequest);
+        const damPipelineResult = await submitToDam(
+          audioFile.file,
+          fileMetadata.userId.trim(),
+          sessionData.sessionId,
+        );
 
-      const sessionData: SessionInfo = {
-        sessionId: sessionResponse.sessionId,
-        userId: fileMetadata.userId.trim()
-      };
+        if (!damPipelineResult.success) {
+          throw new Error(damPipelineResult.error || damPipelineResult.message || 'DAM pipeline failed');
+        }
 
-      // Save initial session data to blob storage so it appears in Analysis Sessions UI
-      setProcessingProgress(prev => ({
-        ...prev,
-        [fileId]: { stage: 'initiating', progress: 10, message: 'Saving session data...', sessionId: sessionResponse.sessionId }
-      }));
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'analyzing', progress: 80, message: 'DAM analysis complete, saving results...' }
+        }));
 
-      const initialSessionData = {
-        sessionId: sessionResponse.sessionId,
-        userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
-        metadata_user_id: fileMetadata.userId.trim(), // Store metadata user ID separately
-        groupId: selectedGroupId, // Assign to selected group if specified
-        ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
-        audioFileName: audioFile.file.name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'initiated'
-      };
+        const damPrediction = mapDamResultToPrediction(damPipelineResult);
 
-      try {
-        console.log('Attempting to save session data (multi-file):', initialSessionData);
-        const saveResult = await apiService.saveSessionData(initialSessionData);
-        console.log('Session data saved successfully (multi-file):', saveResult);
-      } catch (error) {
-        console.error('Failed to save session data (multi-file):', error);
-        console.error('Session data that failed to save:', initialSessionData);
-        addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
-        // Continue with the process even if saving fails
-        // This is not critical for the main workflow, but user should be informed
+        // Build AnalysisResult in same shape as Kintsugi path
+        const analysisResult: AnalysisResult = {
+          sessionId: sessionData.sessionId,
+          depressionScore: safeParseFloat(damPrediction.predictedScoreDepression, 0),
+          riskLevel: (() => {
+            const score = safeParseFloat(damPrediction.predictedScoreDepression, 0);
+            return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+          })(),
+          confidence: undefined,
+          insights: [
+            'Analysis completed using local DAM model',
+            damPrediction.predictedScoreDepression ? `Depression score: ${damPrediction.predictedScoreDepression}` : '',
+            damPrediction.predictedScoreAnxiety ? `Anxiety score: ${damPrediction.predictedScoreAnxiety}` : '',
+            damPipelineResult.totalElapsedMs ? `Pipeline completed in ${Math.round(damPipelineResult.totalElapsedMs)}ms` : '',
+            'Results should be reviewed by a qualified healthcare professional',
+          ].filter(i => i.trim() !== ''),
+          timestamp: damPrediction.updatedAt || new Date().toISOString(),
+          rawApiResponse: damPrediction,
+        };
+
+        // Save final session data
+        const finalSessionData = {
+          ...initialSessionData,
+          prediction: damPrediction,
+          analysisResults: {
+            depressionScore: safeParseFloat(damPrediction.predictedScoreDepression),
+            anxietyScore: safeParseFloat(damPrediction.predictedScoreAnxiety),
+            riskLevel: analysisResult.riskLevel || 'unknown',
+            confidence: undefined,
+            insights: analysisResult.insights || [],
+            completedAt: new Date().toISOString(),
+          },
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        try {
+          await apiService.saveSessionData(finalSessionData);
+          addToast('success', 'Session Saved', 'DAM analysis results saved to session storage.');
+        } catch (saveErr) {
+          console.error('Failed to save DAM analysis results:', saveErr);
+          addToast('warning', 'Save Warning', 'DAM analysis completed but failed to save to session storage.');
+        }
+
+        setProcessingProgress(prev => ({
+          ...prev,
+          [fileId]: { stage: 'complete', progress: 100, message: 'DAM analysis complete!' }
+        }));
+
+        setResults(prev => ({ ...prev, [fileId]: analysisResult }));
+        return; // Skip the rest of the Kintsugi flow
       }
 
       let audioUrl: string;
@@ -2308,10 +2350,11 @@ const UploadAnalyze: React.FC = () => {
     const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
 
-    if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
+    if (!useLocalDam && !effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      availableOptions.push('Local DAM Model');
 
       if (availableOptions.length === 0) {
         setError('No processing options are currently enabled. Please check your configuration.');
@@ -2393,7 +2436,8 @@ const UploadAnalyze: React.FC = () => {
         try {
           const optionsToPass = {
             runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled,
-            transcribeAudio: transcribeAudio && isTranscriptionEnabled
+            transcribeAudio: transcribeAudio && isTranscriptionEnabled,
+            useLocalDam: useLocalDam
           };
           console.log('DEBUG: Calling processSingleFileById with options:', optionsToPass);
           console.log('DEBUG: transcribeAudio checkbox state:', transcribeAudio);
@@ -2473,7 +2517,7 @@ const UploadAnalyze: React.FC = () => {
         });
       }, 2000);
     }
-  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled, selectedGroupId]);
+  }, [audioFiles, fileStates, validateMetadata, addToast, announceToScreenReader, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled, useLocalDam, selectedGroupId]);
 
   const startSingleFile = useCallback(async (fileId: string) => {
     const audioFile = audioFiles.find(f => f.id === fileId);
@@ -2483,10 +2527,11 @@ const UploadAnalyze: React.FC = () => {
     const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
 
-    if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
+    if (!useLocalDam && !effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      availableOptions.push('Local DAM Model');
 
       if (availableOptions.length === 0) {
         setError('No processing options are currently enabled. Please check your configuration.');
@@ -2516,7 +2561,8 @@ const UploadAnalyze: React.FC = () => {
     try {
       const optionsToPass = {
         runKintsugiAssessment: runKintsugiAssessment && isKintsugiEnabled,
-        transcribeAudio: transcribeAudio && isTranscriptionEnabled
+        transcribeAudio: transcribeAudio && isTranscriptionEnabled,
+        useLocalDam: useLocalDam
       };
       console.log('DEBUG: Calling processSingleFileById with options:', optionsToPass);
       console.log('DEBUG: transcribeAudio checkbox state:', transcribeAudio);
@@ -2535,7 +2581,7 @@ const UploadAnalyze: React.FC = () => {
         [fileId]: { stage: 'error', progress: 0, message: `Failed: ${errorMessage}` }
       }));
     }
-  }, [audioFiles, validateMetadata, addToast, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled]);
+  }, [audioFiles, validateMetadata, addToast, processSingleFileById, runKintsugiAssessment, transcribeAudio, isTranscriptionEnabled, isKintsugiEnabled, useLocalDam]);
 
   const processSingleFile = useCallback(async () => {
     if (!audioFile || !userMetadata.userId.trim()) {
@@ -2548,10 +2594,11 @@ const UploadAnalyze: React.FC = () => {
     const effectiveKintsugiAssessment = runKintsugiAssessment && isKintsugiEnabled;
     const effectiveTranscribeAudio = transcribeAudio && isTranscriptionEnabled;
 
-    if (!effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
+    if (!useLocalDam && !effectiveKintsugiAssessment && !effectiveTranscribeAudio) {
       const availableOptions = [];
       if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
       if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+      availableOptions.push('Local DAM Model');
 
       if (availableOptions.length === 0) {
         setError('No processing options are currently enabled. Please check your configuration.');
@@ -2579,53 +2626,86 @@ const UploadAnalyze: React.FC = () => {
     try {
       setError(null);
 
-      // Step 1: Initiate session
-      setProgress({ stage: 'initiating', progress: 5, message: 'Initiating session...' });
-      announceToScreenReader('Starting analysis process - initiating session');
+      // ── DAM (local model) path ─────────────────────────────────────────
+      // When useLocalDam is true we skip server-side session initiation
+      // (which requires Azure Table Storage) and generate a local session ID.
+      // The entire convert → upload → predict flow is replaced by a single
+      // POST to the SK orchestration endpoint.
+      if (useLocalDam) {
+        const localSessionId = crypto.randomUUID();
+        const sessionData: SessionInfo = {
+          sessionId: localSessionId,
+          userId: userMetadata.userId.trim()
+        };
 
-      const metadata = buildMetadata();
-      const sessionRequest: any = {
-        userid: userMetadata.userId.trim(),
-        is_initiated: true
-      };
+        setProgress({ stage: 'initiating', progress: 10, message: 'Starting DAM analysis...' });
+        announceToScreenReader('Starting DAM analysis');
 
-      // Only include metadata if we have any
-      if (metadata) {
-        sessionRequest.metadata = metadata;
-      }
+        setProgress({ stage: 'analyzing', progress: 30, message: 'Uploading to local DAM model for analysis...' });
+        announceToScreenReader('Submitting audio to local DAM model');
 
-      const sessionResponse = await apiService.initiateSession(sessionRequest);
+        const damPipelineResult = await submitToDam(
+          audioFile.file,
+          userMetadata.userId.trim(),
+          sessionData.sessionId,
+        );
 
-      const sessionData: SessionInfo = {
-        sessionId: sessionResponse.sessionId,
-        userId: userMetadata.userId.trim()
-      };
+        if (!damPipelineResult.success) {
+          throw new Error(damPipelineResult.error || damPipelineResult.message || 'DAM pipeline failed');
+        }
 
-      // Save initial session data to blob storage so it appears in Analysis Sessions UI
-      setProgress({ stage: 'initiating', progress: 10, message: 'Saving session data...' });
+        setProgress({ stage: 'analyzing', progress: 80, message: 'DAM analysis complete, saving results...' });
 
-      const initialSessionData = {
-        sessionId: sessionResponse.sessionId,
-        userId: getAuthenticatedUserId(), // Use authenticated user ID for session filtering/access control
-        metadata_user_id: userMetadata.userId.trim(), // Store metadata user ID separately
-        groupId: selectedGroupId, // Assign to selected group if specified
-        ...(metadata && { userMetadata: metadata }), // Only include userMetadata if metadata exists
-        audioFileName: audioFile.file.name,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'initiated'
-      };
+        const damPrediction = mapDamResultToPrediction(damPipelineResult);
 
-      try {
-        console.log('Attempting to save session data (single-file):', initialSessionData);
-        const saveResult = await apiService.saveSessionData(initialSessionData);
-        console.log('Session data saved successfully (single-file):', saveResult);
-      } catch (error) {
-        console.error('Failed to save session data (single-file):', error);
-        console.error('Session data that failed to save:', initialSessionData);
-        addToast('warning', 'Session Save Warning', 'Session data could not be saved to storage, but processing will continue.');
-        // Continue with the process even if saving fails
-        // This is not critical for the main workflow, but user should be informed
+        const analysisResult: AnalysisResult = {
+          sessionId: sessionData.sessionId,
+          depressionScore: safeParseFloat(damPrediction.predictedScoreDepression, 0),
+          riskLevel: (() => {
+            const score = safeParseFloat(damPrediction.predictedScoreDepression, 0);
+            return score > 0.7 ? 'high' : score > 0.4 ? 'medium' : 'low';
+          })(),
+          confidence: undefined,
+          insights: [
+            'Analysis completed using local DAM model',
+            damPrediction.predictedScoreDepression ? `Depression score: ${damPrediction.predictedScoreDepression}` : '',
+            damPrediction.predictedScoreAnxiety ? `Anxiety score: ${damPrediction.predictedScoreAnxiety}` : '',
+            damPipelineResult.totalElapsedMs ? `Pipeline completed in ${Math.round(damPipelineResult.totalElapsedMs)}ms` : '',
+            'Results should be reviewed by a qualified healthcare professional',
+          ].filter(i => i.trim() !== ''),
+          timestamp: damPrediction.updatedAt || new Date().toISOString(),
+          rawApiResponse: damPrediction,
+        };
+
+        const finalSessionData = {
+          ...initialSessionData,
+          prediction: damPrediction,
+          analysisResults: {
+            depressionScore: safeParseFloat(damPrediction.predictedScoreDepression),
+            anxietyScore: safeParseFloat(damPrediction.predictedScoreAnxiety),
+            riskLevel: analysisResult.riskLevel || 'unknown',
+            confidence: undefined,
+            insights: analysisResult.insights || [],
+            completedAt: new Date().toISOString(),
+          },
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        try {
+          await apiService.saveSessionData(finalSessionData);
+          addToast('success', 'Session Saved', 'DAM analysis results saved to session storage.');
+        } catch (saveErr) {
+          console.error('Failed to save DAM analysis results:', saveErr);
+          addToast('warning', 'Save Warning', 'DAM analysis completed but failed to save to session storage.');
+        }
+
+        setProgress({ stage: 'complete', progress: 100, message: 'DAM analysis complete!' });
+        setResult(analysisResult);
+        addToast('success', 'Analysis Complete', 'Local DAM model analysis has been completed successfully.');
+        announceToScreenReader('Local DAM model analysis completed successfully');
+        return; // Skip the rest of the Kintsugi flow
       }
 
       let audioUrl: string;
@@ -2939,7 +3019,7 @@ const UploadAnalyze: React.FC = () => {
       addToast('error', 'Processing Failed', errorMessage);
       announceToScreenReader(`Error: ${errorMessage}`);
     }
-  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat, runKintsugiAssessment, transcribeAudio, selectedGroupId]);
+  }, [audioFile, userMetadata.userId, announceToScreenReader, validateMetadata, buildMetadata, safeParseFloat, runKintsugiAssessment, transcribeAudio, useLocalDam, selectedGroupId]);
 
   const getProgressColor = useCallback((stage: string) => {
     switch (stage) {
@@ -3168,10 +3248,40 @@ const UploadAnalyze: React.FC = () => {
               </p>
             </div>
           </div>
+
+          {/* DAM Local Model Toggle */}
+          <div className="flex items-start">
+            <input
+              id="useLocalDam"
+              type="checkbox"
+              checked={useLocalDam}
+              onChange={(e) => {
+                setUseLocalDam(e.target.checked);
+                // When DAM is enabled, disable Kintsugi (mutually exclusive analysis)
+                if (e.target.checked) {
+                  setRunKintsugiAssessment(false);
+                }
+              }}
+              className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700"
+            />
+            <div className="ml-3">
+              <label htmlFor="useLocalDam" className="text-sm font-medium text-gray-900 dark:text-white">
+                Use Local DAM Model
+              </label>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Analyze audio using the locally-hosted DAM (Depression &amp; Anxiety Model). Audio conversion and prediction are handled server-side.
+              </p>
+              {useLocalDam && runKintsugiAssessment && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  Note: DAM and Kintsugi cannot run simultaneously. Kintsugi will be disabled.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Validation message if no options selected */}
-        {!(runKintsugiAssessment && isKintsugiEnabled) && !(transcribeAudio && isTranscriptionEnabled) && (
+        {!useLocalDam && !(runKintsugiAssessment && isKintsugiEnabled) && !(transcribeAudio && isTranscriptionEnabled) && (
           <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
             <div className="flex items-center">
               <AlertCircle className="h-4 w-4 text-amber-500 mr-2" />
@@ -3180,6 +3290,7 @@ const UploadAnalyze: React.FC = () => {
                   const availableOptions = [];
                   if (isKintsugiEnabled) availableOptions.push('Kintsugi Assessment');
                   if (isTranscriptionEnabled) availableOptions.push('Audio Transcription');
+                  availableOptions.push('Local DAM Model');
 
                   if (availableOptions.length === 0) {
                     return 'No processing options are currently enabled. Please check your configuration.';
@@ -4465,7 +4576,7 @@ const UploadAnalyze: React.FC = () => {
                   disabled={audioFiles.length === 0 || !userMetadata.userId.trim() ||
                            !audioFiles.some(file => fileStates[file.id] === 'ready') ||
                            !!error || Object.values(validationErrors).some(err => err !== undefined) ||
-                           (!runKintsugiAssessment && !transcribeAudio)}
+                           (!runKintsugiAssessment && !transcribeAudio && !useLocalDam)}
                   className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
                 >
                   <Play className="h-5 w-5 mr-2" aria-hidden="true" />
@@ -4488,7 +4599,7 @@ const UploadAnalyze: React.FC = () => {
                 onClick={processAndAnalyze}
                 disabled={!audioFile || !userMetadata.userId.trim() ||
                          !!error || Object.values(validationErrors).some(err => err !== undefined) ||
-                         (!runKintsugiAssessment && !transcribeAudio)}
+                         (!runKintsugiAssessment && !transcribeAudio && !useLocalDam)}
                 className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed dark:focus:ring-offset-gray-800"
               >
                 <Play className="h-5 w-5 mr-2" aria-hidden="true" />

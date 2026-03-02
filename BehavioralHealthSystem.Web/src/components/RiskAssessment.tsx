@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
-import { 
-  Brain, 
-  AlertTriangle, 
-  CheckCircle, 
-  RefreshCw, 
-  Clock, 
+import {
+  Brain,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  Clock,
   TrendingUp,
   Lightbulb,
   ShieldAlert,
@@ -28,26 +28,26 @@ interface RiskAssessmentProps {
 
 // Risk level configuration
 const riskLevelConfig = {
-  low: { 
-    color: 'green', 
+  low: {
+    color: 'green',
     label: 'Low Risk',
     icon: CheckCircle,
     description: 'Low likelihood of immediate concerns'
   },
-  moderate: { 
-    color: 'yellow', 
+  moderate: {
+    color: 'yellow',
     label: 'Moderate Risk',
     icon: AlertTriangle,
     description: 'Some concerns that warrant attention'
   },
-  high: { 
-    color: 'red', 
+  high: {
+    color: 'red',
     label: 'High Risk',
     icon: ShieldAlert,
     description: 'Significant concerns requiring immediate attention'
   },
-  critical: { 
-    color: 'red', 
+  critical: {
+    color: 'red',
     label: 'Critical Risk',
     icon: ShieldAlert,
     description: 'Urgent intervention required'
@@ -77,7 +77,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
       announceToScreenReader('Generating AI risk assessment...');
 
       const response = await apiService.generateRiskAssessment(sessionId);
-      
+
       if (response.success && response.riskAssessment) {
         setAssessment(response.riskAssessment);
         onAssessmentUpdated?.(response.riskAssessment);
@@ -103,7 +103,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
       setError(null);
 
       const response = await apiService.getRiskAssessment(sessionId);
-      
+
       if (response.success && response.riskAssessment) {
         setAssessment(response.riskAssessment);
         onAssessmentUpdated?.(response.riskAssessment);
@@ -122,7 +122,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
     if (!config) return null;
 
     const Icon = config.icon;
-    
+
     return (
       <div className="flex items-center space-x-2">
         <span
@@ -157,7 +157,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
           <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
           AI Risk Assessment
         </h2>
-        
+
         <div className="text-center py-8">
           <Brain className="w-12 h-12 text-gray-400 mx-auto mb-4" aria-hidden="true" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -166,7 +166,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
           <p className="text-gray-600 dark:text-gray-300 mb-6">
             Generate an AI-powered risk assessment based on session data and clinical insights.
           </p>
-          
+
           <div className="space-y-3">
             <button type="button"
               onClick={generateAssessment}
@@ -176,7 +176,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
               <Brain className="w-4 h-4 mr-2" aria-hidden="true" />
               Generate AI Risk Assessment
             </button>
-            
+
             <button type="button"
               onClick={loadAssessment}
               className="btn btn--secondary"
@@ -186,9 +186,9 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
               Check for Existing Assessment
             </button>
           </div>
-          
+
           {error && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div role="alert" className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-red-700 dark:text-red-300 text-sm">
                 {error.message}
               </p>
@@ -207,14 +207,14 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
           <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
           AI Risk Assessment
         </h2>
-        
+
         <div className="flex items-center justify-center py-16">
           <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mr-3" aria-hidden="true" />
           <span className="text-lg text-gray-900 dark:text-white">
             {isGenerating ? 'Generating AI risk assessment...' : 'Loading assessment...'}
           </span>
         </div>
-        
+
         {isGenerating && (
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -238,7 +238,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
           <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
           AI Risk Assessment
         </h2>
-        
+
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button type="button"
             onClick={generateAssessment}
@@ -261,7 +261,7 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
             </h3>
             <RiskLevelBadge riskLevel={assessment.overallRiskLevel} riskScore={assessment.riskScore} />
           </div>
-          
+
           {assessment.generatedAt && (
             <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3 flex items-center">
@@ -381,9 +381,9 @@ const RiskAssessmentComponent: React.FC<RiskAssessmentProps> = ({
           </div>
         </div>
       </div>
-      
+
       {error && (
-        <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+        <div role="alert" className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <p className="text-red-700 dark:text-red-300 text-sm">
             {error.message}
           </p>

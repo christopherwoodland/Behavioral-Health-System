@@ -28,10 +28,10 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
   className = ''
 }) => {
   // Type detection: Check if this is a multi-condition assessment
-  const isMultiCondition = 'conditionAssessments' in assessment && 
-                           Array.isArray(assessment.conditionAssessments) && 
+  const isMultiCondition = 'conditionAssessments' in assessment &&
+                           Array.isArray(assessment.conditionAssessments) &&
                            assessment.conditionAssessments.length > 0;
-  
+
   // For backwards compatibility with legacy schizophrenia format
   const schizo = !isMultiCondition ? (assessment as ExtendedRiskAssessment).schizophreniaAssessment : null;
   const criterionA = schizo?.criterionAEvaluation;
@@ -47,9 +47,9 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
           Severity: {symptom.severity}/4
         </span>
       </div>
-      
+
       <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{description}</p>
-      
+
       <div className="flex items-center gap-2 text-sm">
         <span className="text-gray-600 dark:text-gray-400">Presence Level:</span>
         <span className={`font-semibold ${getSeverityColor(symptom.severity)}`}>
@@ -76,8 +76,15 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
       )}
 
       {/* Severity bar */}
-      <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-        <div 
+      <div
+        className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={symptom.severity}
+        aria-valuemin={0}
+        aria-valuemax={4}
+        aria-label={`${title} severity: ${symptom.severity} out of 4`}
+      >
+        <div
           className={`h-full transition-all duration-300 ${
             symptom.severity === 0 ? 'w-0 bg-gray-400' :
             symptom.severity === 1 ? 'w-1/4 bg-blue-500' :
@@ -85,6 +92,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
             symptom.severity === 3 ? 'w-3/4 bg-orange-500' :
             'w-full bg-red-500'
           }`}
+          aria-hidden="true"
         />
       </div>
     </div>
@@ -99,7 +107,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
             Comprehensive Psychiatric Evaluation with DSM-5 Schizophrenia Assessment
           </span>
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
           <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{assessment.modelVersion}</span>
           <span className="inline-flex items-center px-3 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
@@ -113,34 +121,49 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
 
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 dark:border-gray-700">
-        <div className="flex gap-1">
+        <div className="flex gap-1" role="tablist" aria-label="Risk assessment sections">
           <button
+            role="tab"
+            id="tab-overview"
+            aria-selected={activeTab === 'overview'}
+            aria-controls="tabpanel-overview"
             className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
-              activeTab === 'overview' 
-                ? 'text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+              activeTab === 'overview'
+                ? 'text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
                 : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
             onClick={() => setActiveTab('overview')}
+            tabIndex={activeTab === 'overview' ? 0 : -1}
           >
             Overview
           </button>
           <button
+            role="tab"
+            id="tab-disorders"
+            aria-selected={activeTab === 'disorders'}
+            aria-controls="tabpanel-disorders"
             className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
-              activeTab === 'disorders' 
-                ? 'text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+              activeTab === 'disorders'
+                ? 'text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
                 : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
             onClick={() => setActiveTab('disorders')}
+            tabIndex={activeTab === 'disorders' ? 0 : -1}
           >
             {isMultiCondition ? 'Disorder Evaluations' : 'Schizophrenia Evaluation'}
           </button>
           <button
+            role="tab"
+            id="tab-details"
+            aria-selected={activeTab === 'details'}
+            aria-controls="tabpanel-details"
             className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 ${
-              activeTab === 'details' 
-                ? 'text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+              activeTab === 'details'
+                ? 'text-blue-600 border-blue-600 bg-blue-50 dark:bg-blue-900/20'
                 : 'text-gray-600 dark:text-gray-400 border-transparent hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
             onClick={() => setActiveTab('details')}
+            tabIndex={activeTab === 'details' ? 0 : -1}
           >
             Clinical Details
           </button>
@@ -149,10 +172,10 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
 
       {/* Tab Content */}
       <div className="space-y-6">
-        
+
         {/* Overview Tab */}
         {activeTab === 'overview' && (
-          <div className="space-y-6">
+          <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className={`flex flex-col gap-2 p-6 rounded-lg border-2 ${getRiskLevelColor(assessment.overallRiskLevel)}`}>
                 <span className="text-sm font-medium uppercase tracking-wide">Overall Risk Level</span>
@@ -255,7 +278,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                 {(assessment as MultiConditionExtendedRiskAssessment).conditionAssessments.map((condition, idx) => {
                   const totalCriteria = condition.criteriaEvaluations.length;
                   const metCriteria = condition.criteriaEvaluations.filter(c => c.isMet).length;
-                  
+
                   return (
                     <div key={idx} className="flex flex-col gap-1 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                       <span className="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">{condition.conditionName}</span>
@@ -273,8 +296,8 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
 
         {/* Disorders Evaluation Tab */}
         {activeTab === 'disorders' && (
-          <div className="space-y-8">
-            
+          <div role="tabpanel" id="tabpanel-disorders" aria-labelledby="tab-disorders" className="space-y-8">
+
             {/* Legacy schizophrenia format */}
             {!isMultiCondition && schizo && criterionA && (
               <>
@@ -285,16 +308,16 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                       DSM-5 Criterion A: Characteristic Symptoms
                     </h3>
                     <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                      criterionA.criterionAMet 
-                        ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' 
+                      criterionA.criterionAMet
+                        ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
                         : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
                     }`}>
                       {criterionA.criterionAMet ? 'Criteria Met' : 'Criteria Not Met'}
                     </span>
                   </div>
-                  
+
                   <p className="text-sm text-gray-600 dark:text-gray-400 italic">
-                    At least TWO symptoms must be present for significant time during 1-month period. 
+                    At least TWO symptoms must be present for significant time during 1-month period.
                     At least ONE must be delusions, hallucinations, or disorganized speech.
                   </p>
 
@@ -334,8 +357,8 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                   DSM-5 Criterion B: Functional Impairment
                 </h3>
                 <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                  schizo.functionalImpairment.criterionBMet 
-                    ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800' 
+                  schizo.functionalImpairment.criterionBMet
+                    ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
                     : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
                 }`}>
                   {schizo.functionalImpairment.criterionBMet ? 'Criteria Met' : 'Criteria Not Met'}
@@ -432,7 +455,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                                   {sub.isPresent ? '✓ Present' : '✗ Absent'}
                                 </span>
                               </div>
-                              
+
                               {sub.severity !== undefined && (
                                 <div className="mt-2">
                                   <div className="flex justify-between text-xs mb-1">
@@ -440,14 +463,14 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                                     <span className="font-medium">{sub.severity}/4</span>
                                   </div>
                                   <div className="w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                                    <div 
+                                    <div
                                       className={`h-full ${getSeverityColor(sub.severity)}`}
                                       style={{ width: `${(sub.severity / 4) * 100}%` }}
                                     />
                                   </div>
                                 </div>
                               )}
-                              
+
                               {sub.evidence && (
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 italic">
                                   Evidence: {sub.evidence}
@@ -481,7 +504,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-600 dark:text-gray-400">Confidence:</span>
                         <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div 
+                          <div
                             className="h-full bg-gradient-to-r from-blue-500 to-green-500"
                             style={{ width: `${criterion.confidence * 100}%` }}
                           />
@@ -535,8 +558,8 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
 
         {/* Clinical Details Tab */}
         {activeTab === 'details' && (
-          <div className="space-y-6">
-            
+          <div role="tabpanel" id="tabpanel-details" aria-labelledby="tab-details" className="space-y-6">
+
             {/* Key Risk Factors */}
             <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-3 border-blue-500">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Key Risk Factors</h3>
@@ -646,7 +669,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                 </ul>
               </div>
             )}
-            
+
             {isMultiCondition && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Clinical Notes by Condition</h3>
@@ -671,7 +694,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                 <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">Overall Assessment Confidence</span>
                   <div className="w-full h-4 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500"
                       style={{ width: `${assessment.confidenceLevel * 100}%` }}
                     />
@@ -684,7 +707,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                 <div className="space-y-2 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">Schizophrenia Assessment Confidence</span>
                   <div className="w-full h-4 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500"
                       style={{ width: `${schizo.confidenceScore * 100}%` }}
                     />
@@ -702,7 +725,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                     <div key={idx} className="space-y-2 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                       <span className="text-xs font-medium text-gray-900 dark:text-white">{condition.conditionName}</span>
                       <div className="w-full h-4 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500"
                           style={{ width: `${condition.confidenceScore * 100}%` }}
                         />
@@ -713,12 +736,12 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Overall assessment confidence */}
                 <div className="space-y-2 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-300 dark:border-blue-700">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">Overall Assessment Confidence</span>
                   <div className="w-full h-6 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                    <div 
+                    <div
                       className="h-full bg-gradient-to-r from-blue-600 to-green-600 transition-all duration-500"
                       style={{ width: `${assessment.confidenceLevel * 100}%` }}
                     />
@@ -735,9 +758,9 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
 
       {/* Clinical Disclaimer */}
       <div className="p-4 text-xs leading-relaxed text-yellow-800 dark:text-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-l-4 border-yellow-400">
-        <strong className="font-semibold text-yellow-900 dark:text-yellow-100">Clinical Disclaimer:</strong> This assessment is generated by AI based on limited data and should not replace 
-        comprehensive clinical evaluation by a qualified mental health professional. Formal diagnosis of schizophrenia requires 
-        extensive clinical interview, observation over time, medical evaluation to rule out other conditions, and consideration 
+        <strong className="font-semibold text-yellow-900 dark:text-yellow-100">Clinical Disclaimer:</strong> This assessment is generated by AI based on limited data and should not replace
+        comprehensive clinical evaluation by a qualified mental health professional. Formal diagnosis of schizophrenia requires
+        extensive clinical interview, observation over time, medical evaluation to rule out other conditions, and consideration
         of cultural context. Duration criteria (6 months) cannot be fully assessed from single session data.
       </div>
     </div>

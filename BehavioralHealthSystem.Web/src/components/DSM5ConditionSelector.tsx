@@ -44,10 +44,10 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
       setLoading(true);
       setError(null);
 
-      const conditions = await dsm5Service.getAvailableConditions({ 
-        includeDetails: false 
+      const conditions = await dsm5Service.getAvailableConditions({
+        includeDetails: false
       });
-      
+
       setAvailableConditions(conditions);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load DSM-5 conditions';
@@ -81,7 +81,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
 
     // Group by category
     const categoryMap = new Map<string, DSM5ConditionData[]>();
-    
+
     filteredConditions.forEach(condition => {
       const category = condition.category || 'Other';
       if (!categoryMap.has(category)) {
@@ -131,7 +131,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
 
   const handleSelectAll = () => {
     if (disabled) return;
-    
+
     const visibleConditions = categorizedConditions.flatMap(cat => cat.conditions);
     const allIds = visibleConditions.map(c => c.id);
     const limitedSelection = allIds.slice(0, maxSelections);
@@ -166,7 +166,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
               </svg>
             </div>
@@ -260,7 +260,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
       <div className="max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">
         {categorizedConditions.length === 0 ? (
           <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p>No conditions found matching your criteria.</p>
@@ -285,6 +285,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
                     }`}
                     viewBox="0 0 20 20"
                     fill="currentColor"
+                    aria-hidden="true"
                   >
                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                   </svg>

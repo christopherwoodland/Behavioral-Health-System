@@ -369,7 +369,7 @@ const DamTestBench: React.FC = () => {
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Server className="w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
+            <Server className="w-4 h-4 text-text-muted-light dark:text-text-muted-dark" aria-hidden="true" />
             <span className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
               DAM Model Health
             </span>
@@ -393,13 +393,13 @@ const DamTestBench: React.FC = () => {
               text-text-primary-light dark:text-text-primary-dark transition-colors
               disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {damHealthLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            {damHealthLoading ? <Loader2 className="w-3 h-3 animate-spin" aria-hidden="true" /> : <RefreshCw className="w-3 h-3" aria-hidden="true" />}
             Check
           </button>
         </div>
         {damHealthError && (
           <p className="mt-2 text-xs text-error-600 dark:text-error-400 flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" /> {damHealthError}
+            <AlertCircle className="w-3 h-3" aria-hidden="true" /> {damHealthError}
           </p>
         )}
         {damHealth && !damHealthError && (
@@ -547,10 +547,11 @@ const DamTestBench: React.FC = () => {
           {mode !== 'convert' && (
             <>
               <div>
-                <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+                <label htmlFor="dam-userId" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                   User ID <span className="text-error-500">*</span>
                 </label>
                 <input
+                  id="dam-userId"
                   type="text"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
@@ -562,11 +563,12 @@ const DamTestBench: React.FC = () => {
                 />
               </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+            <label htmlFor="dam-sessionId" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
               Session ID <span className="text-error-500">*</span>
             </label>
             <div className="flex gap-2">
               <input
+                id="dam-sessionId"
                 type="text"
                 value={sessionId}
                 onChange={(e) => setSessionId(e.target.value)}
@@ -579,10 +581,11 @@ const DamTestBench: React.FC = () => {
               <button
                 onClick={() => setSessionId(crypto.randomUUID())}
                 title="Generate new UUID"
+                aria-label="Generate new UUID"
                 className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
                   hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                <RefreshCw className="w-4 h-4 text-text-muted-light dark:text-text-muted-dark" />
+                <RefreshCw className="w-4 h-4 text-text-muted-light dark:text-text-muted-dark" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -591,11 +594,12 @@ const DamTestBench: React.FC = () => {
           {/* Conditional field based on mode */}
           {mode === 'blob' && (
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+              <label htmlFor="dam-blobFileName" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                 Blob File Name{' '}
                 <span className="text-text-muted-light dark:text-text-muted-dark font-normal">(optional — blank = most recent)</span>
               </label>
               <input
+                id="dam-blobFileName"
                 type="text"
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
@@ -609,13 +613,14 @@ const DamTestBench: React.FC = () => {
           )}
           {mode === 'local' && (
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+              <label htmlFor="dam-filePath" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                 File Path{' '}
                 <span className="text-text-muted-light dark:text-text-muted-dark font-normal">
                   (optional — blank = most recent in recordings dir)
                 </span>
               </label>
               <input
+                id="dam-filePath"
                 type="text"
                 value={filePath}
                 onChange={(e) => setFilePath(e.target.value)}
@@ -629,11 +634,12 @@ const DamTestBench: React.FC = () => {
           )}
           {mode === 'upload' && (
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+              <label htmlFor="dam-audioFile" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                 Audio File <span className="text-error-500">*</span>
               </label>
               <div className="flex items-center gap-3">
                 <input
+                  id="dam-audioFile"
                   ref={fileInputRef}
                   type="file"
                   accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm"
@@ -649,7 +655,7 @@ const DamTestBench: React.FC = () => {
                     text-text-primary-light dark:text-text-primary-dark
                     hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <Upload className="w-4 h-4" />
+                  <Upload className="w-4 h-4" aria-hidden="true" />
                   Browse…
                 </button>
                 {selectedFile ? (
@@ -692,7 +698,7 @@ const DamTestBench: React.FC = () => {
                     text-text-primary-light dark:text-text-primary-dark
                     hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <Wand2 className="w-4 h-4" />
+                  <Wand2 className="w-4 h-4" aria-hidden="true" />
                   Browse…
                 </button>
                 {selectedFile ? (
@@ -722,7 +728,7 @@ const DamTestBench: React.FC = () => {
                 bg-primary-600 hover:bg-primary-700 text-white
                 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
-              <Play className="w-4 h-4" />
+              <Play className="w-4 h-4" aria-hidden="true" />
               Run {mode === 'blob' ? 'Blob' : mode === 'local' ? 'Local' : mode === 'upload' ? 'Upload' : 'Convert'} Pipeline
             </button>
           ) : (
@@ -731,7 +737,7 @@ const DamTestBench: React.FC = () => {
               className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium rounded-lg
                 bg-error-600 hover:bg-error-700 text-white transition-colors shadow-sm"
             >
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               Cancel
             </button>
           )}
@@ -749,7 +755,7 @@ const DamTestBench: React.FC = () => {
 
           {status === 'running' && elapsedDisplay && (
             <span className="text-xs text-text-muted-light dark:text-text-muted-dark flex items-center gap-1">
-              <Clock className="w-3 h-3" /> {elapsedDisplay}
+              <Clock className="w-3 h-3" aria-hidden="true" /> {elapsedDisplay}
             </span>
           )}
         </div>
@@ -757,8 +763,8 @@ const DamTestBench: React.FC = () => {
 
       {/* Error Banner */}
       {error && status === 'error' && (
-        <div className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-error-600 dark:text-error-400 flex-shrink-0 mt-0.5" />
+        <div role="alert" className="rounded-xl border border-error-300 dark:border-error-700 bg-error-50 dark:bg-error-900/20 p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-error-600 dark:text-error-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div>
             <p className="text-sm font-medium text-error-700 dark:text-error-300">Pipeline Failed</p>
             <p className="text-sm text-error-600 dark:text-error-400 mt-1">{error}</p>
@@ -777,7 +783,7 @@ const DamTestBench: React.FC = () => {
           {/* Header bar */}
           <div className="bg-primary-50 dark:bg-primary-900/20 px-5 py-3 flex items-center justify-between border-b border-primary-200 dark:border-primary-800">
             <div className="flex items-center gap-2">
-              <Wand2 className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+              <Wand2 className="w-5 h-5 text-primary-600 dark:text-primary-400" aria-hidden="true" />
               <span className="text-sm font-semibold text-primary-700 dark:text-primary-300">
                 Audio Conversion Complete
               </span>
@@ -812,7 +818,7 @@ const DamTestBench: React.FC = () => {
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
                       bg-primary-600 hover:bg-primary-700 text-white transition-colors shadow-sm"
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-4 h-4" aria-hidden="true" />
                     Download Converted WAV
                   </a>
                   <span className="text-xs text-text-muted-light dark:text-text-muted-dark">
@@ -861,14 +867,14 @@ const DamTestBench: React.FC = () => {
           {/* Header bar */}
           <div className="bg-success-50 dark:bg-success-900/20 px-5 py-3 flex items-center justify-between border-b border-success-200 dark:border-success-800">
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-success-600 dark:text-success-400" />
+              <CheckCircle className="w-5 h-5 text-success-600 dark:text-success-400" aria-hidden="true" />
               <span className="text-sm font-semibold text-success-700 dark:text-success-300">
                 Pipeline Completed
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs text-text-muted-light dark:text-text-muted-dark">
               <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+                <Clock className="w-3 h-3" aria-hidden="true" />
                 {result.totalElapsedMs ? formatMs(result.totalElapsedMs) : '—'}
               </span>
               <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 font-medium">
@@ -888,17 +894,17 @@ const DamTestBench: React.FC = () => {
                   <ScoreCard
                     label="Overall"
                     value={result.predictionResponse.predicted_score}
-                    icon={<Activity className="w-4 h-4" />}
+                    icon={<Activity className="w-4 h-4" aria-hidden="true" />}
                   />
                   <ScoreCard
                     label="Depression"
                     value={result.predictionResponse.predicted_score_depression}
-                    icon={<Activity className="w-4 h-4" />}
+                    icon={<Activity className="w-4 h-4" aria-hidden="true" />}
                   />
                   <ScoreCard
                     label="Anxiety"
                     value={result.predictionResponse.predicted_score_anxiety}
-                    icon={<Activity className="w-4 h-4" />}
+                    icon={<Activity className="w-4 h-4" aria-hidden="true" />}
                   />
                 </div>
               </div>
@@ -949,7 +955,7 @@ const DamTestBench: React.FC = () => {
                 className="flex items-center gap-1.5 text-xs font-medium text-text-muted-light dark:text-text-muted-dark
                   hover:text-text-primary-light dark:hover:text-text-primary-dark transition-colors"
               >
-                {expandedRaw ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                {expandedRaw ? <ChevronUp className="w-3 h-3" aria-hidden="true" /> : <ChevronDown className="w-3 h-3" aria-hidden="true" />}
                 Raw JSON Response
               </button>
               {expandedRaw && (
@@ -958,8 +964,9 @@ const DamTestBench: React.FC = () => {
                     onClick={copyJson}
                     className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                     title="Copy JSON"
+                    aria-label="Copy JSON to clipboard"
                   >
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-3 h-3" aria-hidden="true" />
                   </button>
                   <pre className="text-xs bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 overflow-x-auto max-h-96">
                     {JSON.stringify(result, null, 2)}
@@ -976,7 +983,7 @@ const DamTestBench: React.FC = () => {
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-surface-light dark:bg-surface-dark p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark flex items-center gap-2">
-              <FileAudio className="w-4 h-4" />
+              <FileAudio className="w-4 h-4" aria-hidden="true" />
               Run History
             </h2>
             <button
@@ -991,9 +998,9 @@ const DamTestBench: React.FC = () => {
               <div key={entry.id} className="py-2.5 flex items-center justify-between text-sm">
                 <div className="flex items-center gap-3">
                   {entry.result.success ? (
-                    <CheckCircle className="w-4 h-4 text-success-500" />
+                    <CheckCircle className="w-4 h-4 text-success-500" aria-hidden="true" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 text-error-500" />
+                    <AlertCircle className="w-4 h-4 text-error-500" aria-hidden="true" />
                   )}
                   <span className="text-text-primary-light dark:text-text-primary-dark font-medium">
                     {entry.result.originalFileName ?? 'Unknown'}

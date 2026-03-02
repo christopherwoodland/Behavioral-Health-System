@@ -18,6 +18,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { AccessibleDialog } from '../components/AccessibleDialog';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
@@ -700,16 +701,22 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
       )}
 
       {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+      <AccessibleDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Group"
+        titleId="delete-group-dialog-title"
+        role="alertdialog"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full"
+        closeOnBackdropClick={!deleting}
+      >
             <div className="p-6">
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0">
                   <AlertCircle className="w-8 h-8 text-red-600" aria-hidden="true" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  <h3 id="delete-group-dialog-title" className="text-lg font-medium text-gray-900 dark:text-white">
                     Delete Group
                   </h3>
                 </div>
@@ -753,9 +760,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </AccessibleDialog>
     </div>
   );
 };

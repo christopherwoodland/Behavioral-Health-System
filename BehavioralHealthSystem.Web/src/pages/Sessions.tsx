@@ -451,7 +451,7 @@ const Sessions: React.FC = () => {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto p-6">
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <div role="alert" className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
           <div className="flex items-center">
             <AlertCircle className="w-5 h-5 text-red-500 mr-3" aria-hidden="true" />
             <div>

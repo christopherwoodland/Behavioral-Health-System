@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info, X } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { AccessibleDialog } from '../components/AccessibleDialog';
 import { apiService } from '../services/api';
 import { env } from '@/utils/env';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
@@ -1242,18 +1243,22 @@ const UserStatsTable: React.FC<{
       )}
 
       {/* Average Confidence Modal */}
-      {showConfidenceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowConfidenceModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <AccessibleDialog
+        isOpen={showConfidenceModal}
+        onClose={() => setShowConfidenceModal(false)}
+        title="Average Confidence Information"
+        titleId="confidence-modal-title"
+        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl"
+      >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Average Confidence Information</h3>
+              <h3 id="confidence-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Average Confidence Information</h3>
               <button
                 type="button"
                 onClick={() => setShowConfidenceModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                 aria-label="Close modal"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
@@ -1268,23 +1273,25 @@ const UserStatsTable: React.FC<{
                 Analysis accuracy range: 0-100%
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </AccessibleDialog>
 
       {/* Risk Distribution Modal */}
-      {showRiskModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowRiskModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <AccessibleDialog
+        isOpen={showRiskModal}
+        onClose={() => setShowRiskModal(false)}
+        title="Risk Distribution Information"
+        titleId="risk-modal-title"
+        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-2xl"
+      >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Risk Distribution Information</h3>
+              <h3 id="risk-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Risk Distribution Information</h3>
               <button
                 type="button"
                 onClick={() => setShowRiskModal(false)}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                 aria-label="Close modal"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5" aria-hidden="true" />
               </button>
             </div>
             <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
@@ -1292,18 +1299,16 @@ const UserStatsTable: React.FC<{
               <div className="space-y-2">
                 <div>• Shows the distribution of risk levels across all user sessions</div>
                 <div>• Visualized as colored dots representing risk categories</div>
-                <div>• <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1"></span>Low Risk: Minimal behavioral health concerns</div>
-                <div>• <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full mr-1"></span>Medium Risk: Moderate concerns requiring attention</div>
-                <div>• <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1"></span>High Risk: Significant concerns requiring intervention</div>
-                <div>• <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-1"></span>Unknown: Risk level could not be determined</div>
+                <div>• <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-1" aria-hidden="true"></span>Low Risk: Minimal behavioral health concerns</div>
+                <div>• <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full mr-1" aria-hidden="true"></span>Medium Risk: Moderate concerns requiring attention</div>
+                <div>• <span className="inline-block w-2 h-2 bg-red-500 rounded-full mr-1" aria-hidden="true"></span>High Risk: Significant concerns requiring intervention</div>
+                <div>• <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-1" aria-hidden="true"></span>Unknown: Risk level could not be determined</div>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
                 Analysis accuracy: 0-100% (higher confidence = more reliable risk assessment)
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </AccessibleDialog>
     </div>
   );
 };

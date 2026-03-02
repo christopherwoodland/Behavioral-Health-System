@@ -408,9 +408,9 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
           {/* Error Display */}
           {error && (
-            <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <div role="alert" className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-red-700 dark:text-red-300 text-sm flex items-center justify-center">
-                <AlertCircle className="w-4 h-4 mr-2" />
+                <AlertCircle className="w-4 h-4 mr-2" aria-hidden="true" />
                 {error}
               </p>
             </div>
@@ -439,10 +439,18 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           {isLoading && currentJob && (
             <div className="max-w-md mx-auto">
               {/* Progress Bar */}
-              <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
+              <div
+                className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3"
+                role="progressbar"
+                aria-valuenow={jobProgress}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Assessment progress: ${jobProgress}%`}
+              >
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
                   style={{'--progress-width': `${jobProgress}%`, width: 'var(--progress-width)'} as React.CSSProperties}
+                  aria-hidden="true"
                 ></div>
               </div>
 

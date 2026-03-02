@@ -1,5 +1,6 @@
 import React from 'react';
 import { Loader2, Check, X, Sparkles } from 'lucide-react';
+import { AccessibleDialog } from './AccessibleDialog';
 
 interface GrammarCorrectionModalProps {
   isOpen: boolean;
@@ -29,18 +30,23 @@ export const GrammarCorrectionModal: React.FC<GrammarCorrectionModalProps> = ({
   const hasChanges = correctedText !== null && correctedText !== originalText;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      {/* Background overlay */}
-      <div className="fixed inset-0 bg-gray-500 dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 transition-opacity" onClick={onClose}></div>
+    <AccessibleDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="AI Grammar Correction"
+      titleId="modal-title"
+      overlayClassName="fixed inset-0 z-50 overflow-y-auto"
+      className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl"
+    >
+      {/* Background overlay is handled by AccessibleDialog */}
 
       {/* Modal panel */}
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="relative transform overflow-hidden rounded-lg bg-white dark:bg-gray-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
+      <div>
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <Sparkles className="w-5 h-5 text-white mr-2" />
+                <Sparkles className="w-5 h-5 text-white mr-2" aria-hidden="true" />
                 <h3 className="text-lg font-semibold text-white" id="modal-title">
                   AI Grammar Correction
                 </h3>
@@ -50,7 +56,7 @@ export const GrammarCorrectionModal: React.FC<GrammarCorrectionModalProps> = ({
                 className="text-white/80 hover:text-white transition-colors"
                 aria-label="Close modal"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -155,8 +161,7 @@ export const GrammarCorrectionModal: React.FC<GrammarCorrectionModalProps> = ({
             )}
           </div>
         </div>
-      </div>
-    </div>
+    </AccessibleDialog>
   );
 };
 

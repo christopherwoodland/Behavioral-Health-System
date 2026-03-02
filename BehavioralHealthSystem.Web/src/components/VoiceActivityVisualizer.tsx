@@ -26,21 +26,31 @@ export const VoiceActivityVisualizer: React.FC<VoiceActivityVisualizerProps> = (
 
   // Normalize volume (0-100 to 0-1)
   const normalizedVolume = Math.min(volume / 100, 1);
-  
+
+  const statusLabel = !isListening
+    ? 'Voice activity indicator: inactive'
+    : isVoiceActive
+      ? `Voice activity detected, volume ${Math.round(normalizedVolume * 100)}%`
+      : 'Listening for voice activity';
+
   return (
-    <div className={`flex items-center justify-center ${sizeClasses[size]} ${className}`}>
+    <div
+      className={`flex items-center justify-center ${sizeClasses[size]} ${className}`}
+      role="img"
+      aria-label={statusLabel}
+    >
       <div className="flex items-end space-x-1 h-full">
         {Array.from({ length: barCount }).map((_, index) => {
           // Calculate bar height based on volume and index
           const barThreshold = index / barCount;
           const shouldAnimate = isListening && (isVoiceActive || index === 0);
           const isActive = normalizedVolume > barThreshold;
-          
-          const barHeight = shouldAnimate && isActive 
+
+          const barHeight = shouldAnimate && isActive
             ? Math.max(4, normalizedVolume * maxHeight)
             : 4;
           const barDelay = index * 100;
-          
+
           return (
             <div
               key={index}

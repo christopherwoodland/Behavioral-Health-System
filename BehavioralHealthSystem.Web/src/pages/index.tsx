@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { RefreshCw, AlertCircle, Activity, Info, Database, Cloud, Brain, FileText } from 'lucide-react';
 import { useHealthCheck } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
@@ -104,7 +105,7 @@ export const SystemHealth: React.FC = () => {
           className="btn btn--secondary flex items-center space-x-2"
           aria-label="Refresh system health status"
         >
-          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
           <span>Refresh</span>
         </button>
       </div>
@@ -113,7 +114,7 @@ export const SystemHealth: React.FC = () => {
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <div className="flex items-center space-x-3">
-            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" />
+            <RefreshCw className="w-6 h-6 text-blue-600 animate-spin" aria-hidden="true" />
             <span className="text-lg text-gray-900 dark:text-white">
               Checking system health...
             </span>
@@ -123,9 +124,9 @@ export const SystemHealth: React.FC = () => {
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <div role="alert" className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
           <div className="flex items-center">
-            <AlertCircle className="w-6 h-6 text-red-500 mr-3" />
+            <AlertCircle className="w-6 h-6 text-red-500 mr-3" aria-hidden="true" />
             <div>
               <h3 className="text-lg font-medium text-red-900 dark:text-red-200">
                 Health Check Failed
@@ -190,7 +191,7 @@ export const SystemHealth: React.FC = () => {
           {healthStatus.checks && Object.keys(healthStatus.checks).length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Activity className="w-5 h-5 mr-2" />
+                <Activity className="w-5 h-5 mr-2" aria-hidden="true" />
                 Service Details
               </h3>
 
@@ -231,7 +232,7 @@ export const SystemHealth: React.FC = () => {
           {healthStatus.resources && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                <Cloud className="w-5 h-5 mr-2" />
+                <Cloud className="w-5 h-5 mr-2" aria-hidden="true" />
                 Azure Resources
               </h3>
 
@@ -239,7 +240,7 @@ export const SystemHealth: React.FC = () => {
                 {healthStatus.resources.storageAccount && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Database className="w-4 h-4 text-blue-500" />
+                      <Database className="w-4 h-4 text-blue-500" aria-hidden="true" />
                       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Storage Account</span>
                     </div>
                     <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
@@ -251,7 +252,7 @@ export const SystemHealth: React.FC = () => {
                 {healthStatus.resources.documentIntelligence && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
-                      <FileText className="w-4 h-4 text-green-500" />
+                      <FileText className="w-4 h-4 text-green-500" aria-hidden="true" />
                       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Document Intelligence</span>
                     </div>
                     <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
@@ -263,7 +264,7 @@ export const SystemHealth: React.FC = () => {
                 {healthStatus.resources.openAI && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
-                      <Brain className="w-4 h-4 text-purple-500" />
+                      <Brain className="w-4 h-4 text-purple-500" aria-hidden="true" />
                       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Azure OpenAI</span>
                     </div>
                     <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
@@ -278,7 +279,7 @@ export const SystemHealth: React.FC = () => {
           {/* System Information */}
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-              <Info className="w-5 h-5 mr-2" />
+              <Info className="w-5 h-5 mr-2" aria-hidden="true" />
               System Information
             </h3>
 
@@ -333,12 +334,12 @@ export const NotFound: React.FC = () => {
       <p className="text-gray-600 dark:text-gray-400 mb-8">
         The page you're looking for doesn't exist.
       </p>
-      <a
-        href="/"
+      <Link
+        to="/"
         className="btn btn--primary"
       >
         Go to Dashboard
-      </a>
+      </Link>
     </div>
   );
 };

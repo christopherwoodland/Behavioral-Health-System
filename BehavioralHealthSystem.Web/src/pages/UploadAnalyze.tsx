@@ -14,6 +14,7 @@ import { fileGroupService } from '../services/fileGroupService';
 import GrammarCorrectionModal from '../components/GrammarCorrectionModal';
 import { submitToDam, mapDamResultToPrediction } from '../services/damService';
 import type { AppError, SessionMetadata } from '../types';
+import { AccessibleDialog } from '../components/AccessibleDialog';
 
 interface UploadProgress {
   stage: 'idle' | 'starting' | 'initiating' | 'converting' | 'uploading' | 'submitting' | 'analyzing' | 'complete' | 'error';
@@ -2492,9 +2493,12 @@ const UploadAnalyze: React.FC = () => {
 
       {/* Processing Options */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div
-          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        <button
+          type="button"
+          className="w-full p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
           onClick={() => toggleSectionCollapse('processingOptions')}
+          aria-expanded={!collapsedSections.processingOptions}
+          aria-controls="processing-options-content"
         >
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -2511,10 +2515,10 @@ const UploadAnalyze: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-        </div>
+        </button>
 
         {!collapsedSections.processingOptions && (
-          <div className="px-6 pb-6">
+          <div id="processing-options-content" className="px-6 pb-6">
             <p className="text-gray-600 dark:text-gray-400 mb-4">
               Choose which analysis options to run on your audio files.
             </p>
@@ -3042,9 +3046,12 @@ const UploadAnalyze: React.FC = () => {
 
       {/* File Upload Area */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <div
-          className="p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+        <button
+          type="button"
+          className="w-full p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors text-left"
           onClick={() => toggleSectionCollapse('fileUpload')}
+          aria-expanded={!collapsedSections.fileUpload}
+          aria-controls="file-upload-content"
         >
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -3062,10 +3069,10 @@ const UploadAnalyze: React.FC = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
-        </div>
+        </button>
 
         {!collapsedSections.fileUpload && (
-          <div className="px-6 pb-6">
+          <div id="file-upload-content" className="px-6 pb-6">
 
         {/* CSV Upload Section */}
         {processingMode === 'batch-csv' && (
@@ -4118,12 +4125,16 @@ const UploadAnalyze: React.FC = () => {
       </div>
 
       {/* Metadata Editing Modal */}
-      {editingFileMetadata && !shouldHidePatientInfo() && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <AccessibleDialog
+        isOpen={!!editingFileMetadata && !shouldHidePatientInfo()}
+        onClose={cancelMetadataEdit}
+        title="Edit Patient Metadata"
+        titleId="metadata-modal-title"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+      >
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-600">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 id="metadata-modal-title" className="text-lg font-medium text-gray-900 dark:text-white">
                   Edit Patient Metadata
                 </h3>
                 <button
@@ -4131,7 +4142,7 @@ const UploadAnalyze: React.FC = () => {
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   aria-label="Close metadata editor"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5" aria-hidden="true" />
                 </button>
               </div>
             </div>
@@ -4354,9 +4365,7 @@ const UploadAnalyze: React.FC = () => {
                 Save Changes
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </AccessibleDialog>
 
       {/* Grammar Correction Modal */}
       <GrammarCorrectionModal

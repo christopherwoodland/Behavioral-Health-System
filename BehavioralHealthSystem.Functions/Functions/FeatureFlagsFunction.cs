@@ -32,7 +32,7 @@ public class FeatureFlagsFunction
     /// <param name="req">The HTTP request.</param>
     /// <returns>
     /// HTTP 200 (OK) with feature flags dictionary.
-    /// Example: { "AGENT_MODE_ENABLED": true, "ANOTHER_FEATURE": false }
+    /// Example: { "ENABLE_TRANSCRIPTION": true, "ANOTHER_FEATURE": false }
     /// </returns>
     /// <remarks>
     /// This endpoint is public (AuthorizationLevel.Anonymous) to allow unauthenticated
@@ -76,10 +76,10 @@ public class FeatureFlagsFunction
     /// Returns whether a single feature is enabled.
     /// </summary>
     /// <param name="req">The HTTP request.</param>
-    /// <param name="flagName">Name of the feature flag to check (e.g., "AGENT_MODE_ENABLED").</param>
+    /// <param name="flagName">Name of the feature flag to check (e.g., "ENABLE_TRANSCRIPTION").</param>
     /// <returns>
     /// HTTP 200 (OK) with feature status.
-    /// Example: { "AGENT_MODE_ENABLED": true }
+    /// Example: { "ENABLE_TRANSCRIPTION": true }
     /// </returns>
     [Function("GetFeatureFlag")]
     public async Task<HttpResponseData> GetFeatureFlag(

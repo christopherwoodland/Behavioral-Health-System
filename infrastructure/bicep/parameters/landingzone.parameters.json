@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "environment": {
-      "value": "dev"
+      "value": "development"
     },
     "location": {
       "value": "eastus2"
@@ -52,18 +52,6 @@
     },
     "azureAdApiClientId": {
       "value": ""
-    },
-    "azureOpenAIRealtimeDeployment": {
-      "value": "gpt-4o-realtime-preview"
-    },
-    "azureOpenAIRealtimeApiVersion": {
-      "value": "2025-04-01-preview"
-    },
-    "azureOpenAIResourceName": {
-      "value": ""
-    },
-    "azureOpenAIWebRTCRegion": {
-      "value": "eastus2"
     },
     "extendedAssessmentDeployment": {
       "value": "gpt-4o"

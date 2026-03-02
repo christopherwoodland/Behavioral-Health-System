@@ -1,6 +1,8 @@
+using System.ClientModel;
 using Azure;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using OpenAI.Chat;
 
 namespace BehavioralHealthSystem.Services;
 
@@ -203,37 +205,33 @@ public class RiskAssessmentService : IRiskAssessmentService
             var endpoint = new Uri(_openAIOptions.Endpoint);
             var deploymentName = _openAIOptions.DeploymentName;
 
-            // Configure OpenAI client options for Azure OpenAI
-            var clientOptions = new OpenAIClientOptions();
-
             // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
-            OpenAIClient client = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
-                ? new OpenAIClient(endpoint, new AzureKeyCredential(_openAIOptions.ApiKey), clientOptions)
-                : new OpenAIClient(endpoint, new DefaultAzureCredential(), clientOptions);
+            AzureOpenAIClient azureClient = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
+                ? new AzureOpenAIClient(endpoint, new ApiKeyCredential(_openAIOptions.ApiKey))
+                : new AzureOpenAIClient(endpoint, new DefaultAzureCredential());
+
+            var chatClient = azureClient.GetChatClient(deploymentName);
 
             // Check if this is a GPT-5 model based on deployment name
             bool isGpt5Model = deploymentName.ToLowerInvariant().Contains("gpt-5");
 
-            // Configure request options with conditional parameters based on model type
-            var requestOptions = new ChatCompletionsOptions()
+            // Build messages
+            var messages = new List<ChatMessage>
             {
-                MaxTokens = _openAIOptions.MaxTokens,
-                DeploymentName = deploymentName
+                new SystemChatMessage("You are a licensed mental health professional AI assistant. Provide accurate, professional, and ethical clinical assessments."),
+                new UserChatMessage(prompt)
             };
 
-            requestOptions.Messages.Add(new ChatRequestSystemMessage("You are a licensed mental health professional AI assistant. Provide accurate, professional, and ethical clinical assessments."));
-            requestOptions.Messages.Add(new ChatRequestUserMessage(prompt));
+            // Configure request options with conditional parameters based on model type
+            // GPT-5 models don't support max_tokens - they use max_completion_tokens internally
+            var requestOptions = new ChatCompletionOptions();
 
-            if (isGpt5Model)
+            if (!isGpt5Model)
             {
-                // GPT-5 model has limited parameter support, using minimal configuration
-                // Temperature and TopP use default values (not configurable)
-            }
-            else
-            {
-                // Non-GPT-5 models: set parameters for most deterministic results
-                requestOptions.Temperature = 0.1f; // Very low temperature for deterministic output
-                requestOptions.NucleusSamplingFactor = 0.1f; // Very low top-p for focused, deterministic responses
+                // Non-GPT-5 models: set max tokens and parameters for most deterministic results
+                requestOptions.MaxOutputTokenCount = _openAIOptions.MaxTokens;
+                requestOptions.Temperature = 0.1f;
+                requestOptions.TopP = 0.1f;
                 requestOptions.FrequencyPenalty = 0;
                 requestOptions.PresencePenalty = 0;
             }
@@ -242,11 +240,11 @@ public class RiskAssessmentService : IRiskAssessmentService
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             // Make the API call with timeout
-            var response = await client.GetChatCompletionsAsync(requestOptions, cancellationTokenSource.Token);
+            ClientResult<ChatCompletion> response = await chatClient.CompleteChatAsync(messages, requestOptions, cancellationTokenSource.Token);
 
-            if (response?.Value?.Choices?.Count > 0)
+            if (response?.Value != null)
             {
-                var content = response.Value.Choices[0].Message.Content;
+                var content = response.Value.Content?.Count > 0 ? response.Value.Content[0].Text : null;
                 _logger.LogInformation("[{MethodName}] Azure OpenAI API call successful. Model: {Model}, Response length: {Length}",
                     nameof(CallAzureOpenAIAsync), isGpt5Model ? "GPT-5" : "Non-GPT-5", content?.Length ?? 0);
 
@@ -260,8 +258,8 @@ public class RiskAssessmentService : IRiskAssessmentService
             }
             else
             {
-                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Choices count: {Count}",
-                    nameof(CallAzureOpenAIAsync), response?.Value == null, response?.Value?.Choices?.Count ?? 0);
+                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response.",
+                    nameof(CallAzureOpenAIAsync));
                 return null;
             }
         }
@@ -296,11 +294,26 @@ public class RiskAssessmentService : IRiskAssessmentService
             {
                 cleanResponse = cleanResponse.Substring(7);
             }
+            else if (cleanResponse.StartsWith("```"))
+            {
+                cleanResponse = cleanResponse.Substring(3);
+            }
             if (cleanResponse.EndsWith("```"))
             {
                 cleanResponse = cleanResponse.Substring(0, cleanResponse.Length - 3);
             }
             cleanResponse = cleanResponse.Trim();
+
+            // GPT-5 models may include extra text before/after JSON - extract the JSON object
+            if (!string.IsNullOrEmpty(cleanResponse))
+            {
+                var firstBrace = cleanResponse.IndexOf('{');
+                var lastBrace = cleanResponse.LastIndexOf('}');
+                if (firstBrace >= 0 && lastBrace > firstBrace)
+                {
+                    cleanResponse = cleanResponse.Substring(firstBrace, lastBrace - firstBrace + 1);
+                }
+            }
 
             _logger.LogDebug("[{MethodName}] Cleaned response for JSON parsing: {CleanedResponse}", nameof(ParseRiskAssessmentResponse), cleanResponse);
 
@@ -801,42 +814,41 @@ public class RiskAssessmentService : IRiskAssessmentService
             var endpoint = new Uri(effectiveConfig.Endpoint);
             var deploymentName = effectiveConfig.DeploymentName;
 
-            // Configure OpenAI client options for Azure OpenAI
-            var clientOptions = new OpenAIClientOptions();
-
             // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
-            OpenAIClient client = !string.IsNullOrEmpty(effectiveConfig.ApiKey)
-                ? new OpenAIClient(endpoint, new AzureKeyCredential(effectiveConfig.ApiKey), clientOptions)
-                : new OpenAIClient(endpoint, new DefaultAzureCredential(), clientOptions);
+            AzureOpenAIClient azureClient = !string.IsNullOrEmpty(effectiveConfig.ApiKey)
+                ? new AzureOpenAIClient(endpoint, new ApiKeyCredential(effectiveConfig.ApiKey))
+                : new AzureOpenAIClient(endpoint, new DefaultAzureCredential());
+
+            var chatClient = azureClient.GetChatClient(deploymentName);
 
             // GPT-5/O3 models have limited parameter support
             bool isAdvancedModel = deploymentName.ToLowerInvariant().Contains("gpt-5") ||
                                    deploymentName.ToLowerInvariant().Contains("o3");
 
-            // Create request options - GPT-5/O3 doesn't support max_tokens parameter
-            var requestOptions = new ChatCompletionsOptions()
+            // Build messages
+            var messages = new List<ChatMessage>
             {
-                DeploymentName = deploymentName
+                new SystemChatMessage(
+                    "You are a highly experienced licensed psychiatrist and clinical psychologist with expertise in DSM-5 diagnostic criteria, " +
+                    "risk assessment, and differential diagnosis. Provide thorough, evidence-based, professional clinical assessments while " +
+                    "acknowledging the limitations of assessment based on available data."),
+                new UserChatMessage(prompt)
             };
 
-            // Only set MaxTokens for non-GPT-5/O3 models
-            // GPT-5/O3 uses max_completion_tokens which is not supported by this SDK version
+            // Create request options - GPT-5/O3 doesn't support max_tokens parameter
+            var requestOptions = new ChatCompletionOptions();
+
+            // Only set MaxOutputTokenCount for non-GPT-5/O3 models
             if (!isAdvancedModel)
             {
-                requestOptions.MaxTokens = effectiveConfig.MaxTokens;
+                requestOptions.MaxOutputTokenCount = effectiveConfig.MaxTokens;
             }
-
-            requestOptions.Messages.Add(new ChatRequestSystemMessage(
-                "You are a highly experienced licensed psychiatrist and clinical psychologist with expertise in DSM-5 diagnostic criteria, " +
-                "risk assessment, and differential diagnosis. Provide thorough, evidence-based, professional clinical assessments while " +
-                "acknowledging the limitations of assessment based on available data."));
-            requestOptions.Messages.Add(new ChatRequestUserMessage(prompt));
 
             // Set other parameters only for non-advanced models
             if (!isAdvancedModel)
             {
                 requestOptions.Temperature = (float)effectiveConfig.Temperature;
-                requestOptions.NucleusSamplingFactor = 0.2f;
+                requestOptions.TopP = 0.2f;
                 requestOptions.FrequencyPenalty = 0;
                 requestOptions.PresencePenalty = 0;
             }
@@ -851,11 +863,11 @@ public class RiskAssessmentService : IRiskAssessmentService
                 isAdvancedModel ? "omitted (GPT-5/O3 limitation)" : effectiveConfig.MaxTokens.ToString(),
                 effectiveConfig.TimeoutSeconds);
 
-            var response = await client.GetChatCompletionsAsync(requestOptions, cancellationTokenSource.Token);
+            ClientResult<ChatCompletion> response = await chatClient.CompleteChatAsync(messages, requestOptions, cancellationTokenSource.Token);
 
-            if (response?.Value?.Choices?.Count > 0)
+            if (response?.Value != null)
             {
-                var content = response.Value.Choices[0].Message.Content;
+                var content = response.Value.Content?.Count > 0 ? response.Value.Content[0].Text : null;
                 _logger.LogInformation("[{MethodName}] Extended assessment API call successful. Response length: {Length}",
                     nameof(CallAzureOpenAIForExtendedAssessmentAsync), content?.Length ?? 0);
 

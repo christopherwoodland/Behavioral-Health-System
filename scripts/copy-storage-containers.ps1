@@ -3,28 +3,29 @@
   Copy all blob containers (and blobs) from one Storage account to another using AzCopy v10.
 
 .DESCRIPTION
+  - Uses Azure CLI for authentication and container management (no Az PowerShell modules required)
   - Supports Microsoft Entra ID (RBAC) *or* SAS tokens.
   - Creates missing destination containers.
   - Logs AzCopy job IDs and writes a CSV summary.
 
 .PARAMETERS
-  -SourceSubId / -DestSubId     : Optional; for RBAC enumeration via Az modules
+  -SourceSubId / -DestSubId     : Optional; for subscription context
   -SourceAccount / -DestAccount : Required. Storage account names (blob).
-  -SourceRG / -DestRG           : Optional; for creating containers via Az modules
+  -SourceRG / -DestRG           : Required for container management.
   -UseRBAC                      : Switch. If present, authenticate AzCopy with Entra ID (no SAS).
   -SourceSas / -DestSas         : If not using RBAC, provide SAS tokens that include at least rl (read, list) for source, and cw (create, write) for destination.
   -AzCopyPath                   : Optional full path to azcopy.exe if not in PATH.
   -Concurrency                  : Optional azcopy concurrency (default 64).
 
 .NOTES
-  Author: You
+  Requires Azure CLI (az) to be installed and authenticated.
 #>
 
 param(
   [Parameter(Mandatory=$true)]  [string]$SourceAccount,
   [Parameter(Mandatory=$true)]  [string]$DestAccount,
-  [Parameter(Mandatory=$false)] [string]$SourceRG,
-  [Parameter(Mandatory=$false)] [string]$DestRG,
+  [Parameter(Mandatory=$true)]  [string]$SourceRG,
+  [Parameter(Mandatory=$true)]  [string]$DestRG,
   [Parameter(Mandatory=$false)] [string]$SourceSubId,
   [Parameter(Mandatory=$false)] [string]$DestSubId,
   [switch]$UseRBAC,
@@ -61,71 +62,123 @@ $env:AZCOPY_CONCURRENCY_VALUE = "$Concurrency"     # increases parallelism for s
 # Optional: speed up small file handling
 $env:AZCOPY_BUFFER_GB = "4"
 
-# -------------------- Azure login (optional) --------------------
-if ($UseRBAC) {
-  # For enumeration (Get-AzStorageContainer) and to create missing containers we’ll use Az modules
-  if ($SourceSubId) { Connect-AzAccount -UseDeviceAuthentication:$false | Out-Null; Select-AzSubscription -SubscriptionId $SourceSubId | Out-Null }
-  else { Connect-AzAccount -UseDeviceAuthentication:$false | Out-Null }
+# -------------------- Azure CLI check and login --------------------
+# Check if Azure CLI is installed
+$azCli = Get-Command az -ErrorAction SilentlyContinue
+if (-not $azCli) {
+  throw "Azure CLI (az) not found. Please install from: https://aka.ms/InstallAzureCLIDirect"
+}
 
-  # If destination is in a different subscription/tenant, we’ll switch later as needed
+# Check if logged in
+$accountCheck = az account show 2>$null
+if (-not $accountCheck) {
+  Write-Info "Not logged into Azure CLI. Running 'az login'..."
+  az login
+  if ($LASTEXITCODE -ne 0) {
+    throw "Azure CLI login failed."
+  }
+}
+
+if ($UseRBAC) {
+  # Set source subscription if provided
+  if ($SourceSubId) {
+    Write-Info "Setting source subscription: $SourceSubId"
+    az account set --subscription $SourceSubId
+  }
+
+  # Login AzCopy with current Azure credentials
   Write-Info "Logging AzCopy into Microsoft Entra ID..."
-  & $AzCopyPath login | Out-Null    # uses your current Azure credentials (or device code flow)
-  Write-Info "AzCopy login complete. (You can also use managed identity/service principal.)"
+  $loginOutput = & $AzCopyPath login 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warn "AzCopy login may have issues. Output: $loginOutput"
+  } else {
+    Write-Info "AzCopy login complete."
+  }
 } else {
   if (-not $SourceSas -or -not $DestSas) {
     throw "When -UseRBAC is not set, you must provide both -SourceSas and -DestSas."
   }
+  # Ensure SAS tokens start with ?
+  if (-not $SourceSas.StartsWith("?")) { $SourceSas = "?$SourceSas" }
+  if (-not $DestSas.StartsWith("?")) { $DestSas = "?$DestSas" }
 }
 
-# -------------------- Build contexts and list containers --------------------
-# We’ll use Az.Storage to enumerate containers and to create them on destination when missing.
-# This works whether you auth with RBAC or with account keys (RBAC recommended).
-$srcCtx = $null
-$dstCtx = $null
+# -------------------- List containers using Azure CLI --------------------
+Write-Info "Listing containers in source account '$SourceAccount'..."
 
-if ($UseRBAC) {
-  # Get contexts using connected account (no keys/SAS required)
-  if ($SourceRG) {
-    $srcAcct = Get-AzStorageAccount -ResourceGroupName $SourceRG -Name $SourceAccount
-    $srcCtx  = $srcAcct.Context
-  } else {
-    # fallback resolve by name (slower)
-    $srcAcct = Get-AzStorageAccount | Where-Object { $_.StorageAccountName -eq $SourceAccount } | Select-Object -First 1
-    $srcCtx  = $srcAcct.Context
-  }
+# List all containers in source using Azure CLI
+$containersJson = az storage container list `
+  --account-name $SourceAccount `
+  --auth-mode login `
+  --output json 2>$null
 
-  if ($DestSubId -and ($DestSubId -ne $SourceSubId)) { Select-AzSubscription -SubscriptionId $DestSubId | Out-Null }
-  if ($DestRG) {
-    $dstAcct = Get-AzStorageAccount -ResourceGroupName $DestRG -Name $DestAccount
-    $dstCtx  = $dstAcct.Context
-  } else {
-    $dstAcct = Get-AzStorageAccount | Where-Object { $_.StorageAccountName -eq $DestAccount } | Select-Object -First 1
-    $dstCtx  = $dstAcct.Context
-  }
-} else {
-  # If you prefer key-based context for container enumeration/creation
-  $srcKey = (Get-AzStorageAccountKey -Name $SourceAccount -ResourceGroupName $SourceRG)[0].Value
-  $dstKey = (Get-AzStorageAccountKey -Name $DestAccount -ResourceGroupName $DestRG)[0].Value
-  $srcCtx = New-AzStorageContext -StorageAccountName $SourceAccount -StorageAccountKey $srcKey
-  $dstCtx = New-AzStorageContext -StorageAccountName $DestAccount -StorageAccountKey $dstKey
+if ($LASTEXITCODE -ne 0 -or -not $containersJson) {
+  Write-Warn "Failed to list containers with RBAC. Trying with account key..."
+  $srcKeyJson = az storage account keys list `
+    --account-name $SourceAccount `
+    --resource-group $SourceRG `
+    --output json
+  $srcKey = ($srcKeyJson | ConvertFrom-Json)[0].value
+
+  $containersJson = az storage container list `
+    --account-name $SourceAccount `
+    --account-key $srcKey `
+    --output json
 }
 
-# List all containers in source
-$containers = Get-AzStorageContainer -Context $srcCtx
-if (-not $containers) { Write-Warn "No containers found in source account '$SourceAccount'."; return }
+$containers = $containersJson | ConvertFrom-Json
+if (-not $containers -or $containers.Count -eq 0) {
+  Write-Warn "No containers found in source account '$SourceAccount'."
+  return
+}
 
 Write-Info "Found $($containers.Count) containers in source. Starting copy loop..."
 
+# Switch to destination subscription if different
+if ($DestSubId -and ($DestSubId -ne $SourceSubId)) {
+  Write-Info "Switching to destination subscription: $DestSubId"
+  az account set --subscription $DestSubId
+}
+
 # -------------------- Copy loop --------------------
 foreach ($c in $containers) {
-  $name = $c.Name
+  $name = $c.name
 
-  # Ensure destination container exists with same access level
-  $destContainer = Get-AzStorageContainer -Context $dstCtx -Name $name -ErrorAction SilentlyContinue
-  if (-not $destContainer) {
+  # Check if destination container exists
+  $destContainerCheck = az storage container exists `
+    --account-name $DestAccount `
+    --name $name `
+    --auth-mode login `
+    --output json 2>$null
+
+  $exists = ($destContainerCheck | ConvertFrom-Json).exists
+
+  if (-not $exists) {
     Write-Info "Creating destination container '$name'..."
-    $perm = if ($c.PublicAccess) { $c.PublicAccess } else { "Off" }
-    New-AzStorageContainer -Context $dstCtx -Name $name -Permission $perm | Out-Null
+    $publicAccess = if ($c.properties.publicAccess) { $c.properties.publicAccess } else { "off" }
+
+    az storage container create `
+      --account-name $DestAccount `
+      --name $name `
+      --public-access $publicAccess `
+      --auth-mode login `
+      --output none 2>$null
+
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warn "Failed to create container with RBAC, trying with account key..."
+      $dstKeyJson = az storage account keys list `
+        --account-name $DestAccount `
+        --resource-group $DestRG `
+        --output json
+      $dstKey = ($dstKeyJson | ConvertFrom-Json)[0].value
+
+      az storage container create `
+        --account-name $DestAccount `
+        --name $name `
+        --public-access $publicAccess `
+        --account-key $dstKey `
+        --output none
+    }
   }
 
   # Compose source & destination URLs
@@ -143,21 +196,29 @@ foreach ($c in $containers) {
   $jobLogDir = Join-Path $logDir $name
   $null = New-Item -ItemType Directory -Path $jobLogDir -Force | Out-Null
 
-  $args = @(
+  $azcopyArgs = @(
     'copy', $srcUrl, $dstUrl,
     '--recursive=true',
     '--check-length=true',
     '--overwrite=ifSourceNewer',
     '--log-level=INFO',
-    "--output-level=Essential",
-    "--log-file=$jobLogDir\azcopy-$name.log"
+    '--output-level=essential'
   )
 
-  # Kick off AzCopy
-  $proc = Start-Process -FilePath $AzCopyPath -ArgumentList $args -NoNewWindow -PassThru -Wait
+  # Redirect output to log file
+  $logFile = Join-Path $jobLogDir "azcopy-$name.log"
+
+  # Kick off AzCopy with output redirection
+  $proc = Start-Process -FilePath $AzCopyPath -ArgumentList $azcopyArgs -NoNewWindow -PassThru -Wait -RedirectStandardOutput $logFile -RedirectStandardError "$logFile.err"
+
   # Parse jobId from log (best-effort)
-  $jobId = (Select-String -Path "$jobLogDir\azcopy-$name.log" -Pattern 'Job .* has started' -SimpleMatch | Select-Object -Last 1).Line
-  if ($jobId -match 'Job\s+([0-9a-f\-]+)\s+has started') { $jobId = $Matches[1] } else { $jobId = "" }
+  $jobId = ""
+  if (Test-Path $logFile) {
+    $jobIdMatch = Select-String -Path $logFile -Pattern 'Job .* has started' -ErrorAction SilentlyContinue | Select-Object -Last 1
+    if ($jobIdMatch -and $jobIdMatch.Line -match 'Job\s+([0-9a-f\-]+)\s+has started') {
+      $jobId = $Matches[1]
+    }
+  }
 
   # Check exit code
   if ($proc.ExitCode -eq 0) {

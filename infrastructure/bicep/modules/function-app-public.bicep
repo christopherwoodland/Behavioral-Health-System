@@ -221,10 +221,6 @@ resource functionApp 'Microsoft.Web/sites@2024-04-01' = {
           value: '2024-11-15'
         }
         {
-          name: 'AGENT_MODE_ENABLED'
-          value: 'true'
-        }
-        {
           name: 'AZURE_OPENAI_ENABLED'
           value: 'true'
         }

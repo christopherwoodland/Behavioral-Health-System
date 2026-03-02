@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8905698413060314447"
+      "templateHash": "17794849659540003349"
     }
   },
   "parameters": {
@@ -40,6 +40,13 @@
       "defaultValue": "bhs",
       "metadata": {
         "description": "Resource group name for BHS resources"
+      }
+    },
+    "existingUniqueSuffix": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Override unique suffix for re-deployment with existing resources. Leave empty for auto-generated."
       }
     },
     "tags": {
@@ -153,34 +160,6 @@
         "description": "Azure AD Tenant ID"
       }
     },
-    "azureOpenAIRealtimeDeployment": {
-      "type": "string",
-      "defaultValue": "gpt-realtime",
-      "metadata": {
-        "description": "Azure OpenAI Realtime deployment name"
-      }
-    },
-    "azureOpenAIRealtimeApiVersion": {
-      "type": "string",
-      "defaultValue": "2025-04-01-preview",
-      "metadata": {
-        "description": "Azure OpenAI Realtime API version"
-      }
-    },
-    "azureOpenAIResourceName": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Azure OpenAI resource name"
-      }
-    },
-    "azureOpenAIWebRTCRegion": {
-      "type": "string",
-      "defaultValue": "eastus2",
-      "metadata": {
-        "description": "Azure OpenAI WebRTC region"
-      }
-    },
     "extendedAssessmentDeployment": {
       "type": "string",
       "defaultValue": "gpt-5.2",
@@ -225,16 +204,16 @@
     }
   },
   "variables": {
-    "uniqueSuffix": "[uniqueString(subscription().subscriptionId, parameters('resourceGroupName'), parameters('environment'))]",
-    "blobDnsZoneId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/privateDnsZones', 'privatelink.blob.core.windows.net')]",
-    "queueDnsZoneId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/privateDnsZones', 'privatelink.queue.core.windows.net')]",
-    "tableDnsZoneId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/privateDnsZones', 'privatelink.table.core.windows.net')]",
-    "keyVaultDnsZoneId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/privateDnsZones', 'privatelink.vaultcore.azure.net')]",
-    "cognitiveServicesDnsZoneId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/privateDnsZones', 'privatelink.cognitiveservices.azure.com')]",
-    "acrDnsZoneId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/privateDnsZones', 'privatelink.azurecr.io')]",
-    "privateEndpointsSubnetId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('appsVNetName'), parameters('privateEndpointsSubnetName'))]",
-    "aiServicesSubnetId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('aiSpokeVNetName'), parameters('aiServicesSubnetName'))]",
-    "containerAppsSubnetId": "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('appsVNetName'), parameters('containerAppsSubnetName'))]"
+    "uniqueSuffix": "[if(not(empty(parameters('existingUniqueSuffix'))), parameters('existingUniqueSuffix'), uniqueString(subscription().subscriptionId, parameters('resourceGroupName'), parameters('environment')))]",
+    "blobDnsZoneId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/privateDnsZones/privatelink.blob.core.windows.net', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]",
+    "queueDnsZoneId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/privateDnsZones/privatelink.queue.core.windows.net', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]",
+    "tableDnsZoneId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/privateDnsZones/privatelink.table.core.windows.net', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]",
+    "keyVaultDnsZoneId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]",
+    "cognitiveServicesDnsZoneId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/privateDnsZones/privatelink.cognitiveservices.azure.com', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]",
+    "acrDnsZoneId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/privateDnsZones/privatelink.azurecr.io', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]",
+    "privateEndpointsSubnetId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/virtualNetworks/{2}/subnets/{3}', subscription().subscriptionId, parameters('landingZoneResourceGroup'), parameters('appsVNetName'), parameters('privateEndpointsSubnetName'))]",
+    "aiServicesSubnetId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/virtualNetworks/{2}/subnets/{3}', subscription().subscriptionId, parameters('landingZoneResourceGroup'), parameters('aiSpokeVNetName'), parameters('aiServicesSubnetName'))]",
+    "containerAppsSubnetId": "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/virtualNetworks/{2}/subnets/{3}', subscription().subscriptionId, parameters('landingZoneResourceGroup'), parameters('appsVNetName'), parameters('containerAppsSubnetName'))]"
   },
   "resources": [
     {
@@ -341,9 +320,9 @@
         "parameters": {
           "vnetIds": {
             "value": [
-              "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('appsVNetName'))]",
-              "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('aiSpokeVNetName'))]",
-              "[resourceId(parameters('landingZoneResourceGroup'), 'Microsoft.Network/virtualNetworks', 'vnet-hub-01-paarq')]"
+              "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/virtualNetworks/{2}', subscription().subscriptionId, parameters('landingZoneResourceGroup'), parameters('appsVNetName'))]",
+              "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/virtualNetworks/{2}', subscription().subscriptionId, parameters('landingZoneResourceGroup'), parameters('aiSpokeVNetName'))]",
+              "[format('/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Network/virtualNetworks/vnet-hub-01-paarq', subscription().subscriptionId, parameters('landingZoneResourceGroup'))]"
             ]
           }
         },
@@ -1240,7 +1219,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "13673093233409501425"
+              "templateHash": "16111452611917458564"
             }
           },
           "parameters": {
@@ -1252,6 +1231,7 @@
             },
             "appName": {
               "type": "string",
+              "minLength": 2,
               "metadata": {
                 "description": "Application name prefix"
               }
@@ -1294,7 +1274,7 @@
             }
           },
           "variables": {
-            "acrName": "[format('{0}{1}acr{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
+            "acrName": "[format('{0}{1}acr{2}', parameters('appName'), parameters('environment'), take(parameters('uniqueSuffix'), 13))]",
             "privateEndpointName": "[format('{0}-pe', variables('acrName'))]"
           },
           "resources": [
@@ -1432,6 +1412,9 @@
           },
           "landingZoneResourceGroup": {
             "value": "[parameters('landingZoneResourceGroup')]"
+          },
+          "deployModels": {
+            "value": false
           }
         },
         "template": {
@@ -1441,7 +1424,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "11628403606913020795"
+              "templateHash": "1475422338868048411"
             }
           },
           "parameters": {
@@ -1492,6 +1475,13 @@
               "metadata": {
                 "description": "Landing zone resource group name"
               }
+            },
+            "deployModels": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Deploy AI model deployments (set to false if models already exist or quota is limited)"
+              }
             }
           },
           "variables": {
@@ -1524,18 +1514,19 @@
               }
             },
             {
+              "condition": "[parameters('deployModels')]",
               "type": "Microsoft.CognitiveServices/accounts/deployments",
               "apiVersion": "2024-04-01-preview",
-              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-4o')]",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-4.1')]",
               "sku": {
-                "name": "GlobalStandard",
-                "capacity": 30
+                "name": "DataZoneStandard",
+                "capacity": 15
               },
               "properties": {
                 "model": {
                   "format": "OpenAI",
-                  "name": "gpt-4o",
-                  "version": "2024-11-20"
+                  "name": "gpt-4.1",
+                  "version": "2025-04-14"
                 },
                 "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
               },
@@ -1544,9 +1535,10 @@
               ]
             },
             {
+              "condition": "[parameters('deployModels')]",
               "type": "Microsoft.CognitiveServices/accounts/deployments",
               "apiVersion": "2024-04-01-preview",
-              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-4o-mini')]",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-4.1-mini')]",
               "sku": {
                 "name": "GlobalStandard",
                 "capacity": 50
@@ -1554,38 +1546,84 @@
               "properties": {
                 "model": {
                   "format": "OpenAI",
-                  "name": "gpt-4o-mini",
-                  "version": "2024-07-18"
+                  "name": "gpt-4.1-mini",
+                  "version": "2025-04-14"
                 },
                 "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]",
-                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-4o')]"
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-4.1')]"
               ]
             },
             {
+              "condition": "[parameters('deployModels')]",
               "type": "Microsoft.CognitiveServices/accounts/deployments",
               "apiVersion": "2024-04-01-preview",
-              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-4o-realtime-preview')]",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-5-mini')]",
               "sku": {
                 "name": "GlobalStandard",
-                "capacity": 6
+                "capacity": 500
               },
               "properties": {
                 "model": {
                   "format": "OpenAI",
-                  "name": "gpt-4o-realtime-preview",
-                  "version": "2024-12-17"
+                  "name": "gpt-5-mini",
+                  "version": "2025-08-07"
                 },
                 "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]",
-                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-4o-mini')]"
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-4.1-mini')]"
               ]
             },
             {
+              "condition": "[parameters('deployModels')]",
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), 'gpt-5.2')]",
+              "sku": {
+                "name": "DataZoneStandard",
+                "capacity": 9
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "gpt-5.2",
+                  "version": "2025-12-11"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-5-mini')]"
+              ]
+            },
+            {
+              "condition": "[parameters('deployModels')]",
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-04-01-preview",
+              "name": "[format('{0}/{1}', variables('aiServicesName'), 'model-router')]",
+              "sku": {
+                "name": "DataZoneStandard",
+                "capacity": 15
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "model-router",
+                  "version": "2025-11-18"
+                },
+                "versionUpgradeOption": "OnceNewDefaultVersionAvailable"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-5.2')]"
+              ]
+            },
+            {
+              "condition": "[parameters('deployModels')]",
               "type": "Microsoft.CognitiveServices/accounts/deployments",
               "apiVersion": "2024-04-01-preview",
               "name": "[format('{0}/{1}', variables('aiServicesName'), 'text-embedding-3-small')]",
@@ -1603,7 +1641,7 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('aiServicesName'))]",
-                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'gpt-4o-realtime-preview')]"
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('aiServicesName'), 'model-router')]"
               ]
             },
             {
@@ -1744,18 +1782,6 @@
           "apiImageTag": {
             "value": "[parameters('containerImageTag')]"
           },
-          "azureOpenAIRealtimeDeployment": {
-            "value": "[parameters('azureOpenAIRealtimeDeployment')]"
-          },
-          "azureOpenAIRealtimeApiVersion": {
-            "value": "[parameters('azureOpenAIRealtimeApiVersion')]"
-          },
-          "azureOpenAIResourceName": {
-            "value": "[parameters('azureOpenAIResourceName')]"
-          },
-          "azureOpenAIWebRTCRegion": {
-            "value": "[parameters('azureOpenAIWebRTCRegion')]"
-          },
           "extendedAssessmentDeployment": {
             "value": "[parameters('extendedAssessmentDeployment')]"
           },
@@ -1779,7 +1805,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "755140106308186618"
+              "templateHash": "13453039329037002503"
             }
           },
           "parameters": {
@@ -1902,34 +1928,6 @@
                 "description": "Container image tag for API"
               }
             },
-            "azureOpenAIRealtimeDeployment": {
-              "type": "string",
-              "defaultValue": "gpt-realtime",
-              "metadata": {
-                "description": "Azure OpenAI Realtime deployment name"
-              }
-            },
-            "azureOpenAIRealtimeApiVersion": {
-              "type": "string",
-              "defaultValue": "2025-04-01-preview",
-              "metadata": {
-                "description": "Azure OpenAI Realtime API version"
-              }
-            },
-            "azureOpenAIResourceName": {
-              "type": "string",
-              "defaultValue": "",
-              "metadata": {
-                "description": "Azure OpenAI resource name"
-              }
-            },
-            "azureOpenAIWebRTCRegion": {
-              "type": "string",
-              "defaultValue": "eastus2",
-              "metadata": {
-                "description": "Azure OpenAI WebRTC region"
-              }
-            },
             "extendedAssessmentDeployment": {
               "type": "string",
               "defaultValue": "gpt-5.2",
@@ -1964,12 +1962,22 @@
               "metadata": {
                 "description": "Enable Smart Band integration"
               }
+            },
+            "usePlaceholderImages": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Use placeholder images from MCR instead of ACR (for initial deployment before pushing images)"
+              }
             }
           },
           "variables": {
             "containerAppsEnvName": "[format('{0}-{1}-cae-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
             "uiAppName": "[format('{0}-{1}-ui-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "apiAppName": "[format('{0}-{1}-api-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]"
+            "apiAppName": "[format('{0}-{1}-api-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
+            "placeholderImage": "[format('{0}/bhs-quickstart:latest', parameters('acrLoginServer'))]",
+            "uiImage": "[if(parameters('usePlaceholderImages'), variables('placeholderImage'), format('{0}/bhs-ui:{1}', parameters('acrLoginServer'), parameters('uiImageTag')))]",
+            "apiImage": "[if(parameters('usePlaceholderImages'), variables('placeholderImage'), format('{0}/bhs-api:{1}', parameters('acrLoginServer'), parameters('apiImageTag')))]"
           },
           "resources": [
             {
@@ -2046,19 +2054,13 @@
                       "identity": "system"
                     }
                   ],
-                  "secrets": [
-                    {
-                      "name": "openai-realtime-key",
-                      "keyVaultUrl": "[format('{0}secrets/openai-realtime-key', parameters('keyVaultUri'))]",
-                      "identity": "system"
-                    }
-                  ]
+                  "secrets": []
                 },
                 "template": {
                   "containers": [
                     {
                       "name": "ui",
-                      "image": "[format('{0}/bhs-ui:{1}', parameters('acrLoginServer'), parameters('uiImageTag'))]",
+                      "image": "[variables('uiImage')]",
                       "resources": {
                         "cpu": "[json('0.5')]",
                         "memory": "1Gi"
@@ -2079,22 +2081,6 @@
                         {
                           "name": "VITE_API_RETRY_DELAY_MS",
                           "value": "1000"
-                        },
-                        {
-                          "name": "VITE_TARS_VOICE",
-                          "value": "echo"
-                        },
-                        {
-                          "name": "VITE_JEKYLL_VOICE",
-                          "value": "shimmer"
-                        },
-                        {
-                          "name": "VITE_JEKYLL_PHQ2_THRESHOLD",
-                          "value": "1"
-                        },
-                        {
-                          "name": "VITE_MATRON_VOICE",
-                          "value": "coral"
                         },
                         {
                           "name": "VITE_AZURE_CLIENT_ID",
@@ -2137,26 +2123,6 @@
                           "value": "audio-uploads"
                         },
                         {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT",
-                          "value": "[parameters('azureOpenAIRealtimeDeployment')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_API_VERSION",
-                          "value": "[parameters('azureOpenAIRealtimeApiVersion')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME",
-                          "value": "[parameters('azureOpenAIResourceName')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_WEBRTC_REGION",
-                          "value": "[parameters('azureOpenAIWebRTCRegion')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_KEY",
-                          "secretRef": "openai-realtime-key"
-                        },
-                        {
                           "name": "VITE_DEV_ENVIRONMENT",
                           "value": "false"
                         },
@@ -2193,28 +2159,8 @@
                           "value": "false"
                         },
                         {
-                          "name": "VITE_AGENT_MODE_ENABLED",
-                          "value": "false"
-                        },
-                        {
-                          "name": "VITE_ENABLE_JEKYLL_AGENT",
-                          "value": "false"
-                        },
-                        {
                           "name": "VITE_ENABLE_SESSION_VOICE_RECORDING",
                           "value": "false"
-                        },
-                        {
-                          "name": "VITE_BIOMETRIC_SAVE_DELAY_MS",
-                          "value": "2000"
-                        },
-                        {
-                          "name": "VITE_MATRON_MAX_COLLECTION_ATTEMPTS",
-                          "value": "2"
-                        },
-                        {
-                          "name": "VITE_AGENT_HANDOFF_DELAY_MS",
-                          "value": "2000"
                         },
                         {
                           "name": "VITE_ENABLE_SMART_BAND",
@@ -2223,26 +2169,6 @@
                         {
                           "name": "VITE_BAND_SERVICE_URL",
                           "value": "[parameters('bandServiceUrl')]"
-                        },
-                        {
-                          "name": "VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS",
-                          "value": "3"
-                        },
-                        {
-                          "name": "VITE_REALTIME_RECONNECTION_DELAY_MS",
-                          "value": "2000"
-                        },
-                        {
-                          "name": "VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS",
-                          "value": "5000"
-                        },
-                        {
-                          "name": "VITE_INITIAL_GREETING_SESSION_DELAY_MS",
-                          "value": "1500"
-                        },
-                        {
-                          "name": "VITE_INITIAL_GREETING_RESPONSE_DELAY_MS",
-                          "value": "300"
                         },
                         {
                           "name": "VITE_CONTROL_PANEL_REFRESH_INTERVAL",
@@ -2359,7 +2285,7 @@
                   "containers": [
                     {
                       "name": "api",
-                      "image": "[format('{0}/bhs-api:{1}', parameters('acrLoginServer'), parameters('apiImageTag'))]",
+                      "image": "[variables('apiImage')]",
                       "resources": {
                         "cpu": "[json('1.0')]",
                         "memory": "2Gi"
@@ -2507,10 +2433,6 @@
                         },
                         {
                           "name": "AZURE_SPEECH_ENHANCED_MODE",
-                          "value": "false"
-                        },
-                        {
-                          "name": "AGENT_MODE_ENABLED",
                           "value": "false"
                         },
                         {
@@ -2700,7 +2622,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "11713498731670033248"
+              "templateHash": "10151518677657846262"
             }
           },
           "parameters": {
@@ -2923,6 +2845,10 @@
               "type": "string",
               "value": "[reference(resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), parameters('endpointName')), '2023-05-01').hostName]"
             },
+            "endpointId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), parameters('endpointName'))]"
+            },
             "uiOriginGroupId": {
               "type": "string",
               "value": "[resourceId('Microsoft.Cdn/profiles/originGroups', parameters('frontDoorProfileName'), format('{0}-ui-og', parameters('endpointName')))]"
@@ -2955,6 +2881,9 @@
           "policyName": {
             "value": "[format('wafpolicy-bhs-{0}', parameters('environment'))]"
           },
+          "endpointId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('sharedResourceGroup')), 'Microsoft.Resources/deployments', 'frontDoor'), '2025-04-01').outputs.endpointId.value]"
+          },
           "tags": {
             "value": "[parameters('tags')]"
           }
@@ -2966,7 +2895,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "16728514418820631830"
+              "templateHash": "11836215051365040673"
             }
           },
           "parameters": {
@@ -2997,6 +2926,12 @@
               ],
               "metadata": {
                 "description": "WAF mode - Detection or Prevention"
+              }
+            },
+            "endpointId": {
+              "type": "string",
+              "metadata": {
+                "description": "Front Door endpoint ID to associate WAF with"
               }
             }
           },
@@ -3102,7 +3037,7 @@
                     {
                       "domains": [
                         {
-                          "id": "[resourceId('Microsoft.Cdn/profiles/afdEndpoints', parameters('frontDoorProfileName'), 'bhs-dev')]"
+                          "id": "[parameters('endpointId')]"
                         }
                       ],
                       "patternsToMatch": [
@@ -3132,7 +3067,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, parameters('sharedResourceGroup')), 'Microsoft.Resources/deployments', 'frontDoor')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",

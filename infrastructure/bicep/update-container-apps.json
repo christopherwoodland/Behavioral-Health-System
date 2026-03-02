@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "17522383637557134985"
+      "templateHash": "16653572968377723682"
     }
   },
   "parameters": {
@@ -114,34 +114,6 @@
         "description": "Azure Tenant ID"
       }
     },
-    "azureOpenAIRealtimeDeployment": {
-      "type": "string",
-      "defaultValue": "gpt-realtime",
-      "metadata": {
-        "description": "Azure OpenAI Realtime deployment name"
-      }
-    },
-    "azureOpenAIRealtimeApiVersion": {
-      "type": "string",
-      "defaultValue": "2025-04-01-preview",
-      "metadata": {
-        "description": "Azure OpenAI Realtime API version"
-      }
-    },
-    "azureOpenAIResourceName": {
-      "type": "string",
-      "defaultValue": "cwood-mgsuknv5-eastus2",
-      "metadata": {
-        "description": "Azure OpenAI resource name for Realtime API (from .env.local VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME)"
-      }
-    },
-    "azureOpenAIWebRTCRegion": {
-      "type": "string",
-      "defaultValue": "eastus2",
-      "metadata": {
-        "description": "Azure OpenAI WebRTC region"
-      }
-    },
     "extendedAssessmentDeployment": {
       "type": "string",
       "defaultValue": "gpt-5.2",
@@ -214,13 +186,7 @@
               "identity": "system"
             }
           ],
-          "secrets": [
-            {
-              "name": "openai-realtime-key",
-              "keyVaultUrl": "[format('{0}/openai-realtime-key', variables('keyVaultUri'))]",
-              "identity": "system"
-            }
-          ]
+          "secrets": []
         },
         "template": {
           "containers": [
@@ -247,22 +213,6 @@
                 {
                   "name": "VITE_API_RETRY_DELAY_MS",
                   "value": "1000"
-                },
-                {
-                  "name": "VITE_TARS_VOICE",
-                  "value": "echo"
-                },
-                {
-                  "name": "VITE_JEKYLL_VOICE",
-                  "value": "shimmer"
-                },
-                {
-                  "name": "VITE_JEKYLL_PHQ2_THRESHOLD",
-                  "value": "1"
-                },
-                {
-                  "name": "VITE_MATRON_VOICE",
-                  "value": "coral"
                 },
                 {
                   "name": "VITE_AZURE_CLIENT_ID",
@@ -301,26 +251,6 @@
                   "value": "audio-uploads"
                 },
                 {
-                  "name": "VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT",
-                  "value": "[parameters('azureOpenAIRealtimeDeployment')]"
-                },
-                {
-                  "name": "VITE_AZURE_OPENAI_REALTIME_API_VERSION",
-                  "value": "[parameters('azureOpenAIRealtimeApiVersion')]"
-                },
-                {
-                  "name": "VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME",
-                  "value": "[parameters('azureOpenAIResourceName')]"
-                },
-                {
-                  "name": "VITE_AZURE_OPENAI_WEBRTC_REGION",
-                  "value": "[parameters('azureOpenAIWebRTCRegion')]"
-                },
-                {
-                  "name": "VITE_AZURE_OPENAI_REALTIME_KEY",
-                  "secretRef": "openai-realtime-key"
-                },
-                {
                   "name": "VITE_DEV_ENVIRONMENT",
                   "value": "true"
                 },
@@ -353,48 +283,8 @@
                   "value": "false"
                 },
                 {
-                  "name": "VITE_AGENT_MODE_ENABLED",
-                  "value": "false"
-                },
-                {
-                  "name": "VITE_ENABLE_JEKYLL_AGENT",
-                  "value": "false"
-                },
-                {
                   "name": "VITE_ENABLE_SESSION_VOICE_RECORDING",
                   "value": "false"
-                },
-                {
-                  "name": "VITE_BIOMETRIC_SAVE_DELAY_MS",
-                  "value": "2000"
-                },
-                {
-                  "name": "VITE_MATRON_MAX_COLLECTION_ATTEMPTS",
-                  "value": "2"
-                },
-                {
-                  "name": "VITE_AGENT_HANDOFF_DELAY_MS",
-                  "value": "2000"
-                },
-                {
-                  "name": "VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS",
-                  "value": "3"
-                },
-                {
-                  "name": "VITE_REALTIME_RECONNECTION_DELAY_MS",
-                  "value": "2000"
-                },
-                {
-                  "name": "VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS",
-                  "value": "5000"
-                },
-                {
-                  "name": "VITE_INITIAL_GREETING_SESSION_DELAY_MS",
-                  "value": "1500"
-                },
-                {
-                  "name": "VITE_INITIAL_GREETING_RESPONSE_DELAY_MS",
-                  "value": "300"
                 },
                 {
                   "name": "VITE_CONTROL_PANEL_REFRESH_INTERVAL",
@@ -661,10 +551,6 @@
                 },
                 {
                   "name": "AZURE_SPEECH_ENHANCED_MODE",
-                  "value": "false"
-                },
-                {
-                  "name": "AGENT_MODE_ENABLED",
                   "value": "false"
                 },
                 {

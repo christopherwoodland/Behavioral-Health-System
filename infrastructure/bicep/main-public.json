@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "3292643966521597307"
+      "templateHash": "12675294380560351100"
     }
   },
   "parameters": {
@@ -234,7 +234,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "2083213435939053975"
+              "templateHash": "16844347410710459310"
             }
           },
           "parameters": {
@@ -396,6 +396,28 @@
               "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
               "apiVersion": "2023-01-01",
               "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'biometric-data')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'audio-uploads')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'session-data')]",
               "properties": {
                 "publicAccess": "None"
               },
@@ -583,7 +605,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "3442664087826583176"
+              "templateHash": "15879706926088746120"
             }
           },
           "parameters": {
@@ -655,6 +677,7 @@
               "kind": "AIServices",
               "properties": {
                 "customSubDomainName": "[variables('contentUnderstandingName')]",
+                "disableLocalAuth": true,
                 "networkAcls": {
                   "defaultAction": "Allow",
                   "virtualNetworkRules": [],
@@ -750,7 +773,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "4016074188012506033"
+              "templateHash": "14454487834547889162"
             }
           },
           "parameters": {
@@ -1006,10 +1029,6 @@
                     {
                       "name": "AZURE_SPEECH_API_VERSION",
                       "value": "2024-11-15"
-                    },
-                    {
-                      "name": "AGENT_MODE_ENABLED",
-                      "value": "true"
                     },
                     {
                       "name": "AZURE_OPENAI_ENABLED",

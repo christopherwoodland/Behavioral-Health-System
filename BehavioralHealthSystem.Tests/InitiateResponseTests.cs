@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class InitiateResponseTests
-    {
-        [TestMethod]
-        public void InitiateResponse_Constructor_Succeeds()
-        {
-            var model = new InitiateResponse();
-            Assert.IsNotNull(model);
-        }
+namespace BehavioralHealthSystem.Testsssert.AreEqual(string.Empty, response.SessionId);
     }
-}
+

@@ -859,7 +859,6 @@ local.settings.*.json
 .funcignore
 
 # Docker Compose files with secrets
-docker-compose.local.yml
 docker-compose.override.yml
 
 # Environment files
@@ -890,15 +889,9 @@ secrets.json
 
 # DSM-5 PDF files (proprietary/copyrighted content)
 **/dsm/single-pages/*.pdf
-BehavioralHealthSystem.Console/dsm/single-pages/*.pdf
+BehavioralHealthSystem.DSM5Import/dsm/single-pages/*.pdf
 
 # Import progress files (may contain file paths and error details)
 **/dsm5-import-progress.json
-# Azurite local storage emulator files (contain secrets)
-**/__blobstorage__/
-**/__queuestorage__/
-**/__azurite_db_*.json
-**/scripts/__blobstorage__/
-**/scripts/__queuestorage__/
-scripts/__azurite_db_*.json
+
 

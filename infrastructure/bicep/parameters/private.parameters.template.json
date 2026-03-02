@@ -45,23 +45,6 @@
       "value": "",
       "_comment": "Leave empty to use AI Services endpoint. Set if using separate Azure OpenAI resource."
     },
-    "azureOpenAIRealtimeDeployment": {
-      "value": "gpt-realtime"
-    },
-    "azureOpenAIRealtimeApiVersion": {
-      "value": "2025-04-01-preview"
-    },
-    "azureOpenAIResourceName": {
-      "value": "",
-      "_comment": "Azure OpenAI resource name for Realtime API. May differ from AI Services."
-    },
-    "azureOpenAIWebRTCRegion": {
-      "value": "eastus2"
-    },
-    "azureOpenAIRealtimeKey": {
-      "value": "<REPLACE-WITH-KEY>",
-      "_comment": "Azure OpenAI Realtime API Key - store in Key Vault"
-    },
     "extendedAssessmentDeployment": {
       "value": "gpt-5.2",
       "_comment": "Model deployment for extended assessment (o3 model)"

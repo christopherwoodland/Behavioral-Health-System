@@ -47,12 +47,7 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      // Proxy requests to local Azurite blob storage to avoid CORS issues
-      '/devstoreaccount1': {
-        target: 'http://127.0.0.1:10000',
-        changeOrigin: true,
-        secure: false,
-      },
+
     },
   },
   build: {

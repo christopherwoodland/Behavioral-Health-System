@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace BehavioralHealthSystem.Functions.Functions;
 
 /// <summary>
-/// Azure Functions for handling audio file uploads for Vocalist agent
+/// Azure Functions for handling audio file uploads
 /// </summary>
 public class AudioUploadFunctions
 {

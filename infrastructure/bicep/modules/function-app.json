@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "14602042861775809591"
+      "templateHash": "1068658314088616252"
     }
   },
   "parameters": {
@@ -57,12 +57,6 @@
         "description": "Storage account name"
       }
     },
-    "storageAccountId": {
-      "type": "string",
-      "metadata": {
-        "description": "Storage account ID"
-      }
-    },
     "appInsightsConnectionString": {
       "type": "string",
       "metadata": {
@@ -103,7 +97,6 @@
   "variables": {
     "functionAppName": "[format('{0}-{1}-func-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
     "appServicePlanName": "[format('{0}-{1}-asp-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-    "deploymentStorageContainerName": "[format('app-package-{0}-{1}', take(variables('functionAppName'), 32), take(parameters('uniqueSuffix'), 7))]",
     "privateEndpointName": "[format('{0}-pe', variables('functionAppName'))]"
   },
   "resources": [
@@ -140,24 +133,22 @@
           "deployment": {
             "storage": {
               "type": "blobContainer",
-              "value": "[format('{0}{1}', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').primaryEndpoints.blob, variables('deploymentStorageContainerName'))]",
+              "value": "[format('{0}function-app-deployment', reference(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').primaryEndpoints.blob)]",
               "authentication": {
-                "type": "StorageAccountConnectionString",
-                "storageAccountConnectionStringName": "AzureWebJobsStorage"
+                "type": "SystemAssignedIdentity"
               }
             }
-          },
-          "runtime": {
-            "name": "dotnet-isolated",
-            "version": "8.0"
           },
           "scaleAndConcurrency": {
             "maximumInstanceCount": 100,
             "instanceMemoryMB": 2048
+          },
+          "runtime": {
+            "name": "dotnet-isolated",
+            "version": "8.0"
           }
         },
         "siteConfig": {
-          "linuxFxVersion": "DOTNET-ISOLATED|8.0",
           "alwaysOn": false,
           "vnetRouteAllEnabled": true,
           "ftpsState": "Disabled",
@@ -175,20 +166,8 @@
               "value": "~4"
             },
             {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "dotnet-isolated"
-            },
-            {
               "name": "AzureWebJobsStorage",
               "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[toLower(variables('functionAppName'))]"
             },
             {
               "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
@@ -197,10 +176,6 @@
             {
               "name": "KEY_VAULT_URI",
               "value": "[format('https://{0}.vault.azure.net/', parameters('keyVaultName'))]"
-            },
-            {
-              "name": "AZURE_TENANT_ID",
-              "value": "[subscription().tenantId]"
             },
             {
               "name": "AZURE_CLIENT_ID",
@@ -225,18 +200,6 @@
             {
               "name": "AZURE_OPENAI_API_VERSION",
               "value": "2024-12-01-preview"
-            },
-            {
-              "name": "GPT_REALTIME_ENDPOINT",
-              "value": "[parameters('openaiEndpoint')]"
-            },
-            {
-              "name": "GPT_REALTIME_DEPLOYMENT",
-              "value": "gpt-realtime"
-            },
-            {
-              "name": "GPT_REALTIME_API_VERSION",
-              "value": "2025-04-01-preview"
             },
             {
               "name": "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT",
@@ -299,10 +262,6 @@
               "value": "1000"
             },
             {
-              "name": "AGENT_MODE_ENABLED",
-              "value": "true"
-            },
-            {
               "name": "AZURE_OPENAI_ENABLED",
               "value": "true"
             },
@@ -325,7 +284,7 @@
       "tags": "[parameters('tags')]",
       "properties": {
         "subnet": {
-          "id": "[parameters('appSubnetId')]"
+          "id": "[parameters('privateEndpointSubnetId')]"
         },
         "privateLinkServiceConnections": [
           {

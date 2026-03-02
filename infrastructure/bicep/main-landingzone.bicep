@@ -112,18 +112,6 @@ param azureAdApiClientId string = ''
 @description('Azure AD Tenant ID')
 param azureAdTenantId string = subscription().tenantId
 
-@description('Azure OpenAI Realtime deployment name')
-param azureOpenAIRealtimeDeployment string = 'gpt-realtime'
-
-@description('Azure OpenAI Realtime API version')
-param azureOpenAIRealtimeApiVersion string = '2025-04-01-preview'
-
-@description('Azure OpenAI resource name')
-param azureOpenAIResourceName string = ''
-
-@description('Azure OpenAI WebRTC region')
-param azureOpenAIWebRTCRegion string = 'eastus2'
-
 @description('Extended Assessment OpenAI Deployment')
 param extendedAssessmentDeployment string = 'gpt-5.2'
 
@@ -332,10 +320,6 @@ module containerApps 'modules/landingzone/container-apps-landingzone.bicep' = {
     azureAdApiClientId: azureAdApiClientId
     uiImageTag: containerImageTag
     apiImageTag: containerImageTag
-    azureOpenAIRealtimeDeployment: azureOpenAIRealtimeDeployment
-    azureOpenAIRealtimeApiVersion: azureOpenAIRealtimeApiVersion
-    azureOpenAIResourceName: azureOpenAIResourceName
-    azureOpenAIWebRTCRegion: azureOpenAIWebRTCRegion
     extendedAssessmentDeployment: extendedAssessmentDeployment
     agentModelDeployment: agentModelDeployment
     kintsugiBaseUrl: kintsugiBaseUrl

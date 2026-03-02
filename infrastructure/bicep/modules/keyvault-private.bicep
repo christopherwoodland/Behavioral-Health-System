@@ -23,10 +23,6 @@ param vaultPrivateDnsZoneId string
 @description('Kintsugi API Key to store in Key Vault')
 param kintsugiApiKey string = ''
 
-@secure()
-@description('Azure OpenAI Realtime Key to store in Key Vault')
-param azureOpenAIRealtimeKey string = ''
-
 var keyVaultName = '${appName}-${environment}-kv-${uniqueSuffix}'
 var privateEndpointName = '${keyVaultName}-pe'
 
@@ -61,19 +57,6 @@ resource kintsugiApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = i
   name: 'KintsugiApiKey'
   properties: {
     value: kintsugiApiKey
-    contentType: 'text/plain'
-    attributes: {
-      enabled: true
-    }
-  }
-}
-
-// Store Azure OpenAI Realtime Key if provided
-resource openaiRealtimeKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(azureOpenAIRealtimeKey)) {
-  parent: keyVault
-  name: 'openai-realtime-key'
-  properties: {
-    value: azureOpenAIRealtimeKey
     contentType: 'text/plain'
     attributes: {
       enabled: true

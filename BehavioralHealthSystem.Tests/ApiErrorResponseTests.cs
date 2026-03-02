@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class ApiErrorResponseTests
-    {
-        [TestMethod]
-        public void ApiErrorResponse_Constructor_Succeeds()
-        {
-            var model = new ApiErrorResponse();
-            Assert.IsNotNull(model);
-        }
-    }
-}
+namespace BehavioralHealthSystem.Testsssert.AreEqual(string.Empty, response.Message);
+        Assert.AreEqual(string.Empty, response.Error);
+        Assert.IsNotNull(response.AdditionalData);

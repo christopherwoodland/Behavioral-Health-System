@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class PredictionResultTests
-    {
-        [TestMethod]
-        public void PredictionResult_Constructor_Succeeds()
-        {
-            var model = new PredictionResult();
-            Assert.IsNotNull(model);
-        }
-    }
-}
+namespace BehavioralHealthSystem.Testsssert.IsNotNull(result.ActualScore);
+        Assert.AreEqual(string.Empty, result.CreatedAt);
+        Assert.IsFalse(result.IsCalibrated);

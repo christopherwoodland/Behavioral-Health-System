@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class ActualScoreTests
-    {
-        [TestMethod]
-        public void ActualScore_Constructor_Succeeds()
-        {
-            var model = new ActualScore();
-            Assert.IsNotNull(model);
-        }
-    }
-}
+namespace BehavioralHealthSystem.Testsssert.AreEqual(string.Empty, score.AverageTotalScore);
+        Assert.IsFalse(score.IsScoreProcessed);
+        Assert.AreEqual(string.Empty, score.MaxScore);

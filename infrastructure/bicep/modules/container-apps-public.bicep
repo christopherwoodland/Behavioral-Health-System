@@ -53,25 +53,6 @@ param uiImageTag string = 'latest'
 param apiImageTag string = 'latest'
 
 // ============================================================================
-// AZURE OPENAI REALTIME API PARAMETERS (UI)
-// ============================================================================
-@description('Azure OpenAI Realtime deployment name')
-param azureOpenAIRealtimeDeployment string = 'gpt-realtime'
-
-@description('Azure OpenAI Realtime API version')
-param azureOpenAIRealtimeApiVersion string = '2025-04-01-preview'
-
-@description('Azure OpenAI resource name for Realtime API')
-param azureOpenAIResourceName string = ''
-
-@description('Azure OpenAI WebRTC region')
-param azureOpenAIWebRTCRegion string = 'eastus2'
-
-@secure()
-@description('Azure OpenAI Realtime API Key')
-param azureOpenAIRealtimeKey string = ''
-
-// ============================================================================
 // AGENT CONFIGURATION PARAMETERS
 // ============================================================================
 @description('Extended Assessment OpenAI Deployment')
@@ -171,10 +152,6 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
           name: 'acr-password'
           value: acr.listCredentials().passwords[0].value
         }
-        {
-          name: 'openai-realtime-key'
-          value: azureOpenAIRealtimeKey
-        }
       ]
     }
     template: {
@@ -203,23 +180,6 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'VITE_API_RETRY_DELAY_MS'
               value: '1000'
-            }
-            // Agent Voice Configuration
-            {
-              name: 'VITE_TARS_VOICE'
-              value: 'echo'
-            }
-            {
-              name: 'VITE_JEKYLL_VOICE'
-              value: 'shimmer'
-            }
-            {
-              name: 'VITE_JEKYLL_PHQ2_THRESHOLD'
-              value: '1'
-            }
-            {
-              name: 'VITE_MATRON_VOICE'
-              value: 'coral'
             }
             // Azure AD / Entra ID Authentication
             {
@@ -263,27 +223,6 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'VITE_STORAGE_CONTAINER_NAME'
               value: 'audio-uploads'
             }
-            // Azure OpenAI Realtime API Configuration
-            {
-              name: 'VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT'
-              value: azureOpenAIRealtimeDeployment
-            }
-            {
-              name: 'VITE_AZURE_OPENAI_REALTIME_API_VERSION'
-              value: azureOpenAIRealtimeApiVersion
-            }
-            {
-              name: 'VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME'
-              value: azureOpenAIResourceName
-            }
-            {
-              name: 'VITE_AZURE_OPENAI_WEBRTC_REGION'
-              value: azureOpenAIWebRTCRegion
-            }
-            {
-              name: 'VITE_AZURE_OPENAI_REALTIME_KEY'
-              secretRef: 'openai-realtime-key'
-            }
             // Feature Flags
             {
               name: 'VITE_DEV_ENVIRONMENT'
@@ -317,31 +256,10 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'VITE_ENABLE_AI_RISK_ASSESSMENT'
               value: 'false'
             }
-            {
-              name: 'VITE_AGENT_MODE_ENABLED'
-              value: 'false'
-            }
-            {
-              name: 'VITE_ENABLE_JEKYLL_AGENT'
-              value: 'false'
-            }
             // Voice Recording Configuration
             {
               name: 'VITE_ENABLE_SESSION_VOICE_RECORDING'
               value: 'false'
-            }
-            // Biometric Data Service Configuration
-            {
-              name: 'VITE_BIOMETRIC_SAVE_DELAY_MS'
-              value: '2000'
-            }
-            {
-              name: 'VITE_MATRON_MAX_COLLECTION_ATTEMPTS'
-              value: '2'
-            }
-            {
-              name: 'VITE_AGENT_HANDOFF_DELAY_MS'
-              value: '2000'
             }
             // Smart Band Integration Configuration
             {
@@ -351,27 +269,6 @@ resource uiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             {
               name: 'VITE_BAND_SERVICE_URL'
               value: bandServiceUrl
-            }
-            // Realtime API Advanced Configuration
-            {
-              name: 'VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS'
-              value: '3'
-            }
-            {
-              name: 'VITE_REALTIME_RECONNECTION_DELAY_MS'
-              value: '2000'
-            }
-            {
-              name: 'VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS'
-              value: '5000'
-            }
-            {
-              name: 'VITE_INITIAL_GREETING_SESSION_DELAY_MS'
-              value: '1500'
-            }
-            {
-              name: 'VITE_INITIAL_GREETING_RESPONSE_DELAY_MS'
-              value: '300'
             }
             // Polling Configuration
             {
@@ -643,11 +540,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'AZURE_SPEECH_ENHANCED_MODE'
               value: 'false'
             }
-            // Agent Configuration
-            {
-              name: 'AGENT_MODE_ENABLED'
-              value: 'false'
-            }
+            // Grammar Correction Agent Configuration
             {
               name: 'AGENT_ENDPOINT'
               value: openaiEndpoint

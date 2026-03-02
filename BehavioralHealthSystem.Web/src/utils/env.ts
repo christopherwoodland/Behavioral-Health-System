@@ -76,46 +76,12 @@ export const env = {
   get STORAGE_CONTAINER_NAME() { return getEnvVar('VITE_STORAGE_CONTAINER_NAME', 'audio-uploads'); },
   get AZURE_BLOB_SAS_URL() { return getEnvVar('VITE_AZURE_BLOB_SAS_URL'); },
 
-  // Azure OpenAI Realtime API
-  get AZURE_OPENAI_REALTIME_RESOURCE_NAME() { return getEnvVar('VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME'); },
-  get AZURE_OPENAI_REALTIME_KEY() { return getEnvVar('VITE_AZURE_OPENAI_REALTIME_KEY'); },
-  get AZURE_OPENAI_REALTIME_DEPLOYMENT() { return getEnvVar('VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT', 'gpt-4o-realtime-preview'); },
-  get AZURE_OPENAI_REALTIME_API_VERSION() { return getEnvVar('VITE_AZURE_OPENAI_REALTIME_API_VERSION', '2025-04-01-preview'); },
-  get AZURE_OPENAI_WEBRTC_REGION() { return getEnvVar('VITE_AZURE_OPENAI_WEBRTC_REGION', 'eastus2'); },
-
-  // Agent Voice Configuration
-  get TARS_VOICE() { return getEnvVar('VITE_TARS_VOICE', 'echo'); },
-  get JEKYLL_VOICE() { return getEnvVar('VITE_JEKYLL_VOICE', 'shimmer'); },
-  get MATRON_VOICE() { return getEnvVar('VITE_MATRON_VOICE', 'coral'); },
-  get JEKYLL_PHQ2_THRESHOLD() { return getEnvVarInt('VITE_JEKYLL_PHQ2_THRESHOLD', 1); },
-
   // Feature Flags
-  get DEV_ENVIRONMENT() { return getEnvVarBool('VITE_DEV_ENVIRONMENT', false); },
-  get DEV_ENVIRONMENT_TEXT() { return getEnvVar('VITE_DEV_ENVIRONMENT_TEXT'); },
-  get AUTO_START_SESSION() { return getEnvVarBool('VITE_AUTO_START_SESSION', true); },
   get ENABLE_DEBUG_LOGGING() { return getEnvVarBool('VITE_ENABLE_DEBUG_LOGGING', false); },
   get ENABLE_FFMPEG_WORKER() { return getEnvVarBool('VITE_ENABLE_FFMPEG_WORKER', true); },
-  get ENABLE_KINTSUGI() { return getEnvVarBool('VITE_ENABLE_KINTSUGI', true); },
   get ENABLE_TRANSCRIPTION() { return getEnvVarBool('VITE_ENABLE_TRANSCRIPTION', true); },
   get ENABLE_AI_RISK_ASSESSMENT() { return getEnvVarBool('VITE_ENABLE_AI_RISK_ASSESSMENT', true); },
-  get AGENT_MODE_ENABLED() { return getEnvVarBool('VITE_AGENT_MODE_ENABLED', false); },
-  get ENABLE_JEKYLL_AGENT() { return getEnvVarBool('VITE_ENABLE_JEKYLL_AGENT', true); },
-  get ENABLE_SESSION_VOICE_RECORDING() { return getEnvVarBool('VITE_ENABLE_SESSION_VOICE_RECORDING', true); },
-  get ENABLE_SMART_BAND() { return getEnvVarBool('VITE_ENABLE_SMART_BAND', false); },
-  get USE_LOCAL_DAM_MODEL() { return getEnvVarBool('VITE_USE_LOCAL_DAM_MODEL', true); },
   get OFFLINE_MODE() { return getEnvVarBool('VITE_OFFLINE_MODE', false); },
-
-  // Timing Configuration
-  get BIOMETRIC_SAVE_DELAY_MS() { return getEnvVarInt('VITE_BIOMETRIC_SAVE_DELAY_MS', 2000); },
-  get MATRON_MAX_COLLECTION_ATTEMPTS() { return getEnvVarInt('VITE_MATRON_MAX_COLLECTION_ATTEMPTS', 2); },
-  get AGENT_HANDOFF_DELAY_MS() { return getEnvVarInt('VITE_AGENT_HANDOFF_DELAY_MS', 2000); },
-
-  // WebRTC Configuration
-  get REALTIME_MAX_RECONNECTION_ATTEMPTS() { return getEnvVarInt('VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS', 3); },
-  get REALTIME_RECONNECTION_DELAY_MS() { return getEnvVarInt('VITE_REALTIME_RECONNECTION_DELAY_MS', 2000); },
-  get REALTIME_DATA_CHANNEL_TIMEOUT_MS() { return getEnvVarInt('VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS', 5000); },
-  get INITIAL_GREETING_SESSION_DELAY_MS() { return getEnvVarInt('VITE_INITIAL_GREETING_SESSION_DELAY_MS', 1500); },
-  get INITIAL_GREETING_RESPONSE_DELAY_MS() { return getEnvVarInt('VITE_INITIAL_GREETING_RESPONSE_DELAY_MS', 300); },
 
   // Polling Configuration
   get CONTROL_PANEL_REFRESH_INTERVAL() { return getEnvVarInt('VITE_CONTROL_PANEL_REFRESH_INTERVAL', 30); },
@@ -127,7 +93,4 @@ export const env = {
   get AUDIO_SILENCE_THRESHOLD_DB() { return getEnvVarInt('VITE_AUDIO_SILENCE_THRESHOLD_DB', -50); },
   get AUDIO_SILENCE_MIN_DURATION() { return parseFloat(getEnvVar('VITE_AUDIO_SILENCE_MIN_DURATION', '0.1')); },
   get AUDIO_SPEECH_ENHANCEMENT_ENABLED() { return getEnvVarBool('VITE_AUDIO_SPEECH_ENHANCEMENT_ENABLED', true); },
-
-  // Band Service
-  get BAND_SERVICE_URL() { return getEnvVar('VITE_BAND_SERVICE_URL', 'http://localhost:8765'); },
 } as const;

@@ -303,9 +303,7 @@ export const apiService = {
 // Polling utilities
 export class PredictionPoller {
   private sessionId: string;
-  private intervalMs: number;
   private maxAttempts: number;
-  private backoffFactor: number;
   private initialResult?: Partial<PredictionResult>;
   private currentAttempt = 0;
   private timeoutId: number | null = null;
@@ -321,9 +319,7 @@ export class PredictionPoller {
     } = {}
   ) {
     this.sessionId = sessionId;
-    this.intervalMs = options.intervalMs || config.polling.intervalMs;
     this.maxAttempts = options.maxAttempts || config.polling.maxAttempts;
-    this.backoffFactor = options.backoffFactor || config.polling.backoffFactor;
     this.initialResult = options.initialResult;
   }
 
@@ -385,7 +381,7 @@ export class PredictionPoller {
   async start(
     onUpdate: (result: PredictionResult) => void,
     onComplete: (result: PredictionResult) => void,
-    onError: (error: AppError) => void
+    _onError: (error: AppError) => void
   ): Promise<void> {
     if (this.isPolling) {
       return;
@@ -394,56 +390,11 @@ export class PredictionPoller {
     this.isPolling = true;
     this.currentAttempt = 0;
 
-    try {
-      const provider = await apiClient.get<{ useLocalDamModel?: boolean }>('/model/provider');
-      if (provider?.useLocalDamModel) {
-        const completedResult = this.createLocalCompletedResult();
-
-        onUpdate(completedResult);
-        this.stop();
-        onComplete(completedResult);
-        return;
-      }
-    } catch {
-      // Continue with regular polling if provider check fails
-    }
-
-    const poll = async (): Promise<void> => {
-      try {
-        const result = await apiService.getPredictionBySessionId(this.sessionId);
-
-        onUpdate(result);
-
-        if (result.status === 'succeeded' || result.status === 'success' || result.status === 'failed') {
-          this.stop();
-          onComplete(result);
-          return;
-        }
-
-        this.currentAttempt++;
-
-        if (this.currentAttempt >= this.maxAttempts) {
-          this.stop();
-          onError(createAppError(
-            'POLLING_TIMEOUT',
-            'Prediction polling timed out. Please check the session manually.',
-            { sessionId: this.sessionId, attempts: this.currentAttempt }
-          ));
-          return;
-        }
-
-        // Schedule next poll with exponential backoff
-        const nextInterval = this.intervalMs * Math.pow(this.backoffFactor, this.currentAttempt);
-        this.timeoutId = window.setTimeout(poll, nextInterval);
-
-      } catch (error) {
-        this.stop();
-        onError(error as AppError);
-      }
-    };
-
-    // Start polling immediately
-    await poll();
+    // DAM is the only analysis mode — return local completed result immediately
+    const completedResult = this.createLocalCompletedResult();
+    onUpdate(completedResult);
+    this.stop();
+    onComplete(completedResult);
   }
 
   stop(): void {

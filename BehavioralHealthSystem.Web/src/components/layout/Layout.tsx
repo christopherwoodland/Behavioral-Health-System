@@ -3,7 +3,6 @@ import { Header } from './Header';
 import { useSkipToContent } from '@/hooks/accessibility';
 import { A11Y } from '@/config/constants';
 import { MicrosoftLogo } from '@/components/icons';
-import { env } from '@/utils/env';
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,8 +11,6 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
   const { skipToMain } = useSkipToContent();
-  const isDevEnvironment = env.DEV_ENVIRONMENT;
-  const devEnvironmentText = env.DEV_ENVIRONMENT_TEXT;
 
   return (
     <div className="min-h-screen bg-background-light dark:bg-background-dark">
@@ -28,28 +25,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
       >
         Skip to main content
       </a>
-
-      {/* Development Environment Banner */}
-      {isDevEnvironment && (
-        <div
-          className="bg-pink-500 text-white text-center py-2 px-4 font-semibold text-sm"
-          role="banner"
-          aria-label="Development environment indicator"
-        >
-          Development Environment
-        </div>
-      )}
-
-      {/* Development Environment Text Banner (below dev banner) */}
-      {devEnvironmentText && (
-        <div
-          className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-100 text-center py-2 px-4 text-sm border-b border-amber-200 dark:border-amber-700"
-          role="status"
-          aria-label="Environment status message"
-        >
-          {devEnvironmentText}
-        </div>
-      )}
 
       {/* Header */}
       <Header />

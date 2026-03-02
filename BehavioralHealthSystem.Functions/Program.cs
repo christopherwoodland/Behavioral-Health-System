@@ -58,38 +58,6 @@ var host = new HostBuilder()
         var keyVaultClient = GetKeyVaultClient(config);
 
         // Configuration
-        services.Configure<KintsugiApiOptions>(options =>
-        {
-            // Try environment variable first, then Key Vault
-            var apiKey = config["KINTSUGI_API_KEY"];
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                // Try with both naming conventions (underscores and dashes)
-                apiKey = GetSecretFromKeyVault(keyVaultClient, "KintsugiApiKey");
-                if (string.IsNullOrWhiteSpace(apiKey))
-                {
-                    apiKey = GetSecretFromKeyVault(keyVaultClient, "KINTSUGI-API-KEY");
-                }
-            }
-
-            var baseUrl = config["KINTSUGI_BASE_URL"];
-            bool? autoProvideConsent = null;
-            var rawConsent = config["KINTSUGI_AUTO_PROVIDE_CONSENT"];
-            if (!string.IsNullOrWhiteSpace(rawConsent) && bool.TryParse(rawConsent, out var parsed))
-            {
-                autoProvideConsent = parsed;
-            }
-            options.KintsugiApiKey = apiKey ?? string.Empty;
-            options.KintsugiBaseUrl = baseUrl ?? "https://api.kintsugihealth.com/v2";
-            options.TimeoutSeconds = config.GetValue<int>("KINTSUGI_TIMEOUT_SECONDS", 300);
-            options.MaxRetryAttempts = config.GetValue<int>("KINTSUGI_MAX_RETRY_ATTEMPTS", 3);
-            options.RetryDelayMilliseconds = config.GetValue<int>("KINTSUGI_RETRY_DELAY_MS", 1000);
-            if (autoProvideConsent.HasValue)
-            {
-                options.AutoProvideConsent = autoProvideConsent.Value;
-            }
-        });
-
         services.Configure<LocalDamModelOptions>(options =>
         {
             options.BaseUrl = config["LOCAL_DAM_BASE_URL"] ?? "http://localhost:8000";
@@ -128,35 +96,7 @@ var host = new HostBuilder()
             options.UseFallbackToStandardConfig = config.GetValue<bool>("EXTENDED_ASSESSMENT_USE_FALLBACK", true);
         });
 
-        // HTTP Client with policies - Simplified configuration
-        services.AddHttpClient<IKintsugiApiService, KintsugiApiService>()
-            .ConfigureHttpClient((serviceProvider, client) =>
-            {
-                try
-                {
-                    var options = serviceProvider.GetService<IOptions<KintsugiApiOptions>>()?.Value;
-                    if (options != null && !string.IsNullOrEmpty(options.KintsugiBaseUrl))
-                    {
-                        var baseUrl = options.KintsugiBaseUrl.TrimEnd('/') + "/";
-                        client.BaseAddress = new Uri(baseUrl);
-                    }
-                    client.DefaultRequestHeaders.Accept.Clear();
-                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                    if (options != null && !string.IsNullOrEmpty(options.KintsugiApiKey))
-                    {
-                        client.DefaultRequestHeaders.Add("X-API-Key", options.KintsugiApiKey);
-                    }
-                    client.Timeout = TimeSpan.FromMinutes(5);
-                }
-                catch (Exception)
-                {
-                    client.Timeout = TimeSpan.FromMinutes(5);
-                }
-            })
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler())
-            .AddPolicyHandler((serviceProvider, request) => RetryPolicies.GetRetryPolicy(serviceProvider.GetService<ILogger<KintsugiApiService>>()))
-            .AddPolicyHandler(RetryPolicies.GetTimeoutPolicy());
-
+        // HTTP Client with policies for local DAM model
         services.AddHttpClient<ILocalDamModelService, LocalDamModelService>()
             .ConfigureHttpClient((serviceProvider, client) =>
             {
@@ -182,7 +122,6 @@ var host = new HostBuilder()
         services.AddSingleton<IApiKeyValidationService, ApiKeyValidationService>();
 
         // Application Services
-        services.AddScoped<IKintsugiApiService, KintsugiApiService>();
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         services.AddScoped<IDSM5DataService, DSM5DataService>();
         services.AddScoped<IAzureContentUnderstandingService, AzureContentUnderstandingService>();
@@ -202,7 +141,7 @@ var host = new HostBuilder()
                 throw new InvalidOperationException("Configuration not available");
             }
 
-            // First check for explicit connection string (Docker/Azurite)
+            // First check for explicit connection string (Docker)
             var connectionString = config["AZURE_STORAGE_CONNECTION_STRING"] ?? config.GetConnectionString("AzureStorage");
             if (!string.IsNullOrEmpty(connectionString))
             {
@@ -214,7 +153,25 @@ var host = new HostBuilder()
             if (!string.IsNullOrEmpty(storageAccountName))
             {
                 var blobServiceUri = $"https://{storageAccountName}.blob.core.windows.net";
-                return new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential());
+                // Configure credentials for identity-based storage access
+                var credentialOptions = new DefaultAzureCredentialOptions
+                {
+                    ExcludeManagedIdentityCredential = true,
+                    ExcludeSharedTokenCacheCredential = true,
+                    ExcludeVisualStudioCredential = true,
+                    ExcludeVisualStudioCodeCredential = true,
+                    ExcludeAzurePowerShellCredential = true,
+                    ExcludeAzureDeveloperCliCredential = true
+                };
+
+                // Set tenant ID if configured (required when storage account is in a specific tenant)
+                var tenantId = config["AZURE_TENANT_ID"];
+                if (!string.IsNullOrEmpty(tenantId))
+                {
+                    credentialOptions.TenantId = tenantId;
+                }
+
+                return new BlobServiceClient(new Uri(blobServiceUri), new DefaultAzureCredential(credentialOptions));
             }
 
             throw new InvalidOperationException(
@@ -222,10 +179,9 @@ var host = new HostBuilder()
         });
         services.AddScoped<ISessionStorageService, SessionStorageService>();
         services.AddScoped<IFileGroupStorageService, FileGroupStorageService>();
-        services.AddScoped<IKintsugiApiHealthCheck, KintsugiApiHealthCheck>();
         services.AddScoped<IBiometricDataService, BiometricDataService>();
         services.AddValidatorsFromAssemblyContaining<UserMetadataValidator>();
-        services.AddHealthChecks().AddCheck<KintsugiApiHealthCheck>("kintsugi-api");
+        services.AddHealthChecks();
         services.AddSignalR();
 
         // Semantic Kernel audio processing pipeline (Fetch → Convert → Predict)

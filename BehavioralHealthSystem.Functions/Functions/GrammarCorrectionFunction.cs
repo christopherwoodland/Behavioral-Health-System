@@ -15,7 +15,7 @@ public class GrammarCorrectionFunction
 
     [Function("CorrectGrammar")]
     public async Task<HttpResponseData> CorrectGrammar(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "agent/grammar/correct")] HttpRequestData req)
     {
         _logger.LogInformation("[{FunctionName}] Grammar correction request received", nameof(CorrectGrammar));
 
@@ -58,13 +58,13 @@ public class GrammarCorrectionFunction
 
             var response = req.CreateResponse(HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "application/json; charset=utf-8");
-            
+
             var responseData = new GrammarCorrectionResponse
             {
                 OriginalText = request.Text,
                 CorrectedText = correctedText
             };
-            
+
             await response.WriteStringAsync(JsonSerializer.Serialize(responseData, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase

@@ -326,7 +326,6 @@ Write-Host "   az containerapp update --name $apiAppName --resource-group $Resou
 Write-Host ""
 Write-Host "3. Configure secrets in Key Vault:"
 Write-Host "   az keyvault secret set --vault-name $keyVaultName --name KintsugiApiKey --value '<your-api-key>'"
-Write-Host "   az keyvault secret set --vault-name $keyVaultName --name openai-realtime-key --value '<your-key>'"
 Write-Host ""
 Write-Host "4. Copy data from public deployment (if needed):"
 Write-Host "   # DSM-5 data"

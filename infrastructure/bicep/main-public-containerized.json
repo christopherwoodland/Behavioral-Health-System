@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "2078190809346575726"
+      "templateHash": "3637665901199762820"
     }
   },
   "parameters": {
@@ -76,45 +76,24 @@
         "description": "Azure AD Client ID for MSAL authentication"
       }
     },
+    "azureAdApiClientId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Azure AD API Client ID (Backend API app registration - defaults to same as frontend)"
+      }
+    },
+    "azureAdTenantId": {
+      "type": "string",
+      "defaultValue": "[subscription().tenantId]",
+      "metadata": {
+        "description": "Azure AD Tenant ID for Entra ID authentication (defaults to subscription tenant)"
+      }
+    },
     "acrName": {
       "type": "string",
       "metadata": {
         "description": "Azure Container Registry name (must be pre-deployed with images)"
-      }
-    },
-    "azureOpenAIRealtimeDeployment": {
-      "type": "string",
-      "defaultValue": "gpt-realtime",
-      "metadata": {
-        "description": "Azure OpenAI Realtime deployment name"
-      }
-    },
-    "azureOpenAIRealtimeApiVersion": {
-      "type": "string",
-      "defaultValue": "2025-04-01-preview",
-      "metadata": {
-        "description": "Azure OpenAI Realtime API version"
-      }
-    },
-    "azureOpenAIResourceName": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Azure OpenAI resource name for Realtime API"
-      }
-    },
-    "azureOpenAIWebRTCRegion": {
-      "type": "string",
-      "defaultValue": "eastus2",
-      "metadata": {
-        "description": "Azure OpenAI WebRTC region"
-      }
-    },
-    "azureOpenAIRealtimeKey": {
-      "type": "securestring",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Azure OpenAI Realtime API Key"
       }
     },
     "extendedAssessmentDeployment": {
@@ -311,7 +290,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "2083213435939053975"
+              "templateHash": "16844347410710459310"
             }
           },
           "parameters": {
@@ -473,6 +452,28 @@
               "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
               "apiVersion": "2023-01-01",
               "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'biometric-data')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'audio-uploads')]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'session-data')]",
               "properties": {
                 "publicAccess": "None"
               },
@@ -660,7 +661,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "3442664087826583176"
+              "templateHash": "15879706926088746120"
             }
           },
           "parameters": {
@@ -732,6 +733,7 @@
               "kind": "AIServices",
               "properties": {
                 "customSubDomainName": "[variables('contentUnderstandingName')]",
+                "disableLocalAuth": true,
                 "networkAcls": {
                   "defaultAction": "Allow",
                   "virtualNetworkRules": [],
@@ -822,26 +824,15 @@
           "azureAdClientId": {
             "value": "[parameters('azureAdClientId')]"
           },
+          "azureAdApiClientId": "[if(not(empty(parameters('azureAdApiClientId'))), createObject('value', parameters('azureAdApiClientId')), createObject('value', parameters('azureAdClientId')))]",
+          "tenantId": {
+            "value": "[parameters('azureAdTenantId')]"
+          },
           "uiImageTag": {
             "value": "[parameters('containerImageTag')]"
           },
           "apiImageTag": {
             "value": "[parameters('containerImageTag')]"
-          },
-          "azureOpenAIRealtimeDeployment": {
-            "value": "[parameters('azureOpenAIRealtimeDeployment')]"
-          },
-          "azureOpenAIRealtimeApiVersion": {
-            "value": "[parameters('azureOpenAIRealtimeApiVersion')]"
-          },
-          "azureOpenAIResourceName": {
-            "value": "[parameters('azureOpenAIResourceName')]"
-          },
-          "azureOpenAIWebRTCRegion": {
-            "value": "[parameters('azureOpenAIWebRTCRegion')]"
-          },
-          "azureOpenAIRealtimeKey": {
-            "value": "[parameters('azureOpenAIRealtimeKey')]"
           },
           "extendedAssessmentDeployment": {
             "value": "[parameters('extendedAssessmentDeployment')]"
@@ -863,7 +854,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "15135021620134463575"
+              "templateHash": "12326026037868581241"
             }
           },
           "parameters": {
@@ -957,7 +948,14 @@
               "type": "string",
               "defaultValue": "",
               "metadata": {
-                "description": "Azure AD Client ID for MSAL"
+                "description": "Azure AD Client ID for MSAL (Frontend app registration)"
+              }
+            },
+            "azureAdApiClientId": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Azure AD API Client ID (Backend API app registration)"
               }
             },
             "uiImageTag": {
@@ -972,41 +970,6 @@
               "defaultValue": "latest",
               "metadata": {
                 "description": "Container image tag for API"
-              }
-            },
-            "azureOpenAIRealtimeDeployment": {
-              "type": "string",
-              "defaultValue": "gpt-realtime",
-              "metadata": {
-                "description": "Azure OpenAI Realtime deployment name"
-              }
-            },
-            "azureOpenAIRealtimeApiVersion": {
-              "type": "string",
-              "defaultValue": "2025-04-01-preview",
-              "metadata": {
-                "description": "Azure OpenAI Realtime API version"
-              }
-            },
-            "azureOpenAIResourceName": {
-              "type": "string",
-              "defaultValue": "",
-              "metadata": {
-                "description": "Azure OpenAI resource name for Realtime API"
-              }
-            },
-            "azureOpenAIWebRTCRegion": {
-              "type": "string",
-              "defaultValue": "eastus2",
-              "metadata": {
-                "description": "Azure OpenAI WebRTC region"
-              }
-            },
-            "azureOpenAIRealtimeKey": {
-              "type": "securestring",
-              "defaultValue": "",
-              "metadata": {
-                "description": "Azure OpenAI Realtime API Key"
               }
             },
             "extendedAssessmentDeployment": {
@@ -1119,10 +1082,6 @@
                     {
                       "name": "acr-password",
                       "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), '2023-07-01').passwords[0].value]"
-                    },
-                    {
-                      "name": "openai-realtime-key",
-                      "value": "[parameters('azureOpenAIRealtimeKey')]"
                     }
                   ]
                 },
@@ -1153,24 +1112,12 @@
                           "value": "1000"
                         },
                         {
-                          "name": "VITE_TARS_VOICE",
-                          "value": "echo"
-                        },
-                        {
-                          "name": "VITE_JEKYLL_VOICE",
-                          "value": "shimmer"
-                        },
-                        {
-                          "name": "VITE_JEKYLL_PHQ2_THRESHOLD",
-                          "value": "1"
-                        },
-                        {
-                          "name": "VITE_MATRON_VOICE",
-                          "value": "coral"
-                        },
-                        {
                           "name": "VITE_AZURE_CLIENT_ID",
                           "value": "[parameters('azureAdClientId')]"
+                        },
+                        {
+                          "name": "VITE_AZURE_API_CLIENT_ID",
+                          "value": "[parameters('azureAdApiClientId')]"
                         },
                         {
                           "name": "VITE_AZURE_TENANT_ID",
@@ -1205,26 +1152,6 @@
                           "value": "audio-uploads"
                         },
                         {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT",
-                          "value": "[parameters('azureOpenAIRealtimeDeployment')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_API_VERSION",
-                          "value": "[parameters('azureOpenAIRealtimeApiVersion')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_RESOURCE_NAME",
-                          "value": "[parameters('azureOpenAIResourceName')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_WEBRTC_REGION",
-                          "value": "[parameters('azureOpenAIWebRTCRegion')]"
-                        },
-                        {
-                          "name": "VITE_AZURE_OPENAI_REALTIME_KEY",
-                          "secretRef": "openai-realtime-key"
-                        },
-                        {
                           "name": "VITE_DEV_ENVIRONMENT",
                           "value": "false"
                         },
@@ -1238,10 +1165,6 @@
                         },
                         {
                           "name": "VITE_ENABLE_DEBUG_LOGGING",
-                          "value": "false"
-                        },
-                        {
-                          "name": "VITE_ENABLE_VERBOSE_LOGGING",
                           "value": "false"
                         },
                         {
@@ -1261,28 +1184,8 @@
                           "value": "false"
                         },
                         {
-                          "name": "VITE_AGENT_MODE_ENABLED",
-                          "value": "false"
-                        },
-                        {
-                          "name": "VITE_ENABLE_JEKYLL_AGENT",
-                          "value": "false"
-                        },
-                        {
                           "name": "VITE_ENABLE_SESSION_VOICE_RECORDING",
                           "value": "false"
-                        },
-                        {
-                          "name": "VITE_BIOMETRIC_SAVE_DELAY_MS",
-                          "value": "2000"
-                        },
-                        {
-                          "name": "VITE_MATRON_MAX_COLLECTION_ATTEMPTS",
-                          "value": "2"
-                        },
-                        {
-                          "name": "VITE_AGENT_HANDOFF_DELAY_MS",
-                          "value": "2000"
                         },
                         {
                           "name": "VITE_ENABLE_SMART_BAND",
@@ -1291,26 +1194,6 @@
                         {
                           "name": "VITE_BAND_SERVICE_URL",
                           "value": "[parameters('bandServiceUrl')]"
-                        },
-                        {
-                          "name": "VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS",
-                          "value": "3"
-                        },
-                        {
-                          "name": "VITE_REALTIME_RECONNECTION_DELAY_MS",
-                          "value": "2000"
-                        },
-                        {
-                          "name": "VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS",
-                          "value": "5000"
-                        },
-                        {
-                          "name": "VITE_INITIAL_GREETING_SESSION_DELAY_MS",
-                          "value": "1500"
-                        },
-                        {
-                          "name": "VITE_INITIAL_GREETING_RESPONSE_DELAY_MS",
-                          "value": "300"
                         },
                         {
                           "name": "VITE_CONTROL_PANEL_REFRESH_INTERVAL",
@@ -1443,6 +1326,18 @@
                           "value": "[parameters('storageAccountName')]"
                         },
                         {
+                          "name": "AzureWebJobsStorage__blobServiceUri",
+                          "value": "[format('https://{0}.blob.core.windows.net', parameters('storageAccountName'))]"
+                        },
+                        {
+                          "name": "AzureWebJobsStorage__queueServiceUri",
+                          "value": "[format('https://{0}.queue.core.windows.net', parameters('storageAccountName'))]"
+                        },
+                        {
+                          "name": "AzureWebJobsStorage__tableServiceUri",
+                          "value": "[format('https://{0}.table.core.windows.net', parameters('storageAccountName'))]"
+                        },
+                        {
                           "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
                           "value": "[parameters('appInsightsConnectionString')]"
                         },
@@ -1548,7 +1443,7 @@
                         },
                         {
                           "name": "AZURE_SPEECH_ENDPOINT",
-                          "value": "https://eastus2.api.cognitive.microsoft.com"
+                          "value": "[parameters('contentUnderstandingEndpoint')]"
                         },
                         {
                           "name": "AZURE_SPEECH_LOCALE",
@@ -1560,10 +1455,6 @@
                         },
                         {
                           "name": "AZURE_SPEECH_ENHANCED_MODE",
-                          "value": "false"
-                        },
-                        {
-                          "name": "AGENT_MODE_ENABLED",
                           "value": "false"
                         },
                         {
@@ -1609,6 +1500,14 @@
                         {
                           "name": "ALLOWED_ORIGINS",
                           "value": "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                        },
+                        {
+                          "name": "ENTRA_TENANT_ID",
+                          "value": "[parameters('tenantId')]"
+                        },
+                        {
+                          "name": "ENTRA_CLIENT_ID",
+                          "value": "[parameters('azureAdApiClientId')]"
                         }
                       ],
                       "probes": [
@@ -1750,7 +1649,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "9853359266540128317"
+              "templateHash": "8774386396043813254"
             }
           },
           "parameters": {
@@ -1795,6 +1694,13 @@
               "defaultValue": "",
               "metadata": {
                 "description": "Azure Container Registry name"
+              }
+            },
+            "openAiResourceName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Azure OpenAI/Foundry resource name (for AI Agent)"
               }
             }
           },
@@ -1867,6 +1773,18 @@
               "apiVersion": "2022-04-01",
               "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('contentUnderstandingName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
+                "principalId": "[parameters('apiAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "condition": "[not(empty(parameters('openAiResourceName')))]",
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('openAiResourceName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiResourceName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
                 "principalId": "[parameters('apiAppPrincipalId')]",

@@ -3,27 +3,21 @@ namespace BehavioralHealthSystem.Functions;
 public class LocalDamFunctions
 {
     private readonly ILogger<LocalDamFunctions> _logger;
-    private readonly IServiceProvider _serviceProvider;
     private readonly ILocalDamModelService _localDamModelService;
     private readonly IValidator<InitiateRequest> _initiateRequestValidator;
     private readonly BlobServiceClient _blobServiceClient;
-    private readonly IConfiguration _configuration;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public LocalDamFunctions(
         ILogger<LocalDamFunctions> logger,
-        IServiceProvider serviceProvider,
         ILocalDamModelService localDamModelService,
         IValidator<InitiateRequest> initiateRequestValidator,
-        BlobServiceClient blobServiceClient,
-        IConfiguration configuration)
+        BlobServiceClient blobServiceClient)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _localDamModelService = localDamModelService ?? throw new ArgumentNullException(nameof(localDamModelService));
         _initiateRequestValidator = initiateRequestValidator ?? throw new ArgumentNullException(nameof(initiateRequestValidator));
         _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _jsonOptions = JsonSerializerOptionsFactory.Default;
     }
 
@@ -31,50 +25,31 @@ public class LocalDamFunctions
     public Task<HttpResponseData> InitiateSessionLocal(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/initiate-local")] HttpRequestData req)
     {
-        return InitiateSessionInternalAsync(req, useLocalModel: true);
+        return InitiateSessionInternalAsync(req);
     }
 
     [Function("InitiateSessionSelected")]
     public Task<HttpResponseData> InitiateSessionSelected(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sessions/initiate-selected")] HttpRequestData req)
     {
-        return InitiateSessionInternalAsync(req, useLocalModel: UseLocalDamModel());
+        return InitiateSessionInternalAsync(req);
     }
 
     [Function("SubmitPredictionLocal")]
     public Task<HttpResponseData> SubmitPredictionLocal(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "predictions/submit-local")] HttpRequestData req)
     {
-        return SubmitPredictionInternalAsync(req, useLocalModel: true);
+        return SubmitPredictionInternalAsync(req);
     }
 
     [Function("SubmitPredictionSelected")]
     public Task<HttpResponseData> SubmitPredictionSelected(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "predictions/submit-selected")] HttpRequestData req)
     {
-        return SubmitPredictionInternalAsync(req, useLocalModel: UseLocalDamModel());
+        return SubmitPredictionInternalAsync(req);
     }
 
-    [Function("GetModelProvider")]
-    public async Task<HttpResponseData> GetModelProvider(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "model/provider")] HttpRequestData req)
-    {
-        var useLocal = UseLocalDamModel();
-        var provider = useLocal ? "local-dam" : "kintsugi";
-
-        var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteStringAsync(JsonSerializer.Serialize(new
-        {
-            useLocalDamModel = useLocal,
-            provider,
-            selectedInitiateEndpoint = useLocal ? "/api/sessions/initiate-local" : "/api/sessions/initiate",
-            selectedPredictionEndpoint = useLocal ? "/api/predictions/submit-local" : "/api/predictions/submit"
-        }, _jsonOptions));
-
-        return response;
-    }
-
-    private async Task<HttpResponseData> InitiateSessionInternalAsync(HttpRequestData req, bool useLocalModel)
+    private async Task<HttpResponseData> InitiateSessionInternalAsync(HttpRequestData req)
     {
         try
         {
@@ -122,9 +97,7 @@ public class LocalDamFunctions
                 return validationResponse;
             }
 
-            InitiateResponse? initiateResponse = useLocalModel
-                ? await _localDamModelService.InitiateSessionAsync(initiateRequest)
-                : await ResolveKintsugiApiService().InitiateSessionAsync(initiateRequest);
+            var initiateResponse = await _localDamModelService.InitiateSessionAsync(initiateRequest);
 
             if (initiateResponse == null || string.IsNullOrWhiteSpace(initiateResponse.SessionId))
             {
@@ -145,14 +118,14 @@ public class LocalDamFunctions
                 Message = "Session initiated successfully",
                 SessionId = initiateResponse.SessionId,
                 UserId = initiateRequest.UserId,
-                Provider = useLocalModel ? "local-dam" : "kintsugi"
+                Provider = "local-dam"
             }, _jsonOptions));
 
             return response;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error initiating session via {Provider}", nameof(InitiateSessionInternalAsync), useLocalModel ? "local-dam" : "kintsugi");
+            _logger.LogError(ex, "[{FunctionName}] Error initiating session", nameof(InitiateSessionInternalAsync));
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
             await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
@@ -160,14 +133,14 @@ public class LocalDamFunctions
                 Success = false,
                 Message = "Error initiating session",
                 Error = ex.Message,
-                Provider = useLocalModel ? "local-dam" : "kintsugi"
+                Provider = "local-dam"
             }, _jsonOptions));
 
             return errorResponse;
         }
     }
 
-    private async Task<HttpResponseData> SubmitPredictionInternalAsync(HttpRequestData req, bool useLocalModel)
+    private async Task<HttpResponseData> SubmitPredictionInternalAsync(HttpRequestData req)
     {
         var correlationId = Guid.NewGuid().ToString("N")[..8];
         var startedAtUtc = DateTime.UtcNow;
@@ -222,79 +195,59 @@ public class LocalDamFunctions
             }
 
             _logger.LogInformation(
-                "[{FunctionName}] [{CorrelationId}] Prediction request accepted. Provider={Provider}, SessionId={SessionId}, HasAudioData={HasAudioData}, AudioDataLength={AudioDataLength}, HasAudioFileUrl={HasAudioFileUrl}, AudioFileName={AudioFileName}",
+                "[{FunctionName}] [{CorrelationId}] Prediction request accepted. Provider=local-dam, SessionId={SessionId}, HasAudioData={HasAudioData}, AudioDataLength={AudioDataLength}, HasAudioFileUrl={HasAudioFileUrl}, AudioFileName={AudioFileName}",
                 nameof(SubmitPredictionInternalAsync),
                 correlationId,
-                useLocalModel ? "local-dam" : "kintsugi",
                 predictionRequest.SessionId,
                 predictionRequest.AudioData is { Length: > 0 },
                 predictionRequest.AudioData?.Length ?? 0,
                 !string.IsNullOrWhiteSpace(predictionRequest.AudioFileUrl),
                 predictionRequest.AudioFileName);
 
-            PredictionResponse? predictionResponse;
-
-            if (useLocalModel)
+            if ((predictionRequest.AudioData == null || predictionRequest.AudioData.Length == 0) &&
+                !string.IsNullOrWhiteSpace(predictionRequest.AudioFileUrl))
             {
-                if ((predictionRequest.AudioData == null || predictionRequest.AudioData.Length == 0) &&
-                    !string.IsNullOrWhiteSpace(predictionRequest.AudioFileUrl))
-                {
-                    _logger.LogInformation(
-                        "[{FunctionName}] [{CorrelationId}] Downloading blob audio for local DAM from {AudioFileUrl}",
-                        nameof(SubmitPredictionInternalAsync),
-                        correlationId,
-                        predictionRequest.AudioFileUrl);
-
-                    predictionRequest.AudioData = await DownloadAudioFromBlobAsync(predictionRequest.AudioFileUrl);
-
-                    _logger.LogInformation(
-                        "[{FunctionName}] [{CorrelationId}] Downloaded {DataSize} bytes from blob for local DAM",
-                        nameof(SubmitPredictionInternalAsync),
-                        correlationId,
-                        predictionRequest.AudioData.Length);
-
-                    predictionRequest.AudioFileName = ResolveDamAudioFileName(
-                        predictionRequest.AudioFileUrl,
-                        predictionRequest.AudioFileName,
-                        predictionRequest.AudioData);
-
-                    _logger.LogInformation(
-                        "[{FunctionName}] [{CorrelationId}] Normalized local DAM audio filename to {AudioFileName}",
-                        nameof(SubmitPredictionInternalAsync),
-                        correlationId,
-                        predictionRequest.AudioFileName);
-                }
-                else if (predictionRequest.AudioData is { Length: > 0 })
-                {
-                    predictionRequest.AudioFileName = ResolveDamAudioFileName(
-                        predictionRequest.AudioFileUrl,
-                        predictionRequest.AudioFileName,
-                        predictionRequest.AudioData);
-                }
-
                 _logger.LogInformation(
-                    "[{FunctionName}] [{CorrelationId}] Forwarding request to local DAM service. SessionId={SessionId}, AudioBytes={AudioBytes}",
+                    "[{FunctionName}] [{CorrelationId}] Downloading blob audio for local DAM from {AudioFileUrl}",
                     nameof(SubmitPredictionInternalAsync),
                     correlationId,
-                    predictionRequest.SessionId,
-                    predictionRequest.AudioData?.Length ?? 0);
+                    predictionRequest.AudioFileUrl);
 
-                predictionResponse = await _localDamModelService.SubmitPredictionAsync(predictionRequest);
+                predictionRequest.AudioData = await DownloadAudioFromBlobAsync(predictionRequest.AudioFileUrl);
+
+                _logger.LogInformation(
+                    "[{FunctionName}] [{CorrelationId}] Downloaded {DataSize} bytes from blob for local DAM",
+                    nameof(SubmitPredictionInternalAsync),
+                    correlationId,
+                    predictionRequest.AudioData.Length);
+
+                predictionRequest.AudioFileName = ResolveDamAudioFileName(
+                    predictionRequest.AudioFileUrl,
+                    predictionRequest.AudioFileName,
+                    predictionRequest.AudioData);
+
+                _logger.LogInformation(
+                    "[{FunctionName}] [{CorrelationId}] Normalized local DAM audio filename to {AudioFileName}",
+                    nameof(SubmitPredictionInternalAsync),
+                    correlationId,
+                    predictionRequest.AudioFileName);
             }
-            else
+            else if (predictionRequest.AudioData is { Length: > 0 })
             {
-                if (predictionRequest.AudioData is { Length: > 0 })
-                {
-                    predictionResponse = await ResolveKintsugiApiService().SubmitPredictionAsync(predictionRequest.SessionId, predictionRequest.AudioData);
-                }
-                else
-                {
-                    predictionResponse = await ResolveKintsugiApiService().SubmitPredictionAsync(
-                        predictionRequest.SessionId,
-                        predictionRequest.AudioFileUrl,
-                        string.IsNullOrWhiteSpace(predictionRequest.AudioFileName) ? "audio.wav" : predictionRequest.AudioFileName);
-                }
+                predictionRequest.AudioFileName = ResolveDamAudioFileName(
+                    predictionRequest.AudioFileUrl,
+                    predictionRequest.AudioFileName,
+                    predictionRequest.AudioData);
             }
+
+            _logger.LogInformation(
+                "[{FunctionName}] [{CorrelationId}] Forwarding request to local DAM service. SessionId={SessionId}, AudioBytes={AudioBytes}",
+                nameof(SubmitPredictionInternalAsync),
+                correlationId,
+                predictionRequest.SessionId,
+                predictionRequest.AudioData?.Length ?? 0);
+
+            var predictionResponse = await _localDamModelService.SubmitPredictionAsync(predictionRequest);
 
             if (predictionResponse == null)
             {
@@ -310,10 +263,9 @@ public class LocalDamFunctions
 
             var elapsedMs = (DateTime.UtcNow - startedAtUtc).TotalMilliseconds;
             _logger.LogInformation(
-                "[{FunctionName}] [{CorrelationId}] Prediction submitted successfully. Provider={Provider}, SessionId={SessionId}, Status={Status}, ElapsedMs={ElapsedMs}",
+                "[{FunctionName}] [{CorrelationId}] Prediction submitted successfully. Provider=local-dam, SessionId={SessionId}, Status={Status}, ElapsedMs={ElapsedMs}",
                 nameof(SubmitPredictionInternalAsync),
                 correlationId,
-                useLocalModel ? "local-dam" : "kintsugi",
                 predictionResponse.SessionId,
                 predictionResponse.Status,
                 elapsedMs);
@@ -325,7 +277,7 @@ public class LocalDamFunctions
                 Message = "Prediction submitted successfully",
                 SessionId = predictionResponse.SessionId,
                 Status = predictionResponse.Status,
-                Provider = useLocalModel ? "local-dam" : "kintsugi",
+                Provider = "local-dam",
                 PredictedScore = predictionResponse.PredictedScore,
                 PredictedScoreDepression = predictionResponse.PredictedScoreDepression,
                 PredictedScoreAnxiety = predictionResponse.PredictedScoreAnxiety,
@@ -356,10 +308,9 @@ public class LocalDamFunctions
             var elapsedMs = (DateTime.UtcNow - startedAtUtc).TotalMilliseconds;
             _logger.LogError(
                 ex,
-                "[{FunctionName}] [{CorrelationId}] Error submitting prediction via {Provider}. ElapsedMs={ElapsedMs}",
+                "[{FunctionName}] [{CorrelationId}] Error submitting prediction. ElapsedMs={ElapsedMs}",
                 nameof(SubmitPredictionInternalAsync),
                 correlationId,
-                useLocalModel ? "local-dam" : "kintsugi",
                 elapsedMs);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -368,22 +319,11 @@ public class LocalDamFunctions
                 Success = false,
                 Message = "Error submitting prediction",
                 Error = ex.Message,
-                Provider = useLocalModel ? "local-dam" : "kintsugi"
+                Provider = "local-dam"
             }, _jsonOptions));
 
             return errorResponse;
         }
-    }
-
-    private bool UseLocalDamModel()
-    {
-        var value = _configuration["USE_LOCAL_DAM_MODEL"] ?? _configuration["Values:USE_LOCAL_DAM_MODEL"];
-        return bool.TryParse(value, out var enabled) && enabled;
-    }
-
-    private IKintsugiApiService ResolveKintsugiApiService()
-    {
-        return _serviceProvider.GetRequiredService<IKintsugiApiService>();
     }
 
     private async Task<byte[]> DownloadAudioFromBlobAsync(string blobUrl)
@@ -401,21 +341,8 @@ public class LocalDamFunctions
         string containerName;
         string blobPath;
 
-        if (pathSegments[0] == "devstoreaccount1")
-        {
-            if (pathSegments.Length < 3)
-            {
-                throw new InvalidOperationException($"Invalid Azurite blob URL path: {blobUrl}");
-            }
-
-            containerName = pathSegments[1];
-            blobPath = string.Join("/", pathSegments.Skip(2));
-        }
-        else
-        {
-            containerName = pathSegments[0];
-            blobPath = string.Join("/", pathSegments.Skip(1));
-        }
+        containerName = pathSegments[0];
+        blobPath = string.Join("/", pathSegments.Skip(1));
 
         var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
         var blobClient = containerClient.GetBlobClient(blobPath);

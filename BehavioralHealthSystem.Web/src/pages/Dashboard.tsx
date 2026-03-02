@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Upload, History, Bot, TrendingUp } from 'lucide-react';
+import { Eye, Upload, History, TrendingUp } from 'lucide-react';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
-import { useFeatureFlag } from '@/hooks/useFeatureFlags';
 import { useAnnouncements } from '@/hooks/accessibility';
 import { useAuth } from '@/contexts/AuthContext';
 import { getUserId } from '@/utils';
@@ -10,8 +9,6 @@ import { getUserId } from '@/utils';
 export const Dashboard: React.FC = () => {
   const { announce } = useAnnouncements();
   const { canAccessControlPanel, user } = useAuth();
-  const { isEnabled: isAgentModeEnabled } = useFeatureFlag('AGENT_MODE_ENABLED', true);
-
   // Get authenticated user ID for API calls (matches blob storage folder structure)
   const getAuthenticatedUserId = (): string => {
     // Use authenticated user ID if available, otherwise fall back to getUserId utility
@@ -27,14 +24,6 @@ export const Dashboard: React.FC = () => {
   }, [announce]);
 
   const quickActions = [
-    {
-      title: 'Agent Experience',
-      description: 'Real-time AI voice & text chat powered by Azure OpenAI',
-      href: '/agent-experience',
-      icon: Bot,
-      color: 'warning',
-      disabled: !isAgentModeEnabled
-    },
     {
       title: 'Upload & Analyze',
       description: 'Upload audio files for behavioral health analysis',

@@ -94,7 +94,7 @@ class SmartBandDataService {
 
   constructor() {
     // Check if smart band feature is enabled via environment variable
-    this.isEnabled = env.ENABLE_SMART_BAND;
+    this.isEnabled = false;
   }
 
   /**
@@ -117,7 +117,7 @@ class SmartBandDataService {
       console.log('🏃 Checking for Microsoft Band device via local service...');
 
       // Call the local Band Service REST API
-      const bandServiceUrl = env.BAND_SERVICE_URL;
+      const bandServiceUrl = 'http://localhost:8765';
       const response = await fetch(`${bandServiceUrl}/api/band/status`, {
         method: 'GET',
         headers: {
@@ -213,7 +213,7 @@ class SmartBandDataService {
       console.log('📊 Collecting sensor data from Band Service...');
 
       // Call the local Band Service REST API to collect data
-      const bandServiceUrl = env.BAND_SERVICE_URL;
+      const bandServiceUrl = 'http://localhost:8765';
       const response = await fetch(`${bandServiceUrl}/api/band/collect`, {
         method: 'POST',
         headers: {

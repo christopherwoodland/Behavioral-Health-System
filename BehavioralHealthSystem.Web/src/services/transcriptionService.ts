@@ -111,14 +111,6 @@ class TranscriptionService {
     return env.ENABLE_TRANSCRIPTION;
   }
 
-  /**
-   * Check if Kintsugi assessment is enabled via feature flag
-   * @returns boolean
-   */
-  isKintsugiEnabled(): boolean {
-    // Enable Kintsugi by default unless explicitly disabled
-    return env.ENABLE_KINTSUGI;
-  }
 }
 
 export const transcriptionService = new TranscriptionService();

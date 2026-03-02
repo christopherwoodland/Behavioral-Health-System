@@ -1,6 +1,8 @@
+using System.ClientModel;
 using Azure;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using OpenAI.Chat;
 
 namespace BehavioralHealthSystem.Services;
 
@@ -73,33 +75,32 @@ Corrected text:";
             var deploymentName = _openAIOptions.DeploymentName;
 
             // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
-            OpenAIClient client = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
-                ? new OpenAIClient(endpoint, new AzureKeyCredential(_openAIOptions.ApiKey))
-                : new OpenAIClient(endpoint, new DefaultAzureCredential());
+            AzureOpenAIClient azureClient = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
+                ? new AzureOpenAIClient(endpoint, new ApiKeyCredential(_openAIOptions.ApiKey))
+                : new AzureOpenAIClient(endpoint, new DefaultAzureCredential());
+
+            var chatClient = azureClient.GetChatClient(deploymentName);
 
             // Check if this is a GPT-5 model based on deployment name
             bool isGpt5Model = deploymentName.ToLowerInvariant().Contains("gpt-5");
 
-            // Configure request options with conditional parameters based on model type
-            var requestOptions = new ChatCompletionsOptions()
+            // Build messages
+            var messages = new List<ChatMessage>
             {
-                MaxTokens = 1000, // Use a reasonable limit for grammar correction
-                DeploymentName = deploymentName
+                new SystemChatMessage("You are an expert editor and proofreader. Your task is to correct grammar, spelling, and punctuation while preserving the original meaning and tone. Return only the corrected text without any explanations."),
+                new UserChatMessage(prompt)
             };
 
-            requestOptions.Messages.Add(new ChatRequestSystemMessage("You are an expert editor and proofreader. Your task is to correct grammar, spelling, and punctuation while preserving the original meaning and tone. Return only the corrected text without any explanations."));
-            requestOptions.Messages.Add(new ChatRequestUserMessage(prompt));
+            // Configure request options
+            // GPT-5 models don't support max_tokens - they use max_completion_tokens internally
+            var requestOptions = new ChatCompletionOptions();
 
-            if (isGpt5Model)
+            if (!isGpt5Model)
             {
-                // GPT-5 model has limited parameter support, using minimal configuration
-                // Temperature and TopP use default values (not configurable)
-            }
-            else
-            {
-                // Non-GPT-5 models: set parameters for most deterministic results
-                requestOptions.Temperature = 0.2f; // Low temperature for consistent corrections
-                requestOptions.NucleusSamplingFactor = 0.2f; // Low top-p for focused responses
+                // Non-GPT-5 models: set max tokens and parameters for most deterministic results
+                requestOptions.MaxOutputTokenCount = 1000;
+                requestOptions.Temperature = 0.2f;
+                requestOptions.TopP = 0.2f;
                 requestOptions.FrequencyPenalty = 0;
                 requestOptions.PresencePenalty = 0;
             }
@@ -108,11 +109,11 @@ Corrected text:";
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             // Make the API call with timeout
-            var response = await client.GetChatCompletionsAsync(requestOptions, cancellationTokenSource.Token);
+            ClientResult<ChatCompletion> response = await chatClient.CompleteChatAsync(messages, requestOptions, cancellationTokenSource.Token);
 
-            if (response?.Value?.Choices?.Count > 0)
+            if (response?.Value != null)
             {
-                var content = response.Value.Choices[0].Message.Content;
+                var content = response.Value.Content?.Count > 0 ? response.Value.Content[0].Text : null;
                 _logger.LogInformation("[{MethodName}] Azure OpenAI API call successful. Model: {Model}, Response length: {Length}",
                     nameof(CallAzureOpenAIAsync), isGpt5Model ? "GPT-5" : "Non-GPT-5", content?.Length ?? 0);
 
@@ -126,8 +127,8 @@ Corrected text:";
             }
             else
             {
-                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response. Response is null: {IsNull}, Choices count: {Count}",
-                    nameof(CallAzureOpenAIAsync), response?.Value == null, response?.Value?.Choices?.Count ?? 0);
+                _logger.LogWarning("[{MethodName}] Azure OpenAI API returned empty response.",
+                    nameof(CallAzureOpenAIAsync));
                 return null;
             }
         }

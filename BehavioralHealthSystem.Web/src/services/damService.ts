@@ -3,7 +3,7 @@
  *
  * Provides a helper to submit audio files to the SK orchestration backend
  * (`/api/process-audio-upload`) and map the response into the same shape
- * that the UploadAnalyze page uses for Kintsugi results.
+ * that the UploadAnalyze page uses for analysis results.
  */
 
 import { env } from '@/utils/env';
@@ -90,7 +90,7 @@ export async function submitToDam(
  * Map a `DamPipelineResult` into the `PredictionResult` shape used by the frontend.
  *
  * This enables the Sessions, SessionDetail, and Predictions pages to render
- * DAM results identically to Kintsugi cloud results.
+ * DAM results in a consistent PredictionResult format.
  */
 export function mapDamResultToPrediction(pipeline: DamPipelineResult): PredictionResult {
   const pred = pipeline.predictionResponse;
@@ -125,11 +125,4 @@ export function mapDamResultToPrediction(pipeline: DamPipelineResult): Predictio
     model_granularity: pred?.model_granularity,
     is_calibrated: pred?.is_calibrated ?? false,
   };
-}
-
-/**
- * Convenience: check whether DAM mode is enabled via env.
- */
-export function isDamModeEnabled(): boolean {
-  return env.USE_LOCAL_DAM_MODEL;
 }

@@ -3,26 +3,26 @@
     Docker Compose management script for BHS (Behavioral Health System)
 
 .DESCRIPTION
-    This script provides commands to manage Docker Compose environments for local and production.
-    - Local: Uses docker-compose.local.yml with hardcoded dev values
+    This script provides commands to manage Docker Compose environments for development and production.
+    - Development: Uses docker-compose.development.yml for development
     - Production: Uses docker-compose.prod.yml with .env.prod file (managed identity, no API keys)
 
 .PARAMETER Action
     The action to perform: up, down, rebuild, logs, status, restart
 
 .PARAMETER Environment
-    The environment to target: local (default), prod
+    The environment to target: development (default), production
 
 .PARAMETER Service
-    Optional specific service to target: api, web, azurite (local only)
+    Optional specific service to target: api, web
 
 .EXAMPLE
-    .\docker-manage.ps1 -Action up -Environment local
-    Starts all local development containers
+    .\docker-manage.ps1 -Action up -Environment development
+    Starts all development containers
 
 .EXAMPLE
-    .\docker-manage.ps1 -Action rebuild -Environment local
-    Tears down, rebuilds, and starts local containers
+    .\docker-manage.ps1 -Action rebuild -Environment development
+    Tears down, rebuilds, and starts development containers
 
 .EXAMPLE
     .\docker-manage.ps1 -Action logs -Service api
@@ -35,11 +35,11 @@ param(
     [string]$Action,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("local", "prod")]
-    [string]$Environment = "local",
+    [ValidateSet("development", "production")]
+    [string]$Environment = "development",
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("api", "web", "azurite", "")]
+    [ValidateSet("api", "web", "")]
     [string]$Service = ""
 )
 
@@ -53,13 +53,13 @@ $SolutionRoot = Split-Path -Parent $ScriptDir
 Push-Location $SolutionRoot
 
 # Determine compose file based on environment
-$ComposeFile = if ($Environment -eq "local") {
-    "docker-compose.local.yml"
+$ComposeFile = if ($Environment -eq "development") {
+    "docker-compose.development.yml"
 } else {
     "docker-compose.prod.yml"
 }
 
-$EnvFile = if ($Environment -eq "prod") { ".env.prod" } else { $null }
+$EnvFile = if ($Environment -eq "production") { ".env.prod" } else { $null }
 
 # Container name prefix
 $ContainerPrefix = if ($Environment -eq "local") { "bhs" } else { "bhs" }
@@ -132,7 +132,7 @@ function Invoke-DockerDown {
 function Invoke-DockerRebuild {
     Write-Header "Rebuilding $Environment Environment"
 
-    if ($Environment -eq "prod" -and -not (Test-Path ".env.prod")) {
+    if ($Environment -eq "production" -and -not (Test-Path ".env.prod")) {
         Write-ErrorMsg ".env.prod file not found!"
         Write-Host "Copy .env.prod.template to .env.prod and fill in the values." -ForegroundColor Yellow
         return
@@ -221,7 +221,7 @@ function Invoke-DockerShell {
 
     Write-Header "Opening shell in $Service"
 
-    $containerName = if ($Environment -eq "local") {
+    $containerName = if ($Environment -eq "development") {
         "bhs-$Service"
     } else {
         "bhs-$Service-prod"

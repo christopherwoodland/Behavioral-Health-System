@@ -42,25 +42,6 @@ param azureAdApiClientId string = ''
 param azureAdTenantId string = subscription().tenantId
 
 // ============================================================================
-// AZURE OPENAI REALTIME API PARAMETERS (UI)
-// ============================================================================
-@description('Azure OpenAI Realtime deployment name')
-param azureOpenAIRealtimeDeployment string = 'gpt-realtime'
-
-@description('Azure OpenAI Realtime API version')
-param azureOpenAIRealtimeApiVersion string = '2025-04-01-preview'
-
-@description('Azure OpenAI resource name for Realtime API')
-param azureOpenAIResourceName string = ''
-
-@description('Azure OpenAI WebRTC region')
-param azureOpenAIWebRTCRegion string = 'eastus2'
-
-@secure()
-@description('Azure OpenAI Realtime API Key')
-param azureOpenAIRealtimeKey string = ''
-
-// ============================================================================
 // AGENT CONFIGURATION PARAMETERS
 // ============================================================================
 @description('Extended Assessment OpenAI Deployment')
@@ -230,7 +211,6 @@ module keyVault './modules/keyvault-private.bicep' = {
     privateEndpointSubnetId: networking.outputs.privateEndpointsSubnetId
     vaultPrivateDnsZoneId: privateDns.outputs.vaultPrivateDnsZoneId
     kintsugiApiKey: kintsugiApiKey
-    azureOpenAIRealtimeKey: azureOpenAIRealtimeKey
   }
 }
 
@@ -295,11 +275,6 @@ module containerApps './modules/container-apps-private.bicep' = {
     tenantId: azureAdTenantId
     uiImageTag: containerImageTag
     apiImageTag: containerImageTag
-    // Azure OpenAI Realtime API parameters
-    azureOpenAIRealtimeDeployment: azureOpenAIRealtimeDeployment
-    azureOpenAIRealtimeApiVersion: azureOpenAIRealtimeApiVersion
-    azureOpenAIResourceName: azureOpenAIResourceName
-    azureOpenAIWebRTCRegion: azureOpenAIWebRTCRegion
     // Agent configuration
     extendedAssessmentDeployment: extendedAssessmentDeployment
     agentModelDeployment: agentModelDeployment

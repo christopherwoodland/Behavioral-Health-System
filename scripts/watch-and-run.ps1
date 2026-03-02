@@ -7,7 +7,7 @@ Write-Host "Watching for changes in:" -ForegroundColor Yellow
 Write-Host "  - BehavioralHealthSystem.Web/src/**/*" -ForegroundColor Gray
 Write-Host "  - BehavioralHealthSystem.Functions/**/*.cs" -ForegroundColor Gray
 Write-Host "  - BehavioralHealthSystem.Helpers/**/*.cs" -ForegroundColor Gray
-Write-Host "  - BehavioralHealthSystem.Console/**/*.cs" -ForegroundColor Gray
+Write-Host "  - BehavioralHealthSystem.DSM5Import/**/*.cs" -ForegroundColor Gray
 Write-Host ""
 
 $lastRun = Get-Date
@@ -18,7 +18,7 @@ $watchPaths = @(
     "BehavioralHealthSystem.Web\src",
     "BehavioralHealthSystem.Functions",
     "BehavioralHealthSystem.Helpers",
-    "BehavioralHealthSystem.Console"
+    "BehavioralHealthSystem.DSM5Import"
 )
 
 # File extensions to watch
@@ -42,7 +42,7 @@ function Start-LocalRun {
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
 
     try {
-        & "$PSScriptRoot\scripts\local-run.ps1"
+        & "$PSScriptRoot\local-run.ps1"
         Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor DarkGray
         Write-Host "✅ local-run.ps1 completed successfully" -ForegroundColor Green
     }

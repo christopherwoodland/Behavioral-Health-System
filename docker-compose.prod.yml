@@ -1,8 +1,10 @@
+# Usage: docker compose --env-file docker.env -f docker-compose.prod.yml up -d
+
 services:
   # BHS Functions API - Production
   # NOTE: In production, this runs on Azure Container Apps/App Service with:
   # - Managed Identity for Azure services (no API keys)
-  # - Key Vault references for third-party secrets (Kintsugi)
+  # - Key Vault references for third-party secrets
   # - Environment variables set via Azure portal/Bicep
   api:
     image: bhs-api:prod
@@ -22,13 +24,6 @@ services:
       - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
       - ASPNETCORE_ENVIRONMENT=Production
       - AZURE_FUNCTIONS_ENVIRONMENT=Production
-      # Kintsugi API - Key from Key Vault reference in Azure
-      - KINTSUGI_API_KEY=${KINTSUGI_API_KEY}
-      - KINTSUGI_BASE_URL=https://api.kintsugihealth.com/v2
-      - KINTSUGI_TIMEOUT_SECONDS=300
-      - KINTSUGI_MAX_RETRY_ATTEMPTS=3
-      - KINTSUGI_RETRY_DELAY_MS=1000
-      - KINTSUGI_AUTO_PROVIDE_CONSENT=false
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
@@ -51,8 +46,6 @@ services:
       - EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE=0.2
       - EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS=120
       - EXTENDED_ASSESSMENT_USE_FALLBACK=false
-      # Agent mode
-      - AGENT_MODE_ENABLED=false
       # Content Understanding - Managed Identity (no key)
       - AZURE_CONTENT_UNDERSTANDING_ENDPOINT=${AZURE_CONTENT_UNDERSTANDING_ENDPOINT}
       # Document Intelligence - Managed Identity (no key)
@@ -106,50 +99,21 @@ services:
       # Azure Blob Storage
       - VITE_STORAGE_CONTAINER_NAME=audio-uploads
 
-      # Azure OpenAI Realtime API
-      - VITE_AZURE_OPENAI_REALTIME_API_VERSION=2025-04-01-preview
-      - VITE_AZURE_OPENAI_REALTIME_DEPLOYMENT=gpt-realtime
-      - VITE_AZURE_OPENAI_REALTIME_KEY=${VITE_AZURE_OPENAI_REALTIME_KEY}
-      - VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME=${VITE_AZURE_OPENAI_REALTIME_RESOURCE_NAME}
-      - VITE_AZURE_OPENAI_WEBRTC_REGION=${VITE_AZURE_OPENAI_WEBRTC_REGION}
-
-      # Agent Voice Configuration
-      - VITE_TARS_VOICE=echo
-      - VITE_JEKYLL_VOICE=shimmer
-      - VITE_JEKYLL_PHQ2_THRESHOLD=1
-      - VITE_MATRON_VOICE=coral
-
       # Feature Flags (Production settings)
       - VITE_DEV_ENVIRONMENT=false
       - VITE_DEV_ENVIRONMENT_TEXT=
       - VITE_AUTO_START_SESSION=false
       - VITE_ENABLE_DEBUG_LOGGING=false
       - VITE_ENABLE_FFMPEG_WORKER=true
-      - VITE_ENABLE_KINTSUGI=true
       - VITE_ENABLE_TRANSCRIPTION=true
       - VITE_ENABLE_AI_RISK_ASSESSMENT=true
-      - VITE_AGENT_MODE_ENABLED=false
-      - VITE_ENABLE_JEKYLL_AGENT=true
-
       # Voice Recording Configuration
       - VITE_ENABLE_SESSION_VOICE_RECORDING=true
-
-      # Biometric Data Service Configuration
-      - VITE_BIOMETRIC_SAVE_DELAY_MS=2000
-      - VITE_MATRON_MAX_COLLECTION_ATTEMPTS=2
-      - VITE_AGENT_HANDOFF_DELAY_MS=2000
 
       # API Request Configuration
       - VITE_API_TIMEOUT_MS=30000
       - VITE_API_MAX_RETRIES=3
       - VITE_API_RETRY_DELAY_MS=1000
-
-      # WebRTC Configuration
-      - VITE_REALTIME_MAX_RECONNECTION_ATTEMPTS=3
-      - VITE_REALTIME_RECONNECTION_DELAY_MS=2000
-      - VITE_REALTIME_DATA_CHANNEL_TIMEOUT_MS=5000
-      - VITE_INITIAL_GREETING_SESSION_DELAY_MS=1500
-      - VITE_INITIAL_GREETING_RESPONSE_DELAY_MS=300
 
       # Polling Configuration
       - VITE_CONTROL_PANEL_REFRESH_INTERVAL=30

@@ -40,21 +40,6 @@
     "openaiEndpoint": {
       "value": ""
     },
-    "azureOpenAIRealtimeDeployment": {
-      "value": "gpt-realtime"
-    },
-    "azureOpenAIRealtimeApiVersion": {
-      "value": "2025-04-01-preview"
-    },
-    "azureOpenAIResourceName": {
-      "value": "cwood-mgsuknv5-eastus2"
-    },
-    "azureOpenAIWebRTCRegion": {
-      "value": "eastus2"
-    },
-    "azureOpenAIRealtimeKey": {
-      "value": ""
-    },
     "extendedAssessmentDeployment": {
       "value": "gpt-5.2"
     },

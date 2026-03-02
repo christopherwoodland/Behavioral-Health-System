@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class PredictErrorTests
-    {
-        [TestMethod]
-        public void PredictError_Constructor_Succeeds()
-        {
-            var model = new PredictError();
-            Assert.IsNotNull(model);
-        }
-    }
-}
+namespace BehavioralHealthSystem.Testsssert.AreEqual(string.Empty, error.Detail);
+        Assert.AreEqual(0, error.Status);
+        Assert.AreEqual(string.Empty, error.Title);

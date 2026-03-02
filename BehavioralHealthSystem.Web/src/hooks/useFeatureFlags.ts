@@ -15,17 +15,10 @@ declare global {
 
 // Map of feature flag names to their environment variable names
 const FEATURE_FLAG_ENV_MAP: Record<string, string> = {
-  AGENT_MODE_ENABLED: 'VITE_AGENT_MODE_ENABLED',
-  DEV_ENVIRONMENT: 'VITE_DEV_ENVIRONMENT',
-  AUTO_START_SESSION: 'VITE_AUTO_START_SESSION',
   ENABLE_DEBUG_LOGGING: 'VITE_ENABLE_DEBUG_LOGGING',
   ENABLE_FFMPEG_WORKER: 'VITE_ENABLE_FFMPEG_WORKER',
-  ENABLE_KINTSUGI: 'VITE_ENABLE_KINTSUGI',
   ENABLE_TRANSCRIPTION: 'VITE_ENABLE_TRANSCRIPTION',
   ENABLE_AI_RISK_ASSESSMENT: 'VITE_ENABLE_AI_RISK_ASSESSMENT',
-  ENABLE_JEKYLL_AGENT: 'VITE_ENABLE_JEKYLL_AGENT',
-  ENABLE_SESSION_VOICE_RECORDING: 'VITE_ENABLE_SESSION_VOICE_RECORDING',
-  ENABLE_SMART_BAND: 'VITE_ENABLE_SMART_BAND',
   ENABLE_ENTRA_AUTH: 'VITE_ENABLE_ENTRA_AUTH',
 };
 
@@ -94,7 +87,7 @@ export const useFeatureFlags = () => {
 
 /**
  * Hook for checking a specific feature flag
- * @param flagName - Name of the feature flag to check (e.g., "AGENT_MODE_ENABLED")
+ * @param flagName - Name of the feature flag to check (e.g., "ENABLE_TRANSCRIPTION")
  * @param defaultValue - Default value if the flag is not found
  */
 export const useFeatureFlag = (flagName: string, defaultValue: boolean = true) => {
@@ -110,15 +103,6 @@ export const useFeatureFlag = (flagName: string, defaultValue: boolean = true) =
     error: null,
     isFlagMissing: envValue === undefined,
   };
-};
-
-/**
- * Helper function to check agent mode without a hook (synchronous)
- * Useful for non-React contexts or conditional logic
- */
-export const checkAgentModeEnabled = (defaultValue: boolean = false): boolean => {
-  const envValue = getEnvVar('VITE_AGENT_MODE_ENABLED');
-  return parseEnvBoolean(envValue, defaultValue);
 };
 
 /**

@@ -1,21 +1,56 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+
 namespace BehavioralHealthSystem.Tests
 {
     [TestClass]
     public class HealthCheckFunctionTests
     {
-        [TestMethod]
-        public void HealthCheckFunction_Constructor_Succeeds()
+        private Mock<ILogger<HealthCheckFunction>> _loggerMock = null!;
+        private Mock<HealthCheckService> _healthCheckServiceMock = null!;
+        private Mock<IConfiguration> _configurationMock = null!;
+
+        [TestInitialize]
+        public void Setup()
         {
-            // Arrange
-            var loggerMock = new Mock<ILogger<HealthCheckFunction>>();
-            var healthCheckServiceMock = new Mock<HealthCheckService>();
-            var configurationMock = new Mock<IConfiguration>();
+            _loggerMock = new Mock<ILogger<HealthCheckFunction>>();
+            _healthCheckServiceMock = new Mock<HealthCheckService>();
+            _configurationMock = new Mock<IConfiguration>();
+        }
 
-            // Act
-            var function = new HealthCheckFunction(loggerMock.Object, healthCheckServiceMock.Object, configurationMock.Object);
+        #region Constructor Tests
 
-            // Assert
+        [TestMethod]
+        public void Constructor_ValidArgs_CreatesInstance()
+        {
+            var function = new HealthCheckFunction(
+                _loggerMock.Object,
+                _healthCheckServiceMock.Object,
+                _configurationMock.Object);
+
             Assert.IsNotNull(function);
         }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Constructor_NullLogger_ThrowsArgumentNullException()
+        {
+            new HealthCheckFunction(null!, _healthCheckServiceMock.Object, _configurationMock.Object);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Constructor_NullHealthCheckService_ThrowsArgumentNullException()
+        {
+            new HealthCheckFunction(_loggerMock.Object, null!, _configurationMock.Object);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentNullException))]
+        public void Constructor_NullConfiguration_ThrowsArgumentNullException()
+        {
+            new HealthCheckFunction(_loggerMock.Object, _healthCheckServiceMock.Object, null!);
+        }
+
+        #endregion
     }
 }

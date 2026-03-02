@@ -33,8 +33,8 @@ LICENSE
 # Test projects
 BehavioralHealthSystem.Tests/
 
-# Console project (not needed for Functions)
-BehavioralHealthSystem.Console/
+# DSM5Import project (not needed for Functions)
+BehavioralHealthSystem.DSM5Import/
 
 # Web project (separate image)
 BehavioralHealthSystem.Web/

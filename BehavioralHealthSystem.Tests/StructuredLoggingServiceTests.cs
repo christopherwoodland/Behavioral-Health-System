@@ -166,7 +166,7 @@ public class StructuredLoggingServiceTests
     public void LogExternalCall_WithSuccessfulCall_LogsInformation()
     {
         // Arrange
-        var serviceName = "KintsugiAPI";
+        var serviceName = "LocalDAM";
         var endpoint = "/api/v1/assess";
         var method = "POST";
         var elapsedMs = 150L;
@@ -190,7 +190,7 @@ public class StructuredLoggingServiceTests
     public void LogExternalCall_WithErrorStatusCode_LogsWarning()
     {
         // Arrange
-        var serviceName = "KintsugiAPI";
+        var serviceName = "LocalDAM";
         var endpoint = "/api/v1/assess";
         var method = "POST";
         var elapsedMs = 150L;
@@ -214,7 +214,7 @@ public class StructuredLoggingServiceTests
     public void LogExternalCall_WithAllParameters_IncludesAllContextData()
     {
         // Arrange
-        var serviceName = "KintsugiAPI";
+        var serviceName = "LocalDAM";
         var endpoint = "/api/v1/assess";
         var method = "POST";
         var elapsedMs = 150L;

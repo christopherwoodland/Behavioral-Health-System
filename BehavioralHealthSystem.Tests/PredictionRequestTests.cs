@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class PredictionRequestTests
-    {
-        [TestMethod]
-        public void PredictionRequest_Constructor_Succeeds()
-        {
-            var model = new PredictionRequest();
-            Assert.IsNotNull(model);
-        }
-    }
-}
+namespace BehavioralHealthSystem.Testsssert.AreEqual(string.Empty, request.SessionId);
+        Assert.IsNotNull(request.AudioData);
+        Assert.AreEqual(0, request.AudioData.Length);

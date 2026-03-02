@@ -15,10 +15,12 @@
     "AzureWebJobsStorage__tableServiceUri": "https://<storage-account-name>.table.core.windows.net",
     "DSM5_STORAGE_ACCOUNT_NAME": "",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
+
     "AZURE_OPENAI_ENABLED": "false",
     "AZURE_OPENAI_ENDPOINT": "http://localhost:11434",
     "AZURE_OPENAI_DEPLOYMENT": "gpt-4o-mini",
     "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+
     "EXTENDED_ASSESSMENT_OPENAI_ENABLED": "false",
     "EXTENDED_ASSESSMENT_OPENAI_ENDPOINT": "http://localhost:11434",
     "EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT": "gpt-4o-mini",
@@ -27,13 +29,7 @@
     "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",
     "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",
     "EXTENDED_ASSESSMENT_USE_FALLBACK": "false",
-    "KINTSUGI_API_KEY": "",
-    "KINTSUGI_BASE_URL": "http://localhost:8080/mock/kintsugi/v2",
-    "KINTSUGI_AUTO_PROVIDE_CONSENT": "false",
-    "KINTSUGI_TIMEOUT_SECONDS": "300",
-    "KINTSUGI_MAX_RETRY_ATTEMPTS": "3",
-    "KINTSUGI_RETRY_DELAY_MS": "1000",
-    "USE_LOCAL_DAM_MODEL": "false",
+
     "LOCAL_DAM_BASE_URL": "http://localhost:8000",
     "LOCAL_DAM_INITIATE_PATH": "initiate",
     "LOCAL_DAM_PREDICTION_PATH": "predict",
@@ -43,27 +39,21 @@
     "LOCAL_DAM_HEALTH_PATH": "health",
     "LOCAL_DAM_WARMUP_TIMEOUT_SECONDS": "600",
     "LOCAL_DAM_WARMUP_POLL_SECONDS": "5",
+
     "AZURE_SPEECH_ENDPOINT": "",
     "AZURE_SPEECH_KEY": "",
     "AZURE_SPEECH_REGION": "",
     "AZURE_SPEECH_LOCALE": "en-US",
     "AZURE_SPEECH_API_VERSION": "2024-11-15",
+    "AZURE_SPEECH_ENHANCED_MODE": "false",
+
     "AZURE_CONTENT_UNDERSTANDING_ENDPOINT": "",
     "DocumentIntelligenceEndpoint": "",
     "DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT": "",
     "DSM5_CONTAINER_NAME": "dsm5-data",
     "DSM5_EXTRACTION_METHOD": "CONTENT_UNDERSTANDING",
-    "AGENT_MODE_ENABLED": "false",
-    "AGENT_ENABLED": "false",
-    "AGENT_ENDPOINT": "http://localhost:11434",
-    "AGENT_MODEL_DEPLOYMENT": "gpt-4o-mini",
-    "AGENT_SUPPORTS_TEMPERATURE": "false",
-    "AGENT_SUPPORTS_MAX_TOKENS": "false",
-    "AGENT_TIMEOUT_SECONDS": "60",
-    "GRAMMAR_AGENT_NAME": "GrammarCorrectionAgent",
-    "GRAMMAR_AGENT_INCLUDE_EXPLANATIONS": "false",
-    "GRAMMAR_AGENT_PRESERVE_FORMATTING": "true",
-    "GRAMMAR_AGENT_SUGGEST_ALTERNATIVES": "false",
+
+
     "ENTRA_TENANT_ID": "",
     "ENTRA_CLIENT_ID": ""
   }

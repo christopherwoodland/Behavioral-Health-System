@@ -6,7 +6,7 @@ Sets up local development environment with necessary configuration.
 Configures the local development environment for the Behavioral Health System:
 - Copies environment templates
 - Sets up local.settings.json for Azure Functions
-- Configures .env.local for React frontend
+- Configures .env.development for React frontend
 - Adds Key Vault references for local development
 
 .PARAMETER KeyVaultName
@@ -91,17 +91,17 @@ try {
         Write-Status "Template not found, using existing local.settings.json"
     }
 
-    # Setup React frontend .env.local
-    Write-Status "Configuring React frontend .env.local..."
+    # Setup React frontend .env.development
+    Write-Status "Configuring React frontend .env.development..."
     $webDir = Join-Path $repoRoot "BehavioralHealthSystem.Web"
-    $envPath = Join-Path $webDir ".env.local"
+    $envPath = Join-Path $webDir ".env.development"
 
     # Get Function App URL
     $functionApps = az functionapp list --resource-group $ResourceGroupName --query "[0]" --output json | ConvertFrom-Json
     $functionAppUrl = "https://$($functionApps.defaultHostName)/api"
 
     if (-not (Test-Path $envPath)) {
-        Write-Status "Creating .env.local for React frontend..."
+        Write-Status "Creating .env.development for React frontend..."
         $envContent = @"
 # API Configuration
 VITE_API_BASE_URL=$functionAppUrl
@@ -113,21 +113,15 @@ VITE_AZURE_TENANT_ID=3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
 VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
 VITE_AZURE_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
-
-# Agent Voice Configuration
-VITE_TARS_VOICE=echo
-VITE_JEKYLL_VOICE=shimmer
-VITE_JEKYLL_PHQ2_THRESHOLD=1
-VITE_MATRON_VOICE=coral
 "@
         Set-Content -Path $envPath -Value $envContent
-        Write-Success ".env.local created with recommended settings"
+        Write-Success ".env.development created with recommended settings"
     } else {
-        Write-Status "Updating existing .env.local with API URL..."
+        Write-Status "Updating existing .env.development with API URL..."
         $envContent = Get-Content $envPath
         $envContent = $envContent -replace 'VITE_API_BASE_URL=.*', "VITE_API_BASE_URL=$functionAppUrl"
         Set-Content -Path $envPath -Value $envContent
-        Write-Success ".env.local updated"
+        Write-Success ".env.development updated"
     }
 
     Write-Host ""
@@ -139,7 +133,7 @@ VITE_MATRON_VOICE=coral
     Write-Host "✓ Configuration Summary:" -ForegroundColor $Green
     Write-Host "  • Function App local.settings.json: $localSettingsPath"
     Write-Host "    - Key Vault URI: $keyVaultUri"
-    Write-Host "  • React frontend .env.local: $envPath"
+    Write-Host "  • React frontend .env.development: $envPath"
     Write-Host "    - API Base URL: $functionAppUrl"
     Write-Host ""
 

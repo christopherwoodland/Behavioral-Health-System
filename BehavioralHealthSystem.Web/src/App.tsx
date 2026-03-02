@@ -11,7 +11,7 @@ import { APP_ROLES } from '@/config/authConfig';
 
 // Page components
 import { Dashboard } from '@/pages/Dashboard';
-import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, AgentExperience, SystemHealth, NotFound } from '@/pages';
+import { UploadAnalyze, Sessions, SessionDetail, Predictions, ControlPanel, SystemHealth, NotFound } from '@/pages';
 import GroupSessionsDetail from '@/pages/GroupSessionsDetail';
 import DamTestBench from '@/pages/DamTestBench';
 
@@ -107,14 +107,7 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
-                    <Route
-                      path="/agent-experience"
-                      element={
-                        <ProtectedRoute requireRoles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]}>
-                          <AgentExperience />
-                        </ProtectedRoute>
-                      }
-                    />
+
                     <Route
                       path="/health"
                       element={

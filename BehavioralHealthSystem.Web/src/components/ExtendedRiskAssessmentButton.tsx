@@ -7,10 +7,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Brain, Loader2, AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { ExtendedRiskAssessmentDisplay } from './ExtendedRiskAssessmentDisplay';
-import { 
-  ExtendedRiskAssessment, 
-  ExtendedRiskAssessmentResponse, 
-  ExtendedRiskAssessmentStatusResponse 
+import {
+  ExtendedRiskAssessment,
+  ExtendedRiskAssessmentResponse,
+  ExtendedRiskAssessmentStatusResponse
 } from '../types/extendedRiskAssessment';
 import { apiPost, apiGet } from '../utils/api';
 import { config } from '../config/constants';
@@ -78,14 +78,14 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   const [assessment, setAssessment] = useState<ExtendedRiskAssessment | null>(existingAssessment || null);
   const [status, setStatus] = useState<ExtendedRiskAssessmentStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Job-related state
   const [currentJob, setCurrentJob] = useState<ExtendedAssessmentJob | null>(null);
   const [jobProgress, setJobProgress] = useState(0);
   const [jobStep, setJobStep] = useState<string>('');
   const [processingStartTime, setProcessingStartTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
-  
+
   // Refs for cleanup
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const elapsedTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -106,7 +106,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   useEffect(() => {
     console.log('[ExtendedRiskAssessment] Component mounted for session:', sessionId);
     console.log('[ExtendedRiskAssessment] existingAssessment prop:', existingAssessment);
-    
+
     if (existingAssessment) {
       console.log('[ExtendedRiskAssessment] ✅ Existing assessment provided, displaying immediately');
       setAssessment(existingAssessment);
@@ -132,13 +132,13 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
       if (response.success && response.data) {
         // Parse data if it's a string (sometimes API returns stringified JSON)
-        const parsedData = typeof response.data === 'string' 
-          ? JSON.parse(response.data) 
+        const parsedData = typeof response.data === 'string'
+          ? JSON.parse(response.data)
           : response.data;
-        
+
         console.log('[ExtendedRiskAssessment] Status check successful, data:', parsedData);
         setStatus(parsedData);
-        
+
         // If assessment exists, fetch it
         if (response.data.hasExtendedAssessment) {
           await fetchAssessment();
@@ -169,19 +169,21 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       // Check both wrapper success and inner API response success
       if (response.success && response.data) {
         // Parse data if it's a string (sometimes API returns stringified JSON)
-        const parsedData = typeof response.data === 'string' 
-          ? JSON.parse(response.data) 
+        const parsedData = typeof response.data === 'string'
+          ? JSON.parse(response.data)
           : response.data;
-        
+
         console.log('[ExtendedRiskAssessment] Wrapper success: true, checking inner response...');
         console.log('[ExtendedRiskAssessment] parsedData.success:', parsedData.success);
         console.log('[ExtendedRiskAssessment] parsedData.extendedRiskAssessment exists:', !!parsedData.extendedRiskAssessment);
-        
+
         if (parsedData.success && parsedData.extendedRiskAssessment) {
           console.log('[ExtendedRiskAssessment] ✅ Assessment fetched successfully');
           setAssessment(parsedData.extendedRiskAssessment);
           setIsLoading(false); // Make sure to stop loading when we get the result
           onComplete?.(parsedData.extendedRiskAssessment);
+        } else if (parsedData.success && parsedData.hasExtendedAssessment === false) {
+          console.log('[ExtendedRiskAssessment] ℹ️ No assessment generated yet for this session');
         } else {
           console.warn('[ExtendedRiskAssessment] ⚠️ Inner response missing success or extendedRiskAssessment');
         }
@@ -196,17 +198,17 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   // Start async job for assessment generation
   const generateAssessment = async () => {
     console.log('[ExtendedRiskAssessment] 🚀 Starting async job for session:', sessionId);
-    
+
     // Call onStart callback to notify parent component
     onStart?.();
-    
+
     setIsLoading(true);
     setError(null);
     setCurrentJob(null);
     setJobProgress(0);
     setJobStep('');
     setElapsedTime(0);
-    
+
     // Clear existing assessment when regenerating to show loading state
     if (assessment) {
       console.log('[ExtendedRiskAssessment] Clearing existing assessment for regeneration');
@@ -224,15 +226,15 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       );
 
       console.log('[ExtendedRiskAssessment] 📥 Job start response:', JSON.stringify(response, null, 2));
-      
+
       if (response.success && response.data) {
         // Parse the JSON string response
         const jobData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
         console.log('[ExtendedRiskAssessment] ✅ Job started successfully! Job ID:', jobData.jobId);
-        
+
         setJobStep('Job created, starting processing...');
         setProcessingStartTime(new Date());
-        
+
         // Start polling for job status
         startJobPolling(jobData.jobId);
       } else {
@@ -254,7 +256,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   // Start polling for job completion
   const startJobPolling = (jobId: string) => {
     console.log('[ExtendedRiskAssessment] 🔄 Starting job polling for:', jobId);
-    
+
     // Start elapsed time counter
     elapsedTimeIntervalRef.current = setInterval(() => {
       if (processingStartTime) {
@@ -262,29 +264,29 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         setElapsedTime(elapsed);
       }
     }, 1000);
-    
+
     // Poll job status at configurable interval (default 5 seconds)
     const pollJob = async () => {
       try {
         const response = await apiGet<JobStatusResponse>(
           `${apiBaseUrl}/jobs/${jobId}`
         );
-        
+
         // Parse response.data if it's a string
         const jobData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-        
+
         if (response.success && jobData?.job) {
           const job = jobData.job;
           setCurrentJob(job);
           setJobProgress(job.progressPercentage);
           setJobStep(job.currentStep || '');
-          
+
           console.log('[ExtendedRiskAssessment] Job status:', job.status, job.progressPercentage + '%', job.currentStep);
-          
+
           if (job.isCompleted) {
             console.log('[ExtendedRiskAssessment] 🎉 Job completed!');
             stopJobPolling();
-            
+
             if (job.status === 'completed') {
               // Job completed successfully, fetch the result
               await fetchAssessment();
@@ -303,7 +305,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         console.error('[ExtendedRiskAssessment] Error polling job:', err);
       }
     };
-    
+
     // Poll immediately and then every configurable interval (default 5 seconds)
     pollJob();
     pollingIntervalRef.current = setInterval(pollJob, config.polling.jobIntervalMs);
@@ -312,12 +314,12 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
   // Stop job polling
   const stopJobPolling = () => {
     console.log('[ExtendedRiskAssessment] 🛑 Stopping job polling');
-    
+
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
-    
+
     if (elapsedTimeIntervalRef.current) {
       clearInterval(elapsedTimeIntervalRef.current);
       elapsedTimeIntervalRef.current = null;
@@ -339,7 +341,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
           AI Risk Assessment (Extended)
         </h2>
-        
+
         <div className="text-center py-8">
           <Brain className="w-12 h-12 text-gray-400 mx-auto mb-4" aria-hidden="true" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
@@ -356,7 +358,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
               'Generate an AI-powered extended risk assessment with comprehensive DSM-5 schizophrenia evaluation using GPT-5/O3. Processing time: 30-120 seconds.'
             )}
           </p>
-          
+
           <div className="space-y-3">
             <button type="button"
               onClick={generateAssessment}
@@ -367,7 +369,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
               <Brain className="w-4 h-4 mr-2" aria-hidden="true" />
               Generate Extended Risk Assessment
             </button>
-            
+
             <button type="button"
               onClick={checkStatus}
               className="btn btn--secondary"
@@ -377,7 +379,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
               Check for Existing Assessment
             </button>
           </div>
-          
+
           {/* Status Info */}
           {status && (
             <div className="mt-6 bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-sm">
@@ -403,7 +405,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
               </div>
             </div>
           )}
-          
+
           {/* Error Display */}
           {error && (
             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -426,24 +428,24 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
           AI Risk Assessment (Extended)
         </h2>
-        
+
         <div className="text-center py-8">
           <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" aria-hidden="true" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             {isLoading ? 'Processing Extended Assessment...' : 'Checking Status...'}
           </h3>
-          
+
           {/* Job Progress */}
           {isLoading && currentJob && (
             <div className="max-w-md mx-auto">
               {/* Progress Bar */}
               <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
-                <div 
+                <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
                   style={{'--progress-width': `${jobProgress}%`, width: 'var(--progress-width)'} as React.CSSProperties}
                 ></div>
               </div>
-              
+
               {/* Progress Info */}
               <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
                 <div className="flex justify-between items-center">
@@ -467,7 +469,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
               </div>
             </div>
           )}
-          
+
           <p className="text-gray-600 dark:text-gray-300 mt-4">
             {isLoading ? 'Generating comprehensive evaluation. This typically takes 30-120 seconds.' : 'Please wait...'}
           </p>

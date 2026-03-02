@@ -10,7 +10,7 @@ namespace BehavioralHealthSystem.Functions;
 ///   2. Convert and clean via ffmpeg
 ///   3. Run DAM model prediction
 ///
-/// This endpoint can be called by an agent as a single tool.
+/// This endpoint can be called as a single HTTP trigger.
 /// </summary>
 public class AudioProcessingFunction
 {

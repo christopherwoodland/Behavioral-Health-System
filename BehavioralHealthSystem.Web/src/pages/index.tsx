@@ -15,8 +15,6 @@ export { default as Predictions } from './Predictions';
 
 export { default as ControlPanel } from './ControlPanel';
 
-// Use the new Azure OpenAI Realtime WebRTC implementation (no SignalR)
-export { default as AgentExperience } from './RealtimeAgentExperience';
 
 export const SystemHealth: React.FC = () => {
   const { data: healthStatus, isLoading, error, refetch } = useHealthCheck();

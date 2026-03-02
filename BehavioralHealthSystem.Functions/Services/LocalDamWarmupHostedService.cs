@@ -21,12 +21,7 @@ public sealed class LocalDamWarmupHostedService : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        if (!UseLocalDamModel())
-        {
-            _logger.LogInformation("[{ServiceName}] Skipping local DAM warmup because USE_LOCAL_DAM_MODEL is disabled", nameof(LocalDamWarmupHostedService));
-            return;
-        }
-
+        // DAM is the only analysis mode — always run warmup
         var warmupEnabled = _configuration.GetValue("LOCAL_DAM_WARMUP_ON_STARTUP", true);
         if (!warmupEnabled)
         {
@@ -97,12 +92,6 @@ public sealed class LocalDamWarmupHostedService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-
-    private bool UseLocalDamModel()
-    {
-        var value = _configuration["USE_LOCAL_DAM_MODEL"] ?? _configuration["Values:USE_LOCAL_DAM_MODEL"];
-        return bool.TryParse(value, out var parsed) && parsed;
-    }
 
     private static bool IsPipelineLoaded(string healthContent)
     {

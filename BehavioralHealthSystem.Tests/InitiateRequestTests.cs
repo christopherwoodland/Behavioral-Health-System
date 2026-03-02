@@ -1,13 +1,3 @@
-namespace BehavioralHealthSystem.Tests
-{
-    [TestClass]
-    public class InitiateRequestTests
-    {
-        [TestMethod]
-        public void InitiateRequest_Constructor_Succeeds()
-        {
-            var model = new InitiateRequest();
-            Assert.IsNotNull(model);
-        }
-    }
-}
+namespace BehavioralHealthSystem.Testsssert.IsTrue(request.IsInitiated);
+        Assert.IsNull(request.Metadata);
+        Assert.AreEqual(string.Empty, request.UserId);

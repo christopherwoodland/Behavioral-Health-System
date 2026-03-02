@@ -1,3 +1,6 @@
+# Usage: docker compose --env-file docker.env -f docker-compose.development.yml up -d
+# Copy docker.env.example to docker.env and fill in values (gitignored)
+
 services:
   # BHS Functions API - Development Environment
   # Uses Managed Identity and Azure resources (mirrors production setup)
@@ -19,13 +22,6 @@ services:
       - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
       - ASPNETCORE_ENVIRONMENT=Development
       - AZURE_FUNCTIONS_ENVIRONMENT=Development
-      # Kintsugi API - Key from Key Vault reference
-      - KINTSUGI_API_KEY=${KINTSUGI_API_KEY}
-      - KINTSUGI_BASE_URL=https://api.kintsugihealth.com/v2
-      - KINTSUGI_TIMEOUT_SECONDS=300
-      - KINTSUGI_MAX_RETRY_ATTEMPTS=3
-      - KINTSUGI_RETRY_DELAY_MS=1000
-      - KINTSUGI_AUTO_PROVIDE_CONSENT=false
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
@@ -48,8 +44,6 @@ services:
       - EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE=0.2
       - EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS=120
       - EXTENDED_ASSESSMENT_USE_FALLBACK=false
-      # Agent mode
-      - AGENT_MODE_ENABLED=false
       # Content Understanding - Managed Identity (no key)
       - AZURE_CONTENT_UNDERSTANDING_ENDPOINT=${AZURE_CONTENT_UNDERSTANDING_ENDPOINT}
       # Document Intelligence - Managed Identity (no key)

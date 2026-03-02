@@ -188,7 +188,7 @@ const SessionDetail: React.FC = () => {
         return;
       }
 
-      // For remote URLs (Azurite/Azure Blob Storage), fetch through backend API
+      // For remote URLs (Azure Blob Storage), fetch through backend API
       try {
         console.log('🎵 SessionDetail: Loading playable audio URL from:', audioUrl);
         const audioBlob = await apiService.downloadAudioBlob(audioUrl);
@@ -835,7 +835,7 @@ const SessionDetail: React.FC = () => {
               audioUrl={session.audioUrl}
               sessionId={session.sessionId}
               audioFileName={session.audioFileName}
-              existingTranscription={session.transcription}
+              existingTranscription={session.transcription || (session.analysisResults as any)?.transcriptionText}
             />
           </div>
         )}

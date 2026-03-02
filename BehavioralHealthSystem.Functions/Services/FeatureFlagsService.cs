@@ -19,7 +19,7 @@ public class FeatureFlagsService
     /// <summary>
     /// Check if a feature flag is enabled
     /// </summary>
-    /// <param name="flagName">Name of the feature flag (e.g., "AGENT_MODE_ENABLED")</param>
+    /// <param name="flagName">Name of the feature flag (e.g., "ENABLE_TRANSCRIPTION")</param>
     /// <param name="defaultValue">Default value if flag not found</param>
     /// <returns>True if feature is enabled, false otherwise</returns>
     public bool IsFeatureEnabled(string flagName, bool defaultValue = true)
@@ -66,10 +66,9 @@ public class FeatureFlagsService
         try
         {
             // Define all known feature flags
-            var knownFlags = new[]
+            var knownFlags = new string[]
             {
-                "AGENT_MODE_ENABLED",
-                "USE_LOCAL_DAM_MODEL"
+                // Add feature flags here as needed
             };
 
             foreach (var flagName in knownFlags)

@@ -5,6 +5,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { APP_ROLES } from '@/config/authConfig';
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('Header');
 
 interface HeaderProps {
   className?: string;
@@ -49,7 +52,7 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
 
   // Debug authentication state
   useEffect(() => {
-    console.log('[Header] Authentication state:', {
+    log.debug('Authentication state', {
       isAuthenticated,
       user: user ? { id: user.id, name: user.name, roles: user.roles } : null,
       timestamp: new Date().toISOString()

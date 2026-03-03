@@ -1,10 +1,13 @@
 import { createAppError } from '@/utils';
 import { config } from '@/config/constants';
-import type { 
-  FileGroup, 
-  CreateFileGroupRequest, 
-  FileGroupResponse, 
-  FileGroupListResponse 
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('FileGroupService');
+import type {
+  FileGroup,
+  CreateFileGroupRequest,
+  FileGroupResponse,
+  FileGroupListResponse
 } from '@/types';
 
 // Base API client for FileGroup operations
@@ -18,7 +21,7 @@ class FileGroupApiClient {
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
+
       throw createAppError(
         `HTTP_${response.status}`,
         errorData.message || `HTTP ${response.status}: ${response.statusText}`,
@@ -42,7 +45,7 @@ class FileGroupApiClient {
       const baseUrl = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
       const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
       const url = `${baseUrl}${cleanEndpoint}`;
-      
+
       const defaultHeaders = {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -58,7 +61,7 @@ class FileGroupApiClient {
       if (error instanceof Error && 'code' in error) {
         throw error; // Re-throw AppError
       }
-      
+
       throw createAppError(
         'UNKNOWN_ERROR',
         'An unexpected error occurred',
@@ -99,7 +102,7 @@ const apiClient = new FileGroupApiClient(config.api.baseUrl);
  */
 class FileGroupService {
   private readonly STORAGE_KEY = 'behavioral-health-file-groups';
-  
+
   /**
    * Get all file groups for the current user
    */
@@ -113,18 +116,18 @@ class FileGroupService {
       const response = await apiClient.get<{ success: boolean; count: number; fileGroups: FileGroup[] }>(
         `filegroups/users/${userId}`
       );
-      
+
       return {
         success: response.success,
         fileGroups: response.fileGroups || [],
         count: response.count || 0
       };
     } catch (error) {
-      console.error('Error getting file groups from API, falling back to localStorage:', error);
+      log.error('Error getting file groups from API, falling back to localStorage:', error);
       return this.getFileGroupsFromLocalStorage();
     }
   }
-  
+
   /**
    * Get a specific file group by ID
    */
@@ -133,16 +136,16 @@ class FileGroupService {
       const response = await apiClient.get<{ success: boolean; message: string; fileGroup?: FileGroup }>(
         `filegroups/${groupId}`
       );
-      
+
       return response.fileGroup || null;
     } catch (error) {
-      console.error('Error getting file group from API, falling back to localStorage:', error);
+      log.error('Error getting file group from API, falling back to localStorage:', error);
       // Fallback to localStorage
       const localResponse = await this.getFileGroupsFromLocalStorage();
       return localResponse.fileGroups.find(g => g.groupId === groupId) || null;
     }
   }
-  
+
   /**
    * Create a new file group
    */
@@ -158,11 +161,11 @@ class FileGroupService {
         'filegroups',
         apiRequest
       );
-      
+
       if (response.success && response.fileGroup) {
         // Also save to localStorage for offline access
         this.saveToLocalStorage(response.fileGroup);
-        
+
         return {
           success: true,
           message: response.message,
@@ -179,13 +182,13 @@ class FileGroupService {
           message: error.message || `A group with the name '${request.groupName}' already exists. Please choose a different name.`
         };
       }
-      
-      console.error('Error creating file group via API, falling back to localStorage:', error);
+
+      log.error('Error creating file group via API, falling back to localStorage:', error);
       // Fallback to localStorage
       return this.createFileGroupInLocalStorage(request, userId);
     }
   }
-  
+
   /**
    * Update an existing file group
    */
@@ -211,22 +214,22 @@ class FileGroupService {
         `filegroups/${groupId}`,
         updatedGroup
       );
-      
+
       // Update localStorage as well
       this.updateInLocalStorage(updatedGroup);
-      
+
       return {
         success: true,
         message: 'File group updated successfully',
         fileGroup: updatedGroup
       };
     } catch (error) {
-      console.error('Error updating file group via API, falling back to localStorage:', error);
+      log.error('Error updating file group via API, falling back to localStorage:', error);
       // Fallback to localStorage
       return this.updateFileGroupInLocalStorage(groupId, updates);
     }
   }
-  
+
   /**
    * Archive a file group (soft delete)
    */
@@ -235,11 +238,11 @@ class FileGroupService {
       const response = await apiClient.delete<{ success: boolean; message: string }>(
         `filegroups/${groupId}`
       );
-      
+
       if (response.success) {
         // Archive in localStorage as well
         this.archiveInLocalStorage(groupId);
-        
+
         return {
           success: true,
           message: response.message
@@ -248,12 +251,12 @@ class FileGroupService {
         throw new Error(response.message || 'Failed to archive file group');
       }
     } catch (error) {
-      console.error('Error archiving file group via API, falling back to localStorage:', error);
+      log.error('Error archiving file group via API, falling back to localStorage:', error);
       // Fallback to localStorage
       return this.archiveFileGroupInLocalStorage(groupId);
     }
   }
-  
+
   /**
    * Delete a file group and all associated sessions (hard delete)
    */
@@ -262,11 +265,11 @@ class FileGroupService {
       const response = await apiClient.delete<{ success: boolean; message: string }>(
         `filegroups/${groupId}/delete`
       );
-      
+
       if (response.success) {
         // Delete from localStorage as well
         this.deleteFromLocalStorage(groupId);
-        
+
         return {
           success: true,
           message: response.message
@@ -275,12 +278,12 @@ class FileGroupService {
         throw new Error(response.message || 'Failed to delete file group');
       }
     } catch (error) {
-      console.error('Error deleting file group via API, falling back to localStorage:', error);
+      log.error('Error deleting file group via API, falling back to localStorage:', error);
       // Fallback to localStorage
       return this.deleteFileGroupInLocalStorage(groupId);
     }
   }
-  
+
   /**
    * Update session count for a group (called when sessions are added/removed)
    */
@@ -288,14 +291,14 @@ class FileGroupService {
     try {
       // Update locally first for immediate UI feedback
       this.updateSessionCountInLocalStorage(groupId, count);
-      
+
       // TODO: When backend supports session count updates, call API here
       // For now, the backend calculates this dynamically
     } catch (error) {
-      console.error('Failed to update group session count:', error);
+      log.error('Failed to update group session count:', error);
     }
   }
-  
+
   /**
    * Search file groups by name or description
    */
@@ -310,16 +313,16 @@ class FileGroupService {
       const response = await apiClient.get<{ success: boolean; count: number; fileGroups: FileGroup[] }>(
         `filegroups/users/${userId}/search?q=${encodeURIComponent(query)}`
       );
-      
+
       return response.fileGroups || [];
     } catch (error) {
-      console.error('Error searching file groups via API, falling back to localStorage:', error);
+      log.error('Error searching file groups via API, falling back to localStorage:', error);
       // Fallback to local search
       const localResponse = await this.getFileGroupsFromLocalStorage();
       return this.filterGroupsByQuery(localResponse.fileGroups, query);
     }
   }
-  
+
   /**
    * Get groups with their session counts (for dashboard/summary views)
    */
@@ -331,12 +334,12 @@ class FileGroupService {
   // Helper method to filter groups by search query
   private filterGroupsByQuery(groups: FileGroup[], query: string): FileGroup[] {
     const searchTerm = query.toLowerCase().trim();
-    
+
     if (!searchTerm) {
       return groups;
     }
-    
-    return groups.filter(group => 
+
+    return groups.filter(group =>
       group.groupName.toLowerCase().includes(searchTerm) ||
       (group.description && group.description.toLowerCase().includes(searchTerm))
     );
@@ -347,8 +350,8 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
-      const activeGroups = groups.filter(g => g.status === 'active').sort((a, b) => 
+
+      const activeGroups = groups.filter(g => g.status === 'active').sort((a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
       );
 
@@ -358,7 +361,7 @@ class FileGroupService {
         count: activeGroups.length
       };
     } catch (error) {
-      console.error('Failed to load file groups from localStorage:', error);
+      log.error('Failed to load file groups from localStorage:', error);
       return {
         success: false,
         fileGroups: [],
@@ -372,21 +375,21 @@ class FileGroupService {
       // First check for duplicate names
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       // Check if any active group has the same name (case-insensitive)
-      const duplicateExists = groups.some(g => 
-        g.status === 'active' && 
+      const duplicateExists = groups.some(g =>
+        g.status === 'active' &&
         g.createdBy === userId &&
         g.groupName.toLowerCase() === request.groupName.trim().toLowerCase()
       );
-      
+
       if (duplicateExists) {
         return {
           success: false,
           message: `A group with the name '${request.groupName}' already exists. Please choose a different name.`
         };
       }
-      
+
       const newGroup: FileGroup = {
         groupId: `group-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         groupName: request.groupName.trim(),
@@ -397,16 +400,16 @@ class FileGroupService {
         sessionCount: 0,
         status: 'active'
       };
-      
+
       this.saveToLocalStorage(newGroup);
-      
+
       return {
         success: true,
         message: 'File group created successfully',
         fileGroup: newGroup
       };
     } catch (error) {
-      console.error('Failed to create file group in localStorage:', error);
+      log.error('Failed to create file group in localStorage:', error);
       return {
         success: false,
         message: 'Failed to create file group'
@@ -418,7 +421,7 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === groupId);
       if (groupIndex === -1) {
         return {
@@ -426,42 +429,42 @@ class FileGroupService {
           message: 'File group not found'
         };
       }
-      
+
       // Check for duplicate names if groupName is being updated
       if (updates.groupName) {
         const newName = updates.groupName.trim().toLowerCase();
         const currentGroup = groups[groupIndex];
-        const duplicateExists = groups.some((g, index) => 
-          index !== groupIndex && 
-          g.status === 'active' && 
+        const duplicateExists = groups.some((g, index) =>
+          index !== groupIndex &&
+          g.status === 'active' &&
           g.createdBy === currentGroup.createdBy &&
           g.groupName.toLowerCase() === newName
         );
-        
+
         if (duplicateExists) {
           return {
             success: false,
             message: `A group with the name '${updates.groupName}' already exists. Please choose a different name.`
           };
         }
-        
+
         groups[groupIndex].groupName = updates.groupName.trim();
       }
-      
+
       if (updates.description !== undefined) {
         groups[groupIndex].description = updates.description?.trim();
       }
       groups[groupIndex].updatedAt = new Date().toISOString();
-      
+
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
-      
+
       return {
         success: true,
         message: 'File group updated successfully',
         fileGroup: groups[groupIndex]
       };
     } catch (error) {
-      console.error('Failed to update file group in localStorage:', error);
+      log.error('Failed to update file group in localStorage:', error);
       return {
         success: false,
         message: 'Failed to update file group'
@@ -473,7 +476,7 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === groupId);
       if (groupIndex === -1) {
         return {
@@ -481,19 +484,19 @@ class FileGroupService {
           message: 'File group not found'
         };
       }
-      
+
       groups[groupIndex].status = 'archived';
       groups[groupIndex].updatedAt = new Date().toISOString();
-      
+
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
-      
+
       return {
         success: true,
         message: 'File group archived successfully',
         fileGroup: groups[groupIndex]
       };
     } catch (error) {
-      console.error('Failed to archive file group in localStorage:', error);
+      log.error('Failed to archive file group in localStorage:', error);
       return {
         success: false,
         message: 'Failed to archive file group'
@@ -505,7 +508,7 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       // Check if group already exists and update, otherwise add
       const existingIndex = groups.findIndex(g => g.groupId === group.groupId);
       if (existingIndex >= 0) {
@@ -513,10 +516,10 @@ class FileGroupService {
       } else {
         groups.push(group);
       }
-      
+
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
     } catch (error) {
-      console.error('Error saving file group to localStorage:', error);
+      log.error('Error saving file group to localStorage:', error);
     }
   }
 
@@ -524,14 +527,14 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === updatedGroup.groupId);
       if (groupIndex >= 0) {
         groups[groupIndex] = { ...updatedGroup, updatedAt: new Date().toISOString() };
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
       }
     } catch (error) {
-      console.error('Error updating file group in localStorage:', error);
+      log.error('Error updating file group in localStorage:', error);
     }
   }
 
@@ -539,7 +542,7 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === groupId);
       if (groupIndex >= 0) {
         groups[groupIndex].status = 'archived';
@@ -547,7 +550,7 @@ class FileGroupService {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
       }
     } catch (error) {
-      console.error('Error archiving file group in localStorage:', error);
+      log.error('Error archiving file group in localStorage:', error);
     }
   }
 
@@ -555,7 +558,7 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === groupId);
       if (groupIndex >= 0) {
         groups[groupIndex].sessionCount = Math.max(0, count);
@@ -563,7 +566,7 @@ class FileGroupService {
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
       }
     } catch (error) {
-      console.error('Failed to update group session count in localStorage:', error);
+      log.error('Failed to update group session count in localStorage:', error);
     }
   }
 
@@ -571,7 +574,7 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === groupId);
       if (groupIndex === -1) {
         return {
@@ -579,17 +582,17 @@ class FileGroupService {
           message: 'File group not found'
         };
       }
-      
+
       // Remove the group completely (hard delete)
       groups.splice(groupIndex, 1);
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
-      
+
       return {
         success: true,
         message: 'File group and associated sessions deleted successfully'
       };
     } catch (error) {
-      console.error('Failed to delete file group in localStorage:', error);
+      log.error('Failed to delete file group in localStorage:', error);
       return {
         success: false,
         message: 'Failed to delete file group'
@@ -601,14 +604,14 @@ class FileGroupService {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       const groups: FileGroup[] = stored ? JSON.parse(stored) : [];
-      
+
       const groupIndex = groups.findIndex(g => g.groupId === groupId);
       if (groupIndex >= 0) {
         groups.splice(groupIndex, 1);
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(groups));
       }
     } catch (error) {
-      console.error('Error deleting file group from localStorage:', error);
+      log.error('Error deleting file group from localStorage:', error);
     }
   }
 }

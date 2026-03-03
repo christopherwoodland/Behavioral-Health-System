@@ -3,6 +3,9 @@ import { FileText, RefreshCw, AlertCircle, CheckCircle, Copy, Download } from 'l
 import { transcriptionService, type TranscriptionResult } from '../services/transcriptionService';
 import { apiService } from '../services/api';
 import { useAccessibility } from '../hooks/useAccessibility';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('TranscriptionComponent');
 
 interface TranscriptionComponentProps {
   audioUrl?: string;
@@ -60,7 +63,7 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
             await apiService.saveTranscription(sessionId, result.text);
             announceToScreenReader('Transcription completed and saved successfully');
           } catch (saveError) {
-            console.error('Failed to save transcription:', saveError);
+            log.error('Failed to save transcription', saveError);
             announceToScreenReader('Transcription completed but failed to save to session');
           }
         } else {

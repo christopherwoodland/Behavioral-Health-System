@@ -5,6 +5,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { MockAuthProvider } from '@/contexts/MockAuthContext';
 import { msalConfig } from '@/config/authConfig';
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('ConditionalAuth');
 
 interface ConditionalAuthProviderProps {
   children: ReactNode;
@@ -14,20 +17,20 @@ interface ConditionalAuthProviderProps {
 const isAuthEnabled = env.ENABLE_ENTRA_AUTH;
 
 // Log authentication mode for debugging
-console.log('Authentication mode:', isAuthEnabled ? 'Entra ID enabled' : 'Mock authentication enabled');
-console.log('VITE_ENABLE_ENTRA_AUTH:', env.ENABLE_ENTRA_AUTH);
+log.info('Authentication mode', { mode: isAuthEnabled ? 'Entra ID enabled' : 'Mock authentication enabled' });
+log.debug('VITE_ENABLE_ENTRA_AUTH', { value: env.ENABLE_ENTRA_AUTH });
 
 const msalInstance = isAuthEnabled ? new PublicClientApplication(msalConfig) : null;
 
 // Initialize MSAL and handle redirect promise
 if (msalInstance) {
   msalInstance.initialize().then(() => {
-    console.log('[MSAL] Instance initialized successfully');
+    log.info('MSAL instance initialized successfully');
     return msalInstance.handleRedirectPromise();
   }).then(() => {
-    console.log('[MSAL] Redirect promise handled');
+    log.debug('MSAL redirect promise handled');
   }).catch((error) => {
-    console.error('[MSAL] Initialization or redirect error:', error);
+    log.error('MSAL initialization or redirect error', error);
   });
 }
 
@@ -38,11 +41,11 @@ export const ConditionalAuthProvider: React.FC<ConditionalAuthProviderProps> = (
     if (msalInstance) {
       msalInstance.initialize()
         .then(() => {
-          console.log('[MSAL] Provider ready');
+          log.info('MSAL provider ready');
           setIsInitialized(true);
         })
         .catch((error) => {
-          console.error('[MSAL] Failed to initialize:', error);
+          log.error('MSAL failed to initialize', error);
           setIsInitialized(true); // Still render to show error
         });
     }

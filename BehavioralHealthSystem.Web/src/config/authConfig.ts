@@ -1,5 +1,8 @@
 import { Configuration, PopupRequest, RedirectRequest } from '@azure/msal-browser';
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('AuthConfig');
 
 /**
  * Azure AD B2C / Entra ID Configuration
@@ -32,16 +35,16 @@ export const msalConfig: Configuration = {
         }
         switch (level) {
           case 0: // LogLevel.Error
-            console.error('[MSAL Error]:', message);
+            log.error('MSAL Error', undefined, { message });
             break;
           case 1: // LogLevel.Warning
-            console.warn('[MSAL Warning]:', message);
+            log.warn('MSAL Warning', { message });
             break;
           case 2: // LogLevel.Info
-            console.info('[MSAL Info]:', message);
+            log.info('MSAL Info', { message });
             break;
           case 3: // LogLevel.Verbose
-            console.debug('[MSAL Verbose]:', message);
+            log.debug('MSAL Verbose', { message });
             break;
         }
       },

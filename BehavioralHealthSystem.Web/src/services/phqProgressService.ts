@@ -4,6 +4,9 @@
  */
 
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('PhqProgress');
 
 export interface PhqAnsweredQuestion {
   questionNumber: number;
@@ -91,12 +94,12 @@ class PhqProgressService {
     wasSkipped: boolean = false
   ): boolean {
     if (!this.currentProgress) {
-      console.warn('No active PHQ assessment. Start assessment first.');
+      log.warn('No active PHQ assessment. Start assessment first.');
       return false;
     }
 
     if (answer < 0 || answer > 3) {
-      console.warn('Invalid answer value. Must be between 0 and 3.');
+      log.warn('Invalid answer value. Must be between 0 and 3.');
       return false;
     }
 
@@ -277,8 +280,8 @@ class PhqProgressService {
       const apiBaseUrl = env.API_BASE_URL;
       const endpoint = `${apiBaseUrl}/SavePhqProgress`;
 
-      console.log('🟢 Saving PHQ progress to:', endpoint);
-      console.log('📊 Progress data:', {
+      log.debug('Saving PHQ progress to', { endpoint });
+      log.debug('Progress data', {
         assessmentId: this.currentProgress.assessmentId,
         userId: this.currentProgress.userId,
         assessmentType: this.currentProgress.assessmentType,
@@ -311,10 +314,10 @@ class PhqProgressService {
       }
 
       const result = await response.json();
-      console.log('PHQ assessment progress saved successfully:', result);
+      log.info('PHQ assessment progress saved successfully', result);
 
     } catch (error) {
-      console.error('Error saving PHQ assessment progress:', error);
+      log.error('Error saving PHQ assessment progress', error);
 
       // Retry failed saves after a delay
       setTimeout(() => {

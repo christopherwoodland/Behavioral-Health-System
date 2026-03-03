@@ -14,6 +14,9 @@ import {
 } from '../types/extendedRiskAssessment';
 import { apiPost, apiGet } from '../utils/api';
 import { config } from '../config/constants';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('ExtendedRiskAssessment');
 
 // Job-related types
 interface ExtendedAssessmentJob {
@@ -104,14 +107,14 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
   // Load existing assessment on mount or when it changes
   useEffect(() => {
-    console.log('[ExtendedRiskAssessment] Component mounted for session:', sessionId);
-    console.log('[ExtendedRiskAssessment] existingAssessment prop:', existingAssessment);
+    log.debug('Component mounted for session:', { sessionId });
+    log.debug('existingAssessment prop:', { existingAssessment });
 
     if (existingAssessment) {
-      console.log('[ExtendedRiskAssessment] ✅ Existing assessment provided, displaying immediately');
+      log.info('Existing assessment provided, displaying immediately');
       setAssessment(existingAssessment);
     } else {
-      console.log('[ExtendedRiskAssessment] No existing assessment, checking API...');
+      log.debug('No existing assessment, checking API...');
       // Check if assessment exists on the server
       fetchAssessment();
     }
@@ -119,7 +122,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
   // Check status of extended risk assessment
   const checkStatus = async () => {
-    console.log('[ExtendedRiskAssessment] Checking status for session:', sessionId);
+    log.debug('Checking status for session:', { sessionId });
     setIsChecking(true);
     setError(null);
 
@@ -128,7 +131,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment/status`
       );
 
-      console.log('[ExtendedRiskAssessment] Status response:', JSON.stringify(response, null, 2));
+      log.debug('Status response:', response);
 
       if (response.success && response.data) {
         // Parse data if it's a string (sometimes API returns stringified JSON)
@@ -136,7 +139,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           ? JSON.parse(response.data)
           : response.data;
 
-        console.log('[ExtendedRiskAssessment] Status check successful, data:', parsedData);
+        log.debug('Status check successful', { data: parsedData });
         setStatus(parsedData);
 
         // If assessment exists, fetch it
@@ -158,13 +161,13 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
   // Fetch existing assessment
   const fetchAssessment = async () => {
-    console.log('[ExtendedRiskAssessment] Fetching existing assessment for session:', sessionId);
+    log.debug('Fetching existing assessment for session:', { sessionId });
     try {
       const response = await apiGet<ExtendedRiskAssessmentResponse>(
         `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment`
       );
 
-      console.log('[ExtendedRiskAssessment] Fetch response:', JSON.stringify(response, null, 2));
+      log.debug('Fetch response:', response);
 
       // Check both wrapper success and inner API response success
       if (response.success && response.data) {
@@ -173,31 +176,29 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           ? JSON.parse(response.data)
           : response.data;
 
-        console.log('[ExtendedRiskAssessment] Wrapper success: true, checking inner response...');
-        console.log('[ExtendedRiskAssessment] parsedData.success:', parsedData.success);
-        console.log('[ExtendedRiskAssessment] parsedData.extendedRiskAssessment exists:', !!parsedData.extendedRiskAssessment);
+        log.debug('Wrapper success: true, checking inner response...', { success: parsedData.success, hasAssessment: !!parsedData.extendedRiskAssessment });
 
         if (parsedData.success && parsedData.extendedRiskAssessment) {
-          console.log('[ExtendedRiskAssessment] ✅ Assessment fetched successfully');
+          log.info('Assessment fetched successfully');
           setAssessment(parsedData.extendedRiskAssessment);
           setIsLoading(false); // Make sure to stop loading when we get the result
           onComplete?.(parsedData.extendedRiskAssessment);
         } else if (parsedData.success && parsedData.hasExtendedAssessment === false) {
-          console.log('[ExtendedRiskAssessment] ℹ️ No assessment generated yet for this session');
+          log.info('No assessment generated yet for this session');
         } else {
-          console.warn('[ExtendedRiskAssessment] ⚠️ Inner response missing success or extendedRiskAssessment');
+          log.warn('Inner response missing success or extendedRiskAssessment');
         }
       } else {
-        console.warn('[ExtendedRiskAssessment] ⚠️ Wrapper response failed or no data');
+        log.warn('Wrapper response failed or no data');
       }
     } catch (err) {
-      console.error('[ExtendedRiskAssessment] ❌ Error fetching assessment:', err);
+      log.error('Error fetching assessment', err);
     }
   };
 
   // Start async job for assessment generation
   const generateAssessment = async () => {
-    console.log('[ExtendedRiskAssessment] 🚀 Starting async job for session:', sessionId);
+    log.info('Starting async job for session:', { sessionId });
 
     // Call onStart callback to notify parent component
     onStart?.();
@@ -211,13 +212,13 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
     // Clear existing assessment when regenerating to show loading state
     if (assessment) {
-      console.log('[ExtendedRiskAssessment] Clearing existing assessment for regeneration');
+      log.debug('Clearing existing assessment for regeneration');
       setAssessment(null);
     }
 
     try {
-      console.log('[ExtendedRiskAssessment] Making POST request to start async job...');
-      console.log('[ExtendedRiskAssessment] Selected DSM-5 conditions:', selectedDSM5Conditions);
+      log.debug('Making POST request to start async job...');
+      log.debug('Selected DSM-5 conditions:', { selectedDSM5Conditions });
       const response = await apiPost<StartJobResponse>(
         `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment`,
         {
@@ -225,12 +226,12 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         }
       );
 
-      console.log('[ExtendedRiskAssessment] 📥 Job start response:', JSON.stringify(response, null, 2));
+      log.debug('Job start response:', response);
 
       if (response.success && response.data) {
         // Parse the JSON string response
         const jobData = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
-        console.log('[ExtendedRiskAssessment] ✅ Job started successfully! Job ID:', jobData.jobId);
+        log.info('Job started successfully!', { jobId: jobData.jobId });
 
         setJobStep('Job created, starting processing...');
         setProcessingStartTime(new Date());
@@ -238,14 +239,14 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
         // Start polling for job status
         startJobPolling(jobData.jobId);
       } else {
-        console.error('[ExtendedRiskAssessment] ❌ Failed to start job');
+        log.error('Failed to start job');
         const errorMsg = response.error || 'Failed to start assessment job';
         setError(errorMsg);
         onError?.(errorMsg);
         setIsLoading(false);
       }
     } catch (err) {
-      console.error('[ExtendedRiskAssessment] ❌ Exception starting job:', err);
+      log.error('Exception starting job', err);
       const errorMsg = err instanceof Error ? err.message : 'Unknown error starting assessment job';
       setError(errorMsg);
       onError?.(errorMsg);
@@ -255,7 +256,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
   // Start polling for job completion
   const startJobPolling = (jobId: string) => {
-    console.log('[ExtendedRiskAssessment] 🔄 Starting job polling for:', jobId);
+    log.debug('Starting job polling for:', { jobId });
 
     // Start elapsed time counter
     elapsedTimeIntervalRef.current = setInterval(() => {
@@ -281,10 +282,10 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           setJobProgress(job.progressPercentage);
           setJobStep(job.currentStep || '');
 
-          console.log('[ExtendedRiskAssessment] Job status:', job.status, job.progressPercentage + '%', job.currentStep);
+          log.debug('Job status:', { status: job.status, progress: job.progressPercentage, step: job.currentStep });
 
           if (job.isCompleted) {
-            console.log('[ExtendedRiskAssessment] 🎉 Job completed!');
+            log.info('Job completed!');
             stopJobPolling();
 
             if (job.status === 'completed') {
@@ -299,10 +300,10 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
             }
           }
         } else {
-          console.error('[ExtendedRiskAssessment] Failed to get job status');
+          log.error('Failed to get job status');
         }
       } catch (err) {
-        console.error('[ExtendedRiskAssessment] Error polling job:', err);
+        log.error('Error polling job', err);
       }
     };
 
@@ -313,7 +314,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
   // Stop job polling
   const stopJobPolling = () => {
-    console.log('[ExtendedRiskAssessment] 🛑 Stopping job polling');
+    log.debug('Stopping job polling');
 
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -497,7 +498,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           </h2>
           <button type="button"
             onClick={() => {
-              console.log('[ExtendedRiskAssessment] Regenerate button clicked - stopping polling and calling generateAssessment()');
+              log.debug('Regenerate button clicked - stopping polling and calling generateAssessment()');
               stopJobPolling();
               generateAssessment();
             }}

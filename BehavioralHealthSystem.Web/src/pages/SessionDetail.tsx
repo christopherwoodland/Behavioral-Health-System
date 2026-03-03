@@ -28,7 +28,10 @@ import {
 } from 'lucide-react';
 import { config } from '@/config/constants';
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
 import { useAccessibility } from '../hooks/useAccessibility';
+
+const log = Logger.create('SessionDetail');
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { formatDateTime, formatRelativeTime, formatQuantizedScoreLabel } from '../utils';
@@ -122,7 +125,7 @@ const SessionDetail: React.FC = () => {
       const groupData = await fileGroupService.getFileGroup(groupId);
       setFileGroup(groupData);
     } catch (err) {
-      console.error('Error loading group data:', err);
+      log.error('Error loading group data', err);
       // Don't show error to user for group loading failure, just log it
     } finally {
       setLoadingGroup(false);
@@ -190,16 +193,16 @@ const SessionDetail: React.FC = () => {
 
       // For remote URLs (Azure Blob Storage), fetch through backend API
       try {
-        console.log('🎵 SessionDetail: Loading playable audio URL from:', audioUrl);
+        log.debug('Loading playable audio URL from', { audioUrl });
         const audioBlob = await apiService.downloadAudioBlob(audioUrl);
         if (!isCancelled) {
           const blobUrl = URL.createObjectURL(audioBlob);
           setPlayableAudioUrl(blobUrl);
           setAudioFileSize(audioBlob.size);
-          console.log('🎵 SessionDetail: Created playable blob URL:', blobUrl, 'size:', audioBlob.size);
+          log.debug('Created playable blob URL', { blobUrl, size: audioBlob.size });
         }
       } catch (error) {
-        console.error('🎵 SessionDetail: Failed to load playable audio URL:', error);
+        log.error('Failed to load playable audio URL', error);
         if (!isCancelled) {
           setPlayableAudioUrl(null);
           setAudioFileSize(null);
@@ -298,7 +301,7 @@ const SessionDetail: React.FC = () => {
       announceToScreenReader('Audio paused');
     } else {
       audioRef.current.play().catch((err) => {
-        console.error('🎵 Audio playback error:', err);
+        log.error('Audio playback error', err);
         announceToScreenReader('Failed to play audio');
       });
       setAudioPlaying(true);
@@ -785,10 +788,10 @@ const SessionDetail: React.FC = () => {
                       onTimeUpdate={(e) => setAudioCurrentTime(e.currentTarget.currentTime)}
                       onLoadedMetadata={(e) => {
                         setAudioDuration(e.currentTarget.duration);
-                        console.log('🎵 Audio metadata loaded, duration:', e.currentTarget.duration);
+                        log.debug('Audio metadata loaded', { duration: e.currentTarget.duration });
                       }}
                       onError={(e) => {
-                        console.error('🎵 Audio error:', e);
+                        log.error('Audio error', e);
                         setAudioPlaying(false);
                         announceToScreenReader('Audio playback failed - file may not be accessible');
                       }}

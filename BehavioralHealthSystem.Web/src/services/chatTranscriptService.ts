@@ -4,6 +4,9 @@
  */
 
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('ChatTranscriptService');
 
 export interface ChatMessage {
   id: string;
@@ -84,7 +87,7 @@ class ChatTranscriptService {
    */
   addMessage(message: Omit<ChatMessage, 'id' | 'timestamp'>): void {
     if (!this.currentTranscript) {
-      console.warn('No active chat session. Initialize session first.');
+      log.warn('No active chat session. Initialize session first.');
       return;
     }
 
@@ -241,10 +244,10 @@ class ChatTranscriptService {
       }
 
       const result = await response.json();
-      console.log('Chat transcript saved successfully:', result);
+      log.info('Chat transcript saved successfully', { result });
 
     } catch (error) {
-      console.error('Error saving chat transcript:', error);
+      log.error('Error saving chat transcript', error);
 
       // Retry failed saves after a delay
       setTimeout(() => {

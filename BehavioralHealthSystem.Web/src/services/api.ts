@@ -1,5 +1,8 @@
 import { config, API_ENDPOINTS } from '@/config/constants';
 import { createAppError, isNetworkError } from '@/utils';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('ApiClient');
 import type {
   SessionInitiateRequest,
   SessionInitiateResponse,
@@ -71,7 +74,7 @@ class ApiClient {
           Object.assign(defaultHeaders, authHeaders);
         } catch (authError) {
           // Log auth error but continue with request - some endpoints may not require auth
-          console.warn('Failed to get authentication headers:', authError);
+          log.warn('Failed to get authentication headers', { error: authError });
         }
       }
 
@@ -146,7 +149,7 @@ export const getApiAuthHeaders = async (): Promise<Record<string, string>> => {
     try {
       return await _authProvider.getAuthHeaders();
     } catch (error) {
-      console.warn('Failed to get auth headers:', error);
+      log.warn('Failed to get auth headers', { error });
       return {};
     }
   }
@@ -289,11 +292,11 @@ export const apiService = {
     }
     const blob = await response.blob();
     const contentType = response.headers.get('Content-Type') || 'audio/wav';
-    console.log('🎵 Downloaded audio blob - size:', blob.size, 'type:', blob.type, 'response content-type:', contentType);
+    log.debug('Downloaded audio blob', { size: blob.size, type: blob.type, contentType });
 
     // If blob type doesn't match, create a new blob with correct type
     if (!blob.type || blob.type === 'application/octet-stream') {
-      console.log('🎵 Re-creating blob with correct type:', contentType);
+      log.debug('Re-creating blob with correct type', { contentType });
       return new Blob([blob], { type: contentType });
     }
     return blob;

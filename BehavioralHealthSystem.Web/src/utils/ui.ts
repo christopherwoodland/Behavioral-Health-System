@@ -4,6 +4,9 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('UI');
 
 // Common loading states
 export interface LoadingState {
@@ -218,7 +221,7 @@ export const useToasts = () => {
 
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
-    
+
     const timeout = timeoutsRef.current.get(id);
     if (timeout) {
       clearTimeout(timeout);
@@ -363,7 +366,7 @@ export const useLocalStorage = <T>(
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
+      log.warn(`Error reading localStorage key "${key}"`, { error });
       return initialValue;
     }
   });
@@ -374,7 +377,7 @@ export const useLocalStorage = <T>(
       setStoredValue(valueToStore);
       window.localStorage.setItem(key, JSON.stringify(valueToStore));
     } catch (error) {
-      console.warn(`Error setting localStorage key "${key}":`, error);
+      log.warn(`Error setting localStorage key "${key}"`, { error });
     }
   }, [key, storedValue]);
 
@@ -458,10 +461,10 @@ export const scrollToElement = (
   element: HTMLElement | string,
   options: ScrollIntoViewOptions = { behavior: 'smooth', block: 'center' }
 ): void => {
-  const target = typeof element === 'string' 
+  const target = typeof element === 'string'
     ? document.querySelector(element) as HTMLElement
     : element;
-  
+
   if (target) {
     target.scrollIntoView(options);
   }
@@ -483,20 +486,20 @@ export const animateValue = (
   easing: (t: number) => number = (t) => t
 ): void => {
   const startTime = performance.now();
-  
+
   const animate = (currentTime: number) => {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
     const easedProgress = easing(progress);
     const currentValue = start + (end - start) * easedProgress;
-    
+
     callback(currentValue);
-    
+
     if (progress < 1) {
       requestAnimationFrame(animate);
     }
   };
-  
+
   requestAnimationFrame(animate);
 };
 
@@ -514,11 +517,11 @@ export const easingFunctions = {
 // Format utilities
 export const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
@@ -526,7 +529,7 @@ export const formatDuration = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const remainingSeconds = Math.floor(seconds % 60);
-  
+
   if (hours > 0) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   }

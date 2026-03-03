@@ -3,6 +3,10 @@
  * Handles continuous microphone input and audio output streaming
  */
 
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('WebRTCAudio');
+
 export interface WebRTCAudioConfig {
   sampleRate?: number;
   channelCount?: number;
@@ -85,11 +89,11 @@ export class WebRTCAudioService extends EventTarget {
         }
       };
 
-      console.log('WebRTC Audio Service initialized');
+      log.info('WebRTC Audio Service initialized');
       this.dispatchEvent(new CustomEvent('initialized'));
 
     } catch (error) {
-      console.error('Failed to initialize WebRTC Audio Service:', error);
+      log.error('Failed to initialize WebRTC Audio Service', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.dispatchEvent(new CustomEvent('error', { detail: { error: errorMessage } }));
       throw error;
@@ -106,13 +110,13 @@ export class WebRTCAudioService extends EventTarget {
     }
 
     this.isStreaming = true;
-    console.log('Audio streaming started');
+    log.debug('Audio streaming started');
     this.dispatchEvent(new CustomEvent('stream_started'));
   }
 
   stopStreaming(): void {
     this.isStreaming = false;
-    console.log('Audio streaming stopped');
+    log.debug('Audio streaming stopped');
     this.dispatchEvent(new CustomEvent('stream_stopped'));
   }
 
@@ -124,13 +128,13 @@ export class WebRTCAudioService extends EventTarget {
 
   private processAudioData(event: AudioProcessingEvent): void {
     const inputBuffer = event.inputBuffer;
-    
+
     // Get input audio data
     const inputData = inputBuffer.getChannelData(0);
-    
+
     // Convert Float32Array to Int16Array (PCM16)
     const pcmData = this.float32ToPCM16(inputData);
-    
+
     // Create ArrayBuffer
     const audioBuffer = pcmData.buffer.slice(
       pcmData.byteOffset,
@@ -138,13 +142,13 @@ export class WebRTCAudioService extends EventTarget {
     );
 
     // Emit audio data event
-    this.dispatchEvent(new CustomEvent('audio_data', { 
-      detail: { 
+    this.dispatchEvent(new CustomEvent('audio_data', {
+      detail: {
         audioData: audioBuffer,
         timestamp: Date.now(),
         sampleRate: this.config.sampleRate,
         channels: this.config.channelCount
-      } 
+      }
     }));
 
     // Note: Playback handling is done separately via playAudio method
@@ -170,12 +174,12 @@ export class WebRTCAudioService extends EventTarget {
 
   async playAudio(audioData: ArrayBuffer): Promise<void> {
     if (!this.audioContext) {
-      console.warn('Audio context not available for playback');
+      log.warn('Audio context not available for playback');
       return;
     }
 
     this.playbackQueue.push(audioData);
-    
+
     // If not already playing, start playback
     if (!this.isPlayingAudio) {
       this.processPlaybackQueue();
@@ -192,24 +196,24 @@ export class WebRTCAudioService extends EventTarget {
 
     try {
       const audioData = this.playbackQueue.shift()!;
-      
+
       // Convert PCM16 to AudioBuffer
       const audioBuffer = await this.createAudioBuffer(audioData);
-      
+
       // Create and play audio source
       const source = this.audioContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(this.audioContext.destination);
-      
+
       source.onended = () => {
         // Continue with next audio in queue
         this.processPlaybackQueue();
       };
-      
+
       source.start();
 
     } catch (error) {
-      console.error('Error playing audio:', error);
+      log.error('Error playing audio', error);
       this.isPlayingAudio = false;
     }
   }
@@ -221,10 +225,10 @@ export class WebRTCAudioService extends EventTarget {
 
     // Convert ArrayBuffer to Int16Array
     const pcm16Array = new Int16Array(pcmData);
-    
+
     // Convert to Float32Array
     const float32Array = this.pcm16ToFloat32(pcm16Array);
-    
+
     // Create AudioBuffer
     const audioBuffer = this.audioContext.createBuffer(
       this.config.channelCount!,
@@ -243,7 +247,7 @@ export class WebRTCAudioService extends EventTarget {
       const devices = await navigator.mediaDevices.enumerateDevices();
       return devices.filter(device => device.kind === 'audioinput');
     } catch (error) {
-      console.error('Error getting audio devices:', error);
+      log.error('Error getting audio devices', error);
       return [];
     }
   }
@@ -275,11 +279,11 @@ export class WebRTCAudioService extends EventTarget {
         this.sourceNode.connect(this.gainNode!);
       }
 
-      console.log('Switched to audio device:', deviceId);
+      log.info('Switched to audio device', { deviceId });
       this.dispatchEvent(new CustomEvent('device_changed', { detail: { deviceId } }));
 
     } catch (error) {
-      console.error('Error switching audio device:', error);
+      log.error('Error switching audio device', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.dispatchEvent(new CustomEvent('error', { detail: { error: errorMessage } }));
       throw error;
@@ -297,14 +301,14 @@ export class WebRTCAudioService extends EventTarget {
       const analyser = this.audioContext.createAnalyser();
       this.sourceNode.connect(analyser);
       analyser.fftSize = 256;
-      
+
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(dataArray);
-      
+
       // Calculate average amplitude
       const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
       return average / 255; // Normalize to 0-1
-      
+
     } catch (error) {
       return 0;
     }
@@ -339,8 +343,8 @@ export class WebRTCAudioService extends EventTarget {
     }
 
     this.playbackQueue = [];
-    
-    console.log('WebRTC Audio Service disposed');
+
+    log.debug('WebRTC Audio Service disposed');
   }
 
   get isInitialized(): boolean {

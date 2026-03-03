@@ -6,7 +6,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel } from '../utils';
+import { Logger } from '@/utils/logger';
 import type { SessionData, AppError } from '../types';
+
+const log = Logger.create('Sessions');
 
 // Session interface for UI with additional computed fields
 interface SessionWithUI extends SessionData {
@@ -117,7 +120,7 @@ const Sessions: React.FC = () => {
                 groupDescription = group.description;
               }
             } catch (error) {
-              console.warn(`Failed to fetch group info for session ${session.sessionId}:`, error);
+              log.warn(`Failed to fetch group info for session ${session.sessionId}`, { error });
             }
           }
 
@@ -369,7 +372,7 @@ const Sessions: React.FC = () => {
       } catch (err) {
         const appError = err as AppError;
         failedSessions.push(sessionId);
-        console.error(`Failed to delete session ${sessionId}:`, appError.message);
+        log.error(`Failed to delete session ${sessionId}`, undefined, { message: appError.message });
       }
     }
 

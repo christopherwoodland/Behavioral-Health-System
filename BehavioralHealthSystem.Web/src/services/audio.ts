@@ -2,7 +2,10 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { config } from '@/config/constants';
 import { createAppError } from '@/utils';
+import { Logger } from '@/utils/logger';
 import type { AudioConversionOptions, SilenceRemovalOptions } from '@/types';
+
+const log = Logger.create('AudioProcessor');
 // import type { AppError } from '@/types'; // Commented out until used
 
 export interface ConversionProgress {
@@ -172,19 +175,19 @@ export class AudioProcessor {
       command.push('-f', options.outputFormat, outputName);
 
       // Execute conversion
-      console.log('🔵 FFmpeg: Executing command:', command.join(' '));
+      log.debug('Executing FFmpeg command', { command: command.join(' ') });
       await this.ffmpeg.exec(command);
 
       // Read output file
       const outputData = await this.ffmpeg.readFile(outputName);
-      console.log('🔵 FFmpeg: Output data type:', typeof outputData, 'Length:', (outputData as Uint8Array).length || 'N/A');
+      log.debug('FFmpeg output data', { type: typeof outputData, length: (outputData as Uint8Array).length || 'N/A' });
 
       const outputBlob = new Blob([outputData as unknown as ArrayBuffer], { type: `audio/${options.outputFormat}` });
-      console.log('🔵 FFmpeg: Output blob size:', outputBlob.size, 'bytes');
+      log.debug('FFmpeg output blob', { size: outputBlob.size });
 
       // Validate output is not empty
       if (outputBlob.size === 0) {
-        console.error('🔴 FFmpeg: Conversion produced empty output!', {
+        log.error('Conversion produced empty output', undefined, {
           inputFile: file.name,
           inputSize: file.size,
           inputType: file.type,
@@ -203,7 +206,7 @@ export class AudioProcessor {
         `${this.getFileNameWithoutExtension(file.name)}.${options.outputFormat}`,
         { type: `audio/${options.outputFormat}` }
       );
-      console.log('🟢 FFmpeg: Conversion successful, output file size:', convertedFile.size, 'bytes');
+      log.info('Conversion successful', { outputSize: convertedFile.size });
 
       // Clean up temporary files
       await this.ffmpeg.deleteFile(inputName);

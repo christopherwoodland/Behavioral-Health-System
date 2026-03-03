@@ -11,11 +11,17 @@
     },
     "logLevel": {
       "default": "Information",
+      "Microsoft": "Warning",
       "Microsoft.AspNetCore": "Warning",
       "Microsoft.Hosting.Lifetime": "Information",
+      "System": "Warning",
       "Azure.Core": "Warning",
       "Azure.Identity": "Warning",
-      "DurableTask": "Warning"
+      "DurableTask": "Warning",
+      "BehavioralHealthSystem": "Information",
+      "BehavioralHealthSystem.Performance": "Information",
+      "BehavioralHealthSystem.Security": "Warning",
+      "Worker": "Warning"
     }
   },
   "extensions": {

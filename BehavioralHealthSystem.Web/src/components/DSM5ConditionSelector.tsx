@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { DSM5ConditionData } from '../types/dsm5Types';
 import { dsm5Service } from '../services/dsm5Service';
 import { createAppError } from '../utils';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('DSM5ConditionSelector');
 
 interface DSM5ConditionSelectorProps {
   selectedConditions: string[];
@@ -53,7 +56,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
       const errorMessage = err instanceof Error ? err.message : 'Failed to load DSM-5 conditions';
       const error = createAppError('DSM5_LOAD_ERROR', errorMessage);
       setError(error.message);
-      console.error('Error loading DSM-5 conditions:', error);
+      log.error('Error loading DSM-5 conditions', error);
     } finally {
       setLoading(false);
     }

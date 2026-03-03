@@ -2,6 +2,9 @@ import React, { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth, AuthenticatedTemplate, UnauthenticatedTemplate } from '@/contexts/AuthContext';
 import { APP_ROLES, type UserRole } from '@/config/authConfig';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('AuthGuards');
 
 /**
  * Props for authorization components
@@ -24,7 +27,7 @@ export const LoginPrompt: React.FC = () => {
   const { login, isLoading, error } = useAuth();
 
   const handleLogin = () => {
-    login().catch(console.error);
+    login().catch(err => log.error('Login failed', err));
   };
 
   return (

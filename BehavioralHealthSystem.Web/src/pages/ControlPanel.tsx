@@ -4,7 +4,10 @@ import { useAccessibility } from '../hooks/useAccessibility';
 import { AccessibleDialog } from '../components/AccessibleDialog';
 import { apiService } from '../services/api';
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
+
+const log = Logger.create('ControlPanel');
 
 // Types for analytics data
 interface AnalyticsData {
@@ -1335,11 +1338,11 @@ export const ControlPanel: React.FC = () => {
       try {
         // Add cache-busting timestamp to ensure fresh data
         const timestamp = Date.now();
-        console.log('🔄 ControlPanel: Fetching data with cache-buster:', timestamp);
+        log.debug('Fetching data with cache-buster', { timestamp });
 
         const allSessionsResponse = await apiService.getAllSessions();
         allSessions = allSessionsResponse.sessions;
-        console.log('📊 ControlPanel: Fetched sessions data:', {
+        log.debug('Fetched sessions data', {
           timestamp,
           totalCount: allSessions.length,
           responseCount: allSessionsResponse.count,
@@ -1351,14 +1354,14 @@ export const ControlPanel: React.FC = () => {
           }))
         });
       } catch (apiError) {
-        console.warn('getAllSessions endpoint not available:', apiError);
+        log.warn('getAllSessions endpoint not available', { error: apiError });
 
         // No fallback data - show empty state when API is unavailable
         allSessions = [];
       }
 
       const aggregatedData = aggregateSessionData(allSessions);
-      console.log('📈 ControlPanel: Aggregated analytics:', {
+      log.debug('Aggregated analytics', {
         totalSessions: aggregatedData.overview.totalSessions,
         uniqueUsers: aggregatedData.overview.uniqueUsers,
         successRate: aggregatedData.overview.successRate,
@@ -1384,16 +1387,16 @@ export const ControlPanel: React.FC = () => {
 
   // Auto-refresh data at specified interval
   useEffect(() => {
-    console.log('🔄 ControlPanel: Setting up auto-refresh with interval:', refreshInterval / 1000, 'seconds');
+    log.debug('Setting up auto-refresh', { intervalSeconds: refreshInterval / 1000 });
 
     const interval = setInterval(() => {
-      console.log('🔄 ControlPanel: Auto-refresh triggered, loading state:', loading);
+      log.debug('Auto-refresh triggered', { loading });
       // Remove loading check to ensure refresh happens
       loadAnalytics();
     }, refreshInterval);
 
     return () => {
-      console.log('🔄 ControlPanel: Cleaning up auto-refresh interval');
+      log.debug('Cleaning up auto-refresh interval');
       clearInterval(interval);
     }; // Cleanup on unmount
   }, [loadAnalytics, refreshInterval]); // Keep loadAnalytics in dependencies but remove loading

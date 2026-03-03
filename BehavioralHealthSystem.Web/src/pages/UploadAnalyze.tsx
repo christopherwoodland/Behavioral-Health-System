@@ -15,6 +15,9 @@ import GrammarCorrectionModal from '../components/GrammarCorrectionModal';
 import { submitToDam, mapDamResultToPrediction } from '../services/damService';
 import type { AppError, SessionMetadata } from '../types';
 import { AccessibleDialog } from '../components/AccessibleDialog';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('UploadAnalyze');
 
 interface UploadProgress {
   stage: 'idle' | 'starting' | 'initiating' | 'converting' | 'uploading' | 'submitting' | 'analyzing' | 'complete' | 'error';
@@ -447,15 +450,15 @@ const UploadAnalyze: React.FC = () => {
 
       // For remote URLs (Azure Blob Storage), fetch through backend API
       try {
-        console.log('ðŸŽµ Loading playable audio URL from:', audioFile.url);
+        log.debug('Loading playable audio URL from', { url: audioFile.url });
         const audioBlob = await apiService.downloadAudioBlob(audioFile.url);
         if (!isCancelled) {
           const blobUrl = URL.createObjectURL(audioBlob);
           setPlayableAudioUrl(blobUrl);
-          console.log('ðŸŽµ Created playable blob URL:', blobUrl);
+          log.debug('Created playable blob URL', { blobUrl });
         }
       } catch (error) {
-        console.error('ðŸŽµ Failed to load playable audio URL:', error);
+        log.error('Failed to load playable audio URL', error);
         if (!isCancelled) {
           setPlayableAudioUrl(null);
         }
@@ -1108,7 +1111,7 @@ const UploadAnalyze: React.FC = () => {
         try {
           await apiService.saveSessionData(initialSessionData);
         } catch (saveError) {
-          console.warn('Failed to save initial session data:', saveError);
+          log.warn('Failed to save initial session data', { error: saveError });
         }
 
         // Step 2: Convert audio
@@ -1143,7 +1146,7 @@ const UploadAnalyze: React.FC = () => {
             updatedAt: new Date().toISOString()
           });
         } catch (updateError) {
-          console.warn('Failed to update session with audio URL:', updateError);
+          log.warn('Failed to update session with audio URL', { error: updateError });
         }
 
         // Step 4: Transcribe audio (if enabled)
@@ -1163,7 +1166,7 @@ const UploadAnalyze: React.FC = () => {
               await apiService.saveTranscription(sessionId, transcriptionText);
             }
           } catch (transcriptionError) {
-            console.warn('Transcription failed for row', i + 1, transcriptionError);
+            log.warn('Transcription failed for row', { row: i + 1, error: transcriptionError });
           }
         }
 
@@ -1198,7 +1201,7 @@ const UploadAnalyze: React.FC = () => {
         addToast('success', 'Row Processed', `Successfully processed ${filename}`);
 
       } catch (error) {
-        console.error(`Error processing CSV row ${i + 1}:`, error);
+        log.error(`Error processing CSV row ${i + 1}`, error);
 
         // Update row result as error
         setCsvRowResults(prev => prev.map((r, idx) =>
@@ -1510,7 +1513,7 @@ const UploadAnalyze: React.FC = () => {
       const response = await apiService.correctGrammarAgent(userMetadata.sessionNotes);
       setGrammarCorrectedText(response.correctedText);
     } catch (error) {
-      console.error('Grammar correction failed:', error);
+      log.error('Grammar correction failed', error);
       const appError = error as AppError;
 
       // Show error toast
@@ -1863,7 +1866,7 @@ const UploadAnalyze: React.FC = () => {
           );
           audioFileName = blobFileName;
         } catch (uploadError) {
-          console.warn('DAM: Failed to upload audio to blob storage (session details will not show audio info):', uploadError);
+          log.warn('DAM: Failed to upload audio to blob storage (session details will not show audio info)', { error: uploadError });
         }
 
         setProcessingProgress(prev => ({
@@ -1888,7 +1891,7 @@ const UploadAnalyze: React.FC = () => {
         try {
           await apiService.saveSessionData(initialSessionData);
         } catch (saveError) {
-          console.warn('Failed to save initial session data:', saveError);
+          log.warn('Failed to save initial session data', { error: saveError });
         }
 
         // Transcribe audio if the checkbox is checked
@@ -1908,7 +1911,7 @@ const UploadAnalyze: React.FC = () => {
                 `Audio transcription completed with ${Math.round(transcriptionResult.confidence * 100)}% confidence.`);
             }
           } catch (transcriptionError) {
-            console.error('DAM transcription failed:', transcriptionError);
+            log.error('DAM transcription failed', transcriptionError);
             addToast('warning', 'Transcription Failed',
               `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. DAM analysis results are still available.`);
           }
@@ -1961,7 +1964,7 @@ const UploadAnalyze: React.FC = () => {
           await apiService.saveSessionData(finalSessionData);
           addToast('success', 'Session Saved', 'DAM analysis results saved to session storage.');
         } catch (saveErr) {
-          console.error('Failed to save DAM analysis results:', saveErr);
+          log.error('Failed to save DAM analysis results', saveErr);
           addToast('warning', 'Save Warning', 'DAM analysis completed but failed to save to session storage.');
         }
 
@@ -1973,7 +1976,7 @@ const UploadAnalyze: React.FC = () => {
         setResults(prev => ({ ...prev, [fileId]: analysisResult }));
       }
     } catch (err) {
-      console.error(`Error processing file ${fileId}:`, err);
+      log.error(`Error processing file ${fileId}`, err);
 
       // Extract error details for enhanced error display
       let errorCode = 'UNKNOWN_ERROR';
@@ -2019,10 +2022,10 @@ const UploadAnalyze: React.FC = () => {
           };
 
           await apiService.updateSessionData(currentProgress.sessionId, failedSessionData);
-          console.log(`Updated session ${currentProgress.sessionId} status to failed`);
+          log.debug(`Updated session ${currentProgress.sessionId} status to failed`);
         }
       } catch (updateError) {
-        console.error('Failed to update session status to failed:', updateError);
+        log.error('Failed to update session status to failed', updateError);
       }
 
       // Attempt to find and cleanup uploaded file if it exists
@@ -2037,10 +2040,10 @@ const UploadAnalyze: React.FC = () => {
           const fileName = `${userMetadata.userId}_*_*.wav`; // Pattern for potential cleanup
           // Note: In a real implementation, you'd want to track the exact fileName
           // For now, log the cleanup attempt
-          console.log(`Attempting cleanup for file pattern: ${fileName}`);
+          log.debug(`Attempting cleanup for file pattern: ${fileName}`);
         }
       } catch (cleanupError) {
-        console.warn('Error during cleanup attempt:', cleanupError);
+        log.warn('Error during cleanup attempt', { error: cleanupError });
       }
 
       setProcessingProgress(prev => ({
@@ -2225,7 +2228,7 @@ const UploadAnalyze: React.FC = () => {
       setFileStates(prev => ({ ...prev, [fileId]: 'complete' }));
       addToast('success', 'File Complete', `${audioFile.file.name} processed successfully`);
     } catch (error) {
-      console.error(`Error processing ${audioFile.file.name}:`, error);
+      log.error(`Error processing ${audioFile.file.name}`, error);
       const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
 
       addToast('error', 'File Failed', `Failed to process ${audioFile.file.name}: ${errorMessage}`);
@@ -2302,7 +2305,7 @@ const UploadAnalyze: React.FC = () => {
           );
           audioFileName = blobFileName;
         } catch (uploadError) {
-          console.warn('DAM: Failed to upload audio to blob storage (session details will not show audio info):', uploadError);
+          log.warn('DAM: Failed to upload audio to blob storage (session details will not show audio info)', { error: uploadError });
         }
 
         setProgress({ stage: 'analyzing', progress: 80, message: 'Saving results...' });
@@ -2324,7 +2327,7 @@ const UploadAnalyze: React.FC = () => {
         try {
           await apiService.saveSessionData(initialSessionData);
         } catch (saveError) {
-          console.warn('Failed to save initial session data:', saveError);
+          log.warn('Failed to save initial session data', { error: saveError });
         }
 
         // Transcribe audio if the checkbox is checked
@@ -2343,7 +2346,7 @@ const UploadAnalyze: React.FC = () => {
                 `Audio transcription completed with ${Math.round(transcriptionResult.confidence * 100)}% confidence.`);
             }
           } catch (transcriptionError) {
-            console.error('DAM transcription failed:', transcriptionError);
+            log.error('DAM transcription failed', transcriptionError);
             addToast('warning', 'Transcription Failed',
               `Audio transcription could not be completed: ${transcriptionError instanceof Error ? transcriptionError.message : 'Unknown error'}. DAM analysis results are still available.`);
           }
@@ -2394,7 +2397,7 @@ const UploadAnalyze: React.FC = () => {
           await apiService.saveSessionData(finalSessionData);
           addToast('success', 'Session Saved', 'DAM analysis results saved to session storage.');
         } catch (saveErr) {
-          console.error('Failed to save DAM analysis results:', saveErr);
+          log.error('Failed to save DAM analysis results', saveErr);
           addToast('warning', 'Save Warning', 'DAM analysis completed but failed to save to session storage.');
         }
 
@@ -2404,7 +2407,7 @@ const UploadAnalyze: React.FC = () => {
         announceToScreenReader('Local DAM model analysis completed successfully');
       }
     } catch (err) {
-      console.error('Processing error:', err);
+      log.error('Processing error', err);
       const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
       setError(errorMessage);
       setProgress({ stage: 'error', progress: 0, message: 'Processing failed' });
@@ -2589,7 +2592,7 @@ const UploadAnalyze: React.FC = () => {
               checked={transcribeAudio && isTranscriptionEnabled}
               disabled={!isTranscriptionEnabled}
               onChange={(e) => {
-                console.log('DEBUG: Transcribe Audio checkbox changed to:', e.target.checked);
+                log.debug('Transcribe Audio checkbox changed', { checked: e.target.checked });
                 setTranscribeAudio(e.target.checked);
               }}
               className={`mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 ${
@@ -4070,7 +4073,7 @@ const UploadAnalyze: React.FC = () => {
                                 const audioBlob = await apiService.downloadAudioBlob(audioFile.url);
                                 audio.src = URL.createObjectURL(audioBlob);
                               } catch (error) {
-                                console.error('Failed to load audio:', error);
+                                log.error('Failed to load audio', error);
                                 return;
                               }
                             }

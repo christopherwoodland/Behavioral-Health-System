@@ -1,0 +1,24 @@
+﻿properties:
+  template:
+    containers:
+    - name: bhs-dam-selfhost
+      image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest
+      resources:
+        cpu: 2.0
+        memory: 4Gi
+      probes:
+      - type: Liveness
+        httpGet:
+          path: /health
+          port: 8000
+        periodSeconds: 60
+        timeoutSeconds: 30
+        failureThreshold: 5
+      - type: Startup
+        httpGet:
+          path: /health
+          port: 8000
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 10
+        failureThreshold: 30

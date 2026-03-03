@@ -32,13 +32,13 @@ services:
       - DSM5_EXTRACTION_METHOD=CONTENT_UNDERSTANDING
       # Azure OpenAI - Managed Identity (no key)
       - AZURE_OPENAI_ENABLED=true
-      - AZURE_OPENAI_API_VERSION=2024-12-01-preview
-      - AZURE_OPENAI_DEPLOYMENT=gpt-4.1
+      - AZURE_OPENAI_API_VERSION=2025-04-01-preview
+      - AZURE_OPENAI_DEPLOYMENT=gpt-5-mini
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       # Extended Assessment OpenAI - Managed Identity (no key)
       - EXTENDED_ASSESSMENT_OPENAI_ENABLED=true
-      - EXTENDED_ASSESSMENT_OPENAI_API_VERSION=2024-12-01-preview
-      - EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT=gpt-5
+      - EXTENDED_ASSESSMENT_OPENAI_API_VERSION=2025-04-01-preview
+      - EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT=gpt-5.2
       - EXTENDED_ASSESSMENT_OPENAI_ENDPOINT=${EXTENDED_ASSESSMENT_OPENAI_ENDPOINT}
       - EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS=4000
       - EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE=0.2
@@ -51,7 +51,7 @@ services:
       - DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT=${DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT}
       # Grammar Correction Agent - Managed Identity (no API key)
       - AGENT_ENDPOINT=${AGENT_ENDPOINT}
-      - AGENT_MODEL_DEPLOYMENT=gpt-5
+      - AGENT_MODEL_DEPLOYMENT=gpt-5.2
       - AGENT_ENABLED=true
       - AGENT_SUPPORTS_TEMPERATURE=false
       - AGENT_SUPPORTS_MAX_TOKENS=false
@@ -60,12 +60,27 @@ services:
       - GRAMMAR_AGENT_INCLUDE_EXPLANATIONS=false
       - GRAMMAR_AGENT_PRESERVE_FORMATTING=true
       - GRAMMAR_AGENT_SUGGEST_ALTERNATIVES=false
+      # Azure Storage
+      - AZURE_STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}
+      # Local DAM Model
+      - LOCAL_DAM_BASE_URL=http://host.docker.internal:8000
+      - LOCAL_DAM_INITIATE_PATH=initiate
+      - LOCAL_DAM_PREDICTION_PATH=predict
+      - LOCAL_DAM_MODEL_ID=KintsugiHealth/dam
+      - LOCAL_DAM_TIMEOUT_SECONDS=300
+      - LOCAL_DAM_WARMUP_ON_STARTUP=true
+      - LOCAL_DAM_HEALTH_PATH=health
+      - LOCAL_DAM_WARMUP_TIMEOUT_SECONDS=600
+      - LOCAL_DAM_WARMUP_POLL_SECONDS=5
       # Azure Identity for Managed Identity
       - AZURE_TENANT_ID=${AZURE_TENANT_ID}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
       # Entra ID
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
       interval: 60s
@@ -107,9 +122,3 @@ services:
     restart: unless-stopped
 
 # No volumes needed - all data in Azure
-
-# Labels for container metadata
-labels:
-  environment: "development"
-  project: "behavioral-health-system"
-  managed-by: "docker-compose"

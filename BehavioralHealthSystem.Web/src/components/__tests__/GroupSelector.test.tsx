@@ -1,21 +1,79 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
+import userEvent from '@testing-library/user-event';
 import GroupSelector from '../GroupSelector';
 
-// Mock the service
-const mockFileGroupService = {
-  getFileGroups: vi.fn(),
-  createFileGroup: vi.fn(),
-  deleteFileGroup: vi.fn(),
-  getFileGroup: vi.fn(),
-  updateFileGroup: vi.fn(),
-  archiveFileGroup: vi.fn(),
-  searchFileGroups: vi.fn()
-};
+// vi.mock is hoisted—cannot reference variables declared below.
+// Use vi.hoisted() to define the mock object so it's available at hoist time.
+const { mockFileGroupService } = vi.hoisted(() => ({
+  mockFileGroupService: {
+    getFileGroups: vi.fn(),
+    createFileGroup: vi.fn(),
+    deleteFileGroup: vi.fn(),
+    getFileGroup: vi.fn(),
+    updateFileGroup: vi.fn(),
+    archiveFileGroup: vi.fn(),
+    searchFileGroups: vi.fn(),
+  },
+}));
 
 vi.mock('../../services/fileGroupService', () => ({
-  fileGroupService: mockFileGroupService
+  fileGroupService: mockFileGroupService,
+}));
+
+vi.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => ({
+    isAuthenticated: true,
+    user: { id: 'test-user-id', name: 'Test User' },
+    getAuthHeaders: vi.fn().mockResolvedValue({}),
+  }),
+}));
+
+vi.mock('../../utils', () => ({
+  getUserId: vi.fn(() => 'test-user-id'),
+}));
+
+vi.mock('../../utils/ui', () => ({
+  useLoadingState: () => ({
+    isLoading: false,
+    message: undefined,
+    progress: undefined,
+    setLoading: vi.fn(),
+    resetLoading: vi.fn(),
+  }),
+  useFieldState: (initial: any) => ({
+    value: initial,
+    touched: false,
+    isValid: true,
+    error: undefined,
+    setValue: vi.fn(),
+    setTouched: vi.fn(),
+    validate: vi.fn(() => true),
+    reset: vi.fn(),
+  }),
+  useConfirmDialog: () => ({
+    isOpen: false,
+    config: {
+      title: 'Confirm Action',
+      message: '',
+      confirmText: 'Confirm',
+      cancelText: 'Cancel',
+      onConfirm: vi.fn(),
+      onCancel: vi.fn(),
+    },
+    showConfirm: vi.fn(),
+    handleConfirm: vi.fn(),
+    handleCancel: vi.fn(),
+  }),
+}));
+
+vi.mock('../../utils/validation', () => ({
+  validateGroupName: vi.fn(() => ({ isValid: true })),
+}));
+
+vi.mock('../AccessibleDialog', () => ({
+  AccessibleDialog: ({ children, isOpen }: { children: React.ReactNode; isOpen: boolean }) =>
+    isOpen ? children : null,
 }));
 
 describe('GroupSelector Component', () => {
@@ -33,7 +91,7 @@ describe('GroupSelector Component', () => {
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       sessionCount: 5,
-      status: 'active' as const
+      status: 'active' as const,
     },
     {
       groupId: 'group-2',
@@ -43,8 +101,8 @@ describe('GroupSelector Component', () => {
       createdAt: '2024-01-02T00:00:00Z',
       updatedAt: '2024-01-02T00:00:00Z',
       sessionCount: 3,
-      status: 'active' as const
-    }
+      status: 'active' as const,
+    },
   ];
 
   const defaultProps = {
@@ -52,7 +110,7 @@ describe('GroupSelector Component', () => {
     selectedGroupId: undefined,
     onGroupChange: mockOnGroupChange,
     onCreateGroup: mockOnCreateGroup,
-    onDeleteGroup: mockOnDeleteGroup
+    onDeleteGroup: mockOnDeleteGroup,
   };
 
   beforeEach(() => {
@@ -60,21 +118,19 @@ describe('GroupSelector Component', () => {
     mockFileGroupService.getFileGroups.mockResolvedValue({
       success: true,
       fileGroups: mockFileGroups,
-      count: mockFileGroups.length
+      count: mockFileGroups.length,
     });
   });
 
   describe('Basic Rendering', () => {
     it('should render the component', async () => {
       render(<GroupSelector {...defaultProps} />);
-      
-      // Should render the group label
-      expect(screen.getByText('Group')).toBeInTheDocument();
+      expect(screen.getByText('File Group')).toBeInTheDocument();
     });
 
     it('should load file groups on mount', async () => {
       render(<GroupSelector {...defaultProps} />);
-      
+
       await waitFor(() => {
         expect(mockFileGroupService.getFileGroups).toHaveBeenCalledWith(mockUserId);
       });
@@ -82,53 +138,43 @@ describe('GroupSelector Component', () => {
   });
 
   describe('Group Selection', () => {
-    it('should handle group selection', async () => {
-      const user = userEvent.setup();
+    it('should have group change handler defined', async () => {
       render(<GroupSelector {...defaultProps} />);
 
       await waitFor(() => {
         expect(mockFileGroupService.getFileGroups).toHaveBeenCalled();
       });
 
-      // Test that the component can handle group selection
       expect(mockOnGroupChange).toBeDefined();
       expect(typeof mockOnGroupChange).toBe('function');
     });
   });
 
-  describe('Group Creation', () => {
-    it('should validate group names', () => {
-      // Test group name validation logic
+  describe('Group Name Validation Logic', () => {
+    it('should reject empty names', () => {
       const validateGroupName = (name: string, existingGroups: typeof mockFileGroups) => {
         if (!name || name.trim().length === 0) {
           return { isValid: false, error: 'Group name is required' };
         }
-        
-        if (existingGroups.some(g => g.groupName.toLowerCase() === name.toLowerCase())) {
+        if (existingGroups.some((g) => g.groupName.toLowerCase() === name.toLowerCase())) {
           return { isValid: false, error: 'A group with this name already exists' };
         }
-        
         return { isValid: true };
       };
 
-      // Test empty name
       expect(validateGroupName('', mockFileGroups).isValid).toBe(false);
-      
-      // Test duplicate name
       expect(validateGroupName('Test Group 1', mockFileGroups).isValid).toBe(false);
-      
-      // Test valid name
       expect(validateGroupName('New Group', mockFileGroups).isValid).toBe(true);
     });
+  });
 
+  describe('Group Creation', () => {
     it('should handle group creation workflow', async () => {
       const groupName = 'New Test Group';
       const description = 'New group description';
-      
-      // Mock successful creation
+
       mockOnCreateGroup.mockResolvedValue('new-group-id');
-      
-      // Test that creation function can be called
+
       const result = await mockOnCreateGroup(groupName, description);
       expect(result).toBe('new-group-id');
       expect(mockOnCreateGroup).toHaveBeenCalledWith(groupName, description);
@@ -139,24 +185,20 @@ describe('GroupSelector Component', () => {
     it('should handle group deletion workflow', async () => {
       const groupId = 'group-1';
       const groupName = 'Test Group 1';
-      
-      // Mock successful deletion
+
       mockOnDeleteGroup.mockResolvedValue(undefined);
-      
-      // Test deletion workflow
+
       await mockOnDeleteGroup(groupId, groupName);
       expect(mockOnDeleteGroup).toHaveBeenCalledWith(groupId, groupName);
     });
 
     it('should check deletion permissions', () => {
-      const canDelete = (group: typeof mockFileGroups[0], userId: string) => {
+      const canDelete = (group: (typeof mockFileGroups)[0], userId: string) => {
         return group.createdBy === userId;
       };
 
-      // User can delete their own groups
       expect(canDelete(mockFileGroups[0], mockUserId)).toBe(true);
-      
-      // User cannot delete other user's groups
+
       const otherUserGroup = { ...mockFileGroups[0], createdBy: 'other-user' };
       expect(canDelete(otherUserGroup, mockUserId)).toBe(false);
     });
@@ -166,23 +208,20 @@ describe('GroupSelector Component', () => {
     it('should filter groups by search term', () => {
       const filterGroups = (groups: typeof mockFileGroups, searchTerm: string) => {
         if (!searchTerm) return groups;
-        
-        return groups.filter(group =>
-          group.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (group.description && group.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        return groups.filter(
+          (group) =>
+            group.groupName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (group.description && group.description.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       };
 
-      // Test search by name
       const nameResults = filterGroups(mockFileGroups, 'Test Group 1');
       expect(nameResults).toHaveLength(1);
       expect(nameResults[0].groupName).toBe('Test Group 1');
 
-      // Test search by description
       const descResults = filterGroups(mockFileGroups, 'First');
       expect(descResults).toHaveLength(1);
 
-      // Test no matches
       const noResults = filterGroups(mockFileGroups, 'Nonexistent');
       expect(noResults).toHaveLength(0);
     });
@@ -191,10 +230,9 @@ describe('GroupSelector Component', () => {
   describe('Error Handling', () => {
     it('should handle API errors', async () => {
       mockFileGroupService.getFileGroups.mockRejectedValue(new Error('API Error'));
-      
+
       render(<GroupSelector {...defaultProps} />);
-      
-      // Should handle the error gracefully
+
       await waitFor(() => {
         expect(mockFileGroupService.getFileGroups).toHaveBeenCalled();
       });
@@ -202,7 +240,7 @@ describe('GroupSelector Component', () => {
 
     it('should handle creation errors', async () => {
       mockOnCreateGroup.mockRejectedValue(new Error('Creation failed'));
-      
+
       try {
         await mockOnCreateGroup('Test Group', 'Description');
       } catch (error) {
@@ -212,7 +250,7 @@ describe('GroupSelector Component', () => {
 
     it('should handle deletion errors', async () => {
       mockOnDeleteGroup.mockRejectedValue(new Error('Deletion failed'));
-      
+
       try {
         await mockOnDeleteGroup('group-1', 'Test Group 1');
       } catch (error) {
@@ -224,8 +262,7 @@ describe('GroupSelector Component', () => {
   describe('Data Validation', () => {
     it('should validate file group data structure', () => {
       const sampleGroup = mockFileGroups[0];
-      
-      // Required fields
+
       expect(sampleGroup.groupId).toBeDefined();
       expect(sampleGroup.groupName).toBeDefined();
       expect(sampleGroup.createdBy).toBeDefined();
@@ -233,8 +270,7 @@ describe('GroupSelector Component', () => {
       expect(sampleGroup.updatedAt).toBeDefined();
       expect(sampleGroup.sessionCount).toBeDefined();
       expect(sampleGroup.status).toBeDefined();
-      
-      // Type validation
+
       expect(typeof sampleGroup.groupId).toBe('string');
       expect(typeof sampleGroup.groupName).toBe('string');
       expect(typeof sampleGroup.createdBy).toBe('string');
@@ -243,13 +279,11 @@ describe('GroupSelector Component', () => {
     });
 
     it('should validate component props', () => {
-      // Test that all required props are present
       expect(defaultProps.userId).toBeDefined();
       expect(defaultProps.onGroupChange).toBeDefined();
       expect(defaultProps.onCreateGroup).toBeDefined();
       expect(defaultProps.onDeleteGroup).toBeDefined();
-      
-      // Test prop types
+
       expect(typeof defaultProps.userId).toBe('string');
       expect(typeof defaultProps.onGroupChange).toBe('function');
       expect(typeof defaultProps.onCreateGroup).toBe('function');

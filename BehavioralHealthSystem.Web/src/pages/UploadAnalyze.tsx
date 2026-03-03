@@ -1847,6 +1847,9 @@ const UploadAnalyze: React.FC = () => {
 
         const damPrediction = mapDamResultToPrediction(damPipelineResult);
 
+        // Build user metadata for session storage
+        const builtMetadata = buildMetadataFromUserData(fileMetadata);
+
         // Upload audio file to blob storage for session details / playback
         let audioUrl: string | undefined;
         let audioFileName: string | undefined;
@@ -1867,6 +1870,26 @@ const UploadAnalyze: React.FC = () => {
           ...prev,
           [fileId]: { stage: 'analyzing', progress: 80, message: 'Saving results...' }
         }));
+
+        // Save initial session data so SaveTranscription can find the session
+        const initialSessionData = {
+          sessionId: sessionData.sessionId,
+          userId: getAuthenticatedUserId(),
+          metadata_user_id: fileMetadata.userId.trim(),
+          groupId: selectedGroupId,
+          ...(builtMetadata && { userMetadata: builtMetadata }),
+          audioUrl: audioUrl,
+          audioFileName: audioFileName || audioFile.file.name,
+          status: 'processing',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        try {
+          await apiService.saveSessionData(initialSessionData);
+        } catch (saveError) {
+          console.warn('Failed to save initial session data:', saveError);
+        }
 
         // Transcribe audio if the checkbox is checked
         let transcriptionText: string | null = null;
@@ -1912,10 +1935,9 @@ const UploadAnalyze: React.FC = () => {
           transcriptionText: transcriptionText || undefined,
         };
 
-        // Save final session data
+        // Save final session data (merges with initial session data including userMetadata)
         const finalSessionData = {
-          sessionId: sessionData.sessionId,
-          userId: sessionData.userId,
+          ...initialSessionData,
           provider: 'local-dam',
           audioUrl: audioUrl,
           audioFileName: audioFileName || audioFile.file.name,
@@ -1931,7 +1953,6 @@ const UploadAnalyze: React.FC = () => {
             completedAt: new Date().toISOString(),
           },
           status: 'completed',
-          createdAt: new Date().toISOString(),
           completedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
@@ -1984,7 +2005,8 @@ const UploadAnalyze: React.FC = () => {
           const failedSessionData = {
             sessionId: currentProgress.sessionId,
             userId: getAuthenticatedUserId(),
-            metadata_user_id: userMetadata.userId.trim(),
+            metadata_user_id: (audioFile.userMetadata || userMetadata).userId.trim(),
+            groupId: selectedGroupId,
             audioFileName: audioFile.file.name,
             createdAt: new Date().toISOString(), // Set as current time since we don't have original
             status: 'failed',
@@ -2264,6 +2286,9 @@ const UploadAnalyze: React.FC = () => {
 
         const damPrediction = mapDamResultToPrediction(damPipelineResult);
 
+        // Build user metadata for session storage
+        const builtMetadata = buildMetadataFromUserData(userMetadata);
+
         // Upload audio file to blob storage for session details / playback
         let audioUrl: string | undefined;
         let audioFileName: string | undefined;
@@ -2281,6 +2306,26 @@ const UploadAnalyze: React.FC = () => {
         }
 
         setProgress({ stage: 'analyzing', progress: 80, message: 'Saving results...' });
+
+        // Save initial session data so SaveTranscription can find the session
+        const initialSessionData = {
+          sessionId: sessionData.sessionId,
+          userId: getAuthenticatedUserId(),
+          metadata_user_id: userMetadata.userId.trim(),
+          groupId: selectedGroupId,
+          ...(builtMetadata && { userMetadata: builtMetadata }),
+          audioUrl: audioUrl,
+          audioFileName: audioFileName || audioFile.file.name,
+          status: 'processing',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+
+        try {
+          await apiService.saveSessionData(initialSessionData);
+        } catch (saveError) {
+          console.warn('Failed to save initial session data:', saveError);
+        }
 
         // Transcribe audio if the checkbox is checked
         let transcriptionText: string | null = null;
@@ -2325,8 +2370,7 @@ const UploadAnalyze: React.FC = () => {
         };
 
         const finalSessionData = {
-          sessionId: sessionData.sessionId,
-          userId: sessionData.userId,
+          ...initialSessionData,
           provider: 'local-dam',
           audioUrl: audioUrl,
           audioFileName: audioFileName || audioFile.file.name,
@@ -2342,7 +2386,6 @@ const UploadAnalyze: React.FC = () => {
             completedAt: new Date().toISOString(),
           },
           status: 'completed',
-          createdAt: new Date().toISOString(),
           completedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };

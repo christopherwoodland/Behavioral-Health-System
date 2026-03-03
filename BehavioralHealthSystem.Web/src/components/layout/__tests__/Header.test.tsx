@@ -10,7 +10,14 @@ vi.mock('@/contexts/ThemeContext', () => ({
 }));
 
 vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: vi.fn(),
+  useAuth: vi.fn(() => ({
+    user: null,
+    isAuthenticated: false,
+    isLoading: false,
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    getAccessToken: vi.fn(),
+  })),
 }));
 
 vi.mock('react-router-dom', async () => {
@@ -25,6 +32,19 @@ vi.mock('react-router-dom', async () => {
 vi.mock('@/hooks/accessibility', () => ({
   useKeyboardNavigation: vi.fn(() => ({
     handleEnterSpace: vi.fn(),
+  })),
+  useAnnouncements: vi.fn(() => ({
+    announce: vi.fn(),
+  })),
+  useFocusManagement: vi.fn(() => ({
+    focusRef: { current: null },
+  })),
+  useSkipToContent: vi.fn(),
+  useFormAccessibility: vi.fn(() => ({
+    getFieldProps: vi.fn(),
+  })),
+  useStatusAnnouncements: vi.fn(() => ({
+    announceStatus: vi.fn(),
   })),
 }));
 

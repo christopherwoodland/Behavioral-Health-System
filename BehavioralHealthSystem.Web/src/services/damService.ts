@@ -64,6 +64,23 @@ export async function submitToDam(
   userId: string,
   sessionId: string,
 ): Promise<DamPipelineResult> {
+  // Guard: ensure the file is a real File/Blob, not a mock object.
+  // A plain object cast as File would be coerced to "[object Object]" by FormData,
+  // producing a corrupt 15-byte upload that ffmpeg cannot parse.
+  if (!(file instanceof Blob)) {
+    throw new Error(
+      'Invalid audio file: expected a File or Blob but received a plain object. ' +
+      'Please re-select the audio file and try again.'
+    );
+  }
+
+  if (file.size === 0) {
+    throw new Error(
+      'Invalid audio file: file is empty (0 bytes). ' +
+      'Please re-select the audio file and try again.'
+    );
+  }
+
   const apiBaseUrl = env.API_BASE_URL;
 
   const formData = new FormData();

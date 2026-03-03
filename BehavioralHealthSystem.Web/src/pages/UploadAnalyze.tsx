@@ -325,32 +325,53 @@ const UploadAnalyze: React.FC = () => {
       addToast('info', 'Session Data Pre-filled',
         `Metadata and audio file from session ${prefilledData.originalSessionId ? prefilledData.originalSessionId.slice(0, 8) + '...' : ''} have been loaded. Click "Start Analysis" to begin processing.`);
 
-      // If there's an audio URL, create a virtual audio file entry
+      // If there's an audio URL, fetch the actual audio data and create a real File object
       if (prefilledData.audioUrl && prefilledData.audioFileName) {
-        // Create a mock file object since we already have the URL
-        const mockFile = {
-          name: prefilledData.audioFileName,
-          size: 0,
-          type: 'audio/wav',
-          lastModified: Date.now(),
-          stream: () => new ReadableStream(),
-          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-          text: () => Promise.resolve(''),
-          slice: () => new Blob()
-        } as File;
+        const fetchAudioFile = async () => {
+          try {
+            log.info('Re-run: Fetching audio from URL', { url: prefilledData.audioUrl, fileName: prefilledData.audioFileName });
 
-        const virtualAudioFile: AudioFile = {
-          id: `prefilled-${Date.now()}`,
-          file: mockFile,
-          url: prefilledData.audioUrl,
-          duration: undefined
+            let blob: Blob;
+            if (prefilledData.audioUrl!.startsWith('blob:')) {
+              // Local blob URL - fetch directly
+              const response = await fetch(prefilledData.audioUrl!);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch audio: HTTP ${response.status}`);
+              }
+              blob = await response.blob();
+            } else {
+              // Azure Blob Storage URL - download through backend API proxy (handles auth)
+              blob = await apiService.downloadAudioBlob(prefilledData.audioUrl!);
+            }
+            const realFile = new File(
+              [blob],
+              prefilledData.audioFileName!,
+              { type: blob.type || 'audio/wav', lastModified: Date.now() }
+            );
+
+            log.info('Re-run: Audio file fetched successfully', { fileName: realFile.name, size: realFile.size });
+
+            const blobUrl = URL.createObjectURL(realFile);
+            const virtualAudioFile: AudioFile = {
+              id: `prefilled-${Date.now()}`,
+              file: realFile,
+              url: blobUrl,
+              duration: undefined
+            };
+
+            if (isMultiMode) {
+              setAudioFiles([virtualAudioFile]);
+            } else {
+              setAudioFile(virtualAudioFile);
+            }
+          } catch (err) {
+            log.error('Re-run: Failed to fetch audio file. User must re-select the audio file.', err);
+            addToast('warning', 'Audio Not Available',
+              'Could not retrieve the original audio file. Please select a new audio file to re-run the analysis.');
+          }
         };
 
-        if (isMultiMode) {
-          setAudioFiles([virtualAudioFile]);
-        } else {
-          setAudioFile(virtualAudioFile);
-        }
+        fetchAudioFile();
       }
     }
   }, [prefilledData, addToast, isMultiMode]); // Include dependencies
@@ -3537,10 +3558,23 @@ const UploadAnalyze: React.FC = () => {
                               </span>
                             )}
                             {fileState === 'error' && (
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                                <X className="h-3 w-3 mr-1" />
-                                Error
-                              </span>
+                              <>
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
+                                  <X className="h-3 w-3 mr-1" />
+                                  Error
+                                </span>
+                                <button type="button"
+                                  onClick={() => {
+                                    setFileStates(prev => ({ ...prev, [file.id]: 'ready' }));
+                                    setProcessingProgress(prev => ({ ...prev, [file.id]: { stage: 'idle', progress: 0, message: 'Ready to process' } }));
+                                  }}
+                                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 dark:focus:ring-offset-gray-800"
+                                  aria-label={`Retry processing ${file.file.name}`}
+                                >
+                                  <Play className="h-3 w-3 mr-1" />
+                                  Retry
+                                </button>
+                              </>
                             )}
                             <button type="button"
                               onClick={() => removeAudioFile(file.id)}

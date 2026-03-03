@@ -457,31 +457,31 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     zipCodeDistribution: {} as Record<string, { depressionCases: number; anxietyCases: number; totalSessions: number; }>,
   };
 
-  // Helper function to determine if a session indicates depression/anxiety
+  // Helper function to determine if a session has any depression/anxiety prediction
   const hasDepressionCase = (session: ImportedSessionData): boolean => {
-    // Check for moderate_to_severe or severe depression
+    // Check for any depression prediction category
     if (session.prediction) {
       const prediction = session.prediction as any;
       const depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
-      return depressionCategory === 'moderate_to_severe' || depressionCategory === 'severe';
+      return !!depressionCategory;
     }
-    // Fallback to numeric score (PHQ-9 >= 10 indicates moderate or higher depression)
+    // Fallback to numeric score existing
     if (session.analysisResults?.depressionScore !== null && session.analysisResults?.depressionScore !== undefined) {
-      return session.analysisResults.depressionScore >= 10;
+      return true;
     }
     return false;
   };
 
   const hasAnxietyCase = (session: ImportedSessionData): boolean => {
-    // Check for moderate, moderately_severe, or severe anxiety
+    // Check for any anxiety prediction category
     if (session.prediction) {
       const prediction = session.prediction as any;
       const anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
-      return anxietyCategory === 'moderate' || anxietyCategory === 'moderately_severe' || anxietyCategory === 'severe';
+      return !!anxietyCategory;
     }
-    // Fallback to numeric score (GAD-7 >= 10 indicates moderate or higher anxiety)
+    // Fallback to numeric score existing
     if (session.analysisResults?.anxietyScore !== null && session.analysisResults?.anxietyScore !== undefined) {
-      return session.analysisResults.anxietyScore >= 10;
+      return true;
     }
     return false;
   };
@@ -887,7 +887,7 @@ const MetadataCorrelationChart: React.FC<{
               {/* Depression Bar */}
               <div className="mb-3">
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Depression Cases</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Depression Detected</span>
                   <span className="text-sm font-medium text-red-600 dark:text-red-400">
                     {categoryData.depressionCases} ({depressionRate.toFixed(1)}%)
                   </span>
@@ -905,7 +905,7 @@ const MetadataCorrelationChart: React.FC<{
               {/* Anxiety Bar */}
               <div>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Anxiety Cases</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Anxiety Detected</span>
                   <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
                     {categoryData.anxietyCases} ({anxietyRate.toFixed(1)}%)
                   </span>
@@ -931,13 +931,13 @@ const MetadataCorrelationChart: React.FC<{
             <div className="text-lg font-bold text-red-600 dark:text-red-400">
               {categories.reduce((sum, cat) => sum + data[cat].depressionCases, 0)}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Total Depression Cases</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Total Depression Detected</div>
           </div>
           <div>
             <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
               {categories.reduce((sum, cat) => sum + data[cat].anxietyCases, 0)}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">Total Anxiety Cases</div>
+            <div className="text-xs text-gray-600 dark:text-gray-400">Total Anxiety Detected</div>
           </div>
         </div>
       </div>

@@ -1,0 +1,72 @@
+﻿{
+    "properties":  {
+                       "template":  {
+                                        "containers":  [
+                                                           {
+                                                               "env":  [
+                                                                           {
+                                                                               "name":  "DAM_MOCK_MODE",
+                                                                               "value":  "false"
+                                                                           },
+                                                                           {
+                                                                               "name":  "DAM_PRELOAD_ON_STARTUP",
+                                                                               "value":  "true"
+                                                                           },
+                                                                           {
+                                                                               "name":  "DAM_PROCESS_START_METHOD",
+                                                                               "value":  "spawn"
+                                                                           },
+                                                                           {
+                                                                               "name":  "UVICORN_WORKERS",
+                                                                               "value":  "2"
+                                                                           }
+                                                                       ],
+                                                               "image":  "bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest",
+                                                               "imageType":  "ContainerImage",
+                                                               "name":  "bhs-dam-selfhost",
+                                                               "probes":  [
+                                                                              {
+                                                                                  "failureThreshold":  5,
+                                                                                  "httpGet":  {
+                                                                                                  "path":  "/health",
+                                                                                                  "port":  8000
+                                                                                              },
+                                                                                  "periodSeconds":  60,
+                                                                                  "timeoutSeconds":  30,
+                                                                                  "type":  "Liveness"
+                                                                              },
+                                                                              {
+                                                                                  "failureThreshold":  30,
+                                                                                  "httpGet":  {
+                                                                                                  "path":  "/health",
+                                                                                                  "port":  8000
+                                                                                              },
+                                                                                  "initialDelaySeconds":  10,
+                                                                                  "periodSeconds":  10,
+                                                                                  "timeoutSeconds":  10,
+                                                                                  "type":  "Startup"
+                                                                              }
+                                                                          ],
+                                                               "resources":  {
+                                                                                 "cpu":  2.0,
+                                                                                 "ephemeralStorage":  "8Gi",
+                                                                                 "memory":  "4Gi"
+                                                                             }
+                                                           }
+                                                       ],
+                                        "customMetricsSettings":  null,
+                                        "initContainers":  null,
+                                        "revisionSuffix":  "",
+                                        "scale":  {
+                                                      "cooldownPeriod":  300,
+                                                      "maxReplicas":  1,
+                                                      "minReplicas":  1,
+                                                      "pollingInterval":  30,
+                                                      "rules":  null
+                                                  },
+                                        "serviceBinds":  null,
+                                        "terminationGracePeriodSeconds":  null,
+                                        "volumes":  null
+                                    }
+                   }
+}

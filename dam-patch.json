@@ -1,0 +1,57 @@
+﻿{
+    "properties":  {
+                       "template":  {
+                                        "containers":  [
+                                                           {
+                                                               "probes":  [
+                                                                              {
+                                                                                  "periodSeconds":  60,
+                                                                                  "failureThreshold":  5,
+                                                                                  "timeoutSeconds":  30,
+                                                                                  "type":  "Liveness",
+                                                                                  "httpGet":  {
+                                                                                                  "path":  "/health",
+                                                                                                  "port":  8000
+                                                                                              }
+                                                                              },
+                                                                              {
+                                                                                  "httpGet":  {
+                                                                                                  "path":  "/health",
+                                                                                                  "port":  8000
+                                                                                              },
+                                                                                  "timeoutSeconds":  10,
+                                                                                  "periodSeconds":  10,
+                                                                                  "type":  "Startup",
+                                                                                  "initialDelaySeconds":  10,
+                                                                                  "failureThreshold":  30
+                                                                              }
+                                                                          ],
+                                                               "env":  [
+                                                                           {
+                                                                               "value":  "false",
+                                                                               "name":  "DAM_MOCK_MODE"
+                                                                           },
+                                                                           {
+                                                                               "value":  "true",
+                                                                               "name":  "DAM_PRELOAD_ON_STARTUP"
+                                                                           },
+                                                                           {
+                                                                               "value":  "spawn",
+                                                                               "name":  "DAM_PROCESS_START_METHOD"
+                                                                           },
+                                                                           {
+                                                                               "value":  "2",
+                                                                               "name":  "UVICORN_WORKERS"
+                                                                           }
+                                                                       ],
+                                                               "name":  "bhs-dam-selfhost",
+                                                               "resources":  {
+                                                                                 "cpu":  2,
+                                                                                 "memory":  "4Gi"
+                                                                             },
+                                                               "image":  "bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest"
+                                                           }
+                                                       ]
+                                    }
+                   }
+}

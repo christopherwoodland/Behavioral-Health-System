@@ -12,7 +12,18 @@ Accept: application/json
 
 ###
 
-### 2. ce": "white",
+### 2. Initiate Session - Create a new session for user
+POST {{baseUrl}}/api/sessions/initiate
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "metadata": {
+    "age": 28,
+    "ethnicity": "Hispanic, Latino, or Spanish Origin",
+    "gender": "female",
+    "language": true,
+    "race": "white",
     "weight": 140,
     "zipcode": "90210"
   },
@@ -160,4 +171,7 @@ Content-Type: application/json
 ###
 ### Expected Response Flow:
 ### - Health Check: {"status": "Healthy", ...}
-### - Initiate Sess
+### - Initiate Session: {"sessionId": "abc123", "userId": "test-user-123"}
+### - Submit Prediction: {"success": true, "sessionId": "..."}
+### - User Predictions (by userId): [{"sessionId": "...", "results": [...]}]
+### - Prediction (by sessionId): {"sessionId": "...", "status": "...", "predictedScore": "...", ...}

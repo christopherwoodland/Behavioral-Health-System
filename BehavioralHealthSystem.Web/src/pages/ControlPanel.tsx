@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info, X } from 'lucide-react';
+import { RefreshCw, AlertCircle, TrendingUp, TrendingDown, Users, Activity, Info, X, ChevronDown } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { AccessibleDialog } from '../components/AccessibleDialog';
 import { apiService } from '../services/api';
@@ -8,6 +8,47 @@ import { Logger } from '@/utils/logger';
 import type { SessionData as ImportedSessionData, AppError } from '../types';
 
 const log = Logger.create('ControlPanel');
+
+// Collapsible section wrapper for visualization panels
+const CollapsibleSection: React.FC<{
+  title: string;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}> = ({ title, subtitle, defaultOpen = true, children }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="mb-8">
+      <button
+        type="button"
+        onClick={() => setIsOpen(prev => !prev)}
+        className="w-full flex items-center justify-between group cursor-pointer mb-4"
+        aria-expanded={isOpen}
+        aria-controls={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}
+      >
+        <div className="text-left">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            {title}
+            <ChevronDown
+              className={`h-5 w-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-transform duration-200 ${
+                isOpen ? '' : '-rotate-90'
+              }`}
+            />
+          </h2>
+          {subtitle && (
+            <p className="text-gray-600 dark:text-gray-400 mt-1">{subtitle}</p>
+          )}
+        </div>
+      </button>
+      {isOpen && (
+        <div id={`section-${title.replace(/\s+/g, '-').toLowerCase()}`}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Types for analytics data
 interface AnalyticsData {
@@ -135,6 +176,13 @@ interface AnalyticsData {
         totalSessions: number;
       };
     };
+  };
+  modelAnalytics: {
+    providerDistribution: Record<string, number>;
+    modelCategoryDistribution: Record<string, number>;
+    calibratedCount: number;
+    uncalibratedCount: number;
+    totalWithModelInfo: number;
   };
 }
 
@@ -546,6 +594,48 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     }
   });
 
+  // Calculate model analytics from prediction metadata
+  const modelAnalytics = {
+    providerDistribution: {} as Record<string, number>,
+    modelCategoryDistribution: {} as Record<string, number>,
+    calibratedCount: 0,
+    uncalibratedCount: 0,
+    totalWithModelInfo: 0,
+  };
+
+  completedSessions.forEach(session => {
+    if (!session.prediction) return;
+    const prediction = session.prediction as any;
+
+    const provider = prediction.provider || prediction.Provider;
+    const modelCategory = prediction.modelCategory || prediction.model_category;
+    const isCalibrated = prediction.isCalibrated ?? prediction.is_calibrated;
+
+    if (provider || modelCategory || isCalibrated !== undefined) {
+      modelAnalytics.totalWithModelInfo++;
+    }
+
+    if (provider) {
+      const providerLabel = provider === 'local-dam' ? 'DAM (Local)' : provider;
+      modelAnalytics.providerDistribution[providerLabel] =
+        (modelAnalytics.providerDistribution[providerLabel] || 0) + 1;
+    } else {
+      modelAnalytics.providerDistribution['API (Kintsugi)'] =
+        (modelAnalytics.providerDistribution['API (Kintsugi)'] || 0) + 1;
+    }
+
+    if (modelCategory) {
+      modelAnalytics.modelCategoryDistribution[modelCategory] =
+        (modelAnalytics.modelCategoryDistribution[modelCategory] || 0) + 1;
+    }
+
+    if (isCalibrated === true) {
+      modelAnalytics.calibratedCount++;
+    } else if (isCalibrated === false) {
+      modelAnalytics.uncalibratedCount++;
+    }
+  });
+
   return {
     overview: {
       totalSessions,
@@ -578,6 +668,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     riskDistribution: riskCounts,
     userStats,
     correlations,
+    modelAnalytics,
   };
 };
 
@@ -1523,67 +1614,64 @@ export const ControlPanel: React.FC = () => {
           />
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Risk Level Distribution */}
-          <div className="lg:col-span-2">
-            <DistributionChart
-              title="Risk Level Distribution"
-              data={[
-                { label: 'Low Risk', value: analytics.riskLevels.low, color: 'bg-green-500' },
-                { label: 'Medium Risk', value: analytics.riskLevels.medium, color: 'bg-yellow-500' },
-                { label: 'High Risk', value: analytics.riskLevels.high, color: 'bg-red-500' },
-                { label: 'Unknown', value: analytics.riskLevels.unknown, color: 'bg-gray-500' },
-              ]}
-              total={analytics.riskLevels.total}
-            />
+        {/* Risk Level Distribution */}
+        <CollapsibleSection title="Risk Level Distribution">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="lg:col-span-2">
+              <DistributionChart
+                title="Risk Level Distribution"
+                data={[
+                  { label: 'Low Risk', value: analytics.riskLevels.low, color: 'bg-green-500' },
+                  { label: 'Medium Risk', value: analytics.riskLevels.medium, color: 'bg-yellow-500' },
+                  { label: 'High Risk', value: analytics.riskLevels.high, color: 'bg-red-500' },
+                  { label: 'Unknown', value: analytics.riskLevels.unknown, color: 'bg-gray-500' },
+                ]}
+                total={analytics.riskLevels.total}
+              />
+            </div>
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Prediction Distribution */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Depression Score Distribution */}
-          <DistributionChart
-            title="Depression Score Distribution"
-            data={[
-              { label: 'No to Mild', value: analytics.predictions.depression.no_to_mild, color: 'bg-green-500' },
-              { label: 'Mild to Moderate', value: analytics.predictions.depression.mild_to_moderate, color: 'bg-yellow-500' },
-              { label: 'Moderate to Severe', value: analytics.predictions.depression.moderate_to_severe, color: 'bg-orange-500' },
-              { label: 'Severe', value: analytics.predictions.depression.severe, color: 'bg-red-500' },
-            ]}
-            total={analytics.predictions.depression.total}
-          />
+        <CollapsibleSection title="Prediction Distribution" subtitle="Depression and anxiety score breakdowns across all sessions">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Depression Score Distribution */}
+            <DistributionChart
+              title="Depression Score Distribution"
+              data={[
+                { label: 'No to Mild', value: analytics.predictions.depression.no_to_mild, color: 'bg-green-500' },
+                { label: 'Mild to Moderate', value: analytics.predictions.depression.mild_to_moderate, color: 'bg-yellow-500' },
+                { label: 'Moderate to Severe', value: analytics.predictions.depression.moderate_to_severe, color: 'bg-orange-500' },
+                { label: 'Severe', value: analytics.predictions.depression.severe, color: 'bg-red-500' },
+              ]}
+              total={analytics.predictions.depression.total}
+            />
 
-          {/* Anxiety Score Distribution */}
-          <DistributionChart
-            title="Anxiety Score Distribution"
-            data={[
-              { label: 'No or Minimal', value: analytics.predictions.anxiety.no_or_minimal, color: 'bg-green-500' },
-              { label: 'Mild', value: analytics.predictions.anxiety.mild, color: 'bg-yellow-500' },
-              { label: 'Moderate', value: analytics.predictions.anxiety.moderate, color: 'bg-orange-500' },
-              { label: 'Moderately Severe', value: analytics.predictions.anxiety.moderately_severe, color: 'bg-red-500' },
-              { label: 'Severe', value: analytics.predictions.anxiety.severe, color: 'bg-red-700' },
-            ]}
-            total={analytics.predictions.anxiety.total}
-          />
-        </div>
+            {/* Anxiety Score Distribution */}
+            <DistributionChart
+              title="Anxiety Score Distribution"
+              data={[
+                { label: 'No or Minimal', value: analytics.predictions.anxiety.no_or_minimal, color: 'bg-green-500' },
+                { label: 'Mild', value: analytics.predictions.anxiety.mild, color: 'bg-yellow-500' },
+                { label: 'Moderate', value: analytics.predictions.anxiety.moderate, color: 'bg-orange-500' },
+                { label: 'Moderately Severe', value: analytics.predictions.anxiety.moderately_severe, color: 'bg-red-500' },
+                { label: 'Severe', value: analytics.predictions.anxiety.severe, color: 'bg-red-700' },
+              ]}
+              total={analytics.predictions.anxiety.total}
+            />
+          </div>
+        </CollapsibleSection>
 
         {/* Per-User Statistics */}
-        <div className="mb-8">
+        <CollapsibleSection title="Per-User Statistics" subtitle="Individual user session history and risk breakdown">
           <UserStatsTable userStats={analytics.userStats} />
-        </div>
+        </CollapsibleSection>
 
         {/* Metadata Correlation Analysis */}
-        <div className="mb-8">
-          <div className="mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Demographic Correlation Analysis
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400">
-              Correlation between patient demographics and mental health outcomes (Depression & Anxiety cases)
-            </p>
-          </div>
-
+        <CollapsibleSection
+          title="Demographic Correlation Analysis"
+          subtitle="Correlation between patient demographics and mental health outcomes (Depression & Anxiety cases)"
+        >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Depression vs Anxiety Correlation - Featured First */}
             <div className="lg:col-span-2">
@@ -1643,23 +1731,161 @@ export const ControlPanel: React.FC = () => {
               data={analytics.correlations.zipCodeDistribution}
             />
           </div>
-        </div>
+        </CollapsibleSection>
 
         {/* Session Analytics */}
-        <div className="mb-8">
+        <CollapsibleSection title="Session Analytics" subtitle="Session completion funnel and status breakdown">
           <FunnelChart
             title="Session Completion Funnel"
             sessionStatus={analytics.sessionStatus}
           />
-        </div>
+        </CollapsibleSection>
+
+        {/* Model Analytics */}
+        {analytics.modelAnalytics.totalWithModelInfo > 0 && (
+          <CollapsibleSection
+            title="Model Analytics"
+            subtitle="DAM prediction model metadata across all completed sessions"
+          >
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Provider Distribution */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Provider Distribution
+                </h3>
+                <div className="space-y-3">
+                  {Object.entries(analytics.modelAnalytics.providerDistribution).map(([provider, count]) => {
+                    const total = Object.values(analytics.modelAnalytics.providerDistribution).reduce((a, b) => a + b, 0);
+                    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                    return (
+                      <div key={provider}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600 dark:text-gray-400">{provider}</span>
+                          <span className="text-gray-900 dark:text-white font-medium">
+                            {count} ({pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <div
+                            className="h-2 rounded-full bg-indigo-500 transition-all duration-500 progress-dynamic"
+                            style={{ '--progress-width': `${pct}%` } as React.CSSProperties}
+                            role="progressbar"
+                            aria-label={`${provider}: ${count} (${pct}%)`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Model Category Distribution */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Model Category
+                </h3>
+                {Object.keys(analytics.modelAnalytics.modelCategoryDistribution).length > 0 ? (
+                  <div className="space-y-3">
+                    {Object.entries(analytics.modelAnalytics.modelCategoryDistribution).map(([category, count]) => {
+                      const total = Object.values(analytics.modelAnalytics.modelCategoryDistribution).reduce((a, b) => a + b, 0);
+                      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                      return (
+                        <div key={category}>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">{category}</span>
+                            <span className="text-gray-900 dark:text-white font-medium">
+                              {count} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full bg-cyan-500 transition-all duration-500 progress-dynamic"
+                              style={{ '--progress-width': `${pct}%` } as React.CSSProperties}
+                              role="progressbar"
+                              aria-label={`${category}: ${count} (${pct}%)`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-sm">
+                    No model category data available
+                  </p>
+                )}
+              </div>
+
+              {/* Calibration Status */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                  Calibration Status
+                </h3>
+                {(analytics.modelAnalytics.calibratedCount > 0 || analytics.modelAnalytics.uncalibratedCount > 0) ? (
+                  <div className="space-y-3">
+                    {analytics.modelAnalytics.calibratedCount > 0 && (() => {
+                      const total = analytics.modelAnalytics.calibratedCount + analytics.modelAnalytics.uncalibratedCount;
+                      const pct = total > 0 ? Math.round((analytics.modelAnalytics.calibratedCount / total) * 100) : 0;
+                      return (
+                        <div>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Calibrated</span>
+                            <span className="text-gray-900 dark:text-white font-medium">
+                              {analytics.modelAnalytics.calibratedCount} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full bg-green-500 transition-all duration-500 progress-dynamic"
+                              style={{ '--progress-width': `${pct}%` } as React.CSSProperties}
+                              role="progressbar"
+                              aria-label={`Calibrated: ${analytics.modelAnalytics.calibratedCount} (${pct}%)`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {analytics.modelAnalytics.uncalibratedCount > 0 && (() => {
+                      const total = analytics.modelAnalytics.calibratedCount + analytics.modelAnalytics.uncalibratedCount;
+                      const pct = total > 0 ? Math.round((analytics.modelAnalytics.uncalibratedCount / total) * 100) : 0;
+                      return (
+                        <div>
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600 dark:text-gray-400">Uncalibrated</span>
+                            <span className="text-gray-900 dark:text-white font-medium">
+                              {analytics.modelAnalytics.uncalibratedCount} ({pct}%)
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div
+                              className="h-2 rounded-full bg-amber-500 transition-all duration-500 progress-dynamic"
+                              style={{ '--progress-width': `${pct}%` } as React.CSSProperties}
+                              role="progressbar"
+                              aria-label={`Uncalibrated: ${analytics.modelAnalytics.uncalibratedCount} (${pct}%)`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-sm">
+                    No calibration data available
+                  </p>
+                )}
+              </div>
+            </div>
+          </CollapsibleSection>
+        )}
 
         {/* Sessions Over Time - Full Width */}
-        <div className="mb-8">
+        <CollapsibleSection title="Sessions Over Time" subtitle="Session volume trends over the past 7 days">
           <TimeSeriesChart
             title="Sessions Over Time (7 Days)"
             data={analytics.timeData}
           />
-        </div>
+        </CollapsibleSection>
       </div>
     </div>
   );

@@ -122,16 +122,19 @@ const Predictions: React.FC = () => {
     const normalized = String(value).trim().toLowerCase();
 
     if (type === 'depression') {
-      if (normalized === '0' || normalized === 'no_to_mild') return 0;
-      if (normalized === '1' || normalized === 'mild_to_moderate') return 1;
-      if (normalized === '2' || normalized === 'moderate_to_severe') return 2;
+      if (normalized === '0' || normalized === 'no_to_mild') return 1;
+      if (normalized === '1' || normalized === 'mild_to_moderate') return 2;
+      if (normalized === '2' || normalized === 'moderate_to_severe') return 3;
+      if (normalized === '3' || normalized === 'severe') return 4;
       return null;
     }
 
-    if (normalized === '0' || normalized === 'no_or_minimal') return 0;
-    if (normalized === '1' || normalized === 'moderate') return 1;
-    if (normalized === '2' || normalized === 'moderately_severe') return 2;
-    if (normalized === '3' || normalized === 'severe') return 3;
+    // anxiety — 5 categories
+    if (normalized === '0' || normalized === 'no_or_minimal') return 1;
+    if (normalized === '1' || normalized === 'mild') return 2;
+    if (normalized === '2' || normalized === 'moderate') return 3;
+    if (normalized === '3' || normalized === 'moderately_severe') return 4;
+    if (normalized === '4' || normalized === 'severe') return 5;
     return null;
   }, [hasScoreValue]);
 
@@ -328,9 +331,10 @@ const Predictions: React.FC = () => {
       .filter((score): score is number => score !== null);
 
     const depressionBuckets = [
-      { severity: 0, color: 'bg-green-400' },
-      { severity: 1, color: 'bg-yellow-500' },
-      { severity: 2, color: 'bg-red-600' }
+      { severity: 1, color: 'bg-green-400' },
+      { severity: 2, color: 'bg-yellow-500' },
+      { severity: 3, color: 'bg-orange-500' },
+      { severity: 4, color: 'bg-red-600' }
     ];
 
     depressionBuckets.forEach(bucket => {
@@ -339,7 +343,7 @@ const Predictions: React.FC = () => {
 
       if (count > 0) {
         distributions.depression.push({
-          category: formatQuantizedScoreLabel(bucket.severity, 'depression'),
+          category: formatQuantizedScoreLabel(bucket.severity - 1, 'depression'),
           count,
           percentage,
           color: bucket.color
@@ -348,10 +352,11 @@ const Predictions: React.FC = () => {
     });
 
     const anxietyBuckets = [
-      { severity: 0, color: 'bg-green-400' },
-      { severity: 1, color: 'bg-orange-500' },
-      { severity: 2, color: 'bg-red-500' },
-      { severity: 3, color: 'bg-red-700' }
+      { severity: 1, color: 'bg-green-400' },
+      { severity: 2, color: 'bg-blue-400' },
+      { severity: 3, color: 'bg-orange-500' },
+      { severity: 4, color: 'bg-red-500' },
+      { severity: 5, color: 'bg-red-700' }
     ];
 
     anxietyBuckets.forEach(bucket => {
@@ -360,7 +365,7 @@ const Predictions: React.FC = () => {
 
       if (count > 0) {
         distributions.anxiety.push({
-          category: formatQuantizedScoreLabel(bucket.severity, 'anxiety'),
+          category: formatQuantizedScoreLabel(bucket.severity - 1, 'anxiety'),
           count,
           percentage,
           color: bucket.color
@@ -548,9 +553,10 @@ const Predictions: React.FC = () => {
     const getScoreCategoryName = (score: number): string => {
       switch (score) {
         case 1: return 'No to Mild / No or Minimal';
-        case 2: return 'Mild to Moderate / Moderate';
-        case 3: return 'Moderate to Severe / Moderately Severe';
-        case 4: return 'Severe';
+        case 2: return 'Mild to Moderate / Mild';
+        case 3: return 'Moderate to Severe / Moderate';
+        case 4: return 'Severe / Moderately Severe';
+        case 5: return 'Severe';
         default: return 'Unknown';
       }
     };
@@ -561,23 +567,26 @@ const Predictions: React.FC = () => {
         switch (score) {
           case 1: return 'bg-blue-400';  // no_to_mild
           case 2: return 'bg-blue-600';  // mild_to_moderate
-          case 3: return 'bg-blue-800';  // moderate_to_severe
+          case 3: return 'bg-blue-700';  // moderate_to_severe
+          case 4: return 'bg-blue-900';  // severe
           default: return 'bg-blue-500';
         }
       } else if (type === 'anxiety') {
         switch (score) {
-          case 1: return 'bg-purple-400'; // no_or_minimal
-          case 2: return 'bg-purple-600'; // moderate
-          case 3: return 'bg-purple-700'; // moderately_severe
-          case 4: return 'bg-purple-900'; // severe
+          case 1: return 'bg-purple-300'; // no_or_minimal
+          case 2: return 'bg-purple-400'; // mild
+          case 3: return 'bg-purple-600'; // moderate
+          case 4: return 'bg-purple-700'; // moderately_severe
+          case 5: return 'bg-purple-900'; // severe
           default: return 'bg-purple-500';
         }
       } else {
         switch (score) {
           case 1: return 'bg-green-400';
-          case 2: return 'bg-green-600';
-          case 3: return 'bg-green-700';
-          case 4: return 'bg-green-800';
+          case 2: return 'bg-green-500';
+          case 3: return 'bg-green-600';
+          case 4: return 'bg-green-700';
+          case 5: return 'bg-green-800';
           default: return 'bg-green-500';
         }
       }
@@ -1112,53 +1121,82 @@ const Predictions: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {filteredSessions.slice(0, 5).map((session) => (
-                <div key={session.sessionId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-2 h-2 rounded-full ${
-                        session.status === 'succeeded' ? 'bg-green-500' :
-                        session.status === 'processing' ? 'bg-blue-500' :
-                        session.status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
-                      }`} />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {session.audioFileName || `Session ${session.sessionId.slice(-8)}`}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatRelativeTime(session.createdAt)}
-                        </p>
+              {filteredSessions.slice(0, 5).map((session) => {
+                const prediction = session.prediction as Record<string, unknown> | undefined;
+                const provider = (prediction?.provider as string) || (prediction?.model as string) || null;
+                const modelCategory = (prediction?.modelCategory as string) || (prediction?.model_category as string) || null;
+                const isCalibrated = (prediction?.isCalibrated as boolean) ?? (prediction?.is_calibrated as boolean) ?? null;
+
+                return (
+                  <div key={session.sessionId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-2 h-2 rounded-full ${
+                          session.status === 'succeeded' || session.status === 'completed' ? 'bg-green-500' :
+                          session.status === 'processing' ? 'bg-blue-500' :
+                          session.status === 'failed' ? 'bg-red-500' : 'bg-gray-500'
+                        }`} />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {session.audioFileName || `Session ${session.sessionId.slice(-8)}`}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatRelativeTime(session.createdAt)}
+                            </p>
+                            {/* DAM Metadata Badges */}
+                            {provider && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                                {provider === 'local-dam' ? 'DAM' : provider}
+                              </span>
+                            )}
+                            {modelCategory && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300">
+                                {modelCategory}
+                              </span>
+                            )}
+                            {isCalibrated !== null && (
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
+                                isCalibrated
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                  : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                              }`}>
+                                {isCalibrated ? 'Calibrated' : 'Uncalibrated'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center space-x-4">
-                    {hasScoreValue(getSessionScoreValue(session, 'depression')) && (
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Depression</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {formatQuantizedScoreLabel(getSessionScoreValue(session, 'depression'), 'depression')}
-                        </p>
-                      </div>
-                    )}
-                    {hasScoreValue(getSessionScoreValue(session, 'anxiety')) && (
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Anxiety</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {formatQuantizedScoreLabel(getSessionScoreValue(session, 'anxiety'), 'anxiety')}
-                        </p>
-                      </div>
-                    )}
-                    <Link
-                      to={`/sessions/${session.sessionId}`}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-                      aria-label={`View session ${session.sessionId}`}
-                    >
-                      <Eye className="w-4 h-4" aria-hidden="true" />
-                    </Link>
+                    <div className="flex items-center space-x-4">
+                      {hasScoreValue(getSessionScoreValue(session, 'depression')) && (
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Depression</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {formatQuantizedScoreLabel(getSessionScoreValue(session, 'depression'), 'depression')}
+                          </p>
+                        </div>
+                      )}
+                      {hasScoreValue(getSessionScoreValue(session, 'anxiety')) && (
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Anxiety</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {formatQuantizedScoreLabel(getSessionScoreValue(session, 'anxiety'), 'anxiety')}
+                          </p>
+                        </div>
+                      )}
+                      <Link
+                        to={`/sessions/${session.sessionId}`}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                        aria-label={`View session ${session.sessionId}`}
+                      >
+                        <Eye className="w-4 h-4" aria-hidden="true" />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </>

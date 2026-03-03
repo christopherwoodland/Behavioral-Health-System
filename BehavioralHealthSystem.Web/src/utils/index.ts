@@ -298,23 +298,18 @@ export const formatQuantizedScoreLabel = (
   const normalized = String(value).trim().toLowerCase();
 
   if (type === 'depression') {
-    if (normalized === '0') return 'no depression';
-    if (normalized === '1') return 'mild to moderate depression';
-    if (normalized === '2') return 'severe depression';
-    if (normalized === 'no_to_mild') return 'no to mild depression';
-    if (normalized === 'mild_to_moderate') return 'mild to moderate depression';
-    if (normalized === 'moderate_to_severe') return 'moderate to severe depression';
+    if (normalized === '0' || normalized === 'no_to_mild') return 'no to mild depression';
+    if (normalized === '1' || normalized === 'mild_to_moderate') return 'mild to moderate depression';
+    if (normalized === '2' || normalized === 'moderate_to_severe') return 'moderate to severe depression';
+    if (normalized === '3' || normalized === 'severe') return 'severe depression';
   }
 
   if (type === 'anxiety') {
-    if (normalized === '0') return 'no anxiety';
-    if (normalized === '1') return 'mild anxiety';
-    if (normalized === '2') return 'moderate anxiety';
-    if (normalized === '3') return 'severe anxiety';
-    if (normalized === 'no_or_minimal') return 'no or minimal anxiety';
-    if (normalized === 'moderate') return 'moderate anxiety';
-    if (normalized === 'moderately_severe') return 'moderately severe anxiety';
-    if (normalized === 'severe') return 'severe anxiety';
+    if (normalized === '0' || normalized === 'no_or_minimal') return 'no or minimal anxiety';
+    if (normalized === '1' || normalized === 'mild') return 'mild anxiety';
+    if (normalized === '2' || normalized === 'moderate') return 'moderate anxiety';
+    if (normalized === '3' || normalized === 'moderately_severe') return 'moderately severe anxiety';
+    if (normalized === '4' || normalized === 'severe') return 'severe anxiety';
   }
 
   return normalized.replace(/_/g, ' ');

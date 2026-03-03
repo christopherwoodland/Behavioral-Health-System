@@ -111,6 +111,8 @@ services:
       - VITE_AZURE_TENANT_ID=${VITE_AZURE_TENANT_ID}
       # Feature Flags
       - VITE_ENABLE_AUTH=${VITE_ENABLE_AUTH}
+      - VITE_ENABLE_ENTRA_AUTH=${VITE_ENABLE_ENTRA_AUTH:-false}
+      - VITE_ENABLE_DEBUG_LOGGING=${VITE_ENABLE_DEBUG_LOGGING:-true}
     depends_on:
       - api
     healthcheck:

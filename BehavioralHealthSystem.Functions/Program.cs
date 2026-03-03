@@ -154,9 +154,12 @@ var host = new HostBuilder()
             {
                 var blobServiceUri = $"https://{storageAccountName}.blob.core.windows.net";
                 // Configure credentials for identity-based storage access
+                // In Azure Container Apps, ManagedIdentityCredential is the primary auth mechanism.
+                // In local Docker, the connection string path above is used instead, so this branch
+                // is only reached when deploying to Azure where MI must be enabled.
                 var credentialOptions = new DefaultAzureCredentialOptions
                 {
-                    ExcludeManagedIdentityCredential = true,
+                    ExcludeManagedIdentityCredential = false,
                     ExcludeSharedTokenCacheCredential = true,
                     ExcludeVisualStudioCredential = true,
                     ExcludeVisualStudioCodeCredential = true,

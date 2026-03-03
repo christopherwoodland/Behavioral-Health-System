@@ -1,5 +1,8 @@
 import React, { ReactNode } from 'react';
 import { UserInfo, AuthContext } from '@/contexts/AuthContext';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('MockAuth');
 
 // Mock user for non-authenticated mode
 const mockUser: UserInfo = {
@@ -26,13 +29,13 @@ export const MockAuthProvider: React.FC<MockAuthProviderProps> = ({ children }) 
 
     // Authentication methods (no-ops)
     login: async () => {
-      console.log('Mock login called - no action taken');
+      log.debug('Mock login called - no action taken');
     },
     logout: async () => {
-      console.log('Mock logout called - no action taken');
+      log.debug('Mock logout called - no action taken');
     },
     clearError: () => {
-      console.log('Mock clearError called - no action taken');
+      log.debug('Mock clearError called - no action taken');
     },
 
     // Authorization helpers (always return true for unrestricted access)

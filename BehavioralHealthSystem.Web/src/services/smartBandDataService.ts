@@ -5,6 +5,9 @@
  */
 
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('SmartBandData');
 
 export interface SmartBandSensorData {
   // Accelerometer data
@@ -114,7 +117,7 @@ class SmartBandDataService {
     }
 
     try {
-      console.log('🏃 Checking for Microsoft Band device via local service...');
+      log.debug('Checking for Microsoft Band device via local service...');
 
       // Call the local Band Service REST API
       const bandServiceUrl = 'http://localhost:8765';
@@ -126,17 +129,17 @@ class SmartBandDataService {
       });
 
       if (!response.ok) {
-        console.warn('⚠️ Band service not responding:', response.status);
+        log.warn('Band service not responding', { status: response.status });
         return false;
       }
 
       const result = await response.json();
-      console.log('📱 Device status:', result.isConnected ? 'Connected' : 'Not connected');
+      log.debug('Device status', { connected: result.isConnected });
 
       return result.isConnected || false;
     } catch (error) {
-      console.error('❌ Error checking Band device connection:', error);
-      console.log('💡 Make sure the Band Service is running (BehavioralHealthSystem.BandService)');
+      log.error('Error checking Band device connection', error);
+      log.info('Make sure the Band Service is running (BehavioralHealthSystem.BandService)');
       return false;
     }
   }
@@ -147,12 +150,12 @@ class SmartBandDataService {
    */
   async collectDataSnapshot(userId: string): Promise<SmartBandDataSnapshot | null> {
     if (!this.isEnabled) {
-      console.log('⚠️ Smart Band feature is disabled');
+      log.debug('Smart Band feature is disabled');
       return null;
     }
 
     if (this.isCollecting) {
-      console.log('⚠️ Already collecting Smart Band data');
+      log.debug('Already collecting Smart Band data');
       return null;
     }
 
@@ -160,12 +163,12 @@ class SmartBandDataService {
       this.isCollecting = true;
       const startTime = Date.now();
 
-      console.log('🏃 Starting silent Smart Band data collection...');
+      log.debug('Starting silent Smart Band data collection...');
 
       // Check device connection
       const isConnected = await this.isDeviceConnected();
       if (!isConnected) {
-        console.log('⚠️ No Microsoft Band device connected');
+        log.debug('No Microsoft Band device connected');
         return null;
       }
 
@@ -173,7 +176,7 @@ class SmartBandDataService {
       const snapshot = await this.collectAllSensors(userId);
 
       if (!snapshot) {
-        console.log('⚠️ Failed to collect sensor data');
+        log.debug('Failed to collect sensor data');
         return null;
       }
 
@@ -182,12 +185,11 @@ class SmartBandDataService {
       // Add collection duration to metadata
       snapshot.metadata.collectionDurationMs = duration;
 
-      console.log('✅ Smart Band data collection complete');
-      console.log(`📊 Collection duration: ${duration}ms`);
+      log.info('Smart Band data collection complete', { durationMs: duration });
 
       return snapshot;
     } catch (error) {
-      console.error('❌ Error collecting Smart Band data:', error);
+      log.error('Error collecting Smart Band data', error);
 
       // Return snapshot with error info
       return {
@@ -210,7 +212,7 @@ class SmartBandDataService {
    */
   private async collectAllSensors(userId: string): Promise<SmartBandDataSnapshot | null> {
     try {
-      console.log('📊 Collecting sensor data from Band Service...');
+      log.debug('Collecting sensor data from Band Service...');
 
       // Call the local Band Service REST API to collect data
       const bandServiceUrl = 'http://localhost:8765';
@@ -245,11 +247,11 @@ class SmartBandDataService {
         }
       };
 
-      console.log('✅ Sensor data collected successfully');
+      log.info('Sensor data collected successfully');
       return snapshot;
 
     } catch (error) {
-      console.error('❌ Error collecting sensor data:', error);
+      log.error('Error collecting sensor data', error);
       throw error;
     }
   }
@@ -343,7 +345,7 @@ class SmartBandDataService {
       const apiBaseUrl = env.API_BASE_URL;
       const endpoint = `${apiBaseUrl}/SaveSmartBandData`;
 
-      console.log('💾 Saving Smart Band data to:', endpoint);
+      log.debug('Saving Smart Band data to:', { endpoint });
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -359,11 +361,11 @@ class SmartBandDataService {
       }
 
       const result = await response.json();
-      console.log('✅ Smart Band data saved successfully:', result);
+      log.info('Smart Band data saved successfully', result);
 
       return true;
     } catch (error) {
-      console.error('❌ Error saving Smart Band data:', error);
+      log.error('Error saving Smart Band data', error);
       return false;
     }
   }
@@ -385,7 +387,7 @@ class SmartBandDataService {
     }
 
     try {
-      console.log('🏃 Collecting Smart Band data for user:', userId);
+      log.debug('Collecting Smart Band data for user', { userId });
 
       // Collect snapshot
       const snapshot = await this.collectDataSnapshot(userId);
@@ -413,7 +415,7 @@ class SmartBandDataService {
         snapshot
       };
     } catch (error) {
-      console.error('Error in collectAndSave:', error);
+      log.error('Error in collectAndSave', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'

@@ -3,6 +3,10 @@
  * Handles JSON storage in Azure Blob Storage with proper metadata
  */
 
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('PhqAssessment');
+
 export interface PhqQuestion {
   questionNumber: number;
   questionText: string;
@@ -107,7 +111,7 @@ class PhqAssessmentService {
    */
   private readonly responseScale = {
     0: "Not at all",
-    1: "Several days", 
+    1: "Several days",
     2: "More than half the days",
     3: "Nearly every day"
   };
@@ -117,10 +121,10 @@ class PhqAssessmentService {
    */
   startAssessment(type: 'PHQ-2' | 'PHQ-9', userId: string, conversationSessionId?: string): PhqAssessmentResult {
     const questions = type === 'PHQ-2' ? this.phq2Questions : this.phq9Questions;
-    
+
     // Use the conversation session ID if provided, otherwise generate a new one
     const sessionId = conversationSessionId || this.generateSessionId();
-    
+
     this.currentAssessment = {
       assessmentId: this.generateAssessmentId(),
       userId,
@@ -141,7 +145,7 @@ class PhqAssessmentService {
 
     // NOTE: PHQ data now saved directly in chat transcript messages with metadata
     // No need for separate PHQ container saving
-    
+
     return this.currentAssessment;
   }
 
@@ -159,17 +163,17 @@ class PhqAssessmentService {
     if (!this.currentAssessment) return null;
 
     // First pass: get unskipped questions without answers
-    const unanswered = this.currentAssessment.questions.find(q => 
+    const unanswered = this.currentAssessment.questions.find(q =>
       q.answer === undefined && !q.skipped
     );
-    
+
     if (unanswered) return unanswered;
 
     // Second pass: get skipped questions (return to them later)
-    const skipped = this.currentAssessment.questions.find(q => 
+    const skipped = this.currentAssessment.questions.find(q =>
       q.answer === undefined && q.skipped
     );
-    
+
     return skipped || null;
   }
 
@@ -178,7 +182,7 @@ class PhqAssessmentService {
    */
   recordAnswer(questionNumber: number, answer: number): boolean {
     if (!this.currentAssessment) return false;
-    
+
     const question = this.currentAssessment.questions.find(q => q.questionNumber === questionNumber);
     if (!question) return false;
 
@@ -187,23 +191,23 @@ class PhqAssessmentService {
 
     question.answer = answer;
     question.timestamp = new Date().toISOString();
-    
+
     // Check if assessment is complete (all questions either have answers OR are skipped)
-    const allProcessed = this.currentAssessment.questions.every(q => 
+    const allProcessed = this.currentAssessment.questions.every(q =>
       (q.answer !== undefined && q.answer !== null) || q.skipped === true
     );
-    
-    console.log('🔍 Checking completion status:', {
+
+    log.debug('Checking completion status', {
       totalQuestions: this.currentAssessment.questions.length,
       answeredCount: this.currentAssessment.questions.filter(q => q.answer !== undefined && q.answer !== null).length,
       skippedCount: this.currentAssessment.questions.filter(q => q.skipped).length,
       allProcessed
     });
-    
+
     if (allProcessed) {
-      console.log('✅ All questions processed (answered or skipped) - completing assessment...');
+      log.info('All questions processed (answered or skipped) - completing assessment...');
       this.completeAssessment();
-      console.log('📊 Assessment completed with:', {
+      log.info('Assessment completed with', {
         totalScore: this.currentAssessment.totalScore,
         severity: this.currentAssessment.severity,
         isCompleted: this.currentAssessment.isCompleted,
@@ -211,7 +215,7 @@ class PhqAssessmentService {
         skippedQuestions: this.currentAssessment.questions.filter(q => q.skipped).length
       });
     }
-    
+
     // NOTE: PHQ data now saved directly in chat transcript messages with metadata
     // No need for separate PHQ container saving
 
@@ -223,16 +227,16 @@ class PhqAssessmentService {
    */
   recordInvalidAttempt(questionNumber: number): void {
     if (!this.currentAssessment) return;
-    
+
     const question = this.currentAssessment.questions.find(q => q.questionNumber === questionNumber);
     if (question) {
       question.attempts++;
-      
+
       // Skip question after 3 invalid attempts
       if (question.attempts >= 3) {
         question.skipped = true;
       }
-      
+
       // NOTE: PHQ data now saved directly in chat transcript messages with metadata
       // No need for separate PHQ container saving
     }
@@ -243,7 +247,7 @@ class PhqAssessmentService {
    */
   calculateScore(): number {
     if (!this.currentAssessment) return 0;
-    
+
     return this.currentAssessment.questions
       .filter(q => q.answer !== undefined)
       .reduce((sum, q) => sum + (q.answer || 0), 0);
@@ -297,10 +301,10 @@ class PhqAssessmentService {
         'Moderately Severe': "Moderately severe depression. Active treatment recommended.",
         'Severe': "Severe depression. Immediate active treatment required."
       };
-      
+
       const severity = this.determineSeverity(score, type);
       const interpretation = interpretations[severity as keyof typeof interpretations];
-      
+
       const recommendations = [];
       if (score >= 10) {
         recommendations.push("Consider professional mental health treatment");
@@ -310,14 +314,14 @@ class PhqAssessmentService {
         recommendations.push("Consider psychotherapy or counseling");
         recommendations.push("Monitor symptoms closely");
       }
-      
+
       // Check for suicidal ideation (question 9)
       const suicidalQuestion = this.currentAssessment?.questions.find(q => q.questionNumber === 9);
       if (suicidalQuestion && (suicidalQuestion.answer || 0) > 0) {
         recommendations.unshift("⚠️ PRIORITY: Seek immediate help for suicidal thoughts");
         recommendations.push("Contact crisis hotline: 988 (US) or local emergency services");
       }
-      
+
       return { interpretation, recommendations };
     }
   }
@@ -332,7 +336,7 @@ class PhqAssessmentService {
     const severity = this.determineSeverity(score, this.currentAssessment.assessmentType);
     const { interpretation, recommendations } = this.getInterpretation(score, this.currentAssessment.assessmentType);
 
-    console.log('🎯 Completing assessment with calculated values:', {
+    log.debug('Completing assessment with calculated values', {
       score,
       severity,
       interpretationLength: interpretation.length,
@@ -345,8 +349,8 @@ class PhqAssessmentService {
     this.currentAssessment.severity = severity;
     this.currentAssessment.interpretation = interpretation;
     this.currentAssessment.recommendations = recommendations;
-    
-    console.log('✅ Assessment object updated:', {
+
+    log.info('Assessment object updated', {
       totalScore: this.currentAssessment.totalScore,
       severity: this.currentAssessment.severity,
       isCompleted: this.currentAssessment.isCompleted,

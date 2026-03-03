@@ -5,6 +5,7 @@
 
 import { config } from '@/config/constants';
 import { createAppError } from '@/utils';
+import { Logger } from '@/utils/logger';
 import type {
   DSM5ConditionData,
   DSM5DataStatus,
@@ -16,6 +17,8 @@ import type {
   DSM5ConditionDetailsApiResponse,
   DSM5DataStatusApiResponse,
 } from '@/types/dsm5Types';
+
+const log = Logger.create('DSM5');
 
 class DSM5Service {
   private baseUrl: string;
@@ -58,7 +61,7 @@ class DSM5Service {
         blobCount: data.dataStatus.storageInfo.blobCount,
       };
     } catch (error) {
-      console.error('Error fetching DSM-5 data status:', error);
+      log.error('Error fetching DSM-5 data status', error);
       throw createAppError(
         'DSM5_STATUS_ERROR',
         error instanceof Error ? error.message : 'Failed to fetch DSM-5 data status',
@@ -84,7 +87,7 @@ class DSM5Service {
       }
 
       const url = `${this.baseUrl}/dsm5-admin/conditions${params.toString() ? `?${params.toString()}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -104,7 +107,7 @@ class DSM5Service {
 
       return data.conditions;
     } catch (error) {
-      console.error('Error fetching DSM-5 conditions:', error);
+      log.error('Error fetching DSM-5 conditions', error);
       throw createAppError(
         'DSM5_CONDITIONS_ERROR',
         error instanceof Error ? error.message : 'Failed to fetch DSM-5 conditions',
@@ -137,7 +140,7 @@ class DSM5Service {
 
       return data.condition;
     } catch (error) {
-      console.error('Error fetching condition details:', error);
+      log.error('Error fetching condition details', error);
       throw createAppError(
         'DSM5_CONDITION_DETAILS_ERROR',
         error instanceof Error ? error.message : 'Failed to fetch condition details',
@@ -171,7 +174,7 @@ class DSM5Service {
 
       return data.extractionResult;
     } catch (error) {
-      console.error('Error validating extraction:', error);
+      log.error('Error validating extraction', error);
       throw createAppError(
         'DSM5_EXTRACTION_ERROR',
         error instanceof Error ? error.message : 'Failed to validate extraction',
@@ -205,7 +208,7 @@ class DSM5Service {
 
       return data.uploadResult;
     } catch (error) {
-      console.error('Error uploading DSM-5 data:', error);
+      log.error('Error uploading DSM-5 data', error);
       throw createAppError(
         'DSM5_UPLOAD_ERROR',
         error instanceof Error ? error.message : 'Failed to upload DSM-5 data',

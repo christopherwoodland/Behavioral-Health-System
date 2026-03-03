@@ -17,6 +17,9 @@ import {
 import { loginRequest, ROLE_CLAIMS, APP_ROLES } from '@/config/authConfig';
 import { setAuthenticatedUserId } from '@/utils';
 import { env } from '@/utils/env';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('Auth');
 
 // Define the default role for users without specific roles
 const DEFAULT_ROLE = 'User';
@@ -174,24 +177,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const callbackId = instance.addEventCallback((event: EventMessage) => {
       switch (event.eventType) {
         case EventType.LOGIN_SUCCESS:
-          console.log('[Auth] Login successful');
+          log.info('Login successful');
           setError(null);
           break;
         case EventType.LOGIN_FAILURE:
-          console.error('[Auth] Login failed:', event.error);
+          log.error('Login failed', event.error);
           setError(event.error?.message || 'Login failed');
           break;
         case EventType.LOGOUT_SUCCESS:
-          console.log('[Auth] Logout successful');
+          log.info('Logout successful');
           setUser(null);
           setError(null);
           break;
         case EventType.ACQUIRE_TOKEN_SUCCESS:
-          console.log('[Auth] Token acquired successfully');
+          log.debug('Token acquired successfully');
           setError(null);
           break;
         case EventType.ACQUIRE_TOKEN_FAILURE:
-          console.error('[Auth] Token acquisition failed:', event.error);
+          log.error('Token acquisition failed', event.error);
           setError(event.error?.message || 'Token acquisition failed');
           break;
       }
@@ -218,7 +221,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Use redirect login (avoids COOP warnings with Azure AD)
       await instance.loginRedirect(loginRequestWithDefaults);
     } catch (error: any) {
-      console.error('[Auth] Login error:', error);
+      log.error('Login error', error);
       setError(error.message || 'Login failed');
       throw error;
     } finally {
@@ -239,7 +242,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Use redirect logout (avoids COOP warnings with Azure AD)
       await instance.logoutRedirect(logoutRequest);
     } catch (error: any) {
-      console.error('[Auth] Logout error:', error);
+      log.error('Logout error', error);
       setError(error.message || 'Logout failed');
       throw error;
     } finally {

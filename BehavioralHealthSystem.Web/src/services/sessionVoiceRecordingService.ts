@@ -12,6 +12,9 @@
 import { uploadToAzureBlob } from './azure';
 import { convertAudioToWav } from './audio';
 import { getUserId } from '@/utils';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('SessionVoiceRecording');
 
 export interface SessionRecordingState {
   isRecording: boolean;
@@ -74,13 +77,11 @@ class SessionVoiceRecordingService {
   async startSessionRecording(sessionId: string, userId: string): Promise<void> {
     try {
       if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
-        console.warn('⚠️ Session Recording: Already recording');
+        log.warn('Session Recording: Already recording');
         return;
       }
 
-      console.log('🎙️ ========================================');
-      console.log('🎙️ STARTING SESSION-WIDE VOICE RECORDING');
-      console.log('🎙️ ========================================');
+      log.info('STARTING SESSION-WIDE VOICE RECORDING');
 
       this.sessionId = sessionId;
       this.userId = userId;
@@ -115,16 +116,16 @@ class SessionVoiceRecordingService {
         for (const type of fallbackTypes) {
           if (MediaRecorder.isTypeSupported(type)) {
             mimeType = type;
-            console.warn(`⚠️ Session Recording: WAV not supported, using fallback: ${type}`);
+            log.warn(`Session Recording: WAV not supported, using fallback: ${type}`);
             if (type.includes('webm')) {
-              console.warn('⚠️ Session Recording: WebM format may NOT be compatible with Azure Speech API');
+              log.warn('Session Recording: WebM format may NOT be compatible with Azure Speech API');
             }
             break;
           }
         }
       }
 
-      console.log(`🎙️ Session Recording: Using MIME type: ${mimeType}`);
+      log.info(`Session Recording: Using MIME type: ${mimeType}`);
 
       // Create media recorder
       this.mediaRecorder = new MediaRecorder(this.stream, {
@@ -136,18 +137,18 @@ class SessionVoiceRecordingService {
       this.mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
-          console.log(`🎙️ Session Recording: Chunk captured (${event.data.size} bytes)`);
+          log.debug(`Session Recording: Chunk captured (${event.data.size} bytes)`);
         }
       };
 
       // Handle errors
       this.mediaRecorder.onerror = (event: Event) => {
-        console.error('❌ Session Recording: MediaRecorder error:', event);
+        log.error('Session Recording: MediaRecorder error', event);
       };
 
       // Handle stop
       this.mediaRecorder.onstop = () => {
-        console.log('🎙️ Session Recording: MediaRecorder stopped');
+        log.info('Session Recording: MediaRecorder stopped');
         if (this.stream) {
           this.stream.getTracks().forEach(track => track.stop());
           this.stream = null;
@@ -161,10 +162,10 @@ class SessionVoiceRecordingService {
       // Request data every 100ms for fine-grained control
       this.mediaRecorder.start(100);
 
-      console.log(`✅ Session Recording: Started for session ${sessionId}`);
+      log.info(`Session Recording: Started for session ${sessionId}`);
 
     } catch (error) {
-      console.error('❌ Session Recording: Failed to start:', error);
+      log.error('Session Recording: Failed to start', error);
 
       let errorMessage = 'Failed to start session recording';
       if (error instanceof Error) {
@@ -200,9 +201,9 @@ class SessionVoiceRecordingService {
       const source = this.audioContext.createMediaStreamSource(this.stream);
       source.connect(this.analyser);
 
-      console.log('🎚️ Session Recording: Audio analysis setup complete');
+      log.debug('Session Recording: Audio analysis setup complete');
     } catch (error) {
-      console.warn('⚠️ Session Recording: Could not setup audio analysis:', error);
+      log.warn('Session Recording: Could not setup audio analysis', { error });
     }
   }
 
@@ -267,7 +268,7 @@ class SessionVoiceRecordingService {
 
       // If audio level drops below threshold for too long, stop capturing
       if (!this.isSpeechLevel()) {
-        console.log('🔇 Session Recording: Audio level dropped below speech threshold - stopping capture');
+        log.debug('Session Recording: Audio level dropped below speech threshold - stopping capture');
         this.onUserSpeechStop();
       }
     }, 100);
@@ -298,11 +299,11 @@ class SessionVoiceRecordingService {
     // Double-check with client-side audio level analysis
     if (!this.isSpeechLevel()) {
       const level = this.getAudioLevel();
-      console.log(`🔇 Session Recording: VAD detected speech but audio level too low (${level.toFixed(3)}) - filtering out ambient noise`);
+      log.debug(`Session Recording: VAD detected speech but audio level too low (${level.toFixed(3)}) - filtering out ambient noise`);
       return;
     }
 
-    console.log('👤 Session Recording: User speech started - capturing audio');
+    log.debug('Session Recording: User speech started - capturing audio');
     this.isCurrentlyCapturing = true;
     this.captureStartTime = Date.now();
 
@@ -325,7 +326,7 @@ class SessionVoiceRecordingService {
       return; // Not currently capturing
     }
 
-    console.log('👤 Session Recording: User speech stopped - pausing capture');
+    log.debug('Session Recording: User speech stopped - pausing capture');
 
     // Stop audio level monitoring
     this.stopAudioLevelMonitoring();
@@ -334,7 +335,7 @@ class SessionVoiceRecordingService {
     const segmentDuration = (Date.now() - this.captureStartTime) / 1000;
     this.totalCapturedDuration += segmentDuration;
 
-    console.log(`🎙️ Session Recording: Captured ${segmentDuration.toFixed(1)}s (total: ${this.totalCapturedDuration.toFixed(1)}s)`);
+    log.debug(`Session Recording: Captured ${segmentDuration.toFixed(1)}s (total: ${this.totalCapturedDuration.toFixed(1)}s)`);
 
     this.isCurrentlyCapturing = false;
 
@@ -350,13 +351,11 @@ class SessionVoiceRecordingService {
   async stopSessionRecording(): Promise<SessionRecordingResult | null> {
     try {
       if (!this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
-        console.warn('⚠️ Session Recording: No active recording to stop');
+        log.warn('Session Recording: No active recording to stop');
         return null;
       }
 
-      console.log('🎙️ ========================================');
-      console.log('🎙️ STOPPING SESSION-WIDE VOICE RECORDING');
-      console.log('🎙️ ========================================');
+      log.info('STOPPING SESSION-WIDE VOICE RECORDING');
 
       // Stop audio level monitoring
       this.stopAudioLevelMonitoring();
@@ -393,14 +392,12 @@ class SessionVoiceRecordingService {
 
             // Check if we have audio data
             if (this.audioChunks.length === 0) {
-              console.warn('⚠️ Session Recording: No audio data captured');
+              log.warn('Session Recording: No audio data captured');
               resolve(null);
               return;
             }
 
-            console.log(`🎙️ Session Recording: Processing ${this.audioChunks.length} chunks`);
-            console.log(`🎙️ Session Recording: Total duration: ${totalDuration.toFixed(1)}s`);
-            console.log(`🎙️ Session Recording: Captured speech: ${this.totalCapturedDuration.toFixed(1)}s`);
+            log.info('Session Recording: Processing audio', { chunks: this.audioChunks.length, totalDuration: totalDuration.toFixed(1), capturedSpeech: this.totalCapturedDuration.toFixed(1) });
 
             // Create blob from chunks
             const recordedBlob = new Blob(this.audioChunks, {
@@ -408,36 +405,36 @@ class SessionVoiceRecordingService {
             });
             const sizeBytes = recordedBlob.size;
 
-            console.log(`🎙️ Session Recording: Created blob (${(sizeBytes / 1024 / 1024).toFixed(2)} MB)`);
+            log.debug(`Session Recording: Created blob (${(sizeBytes / 1024 / 1024).toFixed(2)} MB)`);
 
             // Convert to WAV format at 44100Hz
-            console.log('🎙️ Session Recording: Converting to 44100Hz WAV...');
+            log.info('Session Recording: Converting to 44100Hz WAV...');
             const wavBlob = await convertAudioToWav(
               new File([recordedBlob], 'session-recording.webm', { type: recordedBlob.type }),
               (progress) => {
-                console.log(`🎙️ Session Recording: Conversion progress: ${progress.toFixed(1)}%`);
+                log.debug(`Session Recording: Conversion progress: ${progress.toFixed(1)}%`);
               }
             );
 
-            console.log(`🎙️ Session Recording: Converted to WAV (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB)`);
+            log.debug(`Session Recording: Converted to WAV (${(wavBlob.size / 1024 / 1024).toFixed(2)} MB)`);
 
             // Generate filename: userId_sessionId_timestamp.wav
             const timestamp = Date.now();
             const fileName = `${this.userId}_${this.sessionId}_${timestamp}.wav`;
 
-            console.log(`🎙️ Session Recording: Uploading as ${fileName}...`);
+            log.info(`Session Recording: Uploading as ${fileName}...`);
 
             // Upload to Azure Blob Storage (audio-uploads container)
             const audioUrl = await uploadToAzureBlob(
               wavBlob,
               fileName,
               (uploadProgress) => {
-                console.log(`🎙️ Session Recording: Upload progress: ${uploadProgress}%`);
+                log.debug(`Session Recording: Upload progress: ${uploadProgress}%`);
               },
               this.userId || getUserId()
             );
 
-            console.log(`✅ Session Recording: Upload complete - ${audioUrl}`);
+            log.info(`Session Recording: Upload complete - ${audioUrl}`);
 
             const result: SessionRecordingResult = {
               audioUrl,
@@ -453,7 +450,7 @@ class SessionVoiceRecordingService {
             resolve(result);
 
           } catch (error) {
-            console.error('❌ Session Recording: Error processing/uploading:', error);
+            log.error('Session Recording: Error processing/uploading', error);
             reject(error);
           }
         };
@@ -463,7 +460,7 @@ class SessionVoiceRecordingService {
       });
 
     } catch (error) {
-      console.error('❌ Session Recording: Error stopping recording:', error);
+      log.error('Session Recording: Error stopping recording', error);
       throw error;
     }
   }
@@ -473,7 +470,7 @@ class SessionVoiceRecordingService {
    */
   cancelRecording(): void {
     try {
-      console.log('🎙️ Session Recording: Cancelling...');
+      log.info('Session Recording: Cancelling...');
 
       if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
         this.mediaRecorder.stop();
@@ -488,10 +485,10 @@ class SessionVoiceRecordingService {
       this.isCurrentlyCapturing = false;
       this.totalCapturedDuration = 0;
 
-      console.log('✅ Session Recording: Cancelled');
+      log.info('Session Recording: Cancelled');
 
     } catch (error) {
-      console.error('❌ Session Recording: Error cancelling:', error);
+      log.error('Session Recording: Error cancelling', error);
     }
   }
 

@@ -3,6 +3,10 @@
  * Saves progressively as the assessment progresses, similar to chat transcript service
  */
 
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('PhqSession');
+
 export interface PhqQuestionResponse {
   questionNumber: number;
   questionText: string;
@@ -89,7 +93,7 @@ class PhqSessionService {
       }
     };
 
-    console.log('🟢 PHQ Session initialized:', {
+    log.info('PHQ Session initialized', {
       assessmentType,
       assessmentId,
       sessionId,
@@ -107,7 +111,7 @@ class PhqSessionService {
    */
   setQuestionText(questionNumber: number, questionText: string): void {
     if (!this.currentSession) {
-      console.warn('No active PHQ session.');
+      log.warn('No active PHQ session.');
       return;
     }
 
@@ -124,7 +128,7 @@ class PhqSessionService {
    */
   recordAnswer(questionNumber: number, answer: number): void {
     if (!this.currentSession) {
-      console.warn('No active PHQ session.');
+      log.warn('No active PHQ session.');
       return;
     }
 
@@ -134,7 +138,7 @@ class PhqSessionService {
       question.answeredAt = new Date().toISOString();
       this.currentSession.lastUpdated = new Date().toISOString();
 
-      console.log(`📝 PHQ answer recorded: Q${questionNumber} = ${answer}`);
+      log.debug(`PHQ answer recorded: Q${questionNumber} = ${answer}`);
 
       this.scheduleDelayedSave();
     }
@@ -145,7 +149,7 @@ class PhqSessionService {
    */
   recordInvalidAttempt(questionNumber: number): void {
     if (!this.currentSession) {
-      console.warn('No active PHQ session.');
+      log.warn('No active PHQ session.');
       return;
     }
 
@@ -156,7 +160,7 @@ class PhqSessionService {
       // Mark as skipped after 3 attempts
       if (question.attempts >= 3) {
         question.skipped = true;
-        console.log(`⏭️ PHQ question ${questionNumber} skipped after 3 attempts`);
+        log.debug(`PHQ question ${questionNumber} skipped after 3 attempts`);
       }
 
       this.currentSession.lastUpdated = new Date().toISOString();
@@ -174,7 +178,7 @@ class PhqSessionService {
     additionalData?: Record<string, any>
   ): void {
     if (!this.currentSession) {
-      console.warn('No active PHQ session.');
+      log.warn('No active PHQ session.');
       return;
     }
 
@@ -199,7 +203,7 @@ class PhqSessionService {
    */
   completeAssessment(totalScore: number, severity: string): void {
     if (!this.currentSession) {
-      console.warn('No active PHQ session.');
+      log.warn('No active PHQ session.');
       return;
     }
 
@@ -209,7 +213,7 @@ class PhqSessionService {
     this.currentSession.severity = severity;
     this.currentSession.lastUpdated = new Date().toISOString();
 
-    console.log('✅ PHQ Session completed:', {
+    log.info('PHQ Session completed', {
       totalScore,
       severity,
       assessmentType: this.currentSession.assessmentType
@@ -231,7 +235,7 @@ class PhqSessionService {
    */
   endSession(): void {
     if (this.currentSession) {
-      console.log('🔴 PHQ Session ended:', this.currentSession.assessmentId);
+      log.debug('PHQ Session ended', { assessmentId: this.currentSession.assessmentId });
 
       // Save one final time before clearing
       this.saveSessionImmediate();
@@ -260,7 +264,7 @@ class PhqSessionService {
   private async saveSessionImmediate(): Promise<void> {
     // Deprecated - PHQ data now flows through chatTranscriptService only
     // Keeping state management for Jekyll agent's local tracking
-    console.log('ℹ️ PHQ session state updated (auto-save to blob deprecated - data saved via chat transcripts)');
+    log.info('PHQ session state updated (auto-save to blob deprecated - data saved via chat transcripts)');
   }
 }
 

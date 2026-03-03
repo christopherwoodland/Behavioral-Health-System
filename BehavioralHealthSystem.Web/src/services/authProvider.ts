@@ -1,6 +1,9 @@
 import { useMsal } from '@azure/msal-react';
 import { InteractionRequiredAuthError, IPublicClientApplication, AccountInfo } from '@azure/msal-browser';
 import { apiRequest } from '@/config/authConfig';
+import { Logger } from '@/utils/logger';
+
+const log = Logger.create('AuthProvider');
 
 /**
  * Authentication provider for API client
@@ -39,7 +42,7 @@ export class AuthProvider {
     } catch (error) {
       // If silent acquisition fails due to interaction required, try popup
       if (error instanceof InteractionRequiredAuthError) {
-        console.warn('Silent token acquisition failed, attempting interactive login...');
+        log.warn('Silent token acquisition failed, attempting interactive login...');
         try {
           const response = await this.msalInstance.acquireTokenPopup({
             ...apiRequest,
@@ -52,12 +55,12 @@ export class AuthProvider {
             'X-User-Principal': this.accounts[0].username,
           };
         } catch (popupError) {
-          console.error('Interactive token acquisition failed:', popupError);
+          log.error('Interactive token acquisition failed', popupError);
           return {};
         }
       }
 
-      console.warn('Failed to acquire access token:', error);
+      log.warn('Failed to acquire access token', { error });
       return {};
     }
   }

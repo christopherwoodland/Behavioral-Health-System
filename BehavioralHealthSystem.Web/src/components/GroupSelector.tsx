@@ -3,7 +3,10 @@ import { Plus, Users, Search, Calendar, Trash2 } from 'lucide-react';
 import { fileGroupService } from '../services/fileGroupService';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserId } from '../utils';
+import { Logger } from '@/utils/logger';
 import { useLoadingState, useFieldState, useConfirmDialog } from '../utils/ui';
+
+const log = Logger.create('GroupSelector');
 import { validateGroupName } from '../utils/validation';
 import type { FileGroup } from '../types';
 import { AccessibleDialog } from './AccessibleDialog';
@@ -66,7 +69,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
         setGroups(response.fileGroups);
       }
     } catch (error) {
-      console.error('Failed to load file groups:', error);
+      log.error('Failed to load file groups', error);
     } finally {
       loadingState.resetLoading();
     }
@@ -119,7 +122,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       await loadGroups();
 
     } catch (error) {
-      console.error('Failed to create group:', error);
+      log.error('Failed to create group', error);
       groupName.setValue(groupName.value); // This will trigger validation and potentially show error
     } finally {
       createLoadingState.resetLoading();
@@ -142,7 +145,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
       await loadGroups();
 
     } catch (error) {
-      console.error('Failed to delete group:', error);
+      log.error('Failed to delete group', error);
       // Could add error handling here if needed
     } finally {
       setDeleteLoading(null);

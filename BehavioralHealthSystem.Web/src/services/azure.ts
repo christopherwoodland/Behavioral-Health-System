@@ -1,6 +1,9 @@
 import { config } from '@/config/constants';
 import { createAppError, getUserId } from '@/utils';
+import { Logger } from '@/utils/logger';
 import { getApiAuthHeaders } from './api';
+
+const log = Logger.create('AzureBlobService');
 
 export interface UploadProgress {
   progress: number;
@@ -39,7 +42,7 @@ export const uploadToAzureBlob = async (
 
   // Validate file has content
   if (fileToUpload.size === 0) {
-    console.error('🔴 uploadToAzureBlob: File is empty!', {
+    log.error('File is empty', undefined, {
       originalType: file instanceof File ? 'File' : 'Blob',
       originalSize: file.size,
       fileName,
@@ -52,7 +55,7 @@ export const uploadToAzureBlob = async (
     );
   }
 
-  console.log('🟢 uploadToAzureBlob: Uploading file', {
+  log.info('Uploading file', {
     fileName,
     fileSize: fileToUpload.size,
     fileType: fileToUpload.type,
@@ -98,7 +101,7 @@ export const uploadToAzureBlob = async (
 
     const result = await response.json();
 
-    console.log('🟢 uploadToAzureBlob: Upload completed', {
+    log.info('Upload completed', {
       blobPath: result.blobPath,
       blobUrl: result.blobUrl || result.url,
       fileName: result.fileName,

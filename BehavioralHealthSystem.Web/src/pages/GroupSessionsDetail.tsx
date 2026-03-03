@@ -23,7 +23,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel, createAppError } from '../utils';
+import { Logger } from '@/utils/logger';
 import type { SessionData, AppError, FileGroup } from '../types';
+
+const log = Logger.create('GroupSessionsDetail');
 
 // Sort configuration interface
 interface SortConfig {
@@ -134,7 +137,7 @@ const GroupSessionsDetail: React.FC<GroupSessionsDetailProps> = ({ groupId: prop
         announceToScreenReader(`Group loaded: ${groupData.groupName}`);
       }
     } catch (err) {
-      console.error('Failed to load group:', err);
+      log.error('Failed to load group', err);
       announceToScreenReader('Failed to load group information');
     } finally {
       setLoadingGroup(false);

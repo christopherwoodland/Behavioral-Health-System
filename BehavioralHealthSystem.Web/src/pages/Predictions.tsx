@@ -24,7 +24,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime, formatQuantizedScoreLabel } from '../utils';
+import { Logger } from '@/utils/logger';
 import type { SessionData, AppError, FileGroup } from '../types';
+
+const log = Logger.create('Predictions');
 
 // Chart data interfaces
 interface ChartDataPoint {
@@ -204,7 +207,7 @@ const Predictions: React.FC = () => {
 
       setGroupAnalytics(analytics);
     } catch (err) {
-      console.error('Failed to load group analytics:', err);
+      log.error('Failed to load group analytics', err);
     } finally {
       setLoadingGroups(false);
     }

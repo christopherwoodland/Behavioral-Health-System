@@ -27,7 +27,6 @@ COPY BehavioralHealthSystem.Helpers/Validators/ ./BehavioralHealthSystem.Helpers
 COPY BehavioralHealthSystem.Helpers/Deploy/ ./BehavioralHealthSystem.Helpers/Deploy/
 COPY BehavioralHealthSystem.Agents/*.cs ./BehavioralHealthSystem.Agents/
 COPY BehavioralHealthSystem.Agents/Services/ ./BehavioralHealthSystem.Agents/Services/
-COPY BehavioralHealthSystem.Agents/Configuration/ ./BehavioralHealthSystem.Agents/Configuration/
 COPY BehavioralHealthSystem.Agents/DependencyInjection/ ./BehavioralHealthSystem.Agents/DependencyInjection/
 COPY BehavioralHealthSystem.Agents/Interfaces/ ./BehavioralHealthSystem.Agents/Interfaces/
 COPY BehavioralHealthSystem.Agents/Models/ ./BehavioralHealthSystem.Agents/Models/
@@ -70,5 +69,4 @@ LABEL maintainer="BHS Team" \
       description="Behavioral Health System Functions API - Development" \
       environment="development"
 
-# Run the Azure Functions host
-CMD ["dotnet", "Microsoft.Azure.Functions.Worker.Sdk.Generators.dll"]
+# The Azure Functions base image handles startup automatically

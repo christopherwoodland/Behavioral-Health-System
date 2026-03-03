@@ -134,9 +134,32 @@ Dev server runs at `http://localhost:5173`. See the [Web README](BehavioralHealt
 
 ### 3) Docker Compose (Development)
 
+Docker Compose requires a `docker.env` file in the repository root containing Azure credentials, storage account names, and service endpoints. This file is **gitignored** and must be created locally.
+
 ```powershell
-docker compose -f docker-compose.development.yml up -d --build
+# 1. Create docker.env from the provided template
+cp docker.env.example docker.env
+
+# 2. Edit docker.env and fill in your Azure values
+#    (tenant ID, client ID/secret, storage account, OpenAI endpoint, etc.)
+
+# 3. Start the containers
+docker compose --env-file docker.env -f docker-compose.development.yml up -d --build
 ```
+
+The `docker.env.example` template includes all required and optional variables with descriptions. Key variables you must set:
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `AZURE_TENANT_ID` | Yes | Azure AD tenant for identity |
+| `AZURE_CLIENT_ID` | Yes | Service principal client ID |
+| `AZURE_CLIENT_SECRET` | Yes | Service principal secret |
+| `STORAGE_ACCOUNT_NAME` | Yes | Azure Storage account for sessions and audio |
+| `AZURE_OPENAI_ENDPOINT` | Yes | Azure OpenAI endpoint for risk assessments |
+| `AZURE_SPEECH_ENDPOINT` | For transcription | Azure Speech endpoint |
+| `EXTENDED_ASSESSMENT_OPENAI_ENDPOINT` | For extended assessments | GPT-5/O3 model endpoint |
+
+> **Security**: Never commit `docker.env` to source control. It contains secrets and is excluded via `.gitignore`.
 
 ### Environment Switching
 

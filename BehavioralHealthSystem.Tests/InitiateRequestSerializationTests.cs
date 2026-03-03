@@ -1,7 +1,7 @@
 namespace BehavioralHealthSystem.Tests
 {
     [TestClass]
-    public class ializationTests
+    public class InitiateRequestSerializationTests
     {
         [TestMethod]
         public void InitiateRequest_Payload_Uses_Snake_Case_Keys()

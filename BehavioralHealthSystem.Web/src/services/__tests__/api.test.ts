@@ -1,303 +1,355 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import { apiService } from '../api';
-import type { SessionData, SessionInitiateRequest, PredictionSubmitRequest } from '../../types';
 
-// Mock fetch globally
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+/**
+ * Tests for apiService.
+ *
+ * The ApiClient constructs URLs as: `${baseUrl}${cleanEndpoint}`
+ * With VITE_API_BASE_URL='http://localhost:7071/api' (set in env.setup.ts)
+ * and endpoint '/sessions' → 'http://localhost:7071/api/sessions'
+ *
+ * Errors from ApiClient are plain AppError objects ({ code, message, details, timestamp }),
+ * NOT Error class instances, because createAppError() returns a plain object.
+ */
 
-describe('API Service', () => {
+const BASE_URL = 'http://localhost:7071/api';
+
+function mockFetchSuccess(data: unknown, status = 200) {
+  (global.fetch as Mock).mockResolvedValueOnce({
+    ok: status >= 200 && status < 300,
+    status,
+    statusText: status === 200 ? 'OK' : 'Error',
+    json: () => Promise.resolve(data),
+    headers: new Headers(),
+  });
+}
+
+function mockFetchError(status: number, statusText: string, errorData: unknown = {}) {
+  (global.fetch as Mock).mockResolvedValueOnce({
+    ok: false,
+    status,
+    statusText,
+    json: () => Promise.resolve(errorData),
+    headers: new Headers(),
+  });
+}
+
+function mockFetchNetworkError() {
+  (global.fetch as Mock).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+}
+
+describe('apiService', () => {
   beforeEach(() => {
-    mockFetch.mockClear();
+    vi.clearAllMocks();
+    (global.fetch as Mock).mockReset();
   });
 
-  describe('Session Storage API', () => {
-    const mockSessionData: SessionData = {
-      sessionId: 'test-session-123',
-      userId: 'test-user-456', // Authenticated user ID
-      metadata_user_id: 'patient-789', // Patient/metadata user ID
-      userMetadata: {
-        age: 25,
-        gender: 'male',
-        ethnicity: 'Hispanic, Latino, or Spanish Origin',
-        language: true,
-        sessionNotes: 'Test session notes'
-      },
-      prediction: {
-        sessionId: 'test-session-123',
-        status: 'succeeded',
-        predictedScore: '75.5',
-        predictedScoreDepression: '75.5',
-        predictedScoreAnxiety: '68.2',
-        createdAt: '2025-09-07T10:00:00.000Z',
-        updatedAt: '2025-09-07T10:05:00.000Z'
-      },
-      analysisResults: {
-        depressionScore: 75.5,
-        anxietyScore: 68.2,
-        riskLevel: 'moderate',
-        confidence: 0.85,
-        insights: ['User shows signs of mild depression', 'Recommend monitoring'],
-        completedAt: '2025-09-07T10:05:00.000Z'
-      },
-      audioUrl: 'https://storage.example.com/audio/test.wav',
-      audioFileName: 'test-audio.wav',
-      status: 'completed',
-      createdAt: '2025-09-07T10:00:00.000Z',
-      updatedAt: '2025-09-07T10:05:00.000Z'
-    };
+  describe('checkHealth', () => {
+    it('should call the health endpoint', async () => {
+      const healthData = { status: 'healthy', timestamp: new Date().toISOString() };
+      mockFetchSuccess(healthData);
 
-    describe('saveSessionData', () => {
-      it('should save session data successfully', async () => {
-        const mockResponse = {
-          success: true,
-          message: 'Session data saved successfully',
-          sessionId: 'test-session-123'
-        };
+      const result = await apiService.checkHealth();
 
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.saveSessionData(mockSessionData);
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mockSessionData),
-          }
-        );
-        expect(result).toEqual(mockResponse);
-      });
-
-      it('should handle save session data error', async () => {
-        mockFetch.mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-          statusText: 'Internal Server Error',
-          json: async () => ({ message: 'Database error' }),
-        });
-
-        await expect(apiService.saveSessionData(mockSessionData)).rejects.toThrow();
-      });
-    });
-
-    describe('getUserSessions', () => {
-      it('should get user sessions successfully', async () => {
-        const mockResponse = {
-          success: true,
-          count: 2,
-          sessions: [mockSessionData, { ...mockSessionData, sessionId: 'test-session-456' }]
-        };
-
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.getUserSessions('test-user-456');
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions/users/test-user-456',
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        expect(result).toEqual(mockResponse);
-        expect(result.sessions).toHaveLength(2);
-      });
-
-      it('should handle empty user sessions', async () => {
-        const mockResponse = {
-          success: true,
-          count: 0,
-          sessions: []
-        };
-
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.getUserSessions('test-user-no-sessions');
-
-        expect(result.sessions).toHaveLength(0);
-        expect(result.count).toBe(0);
-      });
-    });
-
-    describe('getSessionData', () => {
-      it('should get session data by ID successfully', async () => {
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockSessionData,
-        });
-
-        const result = await apiService.getSessionData('test-session-123');
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions/test-session-123',
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        expect(result).toEqual(mockSessionData);
-      });
-    });
-
-    describe('updateSessionData', () => {
-      it('should update session data successfully', async () => {
-        const mockResponse = {
-          success: true,
-          message: 'Session data updated successfully'
-        };
-
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.updateSessionData('test-session-123', mockSessionData);
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions/test-session-123',
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mockSessionData),
-          }
-        );
-        expect(result).toEqual(mockResponse);
-      });
-    });
-
-    describe('deleteSessionData', () => {
-      it('should delete session data successfully', async () => {
-        const mockResponse = {
-          success: true,
-          message: 'Session data deleted successfully'
-        };
-
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.deleteSessionData('test-session-123');
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions/test-session-123',
-          {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-          }
-        );
-        expect(result).toEqual(mockResponse);
-      });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/health`);
+      expect(result).toEqual(healthData);
     });
   });
 
-  describe('Legacy API Endpoints', () => {
-    describe('initiateSession', () => {
-      it('should initiate a session successfully', async () => {
-        const mockRequest: SessionInitiateRequest = {
-          userid: 'test-user-123',
-          is_initiated: true,
-          metadata: {
-            age: 25,
-            gender: 'male',
-            ethnicity: 'Hispanic, Latino, or Spanish Origin',
-            race: 'white',
-            language: true,
-            weight: 170,
-            zipcode: '12345'
-          }
-        };
+  describe('saveSessionData', () => {
+    it('should POST session data to /sessions', async () => {
+      const sessionData = {
+        sessionId: 'test-session-id',
+        userId: 'test-user-id',
+        status: 'active' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      const response = { success: true, sessionId: 'test-session-id', message: 'Saved' };
+      mockFetchSuccess(response);
 
-        const mockResponse = {
-          sessionId: 'test-session-123',
-          status: 'initiated',
-          message: 'Session initiated successfully'
-        };
+      const result = await apiService.saveSessionData(sessionData as any);
 
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.initiateSession(mockRequest);
-
-        expect(mockFetch).toHaveBeenCalledWith(
-          'http://localhost:7071/api/sessions/initiate-selected',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mockRequest),
-          }
-        );
-        expect(result).toEqual(mockResponse);
-      });
-    });
-
-    describe('submitPrediction', () => {
-      it('should submit prediction successfully', async () => {
-        const mockRequest: PredictionSubmitRequest = {
-          sessionId: 'test-session-123',
-          userId: 'test-user-456',
-          audioFileUrl: 'https://storage.example.com/audio/test.wav',
-          audioFileName: 'test-audio.wav'
-        };
-
-        const mockResponse = {
-          sessionId: 'test-session-123',
-          status: 'processing',
-          message: 'Prediction submitted successfully'
-        };
-
-        mockFetch.mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockResponse,
-        });
-
-        const result = await apiService.submitPrediction(mockRequest);
-
-        expect(result).toEqual(mockResponse);
-      });
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions`);
+      expect(options.method).toBe('POST');
+      expect(JSON.parse(options.body)).toEqual(sessionData);
+      expect(result).toEqual(response);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should handle network errors', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  describe('getSessionData', () => {
+    it('should GET session by ID', async () => {
+      const sessionId = 'test-session-id';
+      const sessionData = { sessionId, userId: 'test-user', status: 'active' };
+      mockFetchSuccess(sessionData);
 
-      await expect(apiService.getUserSessions('test-user')).rejects.toThrow('Unable to connect to the server. Please check your internet connection.');
+      const result = await apiService.getSessionData(sessionId);
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/${sessionId}`);
+      expect(result).toEqual(sessionData);
+    });
+  });
+
+  describe('getUserSessions', () => {
+    it('should GET sessions for a user', async () => {
+      const userId = 'test-user-id';
+      const response = { success: true, count: 1, sessions: [{ sessionId: 's1' }] };
+      mockFetchSuccess(response);
+
+      const result = await apiService.getUserSessions(userId);
+
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/users/${userId}`);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('getAllSessions', () => {
+    it('should GET all sessions', async () => {
+      const response = { success: true, count: 2, sessions: [] };
+      mockFetchSuccess(response);
+
+      const result = await apiService.getAllSessions();
+
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/all`);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('updateSessionData', () => {
+    it('should PUT session data', async () => {
+      const sessionId = 'test-session-id';
+      const sessionData = { sessionId, userId: 'test-user', status: 'completed' };
+      const response = { success: true, message: 'Updated' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.updateSessionData(sessionId, sessionData as any);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/${sessionId}`);
+      expect(options.method).toBe('PUT');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('deleteSessionData', () => {
+    it('should DELETE session by ID', async () => {
+      const sessionId = 'test-session-id';
+      const response = { success: true, message: 'Deleted' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.deleteSessionData(sessionId);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/${sessionId}`);
+      expect(options.method).toBe('DELETE');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('initiateSession', () => {
+    it('should POST to sessions/initiate-selected', async () => {
+      const request = { userId: 'test-user', sessionId: 'test-session' };
+      const response = { sessionId: 'test-session', status: 'initiated' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.initiateSession(request as any);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/initiate-selected`);
+      expect(options.method).toBe('POST');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('submitPrediction', () => {
+    it('should POST to predictions/submit-selected', async () => {
+      const request = { sessionId: 'test-session', audioUrl: 'http://example.com/audio.wav' };
+      const response = { success: true, predictionId: 'pred-1' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.submitPrediction(request as any);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/predictions/submit-selected`);
+      expect(options.method).toBe('POST');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('getPredictionBySessionId', () => {
+    it('should GET prediction by session ID', async () => {
+      const sessionId = 'test-session';
+      const response = { sessionId, status: 'success', predictedScore: '0.8' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.getPredictionBySessionId(sessionId);
+
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/predictions/sessions/${sessionId}`);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('getUserPredictions', () => {
+    it('should GET predictions for a user', async () => {
+      const userId = 'test-user';
+      const response = [{ sessionId: 's1', status: 'success' }];
+      mockFetchSuccess(response);
+
+      const result = await apiService.getUserPredictions(userId);
+
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/predictions/${userId}`);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('generateRiskAssessment', () => {
+    it('should POST to generate risk assessment', async () => {
+      const sessionId = 'test-session';
+      const response = { success: true, riskAssessment: {}, message: 'Generated' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.generateRiskAssessment(sessionId);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/${sessionId}/risk-assessment`);
+      expect(options.method).toBe('POST');
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('getRiskAssessment', () => {
+    it('should GET risk assessment for a session', async () => {
+      const sessionId = 'test-session';
+      const response = { success: true, riskAssessment: {}, message: 'Found' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.getRiskAssessment(sessionId);
+
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/sessions/${sessionId}/risk-assessment`);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('correctGrammar', () => {
+    it('should POST text for grammar correction', async () => {
+      const text = 'Hello wrold';
+      const response = { originalText: text, correctedText: 'Hello world' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.correctGrammar(text);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/CorrectGrammar`);
+      expect(options.method).toBe('POST');
+      expect(JSON.parse(options.body)).toEqual({ text });
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('correctGrammarAgent', () => {
+    it('should POST text for agent grammar correction', async () => {
+      const text = 'Hello wrold';
+      const response = { originalText: text, correctedText: 'Hello world' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.correctGrammarAgent(text);
+
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/agent/grammar/correct`);
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('saveTranscription', () => {
+    it('should POST transcription data', async () => {
+      const sessionId = 'test-session';
+      const transcription = 'Test transcription text';
+      const response = { success: true, sessionId, message: 'Saved' };
+      mockFetchSuccess(response);
+
+      const result = await apiService.saveTranscription(sessionId, transcription);
+
+      const [url, options] = (global.fetch as Mock).mock.calls[0];
+      expect(url).toBe(`${BASE_URL}/SaveTranscription`);
+      expect(options.method).toBe('POST');
+      expect(JSON.parse(options.body)).toEqual({ sessionId, transcription });
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('testConnection', () => {
+    it('should return success when health check succeeds', async () => {
+      mockFetchSuccess({ status: 'healthy' });
+
+      const result = await apiService.testConnection();
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('API connection successful');
     });
 
-    it('should handle HTTP errors with custom messages', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        json: async () => ({ message: 'Session not found' }),
-      });
+    it('should return failure when health check fails', async () => {
+      mockFetchNetworkError();
 
-      await expect(apiService.getSessionData('non-existent')).rejects.toThrow();
+      const result = await apiService.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBeTruthy();
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should reject on network errors', async () => {
+      mockFetchNetworkError();
+
+      await expect(apiService.checkHealth()).rejects.toMatchObject({
+        code: 'NETWORK_ERROR',
+      });
     });
 
-    it('should handle malformed JSON responses', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        json: async () => { throw new Error('Invalid JSON'); },
-      });
+    it('should reject on HTTP errors', async () => {
+      mockFetchError(500, 'Internal Server Error', { message: 'Server error' });
 
-      await expect(apiService.getUserSessions('test-user')).rejects.toThrow();
+      // HTTP errors from handleResponse propagate directly because
+      // handleResponse is called without await in request(), so the
+      // catch block does not intercept them.
+      await expect(apiService.checkHealth()).rejects.toMatchObject({
+        code: 'HTTP_500',
+      });
+    });
+
+    it('should include Content-Type header in requests', async () => {
+      mockFetchSuccess({ status: 'healthy' });
+
+      await apiService.checkHealth();
+
+      const [, options] = (global.fetch as Mock).mock.calls[0];
+      expect(options.headers['Content-Type']).toBe('application/json');
+    });
+  });
+
+  describe('URL construction', () => {
+    it('should construct correct URLs from base and endpoints', async () => {
+      mockFetchSuccess({});
+
+      await apiService.getSessionData('abc-123');
+
+      const [url] = (global.fetch as Mock).mock.calls[0];
+      // baseUrl='http://localhost:7071/api' + '/sessions/abc-123'
+      expect(url).toBe('http://localhost:7071/api/sessions/abc-123');
+      // No double slashes
+      expect(url).not.toContain('//api//');
     });
   });
 });

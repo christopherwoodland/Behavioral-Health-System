@@ -63,7 +63,9 @@ export const uploadToAzureBlob = async (
   onProgress?.(20);
 
   // Build upload URL with query parameters
-  const uploadUrl = new URL(`${config.api.baseUrl}/upload-audio`);
+  // config.api.baseUrl is a relative path (e.g. '/api') in dev, so we must provide
+  // window.location.origin as the base; in production it may already be absolute.
+  const uploadUrl = new URL(`${config.api.baseUrl}/upload-audio`, window.location.origin);
   uploadUrl.searchParams.set('userId', effectiveUserId);
   uploadUrl.searchParams.set('sessionId', sessionId);
   uploadUrl.searchParams.set('fileName', fileName);

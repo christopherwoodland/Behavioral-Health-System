@@ -19,6 +19,8 @@ param acrName string
 // Role Definition IDs
 // Built-in role definitions: https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
 var cognitiveServicesUserRoleId = 'a97b65f3-24c7-4388-baec-2e87135dc908'
+var cognitiveServicesOpenAiUserRoleId = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
+var cognitiveServicesSpeechUserRoleId = 'f2dc8367-1007-4938-bd23-fe263f013447' // Cognitive Services Speech User
 var storageBlobDataContributorRoleId = 'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
 var storageQueueDataContributorRoleId = '974c5e8b-45b9-4653-ba55-5f855dd0fb88'
 var storageTableDataContributorRoleId = '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3'
@@ -96,6 +98,28 @@ resource apiAiServicesRole 'Microsoft.Authorization/roleAssignments@2022-04-01' 
   scope: aiServices
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesUserRoleId)
+    principalId: apiAppPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// API App -> AI Services Cognitive Services OpenAI User (for OpenAI completions/grammar correction)
+resource apiAiServicesOpenAiRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(aiServices.id, apiAppPrincipalId, cognitiveServicesOpenAiUserRoleId)
+  scope: aiServices
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesOpenAiUserRoleId)
+    principalId: apiAppPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// API App -> AI Services Cognitive Services Speech User (for speech transcription)
+resource apiAiServicesSpeechRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(aiServices.id, apiAppPrincipalId, cognitiveServicesSpeechUserRoleId)
+  scope: aiServices
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', cognitiveServicesSpeechUserRoleId)
     principalId: apiAppPrincipalId
     principalType: 'ServicePrincipal'
   }

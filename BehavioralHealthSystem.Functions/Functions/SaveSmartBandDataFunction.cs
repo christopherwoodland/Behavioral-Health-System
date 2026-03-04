@@ -5,6 +5,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -16,11 +17,19 @@ public class SaveSmartBandDataFunction
 {
     private readonly ILogger<SaveSmartBandDataFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly ISmartBandDataService? _smartBandDataService;
+    private readonly bool _usePostgres;
 
-    public SaveSmartBandDataFunction(ILogger<SaveSmartBandDataFunction> logger, BlobServiceClient blobServiceClient)
+    public SaveSmartBandDataFunction(
+        ILogger<SaveSmartBandDataFunction> logger,
+        BlobServiceClient blobServiceClient,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _smartBandDataService = _usePostgres ? serviceProvider.GetService(typeof(ISmartBandDataService)) as ISmartBandDataService : null;
     }
 
     /// <summary>
@@ -80,6 +89,26 @@ public class SaveSmartBandDataFunction
             _logger.LogInformation("Processing Smart Band data for user: {UserId}", data.UserId);
             _logger.LogInformation("Snapshot ID: {SnapshotId}", data.SnapshotId);
 
+            // PostgreSQL storage path
+            if (_usePostgres && _smartBandDataService != null)
+            {
+                var sharedData = JsonSerializer.Deserialize<BehavioralHealthSystem.Helpers.Models.SmartBandDataSnapshot>(requestBody)!;
+                await _smartBandDataService.SaveSnapshotAsync(sharedData);
+                _logger.LogInformation("Successfully saved Smart Band data to PostgreSQL for user: {UserId}", data.UserId);
+
+                var pgResponse = req.CreateResponse(HttpStatusCode.OK);
+                await pgResponse.WriteAsJsonAsync(new
+                {
+                    success = true,
+                    message = "Smart Band data saved successfully",
+                    userId = data.UserId,
+                    snapshotId = data.SnapshotId,
+                    storage = "PostgreSQL"
+                });
+                return pgResponse;
+            }
+
+            // Blob storage path (default)
             // Create blob path: bio/users/{userId}/smart-band-{timestamp}.json
             var timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
             var blobName = $"users/{data.UserId}/smart-band-{timestamp}.json";

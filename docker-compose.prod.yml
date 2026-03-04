@@ -89,6 +89,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   # BHS Web UI - Production
@@ -139,6 +142,7 @@ services:
       - VITE_POLL_INTERVAL_MS=1000
     depends_on:
       - api
+      - db
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 60s

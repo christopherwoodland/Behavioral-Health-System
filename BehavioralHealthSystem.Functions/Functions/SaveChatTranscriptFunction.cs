@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -9,19 +10,22 @@ public class SaveChatTranscriptFunction
 {
     private readonly ILogger<SaveChatTranscriptFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IChatTranscriptService? _chatTranscriptService;
+    private readonly bool _usePostgres;
 
     /// <summary>
     /// Initializes a new instance of the SaveChatTranscriptFunction
     /// </summary>
-    /// <param name="logger">Logger for diagnostic information</param>
-    /// <param name="blobServiceClient">Azure Blob Storage client for persisting transcripts</param>
-    /// <exception cref="ArgumentNullException">Thrown when logger or blobServiceClient is null</exception>
     public SaveChatTranscriptFunction(
         ILogger<SaveChatTranscriptFunction> logger,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _chatTranscriptService = _usePostgres ? serviceProvider.GetService(typeof(IChatTranscriptService)) as IChatTranscriptService : null;
     }
 
     /// <summary>
@@ -88,6 +92,30 @@ public class SaveChatTranscriptFunction
                 return badResponse;
             }
 
+            // PostgreSQL storage path
+            if (_usePostgres && _chatTranscriptService != null)
+            {
+                // Re-deserialize into shared model type for PG storage
+                var sharedData = JsonSerializer.Deserialize<BehavioralHealthSystem.Helpers.Models.ChatTranscriptData>(
+                    JsonSerializer.Serialize(requestData.TranscriptData, deserializeOptions), deserializeOptions)!;
+                await _chatTranscriptService.SaveTranscriptAsync(sharedData);
+                _logger.LogInformation("Successfully saved chat transcript to PostgreSQL for user {UserId}, session {SessionId}",
+                    requestData.TranscriptData.UserId, requestData.TranscriptData.SessionId);
+
+                var pgResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
+                pgResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                await pgResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    message = "Chat transcript saved successfully",
+                    sessionId = requestData.TranscriptData.SessionId,
+                    messageCount = requestData.TranscriptData.Messages?.Count ?? 0,
+                    storage = "PostgreSQL"
+                }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+                return pgResponse;
+            }
+
+            // Blob storage path (default)
             // Generate blob name with session ID and user ID
             // Structure: users/{userId}/conversations/{sessionId}.json
             var containerName = requestData.ContainerName ?? "chat-transcripts";

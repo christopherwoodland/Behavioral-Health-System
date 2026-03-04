@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -10,13 +11,19 @@ public class SavePhqSessionFunction
 {
     private readonly ILogger<SavePhqSessionFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IPhqSessionService? _phqSessionService;
+    private readonly bool _usePostgres;
 
     public SavePhqSessionFunction(
         ILogger<SavePhqSessionFunction> logger,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _blobServiceClient = blobServiceClient;
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _phqSessionService = _usePostgres ? serviceProvider.GetService(typeof(IPhqSessionService)) as IPhqSessionService : null;
     }
 
     [Function("SavePhqSession")]
@@ -55,6 +62,26 @@ public class SavePhqSessionFunction
                 var badResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 await badResponse.WriteStringAsync($"Invalid session data: {validation.ErrorMessage}");
                 return badResponse;
+            }
+
+            // Save to storage
+            if (_usePostgres && _phqSessionService != null)
+            {
+                var sharedData = JsonSerializer.Deserialize<BehavioralHealthSystem.Helpers.Models.PhqSessionData>(
+                    JsonSerializer.Serialize(requestData.SessionData, deserializeOptions), deserializeOptions)!;
+                await _phqSessionService.SaveSessionAsync(sharedData);
+                _logger.LogInformation("Successfully saved PHQ session to PostgreSQL: {SessionId}", requestData.SessionData.SessionId);
+
+                var pgResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
+                await pgResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    sessionId = requestData.SessionData.SessionId,
+                    assessmentId = requestData.SessionData.AssessmentId,
+                    isCompleted = requestData.SessionData.IsCompleted,
+                    storage = "PostgreSQL"
+                }));
+                return pgResponse;
             }
 
             // Save to blob storage

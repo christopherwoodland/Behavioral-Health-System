@@ -1,0 +1,49 @@
+properties:
+  configuration:
+    ingress:
+      external: true
+      targetPort: 80
+      transport: auto
+      allowInsecure: false
+  template:
+    containers:
+      - name: bhs-ui-dam
+        image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-ui-dam:latest
+        resources:
+          cpu: 0.5
+          memory: 1Gi
+        env:
+          - name: VITE_ENABLE_ENTRA_AUTH
+            value: "true"
+          - name: VITE_ENABLE_AUTH
+            value: "true"
+          - name: VITE_AZURE_CLIENT_ID
+            value: 98e8135d-5ca5-4015-b0ac-825ae189de20
+          - name: VITE_AZURE_TENANT_ID
+            value: 16b3c013-d300-468d-ac64-7eda0820b6d3
+          - name: VITE_AZURE_AUTHORITY
+            value: https://login.microsoftonline.com/16b3c013-d300-468d-ac64-7eda0820b6d3
+          - name: VITE_AZURE_REDIRECT_URI
+            value: https://bhs-ui-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+          - name: VITE_AZURE_POST_LOGOUT_REDIRECT_URI
+            value: https://bhs-ui-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+          - name: VITE_AZURE_KNOWN_AUTHORITIES
+            value: login.microsoftonline.com
+          - name: VITE_AZURE_ADMIN_GROUP_ID
+            value: ""
+          - name: VITE_AZURE_CONTROL_PANEL_GROUP_ID
+            value: ""
+          - name: VITE_API_BASE_URL
+            value: https://bhs-api-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io/api
+          - name: VITE_ENABLE_DEBUG_LOGGING
+            value: "true"
+          - name: VITE_DEV_ENVIRONMENT
+            value: "true"
+          - name: VITE_DEV_ENVIRONMENT_TEXT
+            value: "AZURE LOCAL DAM + POSTGRES"
+          - name: VITE_ENABLE_TRANSCRIPTION
+            value: "true"
+          - name: VITE_ENABLE_AI_RISK_ASSESSMENT
+            value: "true"
+          - name: VITE_ENABLE_KINTSUGI
+            value: "true"

@@ -53,8 +53,8 @@ public class CorsPreflightFunction
         }
 
         response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
-        response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
+        response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key, X-User-ID, X-User-Principal");
         response.Headers.Add("Access-Control-Allow-Credentials", "true");
         response.Headers.Add("Access-Control-Max-Age", "86400");
     }

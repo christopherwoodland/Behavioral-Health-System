@@ -100,7 +100,7 @@ public class CorsMiddleware : IFunctionsWorkerMiddleware
         // Add CORS headers
         response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
         response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key");
+        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key, X-User-ID, X-User-Principal");
         response.Headers.Add("Access-Control-Allow-Credentials", "true");
     }
 }

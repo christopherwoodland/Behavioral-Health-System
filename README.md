@@ -45,7 +45,7 @@ A deeper, multi-condition psychiatric evaluation powered by a **separate, more c
 - **Multi-Condition Analysis**: The system evaluates the patient against each selected condition, producing per-condition assessments with evidence-based reasoning
 - **Cross-Condition Differential Diagnosis**: When multiple conditions are selected, the system provides differential diagnosis analysis highlighting overlapping symptoms and distinguishing features
 - **Async Processing**: Extended assessments use Azure Durable Functions for orchestration — the clinician starts the assessment, receives a job ID, and polls for results — avoiding HTTP timeout issues with complex evaluations
-- **DSM-5 Data**: Diagnostic criteria are imported from DSM-5 source PDFs using the [DSM-5 Import CLI](BehavioralHealthSystem.DSM5Import/README.md) and stored as structured JSON. When using the PostgreSQL backend, the data is auto-seeded from `data/dsm5-data/conditions/` on first API start
+- **DSM-5 Data**: Diagnostic criteria are imported from DSM-5 source PDFs using the [DSM-5 Import CLI](BehavioralHealthSystem.DSM5Import/README.md) and stored as structured JSON in Azure Blob Storage
 
 ### PHQ Assessments
 
@@ -75,10 +75,6 @@ Patient Health Questionnaire (PHQ) assessment workflow with:
 │  │                                  │
 │  └── BehavioralHealthSystem.Helpers │  Shared models, services,
 │      (Shared Library)              │  validators, configuration
-├─────────────────────────────────────┤
-│  PostgreSQL (sidecar container)     │  Structured data storage
-│  postgres:16-alpine                │  Sessions, assessments, DSM-5
-│  Connected via localhost:5432      │  conditions, transcripts
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
@@ -99,44 +95,6 @@ Agents   ──references──► Helpers
 DSM5Import ─references──► Helpers (DSM5DataService, AzureContentUnderstandingService)
 Tests    ──tests──► Functions, Helpers
 ```
-
-### Storage Backends
-
-The system supports two storage backends, selected via the `STORAGE_BACKEND` environment variable:
-
-| Backend | Value | Description |
-|---------|-------|-------------|
-| **Azure Blob Storage** | `BlobStorage` (default) | Sessions, audio, transcripts, and DSM-5 data stored in Azure Blob containers |
-| **PostgreSQL** | `PostgreSQL` | All structured data stored in PostgreSQL; audio files remain in Azure Blob. Requires `POSTGRES_CONNECTION_STRING` |
-
-When using PostgreSQL, the API automatically:
-1. Creates all 19 database tables on first start (via EF Core)
-2. Seeds 58 DSM-5 diagnostic conditions from bundled JSON files if the table is empty
-
-### Azure Container Apps — PostgreSQL Sidecar Pattern
-
-In Azure Container Apps, PostgreSQL runs as a **sidecar container** within the same API pod rather than as a separate Container App. This is required because:
-
-- Container Apps' Envoy proxy does **not** support the PostgreSQL wire protocol via TCP ingress
-- The Container Apps PostgreSQL add-on service binding causes revisions to get stuck in "Processing" state
-- The sidecar shares the pod's `localhost` network, so the API connects to PostgreSQL at `localhost:5432` with zero routing overhead
-
-```
-┌─ API Container App Pod ─────────────────────────────┐
-│                                                      │
-│  ┌─ api container ────────┐  ┌─ postgres-sidecar ─┐ │
-│  │ bhs-api:latest         │  │ postgres:16-alpine │ │
-│  │ .NET 8 Functions       │  │ Port 5432          │ │
-│  │ 1.0 CPU / 2Gi RAM     │──│ 0.5 CPU / 1Gi RAM  │ │
-│  │                        │  │                    │ │
-│  │ POSTGRES_CONNECTION_   │  │ POSTGRES_USER      │ │
-│  │ STRING=Host=localhost  │  │ POSTGRES_PASSWORD   │ │
-│  └────────────────────────┘  │ POSTGRES_DB        │ │
-│                               └────────────────────┘ │
-└──────────────────────────────────────────────────────┘
-```
-
-In Docker Compose (local development/testing), PostgreSQL runs as a separate `db` service — Docker Compose networking makes it accessible via hostname `db` instead of `localhost`.
 
 ## Projects
 
@@ -187,10 +145,6 @@ cp docker.env.example docker.env
 
 # 3. Start the containers
 docker compose --env-file docker.env -f docker-compose.development.yml up -d --build
-
-# 4. (PostgreSQL backend) Seed DSM-5 data if using STORAGE_BACKEND=PostgreSQL
-#    The API auto-seeds on first start. To re-seed manually:
-.\scripts\seed-dsm5-data.ps1
 ```
 
 The `docker.env.example` template includes all required and optional variables with descriptions. Key variables you must set:
@@ -204,8 +158,6 @@ The `docker.env.example` template includes all required and optional variables w
 | `AZURE_OPENAI_ENDPOINT` | Yes | Azure OpenAI endpoint for risk assessments |
 | `AZURE_SPEECH_ENDPOINT` | For transcription | Azure Speech endpoint |
 | `EXTENDED_ASSESSMENT_OPENAI_ENDPOINT` | For extended assessments | GPT-5/O3 model endpoint |
-| `STORAGE_BACKEND` | No (default: `BlobStorage`) | Storage backend: `BlobStorage` or `PostgreSQL` |
-| `POSTGRES_PASSWORD` | For PostgreSQL | Database password (default: `BhsDev2026!`) |
 
 > **Security**: Never commit `docker.env` to source control. It contains secrets and is excluded via `.gitignore`.
 
@@ -216,7 +168,6 @@ The `docker.env.example` template includes all required and optional variables w
 .\scripts\docker-manage.ps1 -Action up -Environment production
 .\scripts\docker-manage.ps1 -Action down -Environment development
 .\scripts\docker-manage.ps1 -Action status
-.\scripts\docker-manage.ps1 -Action seed   # Seed DSM-5 data into PostgreSQL
 ```
 
 ---
@@ -225,8 +176,8 @@ The `docker.env.example` template includes all required and optional variables w
 
 | Environment | Description | Docker Compose |
 |-------------|-------------|----------------|
-| **Development** | Local dev and Azure-backed dev testing. PostgreSQL via separate `db` service. Optional Ollama for local LLM. | `docker-compose.development.yml` |
-| **Production** | Hardened Azure deployment with Managed Identity, RBAC, and PostgreSQL sidecar. | `docker-compose.prod.yml` |
+| **Development** | Local dev and Azure-backed dev testing. Optional Ollama for local LLM. | `docker-compose.development.yml` |
+| **Production** | Hardened Azure deployment with Managed Identity and RBAC. | `docker-compose.prod.yml` |
 
 ---
 
@@ -260,27 +211,12 @@ The `docker.env.example` template includes all required and optional variables w
 | `AZURE_SPEECH_KEY` | Azure Speech key (transcription) |
 | `AZURE_SPEECH_REGION` | Azure Speech region |
 | `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` | Identity/auth settings |
-| `STORAGE_BACKEND` | `BlobStorage` (default) or `PostgreSQL` |
-| `POSTGRES_CONNECTION_STRING` | PostgreSQL connection string (when `STORAGE_BACKEND=PostgreSQL`) |
 
 ### Security
 
 - Prefer **Managed Identity + RBAC** where possible
 - Store secrets in **Azure Key Vault** or secure local env
 - Never commit secrets to source control
-
-#### Required Azure RBAC Roles
-
-The service principal (or managed identity) needs these data-plane roles:
-
-| Role | Scope | Purpose |
-|------|-------|---------|
-| `Storage Blob Data Contributor` | Storage Account | Audio file upload/download |
-| `Storage Table Data Contributor` | Storage Account | Durable Functions task hub |
-| `Storage Queue Data Contributor` | Storage Account | Durable Functions task hub |
-| `Cognitive Services OpenAI User` | OpenAI / Foundry resource | GPT model access |
-| `Cognitive Services Speech User` | Speech / Cognitive Services | Audio transcription |
-| `Cognitive Services User` | Document Intelligence | DSM-5 PDF extraction |
 
 ---
 
@@ -316,22 +252,10 @@ See the [Web README](BehavioralHealthSystem.Web/README.md) for details.
 
 ### Azure Bicep Deployment
 
-The Bicep templates deploy Azure Container Apps with PostgreSQL as a sidecar container. You must provide the `postgresPassword` parameter:
-
 ```powershell
 az deployment sub create --location eastus2 \
   --template-file infrastructure/bicep/main-public-containerized.bicep \
-  --parameters infrastructure/bicep/parameters/development.parameters.json \
-  --parameters postgresPassword='YourSecurePassword'
-```
-
-To update an existing deployment with new env vars (including PostgreSQL sidecar):
-
-```powershell
-az deployment group create \
-  --resource-group <your-rg> \
-  --template-file infrastructure/bicep/update-container-apps.bicep \
-  --parameters postgresPassword='YourSecurePassword'
+  --parameters infrastructure/bicep/parameters/development.parameters.json
 ```
 
 ### Infrastructure Runbook

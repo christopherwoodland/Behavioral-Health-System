@@ -10,9 +10,7 @@ This project defines the core data contracts and business logic shared by the [F
 
 - **.NET 8** class library
 - **Azure.AI.OpenAI** — risk assessment and grammar correction via GPT models
-- **Azure Blob Storage** — session, file group, and assessment persistence (legacy backend)
-- **PostgreSQL** — structured data storage via Entity Framework Core (primary backend)
-- **Npgsql.EntityFrameworkCore.PostgreSQL** — PostgreSQL EF Core provider
+- **Azure Blob Storage** — session, file group, and assessment persistence
 - **Azure Document Intelligence** — DSM-5 PDF content extraction
 - **Azure Identity** — Managed Identity and credential management
 - **FluentValidation** — request validation rules
@@ -76,10 +74,7 @@ BehavioralHealthSystem.Helpers/
 
 | Service | Purpose |
 |---------|---------|
-| `SessionStorageService` | Session CRUD in Azure Blob Storage (legacy backend) |
-| `PostgresSessionStorageService` | Session CRUD in PostgreSQL via EF Core |
-| `PostgresDSM5DataService` | DSM-5 condition storage in PostgreSQL |
-| `BhsDbContext` | Entity Framework Core DbContext for PostgreSQL (19 tables, auto-migration) |
+| `SessionStorageService` | Session CRUD in Azure Blob Storage |
 | `FileGroupStorageService` | File group management in blob storage |
 | `BiometricDataService` | User biometric data persistence |
 

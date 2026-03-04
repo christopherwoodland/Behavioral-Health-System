@@ -10,9 +10,7 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 
 - **.NET 8** — isolated worker process
 - **Azure Functions v4** — serverless compute
-- **Azure Blob Storage** — audio files, blob-based session data (legacy)
-- **PostgreSQL** — structured data storage (sessions, assessments, transcripts, DSM-5 conditions) via EF Core. Runs as a sidecar container in Azure Container Apps
-- **Entity Framework Core** (Npgsql) — PostgreSQL ORM and migrations
+- **Azure Blob Storage** — session data, audio files, transcripts, assessments
 - **Azure Key Vault** — secrets management
 - **Azure SignalR** — real-time communication
 - **Azure Document Intelligence** — DSM-5 PDF extraction
@@ -129,8 +127,6 @@ Key settings in `local.settings.json`:
 | `LOCAL_DAM_BASE_URL` | Kintsugi DAM model endpoint |
 | `LOCAL_DAM_MODEL_ID` | Model identifier (default: `KintsugiHealth/dam`) |
 | `LOCAL_DAM_API_KEY` | DAM model API key |
-| `STORAGE_BACKEND` | Storage backend: `BlobStorage` (default) or `PostgreSQL` |
-| `POSTGRES_CONNECTION_STRING` | PostgreSQL connection string (when `STORAGE_BACKEND=PostgreSQL`). In Azure Container Apps, use `Host=localhost` (sidecar pattern) |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint for risk assessments |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI key |
 | `AZURE_OPENAI_DEPLOYMENT_NAME` | GPT deployment name (default: `gpt-4o`) |

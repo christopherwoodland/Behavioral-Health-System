@@ -24,7 +24,6 @@ services:
       - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
       - ASPNETCORE_ENVIRONMENT=Production
       - AZURE_FUNCTIONS_ENVIRONMENT=Production
-      - WEBSITE_HOSTNAME=localhost:80
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
@@ -82,11 +81,6 @@ services:
       # Entra ID
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
-      # PostgreSQL Configuration
-      # In Azure Container Apps, PostgreSQL runs as a sidecar (same pod, localhost)
-      # In Docker Compose, it runs as a separate service accessible via hostname 'db'
-      - STORAGE_BACKEND=PostgreSQL
-      - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=${POSTGRES_PASSWORD}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -157,29 +151,4 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  # PostgreSQL Database
-  # In Azure Container Apps, this runs as a sidecar container in the API pod
-  # In Docker Compose, it runs as a separate service (equivalent networking via hostname 'db')
-  db:
-    image: postgres:16-alpine
-    container_name: bhs-postgres-prod
-    environment:
-      - POSTGRES_USER=bhs_admin
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=bhs_dev
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bhs_admin -d bhs_dev"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    restart: unless-stopped
-
-# Volumes for persistent PostgreSQL data
-volumes:
-  pgdata:
-    driver: local
+# No volumes needed - all data in Azure

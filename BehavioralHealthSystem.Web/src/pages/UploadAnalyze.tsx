@@ -3356,7 +3356,7 @@ const UploadAnalyze: React.FC = () => {
                 </div>
                 <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
                   {csvValidationErrors.map((error, index) => (
-                    <li key={index}>• {error}</li>
+                    <li key={index}>â€¢ {error}</li>
                   ))}
                 </ul>
               </div>
@@ -3415,7 +3415,7 @@ const UploadAnalyze: React.FC = () => {
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {(audioFile.file.size / 1024 / 1024).toFixed(2)} MB
-                        {audioFile.duration && ` • ${formatTime(audioFile.duration)}`}
+                        {audioFile.duration && ` â€¢ ${formatTime(audioFile.duration)}`}
                       </p>
                     </div>
                   </div>
@@ -3517,7 +3517,7 @@ const UploadAnalyze: React.FC = () => {
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {(file.file.size / 1024 / 1024).toFixed(2)} MB
-                                {file.duration && ` • ${formatTime(file.duration)}`}
+                                {file.duration && ` â€¢ ${formatTime(file.duration)}`}
                               </p>
                             </div>
                           </div>
@@ -3855,7 +3855,7 @@ const UploadAnalyze: React.FC = () => {
               <ul className="space-y-1">
                 {result.insights.map((insight, index) => (
                   <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
-                    • {insight}
+                    â€¢ {insight}
                   </li>
                 ))}
               </ul>
@@ -4132,7 +4132,7 @@ const UploadAnalyze: React.FC = () => {
                           )}
                         </button>
                         <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {audioFile.file.name} • {audioFile.duration ? `${Math.round(audioFile.duration)}s` : 'Duration unknown'}
+                          {audioFile.file.name} â€¢ {audioFile.duration ? `${Math.round(audioFile.duration)}s` : 'Duration unknown'}
                         </span>
                       </div>
                       <audio

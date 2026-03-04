@@ -168,25 +168,6 @@ public class AudioUploadFunctions
             _logger.LogInformation("UPLOAD_SUCCESS BLOB_PATH={BlobPath} BLOB_URL={BlobUrl} USER_ID={UserId} SESSION_ID={SessionId}",
                 blobPath, blobUrl, userId, sessionId);
 
-            // Save audio metadata to PostgreSQL if configured
-            if (_usePostgres && _audioMetadataService != null)
-            {
-                var audioMetadata = new BehavioralHealthSystem.Helpers.Models.AudioMetadata
-                {
-                    UserId = userId,
-                    SessionId = sessionId,
-                    OriginalFileName = fileName,
-                    BlobPath = blobPath,
-                    BlobUrl = blobUrl,
-                    ContentType = contentType,
-                    FileSizeBytes = memoryStream.Length,
-                    Source = "jekyll-voice-recording",
-                    UploadedAt = DateTime.UtcNow
-                };
-                await _audioMetadataService.SaveMetadataAsync(audioMetadata);
-                _logger.LogInformation("✅ Audio metadata saved to PostgreSQL for session: {SessionId}", sessionId);
-            }
-
             // Return success response
             var response = req.CreateResponse(HttpStatusCode.OK);
             await response.WriteAsJsonAsync(new

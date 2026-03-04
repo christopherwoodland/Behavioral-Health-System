@@ -392,6 +392,11 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'FUNCTIONS_WORKER_RUNTIME'
               value: 'dotnet-isolated'
             }
+            // Required for Durable Functions webhook URI generation in Container Apps
+            {
+              name: 'WEBSITE_HOSTNAME'
+              value: '${apiAppName}.${containerAppsEnv.properties.defaultDomain}'
+            }
             // Azure Storage configuration for managed identity
             {
               name: 'AzureWebJobsStorage__accountName'

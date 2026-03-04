@@ -24,6 +24,7 @@ services:
       - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
       - ASPNETCORE_ENVIRONMENT=Production
       - AZURE_FUNCTIONS_ENVIRONMENT=Production
+      - WEBSITE_HOSTNAME=localhost:80
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}

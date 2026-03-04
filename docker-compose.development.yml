@@ -22,6 +22,7 @@ services:
       - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
       - ASPNETCORE_ENVIRONMENT=Development
       - AZURE_FUNCTIONS_ENVIRONMENT=Development
+      - WEBSITE_HOSTNAME=localhost:80
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
@@ -79,8 +80,14 @@ services:
       # Entra ID
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
+      # PostgreSQL Storage Backend
+      - STORAGE_BACKEND=${STORAGE_BACKEND:-BlobStorage}
+      - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=${POSTGRES_PASSWORD:-BhsDev2026!}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
       interval: 60s
@@ -123,4 +130,42 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-# No volumes needed - all data in Azure
+  # PostgreSQL Database - Development Environment
+  db:
+    image: postgres:16-alpine
+    container_name: bhs-db-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=bhs_dev
+      - POSTGRES_USER=bhs_admin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-BhsDev2026!}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./data:/data:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bhs_admin -d bhs_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # pgAdmin - Database Management UI (Development Only)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: bhs-pgadmin-dev
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@bhs.dev}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+    driver: local

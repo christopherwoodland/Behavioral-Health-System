@@ -21,6 +21,7 @@ COPY BehavioralHealthSystem.Functions/Prompts/ ./BehavioralHealthSystem.Function
 COPY BehavioralHealthSystem.Functions/Properties/ ./BehavioralHealthSystem.Functions/Properties/
 COPY BehavioralHealthSystem.Helpers/*.cs ./BehavioralHealthSystem.Helpers/
 COPY BehavioralHealthSystem.Helpers/Configuration/ ./BehavioralHealthSystem.Helpers/Configuration/
+COPY BehavioralHealthSystem.Helpers/Data/ ./BehavioralHealthSystem.Helpers/Data/
 COPY BehavioralHealthSystem.Helpers/Models/ ./BehavioralHealthSystem.Helpers/Models/
 COPY BehavioralHealthSystem.Helpers/Services/ ./BehavioralHealthSystem.Helpers/Services/
 COPY BehavioralHealthSystem.Helpers/Validators/ ./BehavioralHealthSystem.Helpers/Validators/
@@ -47,6 +48,9 @@ WORKDIR /home/site/wwwroot
 
 # Copy published output
 COPY --from=build /app/publish .
+
+# Copy DSM-5 seed data for auto-seeding on first start
+COPY data/dsm5-data/conditions/ ./Data/dsm5-data/conditions/
 
 # Set environment variables for DEVELOPMENT
 # Development uses Managed Identity like production, but with dev Azure resources

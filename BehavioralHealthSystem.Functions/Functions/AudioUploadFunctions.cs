@@ -1,6 +1,7 @@
 using System.Net;
 using Azure.Storage.Blobs;
 using BehavioralHealthSystem.Functions.Services;
+using BehavioralHealthSystem.Helpers.Services;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
@@ -15,15 +16,21 @@ public class AudioUploadFunctions
     private readonly ILogger<AudioUploadFunctions> _logger;
     private readonly BlobServiceClient _blobServiceClient;
     private readonly IApiKeyValidationService _apiKeyValidation;
+    private readonly IAudioMetadataService? _audioMetadataService;
+    private readonly bool _usePostgres;
 
     public AudioUploadFunctions(
         ILogger<AudioUploadFunctions> logger,
         BlobServiceClient blobServiceClient,
-        IApiKeyValidationService apiKeyValidation)
+        IApiKeyValidationService apiKeyValidation,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
         _apiKeyValidation = apiKeyValidation ?? throw new ArgumentNullException(nameof(apiKeyValidation));
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _audioMetadataService = _usePostgres ? serviceProvider.GetService(typeof(IAudioMetadataService)) as IAudioMetadataService : null;
     }
 
     /// <summary>
@@ -160,6 +167,25 @@ public class AudioUploadFunctions
             _logger.LogInformation("✅ Audio blob path: {BlobPath}", blobPath);
             _logger.LogInformation("UPLOAD_SUCCESS BLOB_PATH={BlobPath} BLOB_URL={BlobUrl} USER_ID={UserId} SESSION_ID={SessionId}",
                 blobPath, blobUrl, userId, sessionId);
+
+            // Save audio metadata to PostgreSQL if configured
+            if (_usePostgres && _audioMetadataService != null)
+            {
+                var audioMetadata = new BehavioralHealthSystem.Helpers.Models.AudioMetadata
+                {
+                    UserId = userId,
+                    SessionId = sessionId,
+                    OriginalFileName = fileName,
+                    BlobPath = blobPath,
+                    BlobUrl = blobUrl,
+                    ContentType = contentType,
+                    FileSizeBytes = memoryStream.Length,
+                    Source = "jekyll-voice-recording",
+                    UploadedAt = DateTime.UtcNow
+                };
+                await _audioMetadataService.SaveMetadataAsync(audioMetadata);
+                _logger.LogInformation("✅ Audio metadata saved to PostgreSQL for session: {SessionId}", sessionId);
+            }
 
             // Return success response
             var response = req.CreateResponse(HttpStatusCode.OK);

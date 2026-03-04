@@ -47,8 +47,12 @@ $roles = @{
     "KeyVaultSecretsOfficer" = "b86a8fe4-44ce-4948-aee5-eccb2c155cd7"
     "KeyVaultSecretsUser" = "4633458b-17de-408a-b874-0445c86b69e6"
     "CognitiveServicesUser" = "a97b65f3-24c7-4388-baec-2e87135dc908"
+    "CognitiveServicesOpenAIUser" = "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd"
+    "CognitiveServicesSpeechUser" = "f2dc8367-1007-4938-bd23-fe263f013447"
     "StorageBlobDataContributor" = "ba92f5b4-2d11-453d-a403-e96b0029c9fe"
     "StorageBlobDataReader" = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d1"
+    "StorageTableDataContributor" = "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3"
+    "StorageQueueDataContributor" = "974c5e8b-45b9-4653-ba55-5f855dd0fb88"
 }
 
 Write-Host "[*] Discovering resources in '$ResourceGroupName'..."
@@ -190,6 +194,44 @@ if ($functionApp) {
                 -PrincipalType "ServicePrincipal" `
                 -Scope $cog.id `
                 -Description "Function App -> Cognitive Services User ($($cog.name))"
+
+            # Cognitive Services OpenAI User (required for OpenAI completions/grammar correction)
+            New-RoleAssignmentSafe `
+                -RoleName "CognitiveServicesOpenAIUser" `
+                -RoleId $roles.CognitiveServicesOpenAIUser `
+                -PrincipalId $funcPrincipalId `
+                -PrincipalType "ServicePrincipal" `
+                -Scope $cog.id `
+                -Description "Function App -> Cognitive Services OpenAI User ($($cog.name))"
+
+            # Cognitive Services Speech User (required for Speech transcription)
+            New-RoleAssignmentSafe `
+                -RoleName "CognitiveServicesSpeechUser" `
+                -RoleId $roles.CognitiveServicesSpeechUser `
+                -PrincipalId $funcPrincipalId `
+                -PrincipalType "ServicePrincipal" `
+                -Scope $cog.id `
+                -Description "Function App -> Cognitive Services Speech User ($($cog.name))"
+        }
+
+        # Storage Table Data Contributor (required for Durable Functions)
+        if ($storageAccount) {
+            New-RoleAssignmentSafe `
+                -RoleName "StorageTableDataContributor" `
+                -RoleId $roles.StorageTableDataContributor `
+                -PrincipalId $funcPrincipalId `
+                -PrincipalType "ServicePrincipal" `
+                -Scope $storageAccount.id `
+                -Description "Function App -> Storage Table Data Contributor"
+
+            # Storage Queue Data Contributor (required for Durable Functions)
+            New-RoleAssignmentSafe `
+                -RoleName "StorageQueueDataContributor" `
+                -RoleId $roles.StorageQueueDataContributor `
+                -PrincipalId $funcPrincipalId `
+                -PrincipalType "ServicePrincipal" `
+                -Scope $storageAccount.id `
+                -Description "Function App -> Storage Queue Data Contributor"
         }
     }
 }

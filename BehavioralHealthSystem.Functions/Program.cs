@@ -4,9 +4,13 @@ using Azure.Storage.Blobs;
 using BehavioralHealthSystem.Agents.DependencyInjection;
 using BehavioralHealthSystem.Configuration;
 using BehavioralHealthSystem.Functions.Services;
+using BehavioralHealthSystem.Helpers.Data;
 using BehavioralHealthSystem.Helpers.Models;
 using BehavioralHealthSystem.Helpers.Services;
+using BehavioralHealthSystem.Helpers.Services.PostgreSQL;
+using BehavioralHealthSystem.Services;
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -123,10 +127,8 @@ var host = new HostBuilder()
 
         // Application Services
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
-        services.AddScoped<IDSM5DataService, DSM5DataService>();
         services.AddScoped<IAzureContentUnderstandingService, AzureContentUnderstandingService>();
         services.AddMemoryCache();
-        services.AddScoped<IExtendedAssessmentJobService, ExtendedAssessmentJobService>();
         services.AddScoped<IGrammarCorrectionService, GrammarCorrectionService>();
         services.AddScoped<GenericErrorHandlingService>();
         services.AddScoped<ExceptionHandlingService>();
@@ -183,6 +185,34 @@ var host = new HostBuilder()
         services.AddScoped<ISessionStorageService, SessionStorageService>();
         services.AddScoped<IFileGroupStorageService, FileGroupStorageService>();
         services.AddScoped<IBiometricDataService, BiometricDataService>();
+        services.AddScoped<IDSM5DataService, DSM5DataService>();
+        services.AddScoped<IExtendedAssessmentJobService, ExtendedAssessmentJobService>();
+
+        // ==================== Storage Backend Toggle ====================
+        var storageBackend = config["STORAGE_BACKEND"] ?? "BlobStorage";
+        if (storageBackend.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+        {
+            var pgConnectionString = config["POSTGRES_CONNECTION_STRING"]
+                ?? throw new InvalidOperationException("POSTGRES_CONNECTION_STRING is required when STORAGE_BACKEND=PostgreSQL");
+
+            services.AddDbContext<BhsDbContext>(options =>
+                options.UseNpgsql(pgConnectionString));
+
+            // Override blob-based registrations with PostgreSQL implementations
+            services.AddScoped<ISessionStorageService, PgSessionStorageService>();
+            services.AddScoped<IFileGroupStorageService, PgFileGroupStorageService>();
+            services.AddScoped<IBiometricDataService, PgBiometricDataService>();
+            services.AddScoped<IDSM5DataService, PgDSM5DataService>();
+            services.AddScoped<IExtendedAssessmentJobService, PgExtendedAssessmentJobService>();
+
+            // New PG-only services (structured data that was previously inline in functions)
+            services.AddScoped<IChatTranscriptService, PgChatTranscriptService>();
+            services.AddScoped<IPhqAssessmentService, PgPhqAssessmentService>();
+            services.AddScoped<IPhqProgressService, PgPhqProgressService>();
+            services.AddScoped<IPhqSessionService, PgPhqSessionService>();
+            services.AddScoped<ISmartBandDataService, PgSmartBandDataService>();
+            services.AddScoped<IAudioMetadataService, PgAudioMetadataService>();
+        }
         services.AddValidatorsFromAssemblyContaining<UserMetadataValidator>();
         services.AddHealthChecks();
         services.AddSignalR();
@@ -192,4 +222,76 @@ var host = new HostBuilder()
     })
     .Build();
 
-host.Run();
+// Initialize PostgreSQL database schema if configured
+var storageBackendInit = host.Services.GetService<IConfiguration>()?["STORAGE_BACKEND"];
+if (storageBackendInit?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true)
+{
+    using var scope = host.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<BhsDbContext>();
+    await db.Database.EnsureCreatedAsync();
+    Console.WriteLine("PostgreSQL database tables created/verified successfully.");
+
+    // Seed DSM-5 conditions if table is empty
+    var dsm5Count = await db.Dsm5Conditions.CountAsync();
+    if (dsm5Count == 0)
+    {
+        Console.WriteLine("DSM-5 conditions table is empty. Attempting to seed from JSON files...");
+
+        // Check multiple possible data directories
+        var possiblePaths = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "Data", "dsm5-data", "conditions"),
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "dsm5-data", "conditions"),
+            "/data/dsm5-data/conditions"  // Docker volume mount
+        };
+
+        var dataDir = possiblePaths.FirstOrDefault(Directory.Exists);
+
+        if (dataDir != null)
+        {
+            var jsonFiles = Directory.GetFiles(dataDir, "*.json");
+            Console.WriteLine($"Found {jsonFiles.Length} DSM-5 condition files in {dataDir}");
+
+            var seeded = 0;
+            var jsonOptions = new System.Text.Json.JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            };
+
+            foreach (var file in jsonFiles)
+            {
+                try
+                {
+                    var json = await File.ReadAllTextAsync(file);
+                    var condition = System.Text.Json.JsonSerializer.Deserialize<DSM5ConditionData>(json, jsonOptions);
+                    if (condition != null)
+                    {
+                        condition.LastUpdated = DateTime.UtcNow;
+                        db.Dsm5Conditions.Add(condition);
+                        seeded++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"  Warning: Failed to load {Path.GetFileName(file)}: {ex.Message}");
+                }
+            }
+
+            if (seeded > 0)
+            {
+                await db.SaveChangesAsync();
+                Console.WriteLine($"Successfully seeded {seeded} DSM-5 conditions into PostgreSQL.");
+            }
+        }
+        else
+        {
+            Console.WriteLine("DSM-5 data directory not found. Run scripts/seed-dsm5-data.ps1 to seed manually.");
+        }
+    }
+    else
+    {
+        Console.WriteLine($"DSM-5 conditions table already has {dsm5Count} records. Skipping seed.");
+    }
+}
+
+await host.RunAsync();

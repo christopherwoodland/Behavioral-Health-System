@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -9,13 +10,19 @@ public class SavePhqAssessmentFunction
 {
     private readonly ILogger<SavePhqAssessmentFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IPhqAssessmentService? _phqAssessmentService;
+    private readonly bool _usePostgres;
 
     public SavePhqAssessmentFunction(
         ILogger<SavePhqAssessmentFunction> logger,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _blobServiceClient = blobServiceClient;
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _phqAssessmentService = _usePostgres ? serviceProvider.GetService(typeof(IPhqAssessmentService)) as IPhqAssessmentService : null;
     }
 
     [Function("SavePhqAssessment")]
@@ -54,6 +61,19 @@ public class SavePhqAssessmentFunction
                 var badResponse = req.CreateResponse(System.Net.HttpStatusCode.BadRequest);
                 await badResponse.WriteStringAsync($"Invalid assessment data: {validation.ErrorMessage}");
                 return badResponse;
+            }
+
+            // Save to storage
+            if (_usePostgres && _phqAssessmentService != null)
+            {
+                var sharedData = JsonSerializer.Deserialize<BehavioralHealthSystem.Helpers.Models.PhqAssessmentData>(
+                    JsonSerializer.Serialize(requestData.AssessmentData, deserializeOptions), deserializeOptions)!;
+                await _phqAssessmentService.SaveAssessmentAsync(sharedData);
+                _logger.LogInformation("Successfully saved PHQ assessment to PostgreSQL: {AssessmentId}", requestData.AssessmentData.AssessmentId);
+
+                var pgResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
+                await pgResponse.WriteStringAsync(JsonSerializer.Serialize(new { success = true, assessmentId = requestData.AssessmentData.AssessmentId, storage = "PostgreSQL" }));
+                return pgResponse;
             }
 
             // Save to blob storage

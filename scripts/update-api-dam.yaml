@@ -54,7 +54,7 @@ properties:
           - name: STORAGE_BACKEND
             value: PostgreSQL
           - name: POSTGRES_CONNECTION_STRING
-            value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=REDACTED_ROTATE_PASSWORD
+            value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=<REPLACE_WITH_POSTGRES_PASSWORD>
           # Entra ID
           - name: ENTRA_TENANT_ID
             value: 16b3c013-d300-468d-ac64-7eda0820b6d3
@@ -148,6 +148,6 @@ properties:
           - name: POSTGRES_USER
             value: bhs_admin
           - name: POSTGRES_PASSWORD
-            value: REDACTED_ROTATE_PASSWORD
+            value: <REPLACE_WITH_POSTGRES_PASSWORD>
           - name: POSTGRES_DB
             value: bhs_dev

@@ -1,4 +1,4 @@
-﻿id: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/containerapps/bhs-api-dam
+id: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/containerapps/bhs-api-dam
 identity:
   principalId: f730cb59-a613-48b3-81be-541ebe6900d7
   tenantId: 16b3c013-d300-468d-ac64-7eda0820b6d3
@@ -192,7 +192,7 @@ properties:
       - name: STORAGE_BACKEND
         value: PostgreSQL
       - name: POSTGRES_CONNECTION_STRING
-        value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=REDACTED_ROTATE_PASSWORD
+        value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=<REPLACE_WITH_POSTGRES_PASSWORD>
       - name: ENTRA_TENANT_ID
         value: 16b3c013-d300-468d-ac64-7eda0820b6d3
       - name: ENTRA_CLIENT_ID
@@ -283,7 +283,7 @@ properties:
       - name: POSTGRES_USER
         value: bhs_admin
       - name: POSTGRES_PASSWORD
-        value: REDACTED_ROTATE_PASSWORD
+        value: <REPLACE_WITH_POSTGRES_PASSWORD>
       - name: POSTGRES_DB
         value: bhs_dev
       image: postgres:16-alpine

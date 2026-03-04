@@ -87,6 +87,19 @@ param extendedAssessmentDeployment string = 'gpt-5.2'
 param agentModelDeployment string = 'gpt-5.2'
 
 // ============================================================================
+// POSTGRESQL SIDECAR CONFIGURATION
+// ============================================================================
+@description('PostgreSQL admin password')
+@secure()
+param postgresPassword string
+
+@description('PostgreSQL database name')
+param postgresDatabase string = 'bhs_dev'
+
+@description('PostgreSQL admin username')
+param postgresUser string = 'bhs_admin'
+
+// ============================================================================
 // REFERENCE EXISTING RESOURCES
 // ============================================================================
 resource containerAppsEnv 'Microsoft.App/managedEnvironments@2024-03-01' existing = {
@@ -578,6 +591,17 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'ALLOWED_ORIGINS'
               value: 'https://${uiAppName}.${containerAppsEnv.properties.defaultDomain}'
             }
+            // PostgreSQL Sidecar Configuration
+            // PostgreSQL runs as a sidecar container in the same pod, accessible via localhost
+            // This avoids TCP ingress issues with Container Apps' Envoy proxy
+            {
+              name: 'STORAGE_BACKEND'
+              value: 'PostgreSQL'
+            }
+            {
+              name: 'POSTGRES_CONNECTION_STRING'
+              value: 'Host=localhost;Port=5432;Database=${postgresDatabase};Username=${postgresUser};Password=${postgresPassword}'
+            }
           ]
           probes: [
             {
@@ -597,6 +621,31 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               }
               initialDelaySeconds: 15
               periodSeconds: 10
+            }
+          ]
+        }
+        // PostgreSQL Sidecar Container
+        // Runs alongside the API in the same pod, sharing localhost network
+        // This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
+        {
+          name: 'postgres-sidecar'
+          image: 'postgres:16-alpine'
+          resources: {
+            cpu: json('0.5')
+            memory: '1Gi'
+          }
+          env: [
+            {
+              name: 'POSTGRES_USER'
+              value: postgresUser
+            }
+            {
+              name: 'POSTGRES_PASSWORD'
+              value: postgresPassword
+            }
+            {
+              name: 'POSTGRES_DB'
+              value: postgresDatabase
             }
           ]
         }

@@ -75,6 +75,10 @@ Patient Health Questionnaire (PHQ) assessment workflow with:
 │  │                                  │
 │  └── BehavioralHealthSystem.Helpers │  Shared models, services,
 │      (Shared Library)              │  validators, configuration
+├─────────────────────────────────────┤
+│  PostgreSQL (sidecar container)     │  Structured data storage
+│  postgres:16-alpine                │  Sessions, assessments, DSM-5
+│  Connected via localhost:5432      │  conditions, transcripts
 └─────────────────────────────────────┘
 
 ┌─────────────────────────────────────┐
@@ -108,6 +112,31 @@ The system supports two storage backends, selected via the `STORAGE_BACKEND` env
 When using PostgreSQL, the API automatically:
 1. Creates all 19 database tables on first start (via EF Core)
 2. Seeds 58 DSM-5 diagnostic conditions from bundled JSON files if the table is empty
+
+### Azure Container Apps — PostgreSQL Sidecar Pattern
+
+In Azure Container Apps, PostgreSQL runs as a **sidecar container** within the same API pod rather than as a separate Container App. This is required because:
+
+- Container Apps' Envoy proxy does **not** support the PostgreSQL wire protocol via TCP ingress
+- The Container Apps PostgreSQL add-on service binding causes revisions to get stuck in "Processing" state
+- The sidecar shares the pod's `localhost` network, so the API connects to PostgreSQL at `localhost:5432` with zero routing overhead
+
+```
+┌─ API Container App Pod ─────────────────────────────┐
+│                                                      │
+│  ┌─ api container ────────┐  ┌─ postgres-sidecar ─┐ │
+│  │ bhs-api:latest         │  │ postgres:16-alpine │ │
+│  │ .NET 8 Functions       │  │ Port 5432          │ │
+│  │ 1.0 CPU / 2Gi RAM     │──│ 0.5 CPU / 1Gi RAM  │ │
+│  │                        │  │                    │ │
+│  │ POSTGRES_CONNECTION_   │  │ POSTGRES_USER      │ │
+│  │ STRING=Host=localhost  │  │ POSTGRES_PASSWORD   │ │
+│  └────────────────────────┘  │ POSTGRES_DB        │ │
+│                               └────────────────────┘ │
+└──────────────────────────────────────────────────────┘
+```
+
+In Docker Compose (local development/testing), PostgreSQL runs as a separate `db` service — Docker Compose networking makes it accessible via hostname `db` instead of `localhost`.
 
 ## Projects
 
@@ -196,8 +225,8 @@ The `docker.env.example` template includes all required and optional variables w
 
 | Environment | Description | Docker Compose |
 |-------------|-------------|----------------|
-| **Development** | Local dev and Azure-backed dev testing. Optional Ollama for local LLM. | `docker-compose.development.yml` |
-| **Production** | Hardened Azure deployment with Managed Identity and RBAC. | `docker-compose.prod.yml` |
+| **Development** | Local dev and Azure-backed dev testing. PostgreSQL via separate `db` service. Optional Ollama for local LLM. | `docker-compose.development.yml` |
+| **Production** | Hardened Azure deployment with Managed Identity, RBAC, and PostgreSQL sidecar. | `docker-compose.prod.yml` |
 
 ---
 
@@ -287,10 +316,22 @@ See the [Web README](BehavioralHealthSystem.Web/README.md) for details.
 
 ### Azure Bicep Deployment
 
+The Bicep templates deploy Azure Container Apps with PostgreSQL as a sidecar container. You must provide the `postgresPassword` parameter:
+
 ```powershell
 az deployment sub create --location eastus2 \
   --template-file infrastructure/bicep/main-public-containerized.bicep \
-  --parameters infrastructure/bicep/parameters/development.parameters.json
+  --parameters infrastructure/bicep/parameters/development.parameters.json \
+  --parameters postgresPassword='YourSecurePassword'
+```
+
+To update an existing deployment with new env vars (including PostgreSQL sidecar):
+
+```powershell
+az deployment group create \
+  --resource-group <your-rg> \
+  --template-file infrastructure/bicep/update-container-apps.bicep \
+  --parameters postgresPassword='YourSecurePassword'
 ```
 
 ### Infrastructure Runbook

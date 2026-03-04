@@ -8,6 +8,8 @@ This CLI tool batch-imports DSM-5 (Diagnostic and Statistical Manual of Mental D
 
 The imported DSM-5 data powers the **Extended Risk Assessment** feature, enabling clinicians to select specific psychiatric conditions for in-depth AI evaluation.
 
+> **Note:** When using the PostgreSQL storage backend (`STORAGE_BACKEND=PostgreSQL`), DSM-5 conditions are **auto-seeded** from bundled JSON files in `data/dsm5-data/conditions/` on first API start. This CLI tool is only needed for the initial PDF-to-JSON extraction or to update the source data.
+
 ## Tech Stack
 
 - **.NET 8** console application

@@ -192,8 +192,44 @@ var host = new HostBuilder()
         var storageBackend = config["STORAGE_BACKEND"] ?? "BlobStorage";
         if (storageBackend.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
         {
-            var pgConnectionString = config["POSTGRES_CONNECTION_STRING"]
-                ?? throw new InvalidOperationException("POSTGRES_CONNECTION_STRING is required when STORAGE_BACKEND=PostgreSQL");
+            // Support multiple PostgreSQL connection formats:
+            // 1. POSTGRES_CONNECTION_STRING (Npgsql format: Host=...;Port=...;Database=...)
+            // 2. POSTGRES_URL (URI format from Container Apps service binding: postgresql://user:pass@host:port/db)
+            // 3. Individual vars from Container Apps service binding (POSTGRES_HOST, POSTGRES_PORT, etc.)
+            var pgConnectionString = config["POSTGRES_CONNECTION_STRING"];
+
+            if (string.IsNullOrEmpty(pgConnectionString))
+            {
+                // Try URI format (Container Apps add-on injects POSTGRES_URL)
+                var postgresUrl = config["POSTGRES_URL"];
+                if (!string.IsNullOrEmpty(postgresUrl))
+                {
+                    // Npgsql supports URI format directly
+                    pgConnectionString = postgresUrl;
+                }
+            }
+
+            if (string.IsNullOrEmpty(pgConnectionString))
+            {
+                // Try individual env vars (Container Apps service binding)
+                var host = config["POSTGRES_HOST"];
+                var port = config["POSTGRES_PORT"] ?? "5432";
+                var user = config["POSTGRES_USERNAME"] ?? config["POSTGRES_USER"];
+                var pass = config["POSTGRES_PASSWORD"];
+                var db = config["POSTGRES_DATABASE"] ?? "postgres";
+
+                if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(user))
+                {
+                    pgConnectionString = $"Host={host};Port={port};Database={db};Username={user};Password={pass}";
+                }
+            }
+
+            if (string.IsNullOrEmpty(pgConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "PostgreSQL connection is required when STORAGE_BACKEND=PostgreSQL. " +
+                    "Set POSTGRES_CONNECTION_STRING, POSTGRES_URL, or individual vars (POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD).");
+            }
 
             services.AddDbContext<BhsDbContext>(options =>
                 options.UseNpgsql(pgConnectionString));
@@ -222,14 +258,31 @@ var host = new HostBuilder()
     })
     .Build();
 
-// Initialize PostgreSQL database schema if configured
+// Initialize PostgreSQL database schema if configured (with retry for container orchestration)
 var storageBackendInit = host.Services.GetService<IConfiguration>()?["STORAGE_BACKEND"];
 if (storageBackendInit?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true)
 {
     using var scope = host.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<BhsDbContext>();
-    await db.Database.EnsureCreatedAsync();
-    Console.WriteLine("PostgreSQL database tables created/verified successfully.");
+
+    // Retry database connection — PostgreSQL container may not be ready immediately
+    const int maxRetries = 10;
+    const int delaySeconds = 5;
+    for (int attempt = 1; attempt <= maxRetries; attempt++)
+    {
+        try
+        {
+            await db.Database.EnsureCreatedAsync();
+            Console.WriteLine("PostgreSQL database tables created/verified successfully.");
+            break;
+        }
+        catch (Exception ex) when (attempt < maxRetries)
+        {
+            Console.WriteLine($"PostgreSQL connection attempt {attempt}/{maxRetries} failed: {ex.Message}");
+            Console.WriteLine($"Retrying in {delaySeconds} seconds...");
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+        }
+    }
 
     // Seed DSM-5 conditions if table is empty
     var dsm5Count = await db.Dsm5Conditions.CountAsync();

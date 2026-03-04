@@ -1,0 +1,317 @@
+﻿id: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/containerapps/bhs-api-dam
+identity:
+  principalId: f730cb59-a613-48b3-81be-541ebe6900d7
+  tenantId: 16b3c013-d300-468d-ac64-7eda0820b6d3
+  type: SystemAssigned
+location: East US 2
+name: bhs-api-dam
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    dapr: null
+    identitySettings: []
+    ingress:
+      additionalPortMappings: null
+      allowInsecure: false
+      clientCertificateMode: null
+      corsPolicy:
+        allowCredentials: true
+        allowedHeaders:
+        - '*'
+        allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        - PATCH
+        allowedOrigins:
+        - https://bhs-ui-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+        - https://bhs-dev-ui-4exbxrzknexso.proudsmoke-3a1aac14.eastus2.azurecontainerapps.io
+        exposeHeaders: null
+        maxAge: null
+      customDomains: null
+      exposedPort: 0
+      external: true
+      fqdn: bhs-api-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+      ipSecurityRestrictions: null
+      stickySessions: null
+      targetPort: 80
+      targetPortHttpScheme: null
+      traffic:
+      - latestRevision: true
+        weight: 100
+      transport: Auto
+    maxInactiveRevisions: 100
+    registries:
+    - identity: ''
+      passwordSecretRef: bhsdevelopmentacr4znv2wxlxs4xqazurecrio-bhsdevelopmentacr4znv2wxlxs4xq
+      server: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io
+      username: bhsdevelopmentacr4znv2wxlxs4xq
+    revisionTransitionThreshold: null
+    runtime: null
+    secrets:
+    - name: bhsdevelopmentacr4znv2wxlxs4xqazurecrio-bhsdevelopmentacr4znv2wxlxs4xq
+    - name: kintsugi-api-key
+    service: null
+    targetLabel: ''
+  customDomainVerificationId: 23BF272B0B185545AD1117E3CBA6C828B6A30E56FEF985B584D0696B7D2FA6F0
+  delegatedIdentities: []
+  environmentId: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/managedEnvironments/bhs-local-dam-env
+  eventStreamEndpoint: https://eastus2.azurecontainerapps.dev/subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/containerApps/bhs-api-dam/eventstream
+  latestReadyRevisionName: bhs-api-dam--0000020
+  latestRevisionFqdn: bhs-api-dam--0000021.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+  latestRevisionName: bhs-api-dam--0000021
+  managedEnvironmentId: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/managedEnvironments/bhs-local-dam-env
+  outboundIpAddresses:
+  - 20.1.250.250
+  - 20.1.251.135
+  - 20.1.251.104
+  - 20.1.251.2
+  - 13.68.118.203
+  - 13.68.119.127
+  - 52.184.147.35
+  - 52.184.147.9
+  - 20.94.111.32
+  - 20.94.110.46
+  - 20.7.131.26
+  - 20.7.130.240
+  - 20.7.131.54
+  - 20.7.131.60
+  - 20.7.131.34
+  - 20.7.131.59
+  - 20.7.131.44
+  - 20.7.131.5
+  - 20.7.131.39
+  - 20.7.131.50
+  - 172.200.51.234
+  - 172.200.52.27
+  - 172.200.51.44
+  - 172.200.51.235
+  - 172.200.51.243
+  - 172.200.51.45
+  - 172.200.51.191
+  - 172.200.51.242
+  - 172.200.52.26
+  - 172.200.51.190
+  - 4.153.75.54
+  - 172.193.97.218
+  - 68.220.18.20
+  - 172.193.72.214
+  - 20.161.102.207
+  - 130.213.148.50
+  - 68.220.243.198
+  - 20.22.147.169
+  - 20.122.241.246
+  - 20.72.121.157
+  - 20.75.24.112
+  - 20.36.255.10
+  - 20.10.96.162
+  - 20.10.77.30
+  - 20.22.59.25
+  - 20.94.21.158
+  - 20.96.95.82
+  - 20.80.208.249
+  - 20.186.165.206
+  - 20.97.130.219
+  - 20.69.200.68
+  - 20.97.132.38
+  - 20.97.133.137
+  - 20.94.122.99
+  - 20.94.122.65
+  - 20.94.122.133
+  - 20.94.122.111
+  - 20.94.122.70
+  - 20.94.122.101
+  - 52.167.135.54
+  - 52.184.149.238
+  - 52.179.250.88
+  - 52.184.149.147
+  - 52.184.198.180
+  - 52.184.138.179
+  - 52.179.253.112
+  - 52.184.190.79
+  - 52.184.141.185
+  - 52.184.151.206
+  - 4.153.163.131
+  - 20.36.242.179
+  - 20.36.243.222
+  - 20.36.243.227
+  - 20.36.243.208
+  - 128.85.230.186
+  - 4.153.163.156
+  - 20.36.242.169
+  - 4.153.163.201
+  - 20.36.244.19
+  - 20.36.244.21
+  - 20.36.243.201
+  - 128.85.220.176
+  - 128.85.212.114
+  - 135.18.214.171
+  - 20.85.91.213
+  - 128.85.239.223
+  - 4.153.23.192
+  - 4.153.23.210
+  - 4.153.23.204
+  - 4.153.23.173
+  - 68.220.200.37
+  - 20.22.76.62
+  - 20.22.133.225
+  - 20.97.149.136
+  - 20.85.54.118
+  - 20.22.84.80
+  - 135.224.132.19
+  patchingMode: Automatic
+  provisioningState: Succeeded
+  runningStatus: Running
+  template:
+    containers:
+    - env:
+      - name: FUNCTIONS_WORKER_RUNTIME
+        value: dotnet-isolated
+      - name: ASPNETCORE_ENVIRONMENT
+        value: Development
+      - name: AZURE_FUNCTIONS_ENVIRONMENT
+        value: Development
+      - name: WEBSITE_HOSTNAME
+        value: bhs-api-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+      - name: AzureWebJobsStorage__accountName
+        value: bhsdevstg4exbxrzknexso
+      - name: AzureWebJobsStorage__credential
+        value: managedidentity
+      - name: AzureWebJobsStorage__blobServiceUri
+        value: https://bhsdevstg4exbxrzknexso.blob.core.windows.net
+      - name: AzureWebJobsStorage__queueServiceUri
+        value: https://bhsdevstg4exbxrzknexso.queue.core.windows.net
+      - name: AzureWebJobsStorage__tableServiceUri
+        value: https://bhsdevstg4exbxrzknexso.table.core.windows.net
+      - name: AZURE_STORAGE_ACCOUNT_NAME
+        value: bhsdevstg4exbxrzknexso
+      - name: DSM5_STORAGE_ACCOUNT_NAME
+        value: bhsdevstg4exbxrzknexso
+      - name: STORAGE_BACKEND
+        value: PostgreSQL
+      - name: POSTGRES_CONNECTION_STRING
+        value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=REDACTED_ROTATE_PASSWORD
+      - name: ENTRA_TENANT_ID
+        value: 16b3c013-d300-468d-ac64-7eda0820b6d3
+      - name: ENTRA_CLIENT_ID
+        value: 98e8135d-5ca5-4015-b0ac-825ae189de20
+      - name: USE_LOCAL_DAM_MODEL
+        value: 'true'
+      - name: LOCAL_DAM_BASE_URL
+        value: https://bhs-dam-selfhost.internal.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+      - name: LOCAL_DAM_INITIATE_PATH
+        value: initiate
+      - name: LOCAL_DAM_PREDICTION_PATH
+        value: predict
+      - name: LOCAL_DAM_TIMEOUT_SECONDS
+        value: '300'
+      - name: AZURE_OPENAI_ENABLED
+        value: 'true'
+      - name: AZURE_OPENAI_ENDPOINT
+        value: https://bhs-development-public-foundry-r.cognitiveservices.azure.com/
+      - name: AZURE_OPENAI_DEPLOYMENT
+        value: gpt-4.1-mini
+      - name: AZURE_OPENAI_API_VERSION
+        value: '2025-04-14'
+      - name: EXTENDED_ASSESSMENT_OPENAI_ENABLED
+        value: 'true'
+      - name: EXTENDED_ASSESSMENT_OPENAI_ENDPOINT
+        value: https://bhs-development-public-foundry-r.cognitiveservices.azure.com/
+      - name: EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT
+        value: gpt-5.2
+      - name: EXTENDED_ASSESSMENT_OPENAI_API_VERSION
+        value: 2025-04-01-preview
+      - name: EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS
+        value: '4000'
+      - name: EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE
+        value: '0.2'
+      - name: EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS
+        value: '120'
+      - name: EXTENDED_ASSESSMENT_USE_FALLBACK
+        value: 'false'
+      - name: AZURE_SPEECH_ENDPOINT
+        value: https://bhs-development-public-foundry-r.cognitiveservices.azure.com/
+      - name: AZURE_SPEECH_REGION
+        value: eastus2
+      - name: AZURE_SPEECH_LOCALE
+        value: en-US
+      - name: AZURE_SPEECH_API_VERSION
+        value: '2024-11-15'
+      - name: AZURE_SPEECH_ENHANCED_MODE
+        value: 'false'
+      - name: AZURE_CONTENT_UNDERSTANDING_ENDPOINT
+        value: https://bhs-development-public-foundry-r.services.ai.azure.com/
+      - name: DSM5_EXTRACTION_METHOD
+        value: CONTENT_UNDERSTANDING
+      - name: DSM5_CONTAINER_NAME
+        value: dsm5-data
+      - name: AGENT_MODE_ENABLED
+        value: 'false'
+      - name: KINTSUGI_AUTO_PROVIDE_CONSENT
+        value: 'false'
+      - name: KINTSUGI_BASE_URL
+        value: https://api.kintsugihealth.com/v2
+      - name: KINTSUGI_API_KEY
+        secretRef: kintsugi-api-key
+      - name: KINTSUGI_TIMEOUT_SECONDS
+        value: '300'
+      - name: KINTSUGI_MAX_RETRY_ATTEMPTS
+        value: '3'
+      - name: KINTSUGI_RETRY_DELAY_MS
+        value: '1000'
+      - name: ALLOWED_ORIGINS
+        value: https://bhs-ui-dam.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io,https://bhs-dev-ui-4exbxrzknexso.proudsmoke-3a1aac14.eastus2.azurecontainerapps.io
+      - name: DEPLOY_TS
+        value: 20260304-1930
+      - name: API_DEPLOYMENT_VERSION
+        value: 20260304a-postgres
+      - name: RESTART_TRIGGER
+        value: 20260304v3
+      image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-api-dam:latest
+      imageType: ContainerImage
+      name: bhs-api-dam
+      resources:
+        cpu: 1.0
+        ephemeralStorage: 4Gi
+        memory: 2Gi
+    # PostgreSQL Sidecar Container
+    # Runs alongside the API in the same pod, sharing localhost network
+    # This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
+    - env:
+      - name: POSTGRES_USER
+        value: bhs_admin
+      - name: POSTGRES_PASSWORD
+        value: REDACTED_ROTATE_PASSWORD
+      - name: POSTGRES_DB
+        value: bhs_dev
+      image: postgres:16-alpine
+      imageType: ContainerImage
+      name: postgres-sidecar
+      resources:
+        cpu: 0.5
+        ephemeralStorage: 2Gi
+        memory: 1Gi
+    customMetricsSettings: null
+    initContainers: null
+    revisionSuffix: ''
+    scale:
+      cooldownPeriod: 300
+      maxReplicas: 1
+      minReplicas: 1
+      pollingInterval: 30
+      rules: null
+    serviceBinds: null
+    terminationGracePeriodSeconds: null
+    volumes: null
+  workloadProfileName: Consumption
+resourceGroup: bhs-development-local-dam-public
+systemData:
+  createdAt: '2026-02-25T19:42:37.7516826'
+  createdBy: cwoodland@microsoft.com
+  createdByType: User
+  lastModifiedAt: '2026-03-04T19:32:18.0318615'
+  lastModifiedBy: cwoodland@microsoft.com
+  lastModifiedByType: User
+type: Microsoft.App/containerApps

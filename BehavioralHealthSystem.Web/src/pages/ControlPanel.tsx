@@ -192,6 +192,30 @@ const getPercentage = (value: number, total: number): number => {
 };
 
 // Function to aggregate session data into analytics
+// Map DAM model quantized scores (0-4) or category strings to distribution keys
+const mapDepressionScore = (value: string | number | null | undefined): string | null => {
+  if (value === undefined || value === null || value === '') return null;
+  const v = String(value).trim().toLowerCase();
+  // DAM quantized scores: 0=no_to_mild, 1=mild_to_moderate, 2=moderate_to_severe, 3=severe
+  if (v === '0' || v === 'no_to_mild') return 'no_to_mild';
+  if (v === '1' || v === 'mild_to_moderate') return 'mild_to_moderate';
+  if (v === '2' || v === 'moderate_to_severe') return 'moderate_to_severe';
+  if (v === '3' || v === 'severe') return 'severe';
+  return null;
+};
+
+const mapAnxietyScore = (value: string | number | null | undefined): string | null => {
+  if (value === undefined || value === null || value === '') return null;
+  const v = String(value).trim().toLowerCase();
+  // DAM quantized scores: 0=no_or_minimal, 1=mild, 2=moderate, 3=moderately_severe, 4=severe
+  if (v === '0' || v === 'no_or_minimal') return 'no_or_minimal';
+  if (v === '1' || v === 'mild') return 'mild';
+  if (v === '2' || v === 'moderate') return 'moderate';
+  if (v === '3' || v === 'moderately_severe') return 'moderately_severe';
+  if (v === '4' || v === 'severe') return 'severe';
+  return null;
+};
+
 const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData => {
   const totalSessions = allSessions.length;
   const uniqueUsers = new Set(allSessions.map(s => s.userId)).size;
@@ -251,36 +275,26 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   };
 
   completedSessions.forEach(session => {
-    // Handle depression scores - try multiple sources
+    // Map prediction scores to distribution categories using DAM quantized scale
     let depressionCategory: string | null = null;
     let anxietyCategory: string | null = null;
 
-    // First try prediction object for classification strings
+    // Try prediction object first (DAM returns numeric strings 0-4)
     if (session.prediction) {
       const prediction = session.prediction as any;
-      depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
-      anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+      const depValue = prediction.predictedScoreDepression || prediction.predicted_score_depression;
+      const anxValue = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+      depressionCategory = mapDepressionScore(depValue);
+      anxietyCategory = mapAnxietyScore(anxValue);
     }
 
-    // If no classification from prediction, try to categorize from numeric scores in analysisResults
+    // Fallback to analysisResults numeric scores (also DAM quantized 0-4 scale)
     if (!depressionCategory && session.analysisResults?.depressionScore !== null && session.analysisResults?.depressionScore !== undefined) {
-      const score = session.analysisResults.depressionScore;
-      // Convert numeric PHQ-9 score to categories (0-27 scale)
-      if (score >= 0 && score <= 4) depressionCategory = 'no_to_mild';
-      else if (score >= 5 && score <= 9) depressionCategory = 'mild_to_moderate';
-      else if (score >= 10 && score <= 14) depressionCategory = 'mild_to_moderate';
-      else if (score >= 15 && score <= 19) depressionCategory = 'moderate_to_severe';
-      else if (score >= 20) depressionCategory = 'severe';
+      depressionCategory = mapDepressionScore(session.analysisResults.depressionScore);
     }
 
     if (!anxietyCategory && session.analysisResults?.anxietyScore !== null && session.analysisResults?.anxietyScore !== undefined) {
-      const score = session.analysisResults.anxietyScore;
-      // Convert numeric GAD-7 score to categories (0-21 scale)
-      if (score >= 0 && score <= 4) anxietyCategory = 'no_or_minimal';
-      else if (score >= 5 && score <= 9) anxietyCategory = 'mild';
-      else if (score >= 10 && score <= 14) anxietyCategory = 'moderate';
-      else if (score >= 15 && score <= 19) anxietyCategory = 'moderately_severe';
-      else if (score >= 20) anxietyCategory = 'severe';
+      anxietyCategory = mapAnxietyScore(session.analysisResults.anxietyScore);
     }
 
     // Count the categories
@@ -386,36 +400,26 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     };
 
     successfulSessions.forEach(session => {
-      // Handle depression scores - try multiple sources
+      // Map prediction scores to distribution categories using DAM quantized scale
       let depressionCategory: string | null = null;
       let anxietyCategory: string | null = null;
 
-      // First try prediction object for classification strings
+      // Try prediction object first (DAM returns numeric strings 0-4)
       if (session.prediction) {
         const prediction = session.prediction as any;
-        depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
-        anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+        const depValue = prediction.predictedScoreDepression || prediction.predicted_score_depression;
+        const anxValue = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
+        depressionCategory = mapDepressionScore(depValue);
+        anxietyCategory = mapAnxietyScore(anxValue);
       }
 
-      // If no classification from prediction, try to categorize from numeric scores in analysisResults
+      // Fallback to analysisResults numeric scores (also DAM quantized 0-4 scale)
       if (!depressionCategory && session.analysisResults?.depressionScore !== null && session.analysisResults?.depressionScore !== undefined) {
-        const score = session.analysisResults.depressionScore;
-        // Convert numeric PHQ-9 score to categories (0-27 scale)
-        if (score >= 0 && score <= 4) depressionCategory = 'no_to_mild';
-        else if (score >= 5 && score <= 9) depressionCategory = 'mild_to_moderate';
-        else if (score >= 10 && score <= 14) depressionCategory = 'mild_to_moderate';
-        else if (score >= 15 && score <= 19) depressionCategory = 'moderate_to_severe';
-        else if (score >= 20) depressionCategory = 'severe';
+        depressionCategory = mapDepressionScore(session.analysisResults.depressionScore);
       }
 
       if (!anxietyCategory && session.analysisResults?.anxietyScore !== null && session.analysisResults?.anxietyScore !== undefined) {
-        const score = session.analysisResults.anxietyScore;
-        // Convert numeric GAD-7 score to categories (0-21 scale)
-        if (score >= 0 && score <= 4) anxietyCategory = 'no_or_minimal';
-        else if (score >= 5 && score <= 9) anxietyCategory = 'mild';
-        else if (score >= 10 && score <= 14) anxietyCategory = 'moderate';
-        else if (score >= 15 && score <= 19) anxietyCategory = 'moderately_severe';
-        else if (score >= 20) anxietyCategory = 'severe';
+        anxietyCategory = mapAnxietyScore(session.analysisResults.anxietyScore);
       }
 
       // Count the categories for this user

@@ -3,6 +3,7 @@ using Azure.Storage.Blobs.Models;
 using BehavioralHealthSystem.Functions.Functions;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System.Net;
@@ -21,6 +22,8 @@ public class SaveChatTranscriptFunctionTests
     private Mock<BlobServiceClient> _mockBlobServiceClient = null!;
     private Mock<BlobContainerClient> _mockContainerClient = null!;
     private Mock<BlobClient> _mockBlobClient = null!;
+    private Mock<IConfiguration> _mockConfig = null!;
+    private Mock<IServiceProvider> _mockServiceProvider = null!;
     private SaveChatTranscriptFunction _function = null!;
 
     [TestInitialize]
@@ -30,6 +33,11 @@ public class SaveChatTranscriptFunctionTests
         _mockBlobServiceClient = new Mock<BlobServiceClient>();
         _mockContainerClient = new Mock<BlobContainerClient>();
         _mockBlobClient = new Mock<BlobClient>();
+        _mockConfig = new Mock<IConfiguration>();
+        _mockServiceProvider = new Mock<IServiceProvider>();
+
+        // Default to blob storage mode
+        _mockConfig.Setup(c => c["STORAGE_BACKEND"]).Returns((string?)null);
 
         _mockBlobServiceClient
             .Setup(x => x.GetBlobContainerClient(It.IsAny<string>()))
@@ -41,7 +49,9 @@ public class SaveChatTranscriptFunctionTests
 
         _function = new SaveChatTranscriptFunction(
             _mockLogger.Object,
-            _mockBlobServiceClient.Object);
+            _mockBlobServiceClient.Object,
+            _mockConfig.Object,
+            _mockServiceProvider.Object);
     }
 
     #region Constructor Tests
@@ -51,7 +61,7 @@ public class SaveChatTranscriptFunctionTests
     public void Constructor_WithNullLogger_ThrowsArgumentNullException()
     {
         // Act
-        _ = new SaveChatTranscriptFunction(null!, _mockBlobServiceClient.Object);
+        _ = new SaveChatTranscriptFunction(null!, _mockBlobServiceClient.Object, _mockConfig.Object, _mockServiceProvider.Object);
     }
 
     [TestMethod]
@@ -59,7 +69,7 @@ public class SaveChatTranscriptFunctionTests
     public void Constructor_WithNullBlobServiceClient_ThrowsArgumentNullException()
     {
         // Act
-        _ = new SaveChatTranscriptFunction(_mockLogger.Object, null!);
+        _ = new SaveChatTranscriptFunction(_mockLogger.Object, null!, _mockConfig.Object, _mockServiceProvider.Object);
     }
 
     #endregion

@@ -27,11 +27,15 @@
 .EXAMPLE
     .\docker-manage.ps1 -Action logs -Service api
     Shows logs for the API container
+
+.EXAMPLE
+    .\docker-manage.ps1 -Action seed
+    Seeds DSM-5 condition data into the PostgreSQL database
 #>
 
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("up", "down", "rebuild", "logs", "status", "restart", "shell")]
+    [ValidateSet("up", "down", "rebuild", "logs", "status", "restart", "shell", "seed")]
     [string]$Action,
 
     [Parameter(Mandatory = $false)]
@@ -231,6 +235,27 @@ function Invoke-DockerShell {
     docker exec -it $containerName /bin/sh
 }
 
+function Invoke-SeedData {
+    Write-Header "Seeding DSM-5 Data - $Environment"
+
+    $containerName = if ($Environment -eq "development") { "bhs-db-dev" } else { "bhs-db-prod" }
+    $seedScript = Join-Path $ScriptDir "seed-dsm5-data.ps1"
+
+    if (-not (Test-Path $seedScript)) {
+        Write-ErrorMsg "Seed script not found: $seedScript"
+        return
+    }
+
+    Write-Step "Running DSM-5 data seed..."
+    & $seedScript -ContainerName $containerName
+
+    if ($LASTEXITCODE -eq 0) {
+        Write-Success "DSM-5 data seeded successfully!"
+    } else {
+        Write-ErrorMsg "Seeding failed. Check the output above."
+    }
+}
+
 try {
     switch ($Action) {
         "up" { Invoke-DockerUp }
@@ -240,6 +265,7 @@ try {
         "status" { Invoke-DockerStatus }
         "restart" { Invoke-DockerRestart }
         "shell" { Invoke-DockerShell }
+        "seed" { Invoke-SeedData }
     }
 }
 catch {

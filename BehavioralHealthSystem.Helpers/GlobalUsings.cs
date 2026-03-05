@@ -17,6 +17,7 @@ global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Options;
 global using Microsoft.Extensions.Caching.Memory;
+global using Microsoft.EntityFrameworkCore;
 
 // Third-party namespaces
 global using FluentValidation;
@@ -28,6 +29,7 @@ global using Polly.Timeout;
 global using BehavioralHealthSystem.Models;
 global using BehavioralHealthSystem.Configuration;
 global using BehavioralHealthSystem.Services.Interfaces;
+global using BehavioralHealthSystem.Helpers.Services.Interfaces;
 
 // Add support for new services
 global using BehavioralHealthSystem.Helpers.Models;

@@ -45,7 +45,20 @@ public class CorsMiddleware : IFunctionsWorkerMiddleware
             }
 
             // Continue with the request
-            await next(context);
+            try
+            {
+                await next(context);
+            }
+            catch (Exception)
+            {
+                // On error, try to add CORS headers so browser can read error response
+                var errorResponse = context.GetInvocationResult().Value as HttpResponseData;
+                if (errorResponse != null && !string.IsNullOrEmpty(origin))
+                {
+                    AddCorsHeaders(errorResponse, origin);
+                }
+                throw;
+            }
 
             // Add CORS headers to the response
             var response = context.GetInvocationResult().Value as HttpResponseData;
@@ -87,7 +100,7 @@ public class CorsMiddleware : IFunctionsWorkerMiddleware
         // Add CORS headers
         response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
         response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key");
+        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key, X-User-ID, X-User-Principal");
         response.Headers.Add("Access-Control-Allow-Credentials", "true");
     }
 }

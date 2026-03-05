@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -9,13 +10,19 @@ public class SavePhqProgressFunction
 {
     private readonly ILogger<SavePhqProgressFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IPhqProgressService? _phqProgressService;
+    private readonly bool _usePostgres;
 
     public SavePhqProgressFunction(
         ILogger<SavePhqProgressFunction> logger,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger;
         _blobServiceClient = blobServiceClient;
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _phqProgressService = _usePostgres ? serviceProvider.GetService(typeof(IPhqProgressService)) as IPhqProgressService : null;
     }
 
     [Function("SavePhqProgress")]
@@ -58,6 +65,30 @@ public class SavePhqProgressFunction
 
             // Generate blob name with simplified user folder hierarchy (unified 'phq' container)
             var containerName = requestData.ContainerName ?? "phq";
+
+            // PostgreSQL storage path
+            if (_usePostgres && _phqProgressService != null)
+            {
+                var sharedData = JsonSerializer.Deserialize<BehavioralHealthSystem.Helpers.Models.PhqProgressData>(
+                    JsonSerializer.Serialize(requestData.ProgressData, deserializeOptions), deserializeOptions)!;
+                await _phqProgressService.SaveProgressAsync(sharedData);
+                _logger.LogInformation("Successfully saved PHQ progress to PostgreSQL: {AssessmentId}, Questions: {QuestionCount}",
+                    requestData.ProgressData.AssessmentId, requestData.ProgressData.AnsweredQuestions?.Count ?? 0);
+
+                var pgResponse = req.CreateResponse(System.Net.HttpStatusCode.OK);
+                pgResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                await pgResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    success = true,
+                    assessmentId = requestData.ProgressData.AssessmentId,
+                    questionsAnswered = requestData.ProgressData.AnsweredQuestions?.Count ?? 0,
+                    totalQuestions = requestData.ProgressData.TotalQuestions,
+                    storage = "PostgreSQL"
+                }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+                return pgResponse;
+            }
+
+            // Blob storage path (default)
             var fileName = requestData.FileName ??
                 $"users/{requestData.ProgressData.UserId}/{requestData.ProgressData.AssessmentId}.json";
 

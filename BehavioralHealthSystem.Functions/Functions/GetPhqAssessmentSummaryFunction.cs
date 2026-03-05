@@ -1,5 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -11,13 +12,19 @@ public class GetPhqAssessmentSummaryFunction
 {
     private readonly ILogger<GetPhqAssessmentSummaryFunction> _logger;
     private readonly BlobServiceClient _blobServiceClient;
+    private readonly IChatTranscriptService? _chatTranscriptService;
+    private readonly bool _usePostgres;
 
     public GetPhqAssessmentSummaryFunction(
         ILogger<GetPhqAssessmentSummaryFunction> logger,
-        BlobServiceClient blobServiceClient)
+        BlobServiceClient blobServiceClient,
+        IConfiguration config,
+        IServiceProvider serviceProvider)
     {
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _blobServiceClient = blobServiceClient ?? throw new ArgumentNullException(nameof(blobServiceClient));
+        _usePostgres = config["STORAGE_BACKEND"]?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase) == true;
+        _chatTranscriptService = _usePostgres ? serviceProvider.GetService(typeof(IChatTranscriptService)) as IChatTranscriptService : null;
     }
 
     [Function("GetPhqAssessmentSummary")]
@@ -69,8 +76,18 @@ public class GetPhqAssessmentSummaryFunction
             _logger.LogInformation("Fetching PHQ assessment summary for userId: {UserId}, sessionId: {SessionId}",
                 userId, sessionId);
 
-            // Build comprehensive summary from chat transcripts only
-            var summary = await BuildAssessmentSummaryFromTranscriptsAsync(userId, sessionId, limit ?? 10);
+            PhqAssessmentSummary summary;
+
+            // PostgreSQL storage path
+            if (_usePostgres && _chatTranscriptService != null)
+            {
+                summary = await BuildAssessmentSummaryFromPostgresAsync(userId, sessionId, limit ?? 10);
+            }
+            else
+            {
+                // Blob storage path (default)
+                summary = await BuildAssessmentSummaryFromTranscriptsAsync(userId, sessionId, limit ?? 10);
+            }
 
             var response = req.CreateResponse(System.Net.HttpStatusCode.OK);
             response.Headers.Add("Content-Type", "application/json");
@@ -192,6 +209,82 @@ public class GetPhqAssessmentSummaryFunction
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching PHQ data from chat transcripts for userId: {UserId}", userId);
+        }
+
+        return summary;
+    }
+
+    private async Task<PhqAssessmentSummary> BuildAssessmentSummaryFromPostgresAsync(
+        string userId,
+        string? sessionId,
+        int limit)
+    {
+        var summary = new PhqAssessmentSummary
+        {
+            UserId = userId,
+            SessionId = sessionId,
+            RetrievedAt = DateTime.UtcNow.ToString("O"),
+            PhqMessages = new List<PhqMessageItem>()
+        };
+
+        try
+        {
+            List<BehavioralHealthSystem.Helpers.Models.ChatTranscriptData> transcripts;
+
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                var transcript = await _chatTranscriptService!.GetTranscriptAsync(userId, sessionId);
+                transcripts = transcript != null ? new List<BehavioralHealthSystem.Helpers.Models.ChatTranscriptData> { transcript } : new();
+            }
+            else
+            {
+                transcripts = await _chatTranscriptService!.GetUserTranscriptsAsync(userId, limit);
+            }
+
+            foreach (var transcript in transcripts)
+            {
+                if (transcript.Messages != null)
+                {
+                    foreach (var message in transcript.Messages)
+                    {
+                        var metadata = message.AdditionalData;
+                        if (metadata != null &&
+                            (metadata.ContainsKey("phq_question_number") ||
+                             metadata.ContainsKey("phq_score") ||
+                             metadata.ContainsKey("phq_assessment_type")))
+                        {
+                            summary.PhqMessages.Add(new PhqMessageItem
+                            {
+                                SessionId = transcript.SessionId,
+                                MessageId = message.Id,
+                                Role = message.Role,
+                                Content = message.Content,
+                                Timestamp = message.Timestamp,
+                                PhqQuestionNumber = metadata.ContainsKey("phq_question_number")
+                                    ? int.Parse(metadata["phq_question_number"]?.ToString() ?? "0")
+                                    : null,
+                                PhqScore = metadata.ContainsKey("phq_score")
+                                    ? int.Parse(metadata["phq_score"]?.ToString() ?? "0")
+                                    : null,
+                                AssessmentType = metadata.ContainsKey("phq_assessment_type")
+                                    ? metadata["phq_assessment_type"]?.ToString()
+                                    : null,
+                                Severity = metadata.ContainsKey("severity")
+                                    ? metadata["severity"]?.ToString()
+                                    : null,
+                                IsRiskAlert = metadata.ContainsKey("isRiskAlert") &&
+                                    bool.Parse(metadata["isRiskAlert"]?.ToString() ?? "false")
+                            });
+                        }
+                    }
+                }
+            }
+
+            summary.SummaryInsights = GenerateSummaryInsights(summary.PhqMessages);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching PHQ data from PostgreSQL for userId: {UserId}", userId);
         }
 
         return summary;

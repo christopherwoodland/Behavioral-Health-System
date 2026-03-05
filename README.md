@@ -54,6 +54,20 @@ Patient Health Questionnaire (PHQ) assessment workflow with:
 - Score calculation and severity mapping
 - Progress tracking across multiple sessions over time
 
+### PostgreSQL Storage Backend
+
+Session data (sessions, file groups, biometric data) can be persisted to **PostgreSQL** instead of Azure Blob Storage. The storage backend is selected via the `STORAGE_BACKEND` environment variable.
+
+| Mode | `STORAGE_BACKEND` | Description |
+|------|-------------------|-------------|
+| **BlobStorage** | `BlobStorage` (default) | Azure Blob Storage via Managed Identity |
+| **PostgreSQL** | `PostgreSQL` | PostgreSQL database (local or managed) |
+| **InMemory** | `InMemory` | In-memory only — data lost on restart |
+
+**Local development**: Docker Compose includes a `db` service (postgres:16-alpine) with a named volume for persistence.
+
+**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`, Burstable B1ms, v16) via public endpoint with SSL.
+
 ---
 
 ## Architecture
@@ -75,7 +89,14 @@ Patient Health Questionnaire (PHQ) assessment workflow with:
 │  │                                  │
 │  └── BehavioralHealthSystem.Helpers │  Shared models, services,
 │      (Shared Library)              │  validators, configuration
-└─────────────────────────────────────┘
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│  PostgreSQL (Storage Backend)        │  Session data persistence
+│  Local: postgres:16 (Docker)         │  (configurable via STORAGE_BACKEND)
+│  Azure: Flexible Server (v16, B1ms)  │
+└──────────────────────────────────────┘
+```
 
 ┌─────────────────────────────────────┐
 │  BehavioralHealthSystem.DSM5Import  │  CLI tool for DSM-5 PDF import
@@ -211,6 +232,14 @@ The `docker.env.example` template includes all required and optional variables w
 | `AZURE_SPEECH_KEY` | Azure Speech key (transcription) |
 | `AZURE_SPEECH_REGION` | Azure Speech region |
 | `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` | Identity/auth settings |
+| `STORAGE_BACKEND` | Storage mode: `BlobStorage` (default), `PostgreSQL`, or `InMemory` |
+| `POSTGRES_HOST` | PostgreSQL hostname (e.g., add-on internal FQDN) |
+| `POSTGRES_PORT` | PostgreSQL port (default: `5432`) |
+| `POSTGRES_USERNAME` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password (use `secretRef` in Container Apps) |
+| `POSTGRES_DATABASE` | PostgreSQL database name (default: `postgres`) |
+| `POSTGRES_CONNECTION_STRING` | Alternative: full Npgsql connection string |
+| `POSTGRES_URL` | Alternative: PostgreSQL URI format |
 
 ### Security
 
@@ -267,6 +296,77 @@ infrastructure/scripts/Configure-Permissions.ps1
 infrastructure/scripts/Setup-LocalDev.ps1
 ```
 
+### Azure Database for PostgreSQL Flexible Server (Dev/Test)
+
+The development environment uses **Azure Database for PostgreSQL Flexible Server** for session persistence.
+
+| Property | Value |
+|----------|-------|
+| Server name | `bhs-dev-postgres` |
+| Host | `bhs-dev-postgres.postgres.database.azure.com` |
+| Tier | Burstable B1ms |
+| Version | PostgreSQL 16 |
+| Storage | 32 GB |
+| Database | `bhs_dev` |
+| Admin user | `bhs_admin` |
+| SSL | Required |
+| Access | Public (Azure services firewall rule) |
+
+```powershell
+# 1. Create the Flexible Server
+az postgres flexible-server create `
+  --name bhs-dev-postgres `
+  --resource-group bhs-development-local-dam-public `
+  --location eastus2 `
+  --tier Burstable `
+  --sku-name Standard_B1ms `
+  --storage-size 32 `
+  --version 16 `
+  --admin-user bhs_admin `
+  --admin-password "<password>" `
+  --public-access 0.0.0.0 `
+  --yes
+
+# 2. Create the application database
+az postgres flexible-server db create `
+  --server-name bhs-dev-postgres `
+  -g bhs-development-local-dam-public `
+  --database-name bhs_dev
+
+# 3. Store the password as a secret in the API app
+az containerapp secret set `
+  --name bhs-api-dam `
+  -g bhs-development-local-dam-public `
+  --secrets "postgres-password=<password>"
+
+# 4. Set PostgreSQL env vars on the API app
+az containerapp update `
+  --name bhs-api-dam `
+  -g bhs-development-local-dam-public `
+  --set-env-vars `
+    "STORAGE_BACKEND=PostgreSQL" `
+    "POSTGRES_HOST=bhs-dev-postgres.postgres.database.azure.com" `
+    "POSTGRES_PORT=5432" `
+    "POSTGRES_USERNAME=bhs_admin" `
+    "POSTGRES_PASSWORD=secretref:postgres-password" `
+    "POSTGRES_DATABASE=bhs_dev"
+
+# 5. Grant storage roles to the app's managed identity
+$principalId = az containerapp identity show `
+  --name bhs-api-dam -g bhs-development-local-dam-public `
+  --query "principalId" -o tsv
+$storageId = az storage account show `
+  --name bhsdevstg4exbxrzknexso -g bhs-development-public `
+  --query "id" -o tsv
+
+az role assignment create --assignee $principalId `
+  --role "Storage Blob Data Contributor" --scope $storageId
+az role assignment create --assignee $principalId `
+  --role "Storage Queue Data Contributor" --scope $storageId
+az role assignment create --assignee $principalId `
+  --role "Storage Table Data Contributor" --scope $storageId
+```
+
 ---
 
 ## Operational Checklist
@@ -283,6 +383,18 @@ Before release/deployment, verify:
 ---
 
 ## Troubleshooting
+
+### Known Issues
+
+#### Container Apps PostgreSQL Add-on (Deprecated — Use Flexible Server)
+
+The Container Apps PostgreSQL **add-on** was previously attempted but has two conflicting platform limitations:
+
+1. **Service binding (`--bind`)** triggers a KEDA `ScaledObjectCheckFailed: Target resource doesn't exist` error.
+2. **Without binding**, the add-on's TCP port is **not reachable** (`service.type` restricts network to bound apps only).
+3. **TCP ingress** on regular Container Apps in this environment also fails (tested and confirmed — `pg_isready` returns "no response" even from inside the same environment).
+
+**Resolution**: Migrated to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`), which provides reliable public-endpoint connectivity with SSL.
 
 ### Storage/Auth Failures
 

@@ -139,7 +139,8 @@ properties:
       # PostgreSQL Sidecar Container
       # Runs alongside the API in the same pod, sharing localhost network
       # This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
-      # Data persisted via Azure Files volume mount
+      # Data persisted via EmptyDir volume (survives container restarts, resets on new revisions)
+      # For true persistence, migrate to Azure DB for PostgreSQL or AKS with PVC
       - name: postgres-sidecar
         image: postgres:16-alpine
         resources:
@@ -159,5 +160,4 @@ properties:
             mountPath: /var/lib/postgresql/data
     volumes:
       - name: postgres-data
-        storageType: AzureFile
-        storageName: bhs-postgres-storage
+        storageType: EmptyDir

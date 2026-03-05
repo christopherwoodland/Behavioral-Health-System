@@ -191,8 +191,7 @@ properties:
         value: bhsdevstg4exbxrzknexso
       - name: STORAGE_BACKEND
         value: PostgreSQL
-      - name: POSTGRES_CONNECTION_STRING
-        value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=<REPLACE_WITH_POSTGRES_PASSWORD>
+      # PostgreSQL connection injected via Container Apps add-on service binding (bhs-postgres)
       - name: ENTRA_TENANT_ID
         value: 16b3c013-d300-468d-ac64-7eda0820b6d3
       - name: ENTRA_CLIENT_ID
@@ -266,9 +265,7 @@ properties:
       - name: DEPLOY_TS
         value: 20260304-1930
       - name: API_DEPLOYMENT_VERSION
-        value: 20260304a-postgres
-      - name: RESTART_TRIGGER
-        value: 20260304v3
+        value: 20260305a-postgres-addon
       image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-api-dam:latest
       imageType: ContainerImage
       name: bhs-api-dam
@@ -276,30 +273,6 @@ properties:
         cpu: 1.0
         ephemeralStorage: 4Gi
         memory: 2Gi
-    # PostgreSQL Sidecar Container
-    # Runs alongside the API in the same pod, sharing localhost network
-    # This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
-    # Data persisted via EmptyDir volume (survives container restarts, resets on new revisions)
-    # For true persistence, migrate to Azure DB for PostgreSQL or AKS with PVC
-    - env:
-      - name: POSTGRES_USER
-        value: bhs_admin
-      - name: POSTGRES_PASSWORD
-        value: <REPLACE_WITH_POSTGRES_PASSWORD>
-      - name: POSTGRES_DB
-        value: bhs_dev
-      - name: PGDATA
-        value: /var/lib/postgresql/data/pgdata
-      image: postgres:16-alpine
-      imageType: ContainerImage
-      name: postgres-sidecar
-      resources:
-        cpu: 0.5
-        ephemeralStorage: 2Gi
-        memory: 1Gi
-      volumeMounts:
-      - mountPath: /var/lib/postgresql/data
-        volumeName: postgres-data
     customMetricsSettings: null
     initContainers: null
     revisionSuffix: ''
@@ -309,11 +282,11 @@ properties:
       minReplicas: 1
       pollingInterval: 30
       rules: null
-    serviceBinds: null
+    serviceBinds:
+    - name: bhs_postgres
+      serviceId: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/containerapps/bhs-postgres
     terminationGracePeriodSeconds: null
-    volumes:
-    - name: postgres-data
-      storageType: EmptyDir
+    volumes: null
   workloadProfileName: Consumption
 resourceGroup: bhs-development-local-dam-public
 systemData:

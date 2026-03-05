@@ -81,6 +81,9 @@ services:
       # Entra ID
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
+      # PostgreSQL
+      - STORAGE_BACKEND=PostgreSQL
+      - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=${POSTGRES_DB:-bhs_dev};Username=${POSTGRES_USER:-bhs_admin};Password=${POSTGRES_PASSWORD:-changeme}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
@@ -92,6 +95,26 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+
+  # PostgreSQL Database - Production
+  # Data persisted via named volume across container restarts
+  db:
+    image: postgres:16-alpine
+    container_name: bhs-db-prod
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-bhs_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-bhs_dev}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - bhs-pgdata-prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bhs_admin} -d ${POSTGRES_DB:-bhs_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   # BHS Web UI - Production
@@ -151,4 +174,7 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-# No volumes needed - all data in Azure
+volumes:
+  bhs-pgdata-prod:
+    name: bhs-pgdata-prod
+    driver: local

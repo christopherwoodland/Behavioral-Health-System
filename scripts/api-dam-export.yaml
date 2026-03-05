@@ -279,6 +279,7 @@ properties:
     # PostgreSQL Sidecar Container
     # Runs alongside the API in the same pod, sharing localhost network
     # This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
+    # Data persisted via Azure Files volume mount
     - env:
       - name: POSTGRES_USER
         value: bhs_admin
@@ -286,6 +287,8 @@ properties:
         value: <REPLACE_WITH_POSTGRES_PASSWORD>
       - name: POSTGRES_DB
         value: bhs_dev
+      - name: PGDATA
+        value: /var/lib/postgresql/data/pgdata
       image: postgres:16-alpine
       imageType: ContainerImage
       name: postgres-sidecar
@@ -293,6 +296,9 @@ properties:
         cpu: 0.5
         ephemeralStorage: 2Gi
         memory: 1Gi
+      volumeMounts:
+      - mountPath: /var/lib/postgresql/data
+        volumeName: postgres-data
     customMetricsSettings: null
     initContainers: null
     revisionSuffix: ''
@@ -304,7 +310,10 @@ properties:
       rules: null
     serviceBinds: null
     terminationGracePeriodSeconds: null
-    volumes: null
+    volumes:
+    - name: postgres-data
+      storageName: bhs-postgres-storage
+      storageType: AzureFile
   workloadProfileName: Consumption
 resourceGroup: bhs-development-local-dam-public
 systemData:

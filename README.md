@@ -301,6 +301,12 @@ infrastructure/scripts/Setup-LocalDev.ps1
 The development Container Apps environment uses a PostgreSQL add-on for session persistence.
 The add-on runs as a managed container in the same environment.
 
+> **Status (2026-03-05)**: The Container Apps PostgreSQL add-on (`bhs-postgres`) is created and running,
+> but is **not yet functional** due to a platform networking limitation — see
+> [Known Issues](#known-issues). The API currently falls back to `InMemory` storage.
+> A regular Container App running `postgres:16-alpine` (non-add-on) is the recommended
+> alternative.
+
 ```powershell
 # 1. Create the PostgreSQL add-on in the Container Apps environment
 az containerapp add-on postgres create `
@@ -308,19 +314,32 @@ az containerapp add-on postgres create `
   --environment bhs-local-dam-env `
   -g bhs-development-local-dam-public
 
-# 2. Get the add-on password (stored as pg-password secret)
+# 2. Prevent the add-on from scaling to zero (no KEDA scaler keeps it alive)
+az containerapp update `
+  --name bhs-postgres `
+  -g bhs-development-local-dam-public `
+  --min-replicas 1 --max-replicas 1
+
+# 3. Get the add-on password (stored as pg-password secret)
 az containerapp secret show `
   --name bhs-postgres `
   -g bhs-development-local-dam-public `
   --secret-name pg-password -o json
 
-# 3. Store the password as a secret in the API app
+# 4. Store the password as a secret in the API app
 az containerapp secret set `
   --name bhs-api-dam `
   -g bhs-development-local-dam-public `
   --secrets "postgres-password=<password-from-step-2>"
 
-# 4. Set PostgreSQL env vars (do NOT use --bind due to KEDA bug)
+# 5. Bind the add-on to the API app (required for TCP network access)
+#    WARNING: This may trigger a KEDA ScaledObjectCheckFailed bug — see Known Issues.
+az containerapp update `
+  --name bhs-api-dam `
+  -g bhs-development-local-dam-public `
+  --bind bhs-postgres
+
+# 6. If binding fails (KEDA bug), set env vars manually instead:
 az containerapp update `
   --name bhs-api-dam `
   -g bhs-development-local-dam-public `
@@ -331,8 +350,11 @@ az containerapp update `
     "POSTGRES_USERNAME=postgres" `
     "POSTGRES_PASSWORD=secretref:postgres-password" `
     "POSTGRES_DATABASE=postgres"
+#    NOTE: Manual env vars alone do NOT grant TCP access to the add-on.
+#    The add-on's service.type restricts access to bound apps only.
+#    Consider using a regular Container App with postgres:16-alpine instead.
 
-# 5. Grant storage roles to the app's managed identity
+# 7. Grant storage roles to the app's managed identity
 $principalId = az containerapp identity show `
   --name bhs-api-dam -g bhs-development-local-dam-public `
   --query "principalId" -o tsv
@@ -348,7 +370,8 @@ az role assignment create --assignee $principalId `
   --role "Storage Table Data Contributor" --scope $storageId
 ```
 
-> **Important**: Do **not** use `--bind` to attach the PostgreSQL add-on. See [Known Issues](#known-issues).
+> **Important**: See [Known Issues](#known-issues) for details on the add-on networking
+> and KEDA limitations.
 
 ---
 
@@ -369,11 +392,29 @@ Before release/deployment, verify:
 
 ### Known Issues
 
-#### Container Apps PostgreSQL Service Binding (KEDA Bug)
+#### Container Apps PostgreSQL Add-on — Catch-22 (KEDA + Networking)
 
-The Container Apps **service binding** (`--bind bhs-postgres`) triggers a KEDA `ScaledObjectCheckFailed: Target resource doesn't exist` error that prevents new revisions from starting replicas. This is a platform-level bug.
+The Container Apps PostgreSQL **add-on** (`service.type: "postgres"`) has two conflicting platform limitations:
 
-**Workaround**: Configure PostgreSQL connection via **manual environment variables** (`POSTGRES_HOST`, `POSTGRES_USERNAME`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`) instead of using `--bind`. The add-on container (`bhs-postgres`) is still reachable within the environment via its internal FQDN. The password is stored as a Container App secret (`postgres-password`) and referenced via `secretRef`.
+1. **Service binding (`--bind`)** triggers a KEDA `ScaledObjectCheckFailed: Target resource doesn't exist` error that prevents new revisions from starting replicas. This is a platform-level bug.
+
+2. **Without service binding**, the add-on's TCP port (5432) is **not reachable** from other apps in the environment. Add-ons with `service.type` set restrict network access to apps that have an active service binding. DNS resolves correctly (`bhs-postgres.internal.<env-fqdn>` → internal IP), but TCP connections are refused.
+
+**Result**: The add-on cannot be used — binding breaks KEDA, and unbinding breaks networking.
+
+**Recommended alternatives**:
+- **Regular Container App**: Deploy `postgres:16-alpine` as a standard Container App with TCP ingress (`transport: Tcp`, `exposedPort: 5432`). No `service.type` restriction — all apps in the environment can connect via internal FQDN.
+- **Azure Database for PostgreSQL Flexible Server**: Fully managed, production-grade. Requires VNet integration or public access.
+- **InMemory fallback**: Set `STORAGE_BACKEND=InMemory` for dev/test when persistence isn't needed.
+
+#### Add-on Scales to Zero
+
+Container Apps add-ons default to `minReplicas: 0`. Without a service binding (which creates a KEDA scaler), nothing keeps the add-on alive and it scales to zero. Fix with:
+
+```powershell
+az containerapp update --name bhs-postgres -g bhs-development-local-dam-public `
+  --min-replicas 1 --max-replicas 1
+```
 
 ### Storage/Auth Failures
 

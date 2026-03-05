@@ -299,8 +299,10 @@ properties:
       rules: null
     serviceBinds: null
     # NOTE: Service binding (--bind bhs-postgres) is NOT used due to a KEDA
-    # ScaledObjectCheckFailed bug. PostgreSQL add-on is connected via manual
-    # env vars (POSTGRES_HOST, POSTGRES_USERNAME, etc.) instead.
+    # ScaledObjectCheckFailed bug. However, without the binding, the add-on's
+    # TCP port is NOT reachable (service.type restricts access to bound apps).
+    # This is a platform catch-22. Replace the add-on with a regular Container
+    # App running postgres:16-alpine, or use Azure Database for PostgreSQL.
     terminationGracePeriodSeconds: null
     volumes: null
   workloadProfileName: Consumption

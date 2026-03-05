@@ -50,11 +50,21 @@ properties:
             value: bhsdevstg4exbxrzknexso
           - name: DSM5_STORAGE_ACCOUNT_NAME
             value: bhsdevstg4exbxrzknexso
-          # PostgreSQL
+          # PostgreSQL - Azure Database for PostgreSQL Flexible Server
+          # Server: bhs-dev-postgres (Burstable B1ms, v16, eastus2)
+          # SSL required. Public access with Azure services firewall rule.
           - name: STORAGE_BACKEND
             value: PostgreSQL
-          - name: POSTGRES_CONNECTION_STRING
-            value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=<REPLACE_WITH_POSTGRES_PASSWORD>
+          - name: POSTGRES_HOST
+            value: bhs-dev-postgres.postgres.database.azure.com
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_USERNAME
+            value: bhs_admin
+          - name: POSTGRES_PASSWORD
+            secretRef: postgres-password
+          - name: POSTGRES_DATABASE
+            value: bhs_dev
           # Entra ID
           - name: ENTRA_TENANT_ID
             value: 16b3c013-d300-468d-ac64-7eda0820b6d3
@@ -135,19 +145,4 @@ properties:
           - name: DEPLOY_TS
             value: "20260304-1930"
           - name: API_DEPLOYMENT_VERSION
-            value: "20260304a-postgres"
-      # PostgreSQL Sidecar Container
-      # Runs alongside the API in the same pod, sharing localhost network
-      # This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
-      - name: postgres-sidecar
-        image: postgres:16-alpine
-        resources:
-          cpu: 0.5
-          memory: 1Gi
-        env:
-          - name: POSTGRES_USER
-            value: bhs_admin
-          - name: POSTGRES_PASSWORD
-            value: <REPLACE_WITH_POSTGRES_PASSWORD>
-          - name: POSTGRES_DB
-            value: bhs_dev
+            value: "20260305c-postgres-flexible-server"

@@ -1,6 +1,6 @@
 id: /subscriptions/6bf68138-6ea4-4272-a3db-78e737e132a6/resourceGroups/bhs-development-local-dam-public/providers/Microsoft.App/containerapps/bhs-api-dam
 identity:
-  principalId: f730cb59-a613-48b3-81be-541ebe6900d7
+  principalId: d950ae64-ecff-42f6-bdb2-62446ad2cf40
   tenantId: 16b3c013-d300-468d-ac64-7eda0820b6d3
   type: SystemAssigned
 location: East US 2
@@ -53,6 +53,7 @@ properties:
     secrets:
     - name: bhsdevelopmentacr4znv2wxlxs4xqazurecrio-bhsdevelopmentacr4znv2wxlxs4xq
     - name: kintsugi-api-key
+    - name: postgres-password
     service: null
     targetLabel: ''
   customDomainVerificationId: 23BF272B0B185545AD1117E3CBA6C828B6A30E56FEF985B584D0696B7D2FA6F0
@@ -191,8 +192,19 @@ properties:
         value: bhsdevstg4exbxrzknexso
       - name: STORAGE_BACKEND
         value: PostgreSQL
-      - name: POSTGRES_CONNECTION_STRING
-        value: Host=localhost;Port=5432;Database=bhs_dev;Username=bhs_admin;Password=<REPLACE_WITH_POSTGRES_PASSWORD>
+      # PostgreSQL - Azure Database for PostgreSQL Flexible Server
+      # Server: bhs-dev-postgres (Burstable B1ms, v16, eastus2)
+      # SSL required. Public access with Azure services firewall rule.
+      - name: POSTGRES_HOST
+        value: bhs-dev-postgres.postgres.database.azure.com
+      - name: POSTGRES_PORT
+        value: '5432'
+      - name: POSTGRES_USERNAME
+        value: bhs_admin
+      - name: POSTGRES_PASSWORD
+        secretRef: postgres-password
+      - name: POSTGRES_DATABASE
+        value: bhs_dev
       - name: ENTRA_TENANT_ID
         value: 16b3c013-d300-468d-ac64-7eda0820b6d3
       - name: ENTRA_CLIENT_ID
@@ -266,9 +278,7 @@ properties:
       - name: DEPLOY_TS
         value: 20260304-1930
       - name: API_DEPLOYMENT_VERSION
-        value: 20260304a-postgres
-      - name: RESTART_TRIGGER
-        value: 20260304v3
+        value: 20260305c-postgres-flexible-server
       image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-api-dam:latest
       imageType: ContainerImage
       name: bhs-api-dam
@@ -276,23 +286,6 @@ properties:
         cpu: 1.0
         ephemeralStorage: 4Gi
         memory: 2Gi
-    # PostgreSQL Sidecar Container
-    # Runs alongside the API in the same pod, sharing localhost network
-    # This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
-    - env:
-      - name: POSTGRES_USER
-        value: bhs_admin
-      - name: POSTGRES_PASSWORD
-        value: <REPLACE_WITH_POSTGRES_PASSWORD>
-      - name: POSTGRES_DB
-        value: bhs_dev
-      image: postgres:16-alpine
-      imageType: ContainerImage
-      name: postgres-sidecar
-      resources:
-        cpu: 0.5
-        ephemeralStorage: 2Gi
-        memory: 1Gi
     customMetricsSettings: null
     initContainers: null
     revisionSuffix: ''
@@ -303,6 +296,8 @@ properties:
       pollingInterval: 30
       rules: null
     serviceBinds: null
+    # NOTE: PostgreSQL is now Azure Database for PostgreSQL Flexible Server
+    # (bhs-dev-postgres). No service binding needed.
     terminationGracePeriodSeconds: null
     volumes: null
   workloadProfileName: Consumption

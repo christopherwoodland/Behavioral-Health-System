@@ -50,9 +50,23 @@ properties:
             value: bhsdevstg4exbxrzknexso
           - name: DSM5_STORAGE_ACCOUNT_NAME
             value: bhsdevstg4exbxrzknexso
-          # PostgreSQL (connection injected via Container Apps add-on service binding)
+          # PostgreSQL - Container Apps add-on (bhs-postgres)
+          # NOTE: Connection configured via manual env vars, NOT service binding.
+          # Service binding triggers a KEDA ScaledObjectCheckFailed bug that
+          # prevents new revisions from starting. The add-on container runs
+          # in the same environment and is reachable via internal FQDN.
           - name: STORAGE_BACKEND
             value: PostgreSQL
+          - name: POSTGRES_HOST
+            value: bhs-postgres.internal.thankfulmoss-a40a822d.eastus2.azurecontainerapps.io
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: POSTGRES_USERNAME
+            value: postgres
+          - name: POSTGRES_PASSWORD
+            secretRef: postgres-password
+          - name: POSTGRES_DATABASE
+            value: postgres
           # Entra ID
           - name: ENTRA_TENANT_ID
             value: 16b3c013-d300-468d-ac64-7eda0820b6d3
@@ -133,4 +147,4 @@ properties:
           - name: DEPLOY_TS
             value: "20260304-1930"
           - name: API_DEPLOYMENT_VERSION
-            value: "20260305a-postgres-addon"
+            value: "20260305b-postgres-manual-vars"

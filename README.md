@@ -54,6 +54,20 @@ Patient Health Questionnaire (PHQ) assessment workflow with:
 - Score calculation and severity mapping
 - Progress tracking across multiple sessions over time
 
+### PostgreSQL Storage Backend
+
+Session data (sessions, file groups, biometric data) can be persisted to **PostgreSQL** instead of Azure Blob Storage. The storage backend is selected via the `STORAGE_BACKEND` environment variable.
+
+| Mode | `STORAGE_BACKEND` | Description |
+|------|-------------------|-------------|
+| **BlobStorage** | `BlobStorage` (default) | Azure Blob Storage via Managed Identity |
+| **PostgreSQL** | `PostgreSQL` | PostgreSQL database (local or managed) |
+| **InMemory** | `InMemory` | In-memory only — data lost on restart |
+
+**Local development**: Docker Compose includes a `db` service (postgres:16-alpine) with a named volume for persistence.
+
+**Azure Container Apps**: A Container Apps PostgreSQL add-on (`bhs-postgres`, postgres:14) runs in the same environment. Connection is configured via **manual environment variables** (not service binding — see [Known Issues](#known-issues)).
+
 ---
 
 ## Architecture
@@ -75,7 +89,14 @@ Patient Health Questionnaire (PHQ) assessment workflow with:
 │  │                                  │
 │  └── BehavioralHealthSystem.Helpers │  Shared models, services,
 │      (Shared Library)              │  validators, configuration
+└──────────────┬──────────────────────┘
+               │
+┌──────────────▼──────────────────────┐
+│  PostgreSQL (Storage Backend)       │  Session data persistence
+│  Local: postgres:16 (Docker)        │  (configurable via STORAGE_BACKEND)
+│  Azure: CA add-on postgres:14       │
 └─────────────────────────────────────┘
+```
 
 ┌─────────────────────────────────────┐
 │  BehavioralHealthSystem.DSM5Import  │  CLI tool for DSM-5 PDF import
@@ -211,6 +232,14 @@ The `docker.env.example` template includes all required and optional variables w
 | `AZURE_SPEECH_KEY` | Azure Speech key (transcription) |
 | `AZURE_SPEECH_REGION` | Azure Speech region |
 | `AZURE_TENANT_ID` / `AZURE_CLIENT_ID` | Identity/auth settings |
+| `STORAGE_BACKEND` | Storage mode: `BlobStorage` (default), `PostgreSQL`, or `InMemory` |
+| `POSTGRES_HOST` | PostgreSQL hostname (e.g., add-on internal FQDN) |
+| `POSTGRES_PORT` | PostgreSQL port (default: `5432`) |
+| `POSTGRES_USERNAME` | PostgreSQL username |
+| `POSTGRES_PASSWORD` | PostgreSQL password (use `secretRef` in Container Apps) |
+| `POSTGRES_DATABASE` | PostgreSQL database name (default: `postgres`) |
+| `POSTGRES_CONNECTION_STRING` | Alternative: full Npgsql connection string |
+| `POSTGRES_URL` | Alternative: PostgreSQL URI format |
 
 ### Security
 
@@ -267,6 +296,60 @@ infrastructure/scripts/Configure-Permissions.ps1
 infrastructure/scripts/Setup-LocalDev.ps1
 ```
 
+### Container Apps PostgreSQL Add-on (Dev/Test)
+
+The development Container Apps environment uses a PostgreSQL add-on for session persistence.
+The add-on runs as a managed container in the same environment.
+
+```powershell
+# 1. Create the PostgreSQL add-on in the Container Apps environment
+az containerapp add-on postgres create `
+  --name bhs-postgres `
+  --environment bhs-local-dam-env `
+  -g bhs-development-local-dam-public
+
+# 2. Get the add-on password (stored as pg-password secret)
+az containerapp secret show `
+  --name bhs-postgres `
+  -g bhs-development-local-dam-public `
+  --secret-name pg-password -o json
+
+# 3. Store the password as a secret in the API app
+az containerapp secret set `
+  --name bhs-api-dam `
+  -g bhs-development-local-dam-public `
+  --secrets "postgres-password=<password-from-step-2>"
+
+# 4. Set PostgreSQL env vars (do NOT use --bind due to KEDA bug)
+az containerapp update `
+  --name bhs-api-dam `
+  -g bhs-development-local-dam-public `
+  --set-env-vars `
+    "STORAGE_BACKEND=PostgreSQL" `
+    "POSTGRES_HOST=bhs-postgres.internal.<env-fqdn>" `
+    "POSTGRES_PORT=5432" `
+    "POSTGRES_USERNAME=postgres" `
+    "POSTGRES_PASSWORD=secretref:postgres-password" `
+    "POSTGRES_DATABASE=postgres"
+
+# 5. Grant storage roles to the app's managed identity
+$principalId = az containerapp identity show `
+  --name bhs-api-dam -g bhs-development-local-dam-public `
+  --query "principalId" -o tsv
+$storageId = az storage account show `
+  --name bhsdevstg4exbxrzknexso -g bhs-development-public `
+  --query "id" -o tsv
+
+az role assignment create --assignee $principalId `
+  --role "Storage Blob Data Contributor" --scope $storageId
+az role assignment create --assignee $principalId `
+  --role "Storage Queue Data Contributor" --scope $storageId
+az role assignment create --assignee $principalId `
+  --role "Storage Table Data Contributor" --scope $storageId
+```
+
+> **Important**: Do **not** use `--bind` to attach the PostgreSQL add-on. See [Known Issues](#known-issues).
+
 ---
 
 ## Operational Checklist
@@ -283,6 +366,14 @@ Before release/deployment, verify:
 ---
 
 ## Troubleshooting
+
+### Known Issues
+
+#### Container Apps PostgreSQL Service Binding (KEDA Bug)
+
+The Container Apps **service binding** (`--bind bhs-postgres`) triggers a KEDA `ScaledObjectCheckFailed: Target resource doesn't exist` error that prevents new revisions from starting replicas. This is a platform-level bug.
+
+**Workaround**: Configure PostgreSQL connection via **manual environment variables** (`POSTGRES_HOST`, `POSTGRES_USERNAME`, `POSTGRES_PASSWORD`, `POSTGRES_DATABASE`) instead of using `--bind`. The add-on container (`bhs-postgres`) is still reachable within the environment via its internal FQDN. The password is stored as a Container App secret (`postgres-password`) and referenced via `secretRef`.
 
 ### Storage/Auth Failures
 

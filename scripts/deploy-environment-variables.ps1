@@ -87,13 +87,13 @@ $environmentVariables = @(
     "AZURE_CONTENT_UNDERSTANDING_KEY=$(Get-RequiredEnvVar -Name 'AZURE_CONTENT_UNDERSTANDING_KEY')",
     "DSM5_EXTRACTION_METHOD=$(Get-OptionalEnvVar -Name 'DSM5_EXTRACTION_METHOD' -DefaultValue 'CONTENT_UNDERSTANDING')",
     "VITE_API_BASE_URL=$(Get-RequiredEnvVar -Name 'VITE_API_BASE_URL')",
-    # PostgreSQL Storage Backend
+    # PostgreSQL Storage Backend (Azure Database for PostgreSQL Flexible Server)
     "STORAGE_BACKEND=$(Get-OptionalEnvVar -Name 'STORAGE_BACKEND' -DefaultValue 'BlobStorage')",
     "POSTGRES_HOST=$(Get-OptionalEnvVar -Name 'POSTGRES_HOST')",
     "POSTGRES_PORT=$(Get-OptionalEnvVar -Name 'POSTGRES_PORT' -DefaultValue '5432')",
     "POSTGRES_USERNAME=$(Get-OptionalEnvVar -Name 'POSTGRES_USERNAME')",
     "POSTGRES_PASSWORD=$(Get-OptionalEnvVar -Name 'POSTGRES_PASSWORD')",
-    "POSTGRES_DATABASE=$(Get-OptionalEnvVar -Name 'POSTGRES_DATABASE' -DefaultValue 'postgres')"
+    "POSTGRES_DATABASE=$(Get-OptionalEnvVar -Name 'POSTGRES_DATABASE' -DefaultValue 'bhs_dev')"
 )
 
 Write-Host "Setting environment variables..." -ForegroundColor Yellow

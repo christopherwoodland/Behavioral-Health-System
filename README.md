@@ -66,7 +66,7 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 
 **Local development**: Docker Compose includes a `db` service (postgres:16-alpine) with a named volume for persistence.
 
-**Azure Container Apps**: A Container Apps PostgreSQL add-on (`bhs-postgres`, postgres:14) runs in the same environment. Connection is configured via **manual environment variables** (not service binding — see [Known Issues](#known-issues)).
+**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`, Burstable B1ms, v16) via public endpoint with SSL.
 
 ---
 
@@ -92,10 +92,10 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 └──────────────┬──────────────────────┘
                │
 ┌──────────────▼──────────────────────┐
-│  PostgreSQL (Storage Backend)       │  Session data persistence
-│  Local: postgres:16 (Docker)        │  (configurable via STORAGE_BACKEND)
-│  Azure: CA add-on postgres:14       │
-└─────────────────────────────────────┘
+│  PostgreSQL (Storage Backend)        │  Session data persistence
+│  Local: postgres:16 (Docker)         │  (configurable via STORAGE_BACKEND)
+│  Azure: Flexible Server (v16, B1ms)  │
+└──────────────────────────────────────┘
 ```
 
 ┌─────────────────────────────────────┐
@@ -296,65 +296,62 @@ infrastructure/scripts/Configure-Permissions.ps1
 infrastructure/scripts/Setup-LocalDev.ps1
 ```
 
-### Container Apps PostgreSQL Add-on (Dev/Test)
+### Azure Database for PostgreSQL Flexible Server (Dev/Test)
 
-The development Container Apps environment uses a PostgreSQL add-on for session persistence.
-The add-on runs as a managed container in the same environment.
+The development environment uses **Azure Database for PostgreSQL Flexible Server** for session persistence.
 
-> **Status (2026-03-05)**: The Container Apps PostgreSQL add-on (`bhs-postgres`) is created and running,
-> but is **not yet functional** due to a platform networking limitation — see
-> [Known Issues](#known-issues). The API currently falls back to `InMemory` storage.
-> A regular Container App running `postgres:16-alpine` (non-add-on) is the recommended
-> alternative.
+| Property | Value |
+|----------|-------|
+| Server name | `bhs-dev-postgres` |
+| Host | `bhs-dev-postgres.postgres.database.azure.com` |
+| Tier | Burstable B1ms |
+| Version | PostgreSQL 16 |
+| Storage | 32 GB |
+| Database | `bhs_dev` |
+| Admin user | `bhs_admin` |
+| SSL | Required |
+| Access | Public (Azure services firewall rule) |
 
 ```powershell
-# 1. Create the PostgreSQL add-on in the Container Apps environment
-az containerapp add-on postgres create `
-  --name bhs-postgres `
-  --environment bhs-local-dam-env `
-  -g bhs-development-local-dam-public
+# 1. Create the Flexible Server
+az postgres flexible-server create `
+  --name bhs-dev-postgres `
+  --resource-group bhs-development-local-dam-public `
+  --location eastus2 `
+  --tier Burstable `
+  --sku-name Standard_B1ms `
+  --storage-size 32 `
+  --version 16 `
+  --admin-user bhs_admin `
+  --admin-password "<password>" `
+  --public-access 0.0.0.0 `
+  --yes
 
-# 2. Prevent the add-on from scaling to zero (no KEDA scaler keeps it alive)
-az containerapp update `
-  --name bhs-postgres `
+# 2. Create the application database
+az postgres flexible-server db create `
+  --server-name bhs-dev-postgres `
   -g bhs-development-local-dam-public `
-  --min-replicas 1 --max-replicas 1
+  --database-name bhs_dev
 
-# 3. Get the add-on password (stored as pg-password secret)
-az containerapp secret show `
-  --name bhs-postgres `
-  -g bhs-development-local-dam-public `
-  --secret-name pg-password -o json
-
-# 4. Store the password as a secret in the API app
+# 3. Store the password as a secret in the API app
 az containerapp secret set `
   --name bhs-api-dam `
   -g bhs-development-local-dam-public `
-  --secrets "postgres-password=<password-from-step-2>"
+  --secrets "postgres-password=<password>"
 
-# 5. Bind the add-on to the API app (required for TCP network access)
-#    WARNING: This may trigger a KEDA ScaledObjectCheckFailed bug — see Known Issues.
-az containerapp update `
-  --name bhs-api-dam `
-  -g bhs-development-local-dam-public `
-  --bind bhs-postgres
-
-# 6. If binding fails (KEDA bug), set env vars manually instead:
+# 4. Set PostgreSQL env vars on the API app
 az containerapp update `
   --name bhs-api-dam `
   -g bhs-development-local-dam-public `
   --set-env-vars `
     "STORAGE_BACKEND=PostgreSQL" `
-    "POSTGRES_HOST=bhs-postgres.internal.<env-fqdn>" `
+    "POSTGRES_HOST=bhs-dev-postgres.postgres.database.azure.com" `
     "POSTGRES_PORT=5432" `
-    "POSTGRES_USERNAME=postgres" `
+    "POSTGRES_USERNAME=bhs_admin" `
     "POSTGRES_PASSWORD=secretref:postgres-password" `
-    "POSTGRES_DATABASE=postgres"
-#    NOTE: Manual env vars alone do NOT grant TCP access to the add-on.
-#    The add-on's service.type restricts access to bound apps only.
-#    Consider using a regular Container App with postgres:16-alpine instead.
+    "POSTGRES_DATABASE=bhs_dev"
 
-# 7. Grant storage roles to the app's managed identity
+# 5. Grant storage roles to the app's managed identity
 $principalId = az containerapp identity show `
   --name bhs-api-dam -g bhs-development-local-dam-public `
   --query "principalId" -o tsv
@@ -369,9 +366,6 @@ az role assignment create --assignee $principalId `
 az role assignment create --assignee $principalId `
   --role "Storage Table Data Contributor" --scope $storageId
 ```
-
-> **Important**: See [Known Issues](#known-issues) for details on the add-on networking
-> and KEDA limitations.
 
 ---
 
@@ -392,29 +386,15 @@ Before release/deployment, verify:
 
 ### Known Issues
 
-#### Container Apps PostgreSQL Add-on — Catch-22 (KEDA + Networking)
+#### Container Apps PostgreSQL Add-on (Deprecated — Use Flexible Server)
 
-The Container Apps PostgreSQL **add-on** (`service.type: "postgres"`) has two conflicting platform limitations:
+The Container Apps PostgreSQL **add-on** was previously attempted but has two conflicting platform limitations:
 
-1. **Service binding (`--bind`)** triggers a KEDA `ScaledObjectCheckFailed: Target resource doesn't exist` error that prevents new revisions from starting replicas. This is a platform-level bug.
+1. **Service binding (`--bind`)** triggers a KEDA `ScaledObjectCheckFailed: Target resource doesn't exist` error.
+2. **Without binding**, the add-on's TCP port is **not reachable** (`service.type` restricts network to bound apps only).
+3. **TCP ingress** on regular Container Apps in this environment also fails (tested and confirmed — `pg_isready` returns "no response" even from inside the same environment).
 
-2. **Without service binding**, the add-on's TCP port (5432) is **not reachable** from other apps in the environment. Add-ons with `service.type` set restrict network access to apps that have an active service binding. DNS resolves correctly (`bhs-postgres.internal.<env-fqdn>` → internal IP), but TCP connections are refused.
-
-**Result**: The add-on cannot be used — binding breaks KEDA, and unbinding breaks networking.
-
-**Recommended alternatives**:
-- **Regular Container App**: Deploy `postgres:16-alpine` as a standard Container App with TCP ingress (`transport: Tcp`, `exposedPort: 5432`). No `service.type` restriction — all apps in the environment can connect via internal FQDN.
-- **Azure Database for PostgreSQL Flexible Server**: Fully managed, production-grade. Requires VNet integration or public access.
-- **InMemory fallback**: Set `STORAGE_BACKEND=InMemory` for dev/test when persistence isn't needed.
-
-#### Add-on Scales to Zero
-
-Container Apps add-ons default to `minReplicas: 0`. Without a service binding (which creates a KEDA scaler), nothing keeps the add-on alive and it scales to zero. Fix with:
-
-```powershell
-az containerapp update --name bhs-postgres -g bhs-development-local-dam-public `
-  --min-replicas 1 --max-replicas 1
-```
+**Resolution**: Migrated to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`), which provides reliable public-endpoint connectivity with SSL.
 
 ### Storage/Auth Failures
 

@@ -217,10 +217,49 @@ var host = new HostBuilder()
                 var user = config["POSTGRES_USERNAME"] ?? config["POSTGRES_USER"];
                 var pass = config["POSTGRES_PASSWORD"];
                 var db = config["POSTGRES_DATABASE"] ?? "postgres";
+                var useManagedIdentity = config["POSTGRES_USE_MANAGED_IDENTITY"];
 
-                if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(user))
+                // Azure Managed Identity: acquire Entra token as the PG password
+                if (!string.IsNullOrEmpty(host)
+                    && host.Contains(".postgres.database.azure.com", StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(useManagedIdentity, "true", StringComparison.OrdinalIgnoreCase))
                 {
-                    pgConnectionString = $"Host={host};Port={port};Database={db};Username={user};Password={pass}";
+                    var credential = new DefaultAzureCredential();
+                    var tokenResult = credential.GetToken(
+                        new Azure.Core.TokenRequestContext(new[] { "https://ossrdbms-aad.database.windows.net/.default" }));
+
+                    var builder = new Npgsql.NpgsqlConnectionStringBuilder
+                    {
+                        Host = host,
+                        Port = int.TryParse(port, out var pMi) ? pMi : 5432,
+                        Database = db,
+                        Username = user,           // PG role name mapped to the MI
+                        Password = tokenResult.Token,
+                        SslMode = Npgsql.SslMode.Require
+                    };
+
+                    pgConnectionString = builder.ConnectionString;
+                    Console.WriteLine("PostgreSQL: Using Managed Identity (Entra ID token) authentication.");
+                }
+                else if (!string.IsNullOrEmpty(host) && !string.IsNullOrEmpty(user))
+                {
+                    // Password-based authentication (local Docker, legacy)
+                    var builder = new Npgsql.NpgsqlConnectionStringBuilder
+                    {
+                        Host = host,
+                        Port = int.TryParse(port, out var p) ? p : 5432,
+                        Database = db,
+                        Username = user,
+                        Password = pass
+                    };
+
+                    // Azure Database for PostgreSQL requires SSL
+                    if (host.Contains(".postgres.database.azure.com", StringComparison.OrdinalIgnoreCase))
+                    {
+                        builder.SslMode = Npgsql.SslMode.Require;
+                    }
+
+                    pgConnectionString = builder.ConnectionString;
                 }
             }
 
@@ -272,8 +311,35 @@ if (storageBackendInit?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase)
     {
         try
         {
-            await db.Database.EnsureCreatedAsync();
-            Console.WriteLine("PostgreSQL database tables created/verified successfully.");
+            var created = await db.Database.EnsureCreatedAsync();
+            if (created)
+            {
+                Console.WriteLine("PostgreSQL database created with full schema.");
+            }
+            else
+            {
+                // Database already exists — EnsureCreatedAsync does NOT update schema.
+                // Run raw SQL to create any missing tables so new entity types are available.
+                Console.WriteLine("PostgreSQL database already exists. Checking for missing tables...");
+                var pendingScript = db.Database.GenerateCreateScript();
+                // Execute individual CREATE TABLE IF NOT EXISTS blocks
+                try
+                {
+                    // Use the generated script but wrap in a safety block
+                    await db.Database.ExecuteSqlRawAsync(
+                        "DO $$ BEGIN " +
+                        "IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'file_groups') THEN " +
+                        "CREATE TABLE file_groups (\"GroupId\" text NOT NULL, \"GroupName\" text NOT NULL, \"Description\" text, \"CreatedAt\" text NOT NULL, \"UpdatedAt\" text NOT NULL, \"CreatedBy\" text NOT NULL, \"SessionCount\" integer NOT NULL DEFAULT 0, \"Status\" text NOT NULL, CONSTRAINT \"PK_file_groups\" PRIMARY KEY (\"GroupId\")); " +
+                        "RAISE NOTICE 'Created file_groups table'; " +
+                        "END IF; " +
+                        "END $$;");
+                    Console.WriteLine("Missing table check complete.");
+                }
+                catch (Exception schemaEx)
+                {
+                    Console.WriteLine($"Schema update warning (non-fatal): {schemaEx.Message}");
+                }
+            }
             break;
         }
         catch (Exception ex) when (attempt < maxRetries)

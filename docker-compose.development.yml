@@ -79,7 +79,7 @@ services:
       # Entra ID
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
-      # PostgreSQL
+      # PostgreSQL (local Docker uses password auth; Azure uses Managed Identity)
       - STORAGE_BACKEND=PostgreSQL
       - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=${POSTGRES_DB:-bhs_dev};Username=${POSTGRES_USER:-bhs_admin};Password=${POSTGRES_PASSWORD:-changeme}
     extra_hosts:

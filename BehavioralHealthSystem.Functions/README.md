@@ -134,6 +134,20 @@ Key settings in `local.settings.json`:
 | `AZURE_SPEECH_KEY` | Azure Speech service key for transcription |
 | `AZURE_SPEECH_REGION` | Azure Speech region |
 
+#### PostgreSQL Configuration
+
+| Setting | Purpose |
+|---------|---------|
+| `STORAGE_BACKEND` | Set to `PostgreSQL` to use PostgreSQL storage |
+| `POSTGRES_HOST` | PostgreSQL server hostname |
+| `POSTGRES_PORT` | PostgreSQL port (default: `5432`) |
+| `POSTGRES_USERNAME` | PostgreSQL username or MI role name (e.g. `bhs-api-dam`) |
+| `POSTGRES_PASSWORD` | PostgreSQL password (not needed with managed identity) |
+| `POSTGRES_DATABASE` | Database name (default: `postgres`) |
+| `POSTGRES_USE_MANAGED_IDENTITY` | Set to `true` for Entra ID token auth (Azure only) |
+| `POSTGRES_CONNECTION_STRING` | Alternative: full Npgsql connection string |
+| `POSTGRES_URL` | Alternative: URI format from Container Apps add-on |
+
 ### Authentication
 
 - **Microsoft Entra ID** — JWT token validation for user-facing endpoints

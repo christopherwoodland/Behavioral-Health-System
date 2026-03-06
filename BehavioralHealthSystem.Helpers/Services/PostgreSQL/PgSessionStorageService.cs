@@ -46,22 +46,46 @@ public class PgSessionStorageService : ISessionStorageService
 
     public async Task<SessionData?> GetSessionDataAsync(string sessionId, CancellationToken cancellationToken = default)
     {
-        return await _db.Sessions.FindAsync(new object[] { sessionId }, cancellationToken);
+        try
+        {
+            return await _db.Sessions.FindAsync(new object[] { sessionId }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting session data for session: {SessionId}", sessionId);
+            return null;
+        }
     }
 
     public async Task<List<SessionData>> GetUserSessionsAsync(string userId, CancellationToken cancellationToken = default)
     {
-        return await _db.Sessions
-            .Where(s => s.UserId == userId)
-            .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await _db.Sessions
+                .Where(s => s.UserId == userId)
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting sessions for user: {UserId}", userId);
+            return new List<SessionData>();
+        }
     }
 
     public async Task<List<SessionData>> GetAllSessionsAsync(CancellationToken cancellationToken = default)
     {
-        return await _db.Sessions
-            .OrderByDescending(s => s.CreatedAt)
-            .ToListAsync(cancellationToken);
+        try
+        {
+            return await _db.Sessions
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all sessions");
+            return new List<SessionData>();
+        }
     }
 
     public async Task<bool> UpdateSessionDataAsync(SessionData sessionData, CancellationToken cancellationToken = default)

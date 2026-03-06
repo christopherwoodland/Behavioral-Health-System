@@ -66,7 +66,7 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 
 **Local development**: Docker Compose includes a `db` service (postgres:16-alpine) with a named volume for persistence.
 
-**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`, Burstable B1ms, v16) via public endpoint with SSL.
+**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`, Burstable B1ms, v16) via public endpoint with SSL. Authentication uses **Microsoft Entra ID managed identity** (passwordless) — the Container App's system-assigned MI maps to a PostgreSQL role `bhs-api-dam`.
 
 ---
 
@@ -235,9 +235,10 @@ The `docker.env.example` template includes all required and optional variables w
 | `STORAGE_BACKEND` | Storage mode: `BlobStorage` (default), `PostgreSQL`, or `InMemory` |
 | `POSTGRES_HOST` | PostgreSQL hostname (e.g., add-on internal FQDN) |
 | `POSTGRES_PORT` | PostgreSQL port (default: `5432`) |
-| `POSTGRES_USERNAME` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | PostgreSQL password (use `secretRef` in Container Apps) |
+| `POSTGRES_USERNAME` | PostgreSQL username (MI role name for Entra auth, e.g. `bhs-api-dam`) |
+| `POSTGRES_PASSWORD` | PostgreSQL password (only for password auth; not needed with MI) |
 | `POSTGRES_DATABASE` | PostgreSQL database name (default: `postgres`) |
+| `POSTGRES_USE_MANAGED_IDENTITY` | Set to `true` to use Entra ID token auth (no password needed) |
 | `POSTGRES_CONNECTION_STRING` | Alternative: full Npgsql connection string |
 | `POSTGRES_URL` | Alternative: PostgreSQL URI format |
 
@@ -308,7 +309,9 @@ The development environment uses **Azure Database for PostgreSQL Flexible Server
 | Version | PostgreSQL 16 |
 | Storage | 32 GB |
 | Database | `bhs_dev` |
-| Admin user | `bhs_admin` |
+| Authentication | **Microsoft Entra ID** (managed identity) — passwordless |
+| MI PG Role | `bhs-api-dam` (mapped to Container App system-assigned MI) |
+| Admin user | `bhs_admin` (password auth available in parallel mode) |
 | SSL | Required |
 | Access | Public (Azure services firewall rule) |
 
@@ -333,13 +336,26 @@ az postgres flexible-server db create `
   -g bhs-development-local-dam-public `
   --database-name bhs_dev
 
-# 3. Store the password as a secret in the API app
-az containerapp secret set `
-  --name bhs-api-dam `
+# 3. Enable Entra ID auth on the PG server and set yourself as admin
+az postgres flexible-server update `
+  --name bhs-dev-postgres `
   -g bhs-development-local-dam-public `
-  --secrets "postgres-password=<password>"
+  --active-directory-auth Enabled `
+  --password-auth Enabled
 
-# 4. Set PostgreSQL env vars on the API app
+az postgres flexible-server microsoft-entra-admin create `
+  --server-name bhs-dev-postgres `
+  -g bhs-development-local-dam-public `
+  --display-name "<your-display-name>" `
+  --object-id "<your-entra-object-id>" `
+  --type User
+
+# 4. Create the managed identity role in PostgreSQL
+#    Run the setup script (requires psycopg2: pip install psycopg2-binary)
+$env:PG_TOKEN = az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
+python scripts/setup-mi-postgres.py
+
+# 5. Set PostgreSQL env vars on the API app (managed identity, no password)
 az containerapp update `
   --name bhs-api-dam `
   -g bhs-development-local-dam-public `
@@ -347,9 +363,9 @@ az containerapp update `
     "STORAGE_BACKEND=PostgreSQL" `
     "POSTGRES_HOST=bhs-dev-postgres.postgres.database.azure.com" `
     "POSTGRES_PORT=5432" `
-    "POSTGRES_USERNAME=bhs_admin" `
-    "POSTGRES_PASSWORD=secretref:postgres-password" `
-    "POSTGRES_DATABASE=bhs_dev"
+    "POSTGRES_USERNAME=bhs-api-dam" `
+    "POSTGRES_DATABASE=bhs_dev" `
+    "POSTGRES_USE_MANAGED_IDENTITY=true"
 
 # 5. Grant storage roles to the app's managed identity
 $principalId = az containerapp identity show `

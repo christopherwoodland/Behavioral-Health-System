@@ -55,6 +55,14 @@
 
 
     "ENTRA_TENANT_ID": "",
-    "ENTRA_CLIENT_ID": ""
+    "ENTRA_CLIENT_ID": "",
+
+    "STORAGE_BACKEND": "BlobStorage",
+    "POSTGRES_HOST": "",
+    "POSTGRES_PORT": "5432",
+    "POSTGRES_USERNAME": "",
+    "POSTGRES_PASSWORD": "",
+    "POSTGRES_DATABASE": "bhs_dev",
+    "POSTGRES_USE_MANAGED_IDENTITY": "false"
   }
 }

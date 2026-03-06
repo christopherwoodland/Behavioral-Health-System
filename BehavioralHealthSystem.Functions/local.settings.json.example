@@ -53,6 +53,14 @@
     "ENTRA_TENANT_ID": "<tenant-id>",
     "ENTRA_CLIENT_ID": "<api-client-id>",
     "AZURE_TENANT_ID": "<tenant-id>",
-    "AZURE_CLIENT_ID": "<user-assigned-managed-identity-client-id>"
+    "AZURE_CLIENT_ID": "<user-assigned-managed-identity-client-id>",
+
+    "STORAGE_BACKEND": "PostgreSQL",
+    "POSTGRES_HOST": "<your-server>.postgres.database.azure.com",
+    "POSTGRES_PORT": "5432",
+    "POSTGRES_USERNAME": "<mi-role-name-or-admin-user>",
+    "POSTGRES_PASSWORD": "",
+    "POSTGRES_DATABASE": "bhs_dev",
+    "POSTGRES_USE_MANAGED_IDENTITY": "true"
   }
 }

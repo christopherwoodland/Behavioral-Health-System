@@ -158,9 +158,9 @@ Key settings in `local.settings.json`:
 Dockerfiles are provided for each environment:
 
 ```
-Dockerfile.development   # Development image
-Dockerfile.local         # Local testing image
-Dockerfile.prod          # Production image
+Dockerfile.local         # Local image (password-based PG auth, local Docker PG container)
+Dockerfile.development   # Development image (Managed Identity PG auth, Azure PG Flexible Server)
+Dockerfile.prod          # Production image (Managed Identity PG auth, Azure PG Flexible Server)
 ```
 
 ## Testing

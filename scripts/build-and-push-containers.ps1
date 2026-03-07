@@ -15,7 +15,8 @@
     The image tag to use. Defaults to 'latest'.
 
 .PARAMETER Environment
-    The target environment: development or production. Defaults to 'development'.
+    The target environment: local, development, or production. Defaults to 'development'.
+    Note: 'local' builds images locally but does not push to ACR.
 
 .PARAMETER SkipUI
     Skip building the UI image.
@@ -30,7 +31,7 @@
     .\build-and-push-containers.ps1 -Environment production -Tag "v1.0.0"
 
 .EXAMPLE
-    .\build-and-push-containers.ps1 -Environment development -SkipUI
+    .\build-and-push-containers.ps1 -Environment local -SkipUI
 
 .EXAMPLE
     .\build-and-push-containers.ps1 -Environment development
@@ -39,7 +40,7 @@
 param(
     [string]$AcrName = "bhsdevelopmentacr4znv2wxlxs4xq",
     [string]$Tag = "latest",
-    [ValidateSet("development", "production")]
+    [ValidateSet("local", "development", "production")]
     [string]$Environment = "development",
     [switch]$SkipUI,
     [switch]$SkipAPI
@@ -55,9 +56,13 @@ Push-Location $SolutionRoot
 try {
     # Determine Dockerfile suffix based on environment
     $dockerfileSuffix = switch ($Environment) {
+        "local"       { "local" }
         "development" { "development" }
-        "production" { "prod" }
+        "production"  { "prod" }
     }
+
+    # Local builds are not pushed to ACR
+    $pushToAcr = $Environment -ne "local"
 
     Write-Host "========================================"  -ForegroundColor Cyan
     Write-Host "Build and Push Containers"  -ForegroundColor Cyan
@@ -66,17 +71,23 @@ try {
     Write-Host "Tag: $Tag"  -ForegroundColor Gray
 
     $AcrLoginServer = "$AcrName.azurecr.io"
-    Write-Host "ACR: $AcrLoginServer"  -ForegroundColor Gray
+    if ($pushToAcr) {
+        Write-Host "ACR: $AcrLoginServer"  -ForegroundColor Gray
+    } else {
+        Write-Host "Mode: Local build only (no ACR push)"  -ForegroundColor Gray
+    }
     Write-Host ""
 
-    # Login to ACR
-    Write-Host "Logging in to Azure Container Registry..."  -ForegroundColor Yellow
-    az acr login --name $AcrName
-    if ($LASTEXITCODE -ne 0) {
-        throw "Failed to login to ACR"
+    # Login to ACR (skip for local-only builds)
+    if ($pushToAcr) {
+        Write-Host "Logging in to Azure Container Registry..."  -ForegroundColor Yellow
+        az acr login --name $AcrName
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to login to ACR"
+        }
+        Write-Host "Logged in to ACR"  -ForegroundColor Green
+        Write-Host ""
     }
-    Write-Host "Logged in to ACR"  -ForegroundColor Green
-    Write-Host ""
 
     # Build and push UI
     if (-not $SkipUI) {
@@ -84,7 +95,7 @@ try {
         Write-Host "Building UI Image..."  -ForegroundColor Yellow
         Write-Host "========================================"  -ForegroundColor Cyan
 
-        $UiImage = "$AcrLoginServer/bhs-ui:$Tag"
+        $UiImage = if ($pushToAcr) { "$AcrLoginServer/bhs-ui:$Tag" } else { "bhs-web:local" }
 
         docker build -f BehavioralHealthSystem.Web/Dockerfile.$dockerfileSuffix -t $UiImage BehavioralHealthSystem.Web
         if ($LASTEXITCODE -ne 0) {
@@ -92,12 +103,14 @@ try {
         }
         Write-Host "UI image built: $UiImage"  -ForegroundColor Green
 
-        Write-Host "Pushing UI image..."  -ForegroundColor Yellow
-        docker push $UiImage
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to push UI image"
+        if ($pushToAcr) {
+            Write-Host "Pushing UI image..."  -ForegroundColor Yellow
+            docker push $UiImage
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to push UI image"
+            }
+            Write-Host "UI image pushed"  -ForegroundColor Green
         }
-        Write-Host "UI image pushed"  -ForegroundColor Green
         Write-Host ""
     }
 
@@ -107,7 +120,7 @@ try {
         Write-Host "Building API Image..."  -ForegroundColor Yellow
         Write-Host "========================================"  -ForegroundColor Cyan
 
-        $ApiImage = "$AcrLoginServer/bhs-api:$Tag"
+        $ApiImage = if ($pushToAcr) { "$AcrLoginServer/bhs-api:$Tag" } else { "bhs-api:local" }
 
         docker build -f BehavioralHealthSystem.Functions/Dockerfile.$dockerfileSuffix -t $ApiImage .
         if ($LASTEXITCODE -ne 0) {
@@ -115,12 +128,14 @@ try {
         }
         Write-Host "API image built: $ApiImage"  -ForegroundColor Green
 
-        Write-Host "Pushing API image..."  -ForegroundColor Yellow
-        docker push $ApiImage
-        if ($LASTEXITCODE -ne 0) {
-            throw "Failed to push API image"
+        if ($pushToAcr) {
+            Write-Host "Pushing API image..."  -ForegroundColor Yellow
+            docker push $ApiImage
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to push API image"
+            }
+            Write-Host "API image pushed"  -ForegroundColor Green
         }
-        Write-Host "API image pushed"  -ForegroundColor Green
         Write-Host ""
     }
 

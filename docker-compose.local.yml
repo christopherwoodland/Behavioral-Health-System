@@ -1,19 +1,18 @@
-# Usage: docker compose --env-file docker.env -f docker-compose.development.yml up -d
+# Usage: docker compose --env-file docker.env -f docker-compose.local.yml up -d
 # Copy docker.env.example to docker.env and fill in values (gitignored)
 #
-# DEVELOPMENT environment: connects to Azure PostgreSQL Flexible Server
-# using Managed Identity (Entra ID token auth). No local PG container.
-# For local password-based PG, use docker-compose.local.yml instead.
+# LOCAL environment: password-based PostgreSQL auth with a local PG container.
+# Use this for local development without Azure Managed Identity.
 
 services:
-  # BHS Functions API - Development Environment
-  # Uses Managed Identity for Azure PostgreSQL (mirrors production setup)
+  # BHS Functions API - Local Environment
+  # Uses password-based PostgreSQL auth against a local Docker PG container
   api:
-    image: bhs-api:development
-    container_name: bhs-api-dev
+    image: bhs-api:local
+    container_name: bhs-api-local
     build:
       context: .
-      dockerfile: BehavioralHealthSystem.Functions/Dockerfile.development
+      dockerfile: BehavioralHealthSystem.Functions/Dockerfile.local
     ports:
       - "7071:80"
     environment:
@@ -83,16 +82,19 @@ services:
       # Entra ID
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
-      # PostgreSQL — DEVELOPMENT: Managed Identity auth against Azure PG Flexible Server
+      # PostgreSQL — LOCAL: password auth against local Docker PG container
       - STORAGE_BACKEND=PostgreSQL
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
       - POSTGRES_DATABASE=${POSTGRES_DB:-bhs_dev}
-      - POSTGRES_USERNAME=${POSTGRES_USER:-bhs-api-dam}
-      - POSTGRES_PASSWORD=
-      - POSTGRES_USE_MANAGED_IDENTITY=true
+      - POSTGRES_USERNAME=${POSTGRES_USER:-bhs_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_USE_MANAGED_IDENTITY=false
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
       interval: 60s
@@ -101,10 +103,32 @@ services:
       start_period: 60s
     restart: unless-stopped
 
-  # BHS Web UI - Development Environment
+  # PostgreSQL Database - Local
+  # Data persisted via named volume across container restarts
+  db:
+    image: postgres:16-alpine
+    container_name: bhs-db-local
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-bhs_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-bhs_dev}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - bhs-pgdata-local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bhs_admin} -d ${POSTGRES_DB:-bhs_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # BHS Web UI - Local Environment
   web:
-    image: bhs-web:development
-    container_name: bhs-web-dev
+    image: bhs-web:local
+    container_name: bhs-web-local
     build:
       context: ./BehavioralHealthSystem.Web
       dockerfile: Dockerfile.development
@@ -134,3 +158,8 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
+
+volumes:
+  bhs-pgdata-local:
+    name: bhs-pgdata-local
+    driver: local

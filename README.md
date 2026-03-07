@@ -153,7 +153,7 @@ npm run dev
 
 Dev server runs at `http://localhost:5173`. See the [Web README](BehavioralHealthSystem.Web/README.md) for environment variables.
 
-### 3) Docker Compose (Development)
+### 3) Docker Compose
 
 Docker Compose requires a `docker.env` file in the repository root containing Azure credentials, storage account names, and service endpoints. This file is **gitignored** and must be created locally.
 
@@ -164,7 +164,11 @@ cp docker.env.example docker.env
 # 2. Edit docker.env and fill in your Azure values
 #    (tenant ID, client ID/secret, storage account, OpenAI endpoint, etc.)
 
-# 3. Start the containers
+# 3. Start the containers (choose your environment)
+# Local — password-based PG auth with a local Docker PG container:
+docker compose --env-file docker.env -f docker-compose.local.yml up -d --build
+
+# Development — Managed Identity PG auth against Azure PG Flexible Server:
 docker compose --env-file docker.env -f docker-compose.development.yml up -d --build
 ```
 
@@ -179,15 +183,18 @@ The `docker.env.example` template includes all required and optional variables w
 | `AZURE_OPENAI_ENDPOINT` | Yes | Azure OpenAI endpoint for risk assessments |
 | `AZURE_SPEECH_ENDPOINT` | For transcription | Azure Speech endpoint |
 | `EXTENDED_ASSESSMENT_OPENAI_ENDPOINT` | For extended assessments | GPT-5/O3 model endpoint |
+| `POSTGRES_HOST` | Development only | Azure PG Flexible Server FQDN (e.g. `<server>.postgres.database.azure.com`) |
+| `POSTGRES_PASSWORD` | Local only | PostgreSQL password for local Docker PG container |
 
 > **Security**: Never commit `docker.env` to source control. It contains secrets and is excluded via `.gitignore`.
 
 ### Environment Switching
 
 ```powershell
-.\scripts\docker-manage.ps1 -Action up -Environment development
-.\scripts\docker-manage.ps1 -Action up -Environment production
-.\scripts\docker-manage.ps1 -Action down -Environment development
+.\scripts\docker-manage.ps1 -Action up -Environment local         # Local PG (password auth)
+.\scripts\docker-manage.ps1 -Action up -Environment development    # Azure PG (Managed Identity)
+.\scripts\docker-manage.ps1 -Action up -Environment production     # Production
+.\scripts\docker-manage.ps1 -Action down -Environment local
 .\scripts\docker-manage.ps1 -Action status
 ```
 
@@ -195,10 +202,11 @@ The `docker.env.example` template includes all required and optional variables w
 
 ## Environment Model
 
-| Environment | Description | Docker Compose |
-|-------------|-------------|----------------|
-| **Development** | Local dev and Azure-backed dev testing. Optional Ollama for local LLM. | `docker-compose.development.yml` |
-| **Production** | Hardened Azure deployment with Managed Identity and RBAC. | `docker-compose.prod.yml` |
+| Environment | Description | PostgreSQL Auth | Docker Compose |
+|-------------|-------------|-----------------|----------------|
+| **Local** | Local dev with Docker PG container. Password-based auth. | Password | `docker-compose.local.yml` |
+| **Development** | Azure-backed dev testing. Connects to Azure PG Flexible Server. | Managed Identity | `docker-compose.development.yml` |
+| **Production** | Hardened Azure deployment with Managed Identity and RBAC. | Managed Identity | `docker-compose.prod.yml` |
 
 ---
 

@@ -3,26 +3,31 @@
     Docker Compose management script for BHS (Behavioral Health System)
 
 .DESCRIPTION
-    This script provides commands to manage Docker Compose environments for development and production.
-    - Development: Uses docker-compose.development.yml for development
+    This script provides commands to manage Docker Compose environments for local, development, and production.
+    - Local: Uses docker-compose.local.yml with password-based PostgreSQL (local PG container)
+    - Development: Uses docker-compose.development.yml with Managed Identity (Azure PG Flexible Server)
     - Production: Uses docker-compose.prod.yml with .env.prod file (managed identity, no API keys)
 
 .PARAMETER Action
     The action to perform: up, down, rebuild, logs, status, restart
 
 .PARAMETER Environment
-    The environment to target: development (default), production
+    The environment to target: local (default), development, production
 
 .PARAMETER Service
     Optional specific service to target: api, web
 
 .EXAMPLE
-    .\docker-manage.ps1 -Action up -Environment development
-    Starts all development containers
+    .\docker-manage.ps1 -Action up -Environment local
+    Starts all local containers (password-based PG)
 
 .EXAMPLE
-    .\docker-manage.ps1 -Action rebuild -Environment development
-    Tears down, rebuilds, and starts development containers
+    .\docker-manage.ps1 -Action up -Environment development
+    Starts all development containers (Managed Identity PG)
+
+.EXAMPLE
+    .\docker-manage.ps1 -Action rebuild -Environment local
+    Tears down, rebuilds, and starts local containers
 
 .EXAMPLE
     .\docker-manage.ps1 -Action logs -Service api
@@ -39,8 +44,8 @@ param(
     [string]$Action,
 
     [Parameter(Mandatory = $false)]
-    [ValidateSet("development", "production")]
-    [string]$Environment = "development",
+    [ValidateSet("local", "development", "production")]
+    [string]$Environment = "local",
 
     [Parameter(Mandatory = $false)]
     [ValidateSet("api", "web", "")]
@@ -57,10 +62,10 @@ $SolutionRoot = Split-Path -Parent $ScriptDir
 Push-Location $SolutionRoot
 
 # Determine compose file based on environment
-$ComposeFile = if ($Environment -eq "development") {
-    "docker-compose.development.yml"
-} else {
-    "docker-compose.prod.yml"
+$ComposeFile = switch ($Environment) {
+    "local"       { "docker-compose.local.yml" }
+    "development" { "docker-compose.development.yml" }
+    "production"  { "docker-compose.prod.yml" }
 }
 
 $EnvFile = if ($Environment -eq "production") { ".env.prod" } else { $null }

@@ -81,7 +81,12 @@ services:
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
       # PostgreSQL (local Docker uses password auth; Azure uses Managed Identity)
       - STORAGE_BACKEND=PostgreSQL
-      - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=${POSTGRES_DB:-bhs_dev};Username=${POSTGRES_USER:-bhs_admin};Password=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=${POSTGRES_DB:-bhs_dev}
+      - POSTGRES_USERNAME=${POSTGRES_USER:-bhs_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_USE_MANAGED_IDENTITY=false
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:

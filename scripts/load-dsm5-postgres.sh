@@ -13,7 +13,7 @@ for f in "$DATA_DIR"/*.json; do
     BASENAME=$(basename "$f")
 
     # Use a SQL function to read and parse the JSON file
-    RESULT=$(psql -U bhs_admin -d bhs_dev -v ON_ERROR_STOP=1 -t -A <<EOSQL
+    RESULT=$(psql -U "${POSTGRES_USER:-bhs_admin}" -d "${POSTGRES_DB:-bhs_dev}" -v ON_ERROR_STOP=1 -t -A <<EOSQL
 WITH raw AS (
     SELECT pg_read_file('$f')::jsonb AS data
 )
@@ -64,7 +64,7 @@ EOSQL
     fi
 done
 
-TOTAL=$(psql -U bhs_admin -d bhs_dev -t -A -c "SELECT COUNT(*) FROM dsm5_conditions;")
+TOTAL=$(psql -U "${POSTGRES_USER:-bhs_admin}" -d "${POSTGRES_DB:-bhs_dev}" -t -A -c "SELECT COUNT(*) FROM dsm5_conditions;")
 
 echo ""
 echo "=== Import Complete ==="

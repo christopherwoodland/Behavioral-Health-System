@@ -83,16 +83,25 @@ param bandServiceUrl string = ''
 param enableSmartBand bool = false
 
 // ============================================================================
-// POSTGRESQL SIDECAR CONFIGURATION
+// POSTGRESQL CONFIGURATION
 // ============================================================================
-@description('PostgreSQL admin password')
+// Two modes: (1) Sidecar with password auth, (2) Azure PG Flexible Server with Managed Identity.
+// Set usePostgresManagedIdentity=true for Azure PG Flexible Server.
+
+@description('Use Managed Identity for PostgreSQL (Azure PG Flexible Server)')
+param usePostgresManagedIdentity bool = false
+
+@description('PostgreSQL host (Azure PG Flexible Server FQDN). Required when usePostgresManagedIdentity=true.')
+param postgresHost string = 'localhost'
+
+@description('PostgreSQL admin password (only used when usePostgresManagedIdentity=false)')
 @secure()
-param postgresPassword string
+param postgresPassword string = ''
 
 @description('PostgreSQL database name')
 param postgresDatabase string = 'bhs_dev'
 
-@description('PostgreSQL admin username')
+@description('PostgreSQL username. For MI: the PG role matching the Container App MI. For sidecar: admin username.')
 param postgresUser string = 'bhs_admin'
 
 var containerAppsEnvName = '${appName}-${environment}-cae-${uniqueSuffix}'
@@ -614,16 +623,36 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
               name: 'ENTRA_CLIENT_ID'
               value: azureAdApiClientId
             }
-            // PostgreSQL Sidecar Configuration
-            // PostgreSQL runs as a sidecar container in the same pod, accessible via localhost
-            // This avoids TCP ingress issues with Container Apps' Envoy proxy
+            // PostgreSQL Configuration
+            // When usePostgresManagedIdentity=true: connects to Azure PG Flexible Server with Entra ID token.
+            // When false: connects to sidecar PG container via localhost with password.
             {
               name: 'STORAGE_BACKEND'
               value: 'PostgreSQL'
             }
             {
-              name: 'POSTGRES_CONNECTION_STRING'
-              value: 'Host=localhost;Port=5432;Database=${postgresDatabase};Username=${postgresUser};Password=${postgresPassword}'
+              name: 'POSTGRES_HOST'
+              value: postgresHost
+            }
+            {
+              name: 'POSTGRES_PORT'
+              value: '5432'
+            }
+            {
+              name: 'POSTGRES_DATABASE'
+              value: postgresDatabase
+            }
+            {
+              name: 'POSTGRES_USERNAME'
+              value: postgresUser
+            }
+            {
+              name: 'POSTGRES_PASSWORD'
+              value: usePostgresManagedIdentity ? '' : postgresPassword
+            }
+            {
+              name: 'POSTGRES_USE_MANAGED_IDENTITY'
+              value: string(usePostgresManagedIdentity)
             }
           ]
           probes: [
@@ -647,9 +676,10 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
           ]
         }
-        // PostgreSQL Sidecar Container
-        // Runs alongside the API in the same pod, sharing localhost network
-        // This approach bypasses Container Apps' Envoy proxy which doesn't support PostgreSQL wire protocol
+        // PostgreSQL Sidecar Container (only when NOT using Managed Identity)
+        // Runs alongside the API in the same pod, sharing localhost network.
+        // When usePostgresManagedIdentity=true, the API connects to Azure PG Flexible Server
+        // instead and this sidecar is not needed — but kept for backward compatibility.
         {
           name: 'postgres-sidecar'
           image: 'postgres:16-alpine'

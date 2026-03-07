@@ -82,8 +82,15 @@ services:
       - ENTRA_TENANT_ID=${ENTRA_TENANT_ID}
       - ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID}
       # PostgreSQL
+      # Production on Azure uses Managed Identity (POSTGRES_USE_MANAGED_IDENTITY=true).
+      # When running via docker-compose locally, uses password auth against the local PG container.
       - STORAGE_BACKEND=PostgreSQL
-      - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=${POSTGRES_DB:-bhs_dev};Username=${POSTGRES_USER:-bhs_admin};Password=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_HOST=${POSTGRES_HOST:-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DATABASE=${POSTGRES_DB:-bhs_dev}
+      - POSTGRES_USERNAME=${POSTGRES_USER:-bhs_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_USE_MANAGED_IDENTITY=${POSTGRES_USE_MANAGED_IDENTITY:-false}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

@@ -53,7 +53,6 @@ properties:
     secrets:
     - name: bhsdevelopmentacr4znv2wxlxs4xqazurecrio-bhsdevelopmentacr4znv2wxlxs4xq
     - name: kintsugi-api-key
-    - name: postgres-password
     service: null
     targetLabel: ''
   customDomainVerificationId: 23BF272B0B185545AD1117E3CBA6C828B6A30E56FEF985B584D0696B7D2FA6F0
@@ -194,17 +193,18 @@ properties:
         value: PostgreSQL
       # PostgreSQL - Azure Database for PostgreSQL Flexible Server
       # Server: bhs-dev-postgres (Burstable B1ms, v16, eastus2)
-      # SSL required. Public access with Azure services firewall rule.
+      # Authentication: Microsoft Entra ID (Managed Identity) — no password needed.
+      # The Container App's system-assigned MI has a PG role 'bhs-api-dam'.
       - name: POSTGRES_HOST
         value: bhs-dev-postgres.postgres.database.azure.com
       - name: POSTGRES_PORT
         value: '5432'
       - name: POSTGRES_USERNAME
-        value: bhs_admin
-      - name: POSTGRES_PASSWORD
-        secretRef: postgres-password
+        value: bhs-api-dam
       - name: POSTGRES_DATABASE
         value: bhs_dev
+      - name: POSTGRES_USE_MANAGED_IDENTITY
+        value: 'true'
       - name: ENTRA_TENANT_ID
         value: 16b3c013-d300-468d-ac64-7eda0820b6d3
       - name: ENTRA_CLIENT_ID

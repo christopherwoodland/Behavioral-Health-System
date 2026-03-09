@@ -1,3 +1,5 @@
+using BehavioralHealthSystem.Dam.Services;
+
 namespace BehavioralHealthSystem.Functions;
 
 public class LocalDamFunctions

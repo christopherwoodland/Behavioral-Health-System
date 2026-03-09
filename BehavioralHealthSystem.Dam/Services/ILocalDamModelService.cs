@@ -1,0 +1,9 @@
+using BehavioralHealthSystem.Models;
+
+namespace BehavioralHealthSystem.Dam.Services;
+
+public interface ILocalDamModelService
+{
+    Task<InitiateResponse?> InitiateSessionAsync(InitiateRequest request, CancellationToken cancellationToken = default);
+    Task<PredictionResponse?> SubmitPredictionAsync(PredictionRequest request, CancellationToken cancellationToken = default);
+}

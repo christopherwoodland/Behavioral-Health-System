@@ -75,6 +75,8 @@ public class ApiKeyValidationService : IApiKeyValidationService
     /// <summary>
     /// Sync validation - checks API key or development mode.
     /// For Entra ID token validation, use ValidateRequestAsync instead.
+    /// Note: Bearer tokens require async validation — callers with bearer tokens
+    /// should use ValidateRequestAsync directly.
     /// </summary>
     public bool ValidateApiKey(HttpRequestData request)
     {
@@ -85,16 +87,16 @@ public class ApiKeyValidationService : IApiKeyValidationService
             return true;
         }
 
-        // Check for Authorization header (indicates Entra ID flow - use async method)
+        // Check for Authorization header — bearer tokens need async validation
         if (request.Headers.TryGetValues("Authorization", out var authValues))
         {
             var authHeader = authValues.FirstOrDefault();
             if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                // Has bearer token - caller should use ValidateRequestAsync for proper validation
-                // For backward compatibility, we'll do sync validation
-                var result = ValidateRequestAsync(request).GetAwaiter().GetResult();
-                return result.IsValid;
+                // Caller should use ValidateRequestAsync for bearer tokens.
+                // In sync context, we cannot safely validate — reject and log guidance.
+                _logger.LogWarning("Bearer token detected in sync ValidateApiKey. Use ValidateRequestAsync instead.");
+                return false;
             }
         }
 

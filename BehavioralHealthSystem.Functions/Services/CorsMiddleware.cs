@@ -75,20 +75,17 @@ public class CorsMiddleware : IFunctionsWorkerMiddleware
 
     private static void AddCorsHeaders(HttpResponseData response, string? origin)
     {
-        // Check if origin is allowed
-        var allowedOrigin = "*";
-        if (!string.IsNullOrEmpty(origin))
-        {
-            // Check against allowed origins or environment variable
-            var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS");
-            var originsToCheck = !string.IsNullOrEmpty(allowedOriginsEnv)
-                ? allowedOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                : AllowedOrigins;
+        // Check against allowed origins or environment variable
+        var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS");
+        var originsToCheck = !string.IsNullOrEmpty(allowedOriginsEnv)
+            ? allowedOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            : AllowedOrigins;
 
-            if (originsToCheck.Any(o => o.Equals(origin, StringComparison.OrdinalIgnoreCase)))
-            {
-                allowedOrigin = origin;
-            }
+        // Only set CORS headers if origin is in the allowlist — deny unknown origins
+        if (string.IsNullOrEmpty(origin) ||
+            !originsToCheck.Any(o => o.Equals(origin, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
         }
 
         // Remove existing headers if any
@@ -97,8 +94,8 @@ public class CorsMiddleware : IFunctionsWorkerMiddleware
         response.Headers.Remove("Access-Control-Allow-Headers");
         response.Headers.Remove("Access-Control-Allow-Credentials");
 
-        // Add CORS headers
-        response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
+        // Add CORS headers for the matched origin
+        response.Headers.Add("Access-Control-Allow-Origin", origin);
         response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
         response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key, X-User-ID, X-User-Principal");
         response.Headers.Add("Access-Control-Allow-Credentials", "true");

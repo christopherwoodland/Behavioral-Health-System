@@ -4,7 +4,7 @@
 
 ## Overview
 
-This project is the central API layer. The [React frontend](../BehavioralHealthSystem.Web/README.md) communicates with these endpoints for all clinical workflow operations. It references the shared [Helpers library](../BehavioralHealthSystem.Helpers/README.md) for models, validators, and services, and the [Agents project](../BehavioralHealthSystem.Agents/README.md) for the Semantic Kernel audio processing pipeline.
+This project is the central API layer. The [React frontend](../BehavioralHealthSystem.Web/README.md) communicates with these endpoints for all clinical workflow operations. It references the shared [Helpers library](../BehavioralHealthSystem.Helpers/README.md) for models, validators, and services, the [Agents project](../BehavioralHealthSystem.Agents/README.md) for the Semantic Kernel audio processing pipeline, and the [Dam library](../BehavioralHealthSystem.Dam/README.md) for the DAM HTTP client pipeline.
 
 ## Tech Stack
 

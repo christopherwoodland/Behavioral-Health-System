@@ -3,6 +3,7 @@ using Azure.Security.KeyVault.Secrets;
 using Azure.Storage.Blobs;
 using BehavioralHealthSystem.Agents.DependencyInjection;
 using BehavioralHealthSystem.Configuration;
+using BehavioralHealthSystem.Dam.Services;
 using BehavioralHealthSystem.Functions.Services;
 using BehavioralHealthSystem.Helpers.Data;
 using BehavioralHealthSystem.Helpers.Models;
@@ -61,16 +62,8 @@ var host = new HostBuilder()
         var config = context.Configuration;
         var keyVaultClient = GetKeyVaultClient(config);
 
-        // Configuration
-        services.Configure<LocalDamModelOptions>(options =>
-        {
-            options.BaseUrl = config["LOCAL_DAM_BASE_URL"] ?? "http://localhost:8000";
-            options.InitiatePath = config["LOCAL_DAM_INITIATE_PATH"] ?? "initiate";
-            options.PredictionPath = config["LOCAL_DAM_PREDICTION_PATH"] ?? "predict";
-            options.ApiKey = config["LOCAL_DAM_API_KEY"];
-            options.ModelId = config["LOCAL_DAM_MODEL_ID"] ?? "KintsugiHealth/dam";
-            options.TimeoutSeconds = config.GetValue<int>("LOCAL_DAM_TIMEOUT_SECONDS", 300);
-        });
+        // DAM pipeline services (shared library)
+        services.AddDamServices(config);
 
         // Azure OpenAI Configuration
         services.Configure<AzureOpenAIOptions>(options =>
@@ -99,27 +92,6 @@ var host = new HostBuilder()
             options.Enabled = config.GetValue<bool>("EXTENDED_ASSESSMENT_OPENAI_ENABLED", false);
             options.UseFallbackToStandardConfig = config.GetValue<bool>("EXTENDED_ASSESSMENT_USE_FALLBACK", true);
         });
-
-        // HTTP Client with policies for local DAM model
-        services.AddHttpClient<ILocalDamModelService, LocalDamModelService>()
-            .ConfigureHttpClient((serviceProvider, client) =>
-            {
-                var options = serviceProvider.GetService<IOptions<LocalDamModelOptions>>()?.Value;
-                if (options != null)
-                {
-                    client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
-                    client.Timeout = TimeSpan.FromSeconds(Math.Max(30, options.TimeoutSeconds));
-                    if (!string.IsNullOrWhiteSpace(options.ApiKey))
-                    {
-                        client.DefaultRequestHeaders.Remove("X-API-Key");
-                        client.DefaultRequestHeaders.Add("X-API-Key", options.ApiKey);
-                    }
-                }
-            })
-            .AddPolicyHandler((serviceProvider, request) =>
-                RetryPolicies.GetRetryPolicy(serviceProvider.GetService<ILogger<LocalDamModelService>>()));
-
-        services.AddHostedService<LocalDamWarmupHostedService>();
 
         // Authentication & Authorization Services
         services.AddSingleton<IEntraIdValidationService, EntraIdValidationService>();

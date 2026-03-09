@@ -1,4 +1,5 @@
 using Azure.Storage.Blobs.Models;
+using BehavioralHealthSystem.Helpers.Models;
 using BehavioralHealthSystem.Helpers.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
@@ -95,10 +96,7 @@ public class SaveChatTranscriptFunction
             // PostgreSQL storage path
             if (_usePostgres && _chatTranscriptService != null)
             {
-                // Re-deserialize into shared model type for PG storage
-                var sharedData = JsonSerializer.Deserialize<BehavioralHealthSystem.Helpers.Models.ChatTranscriptData>(
-                    JsonSerializer.Serialize(requestData.TranscriptData, deserializeOptions), deserializeOptions)!;
-                await _chatTranscriptService.SaveTranscriptAsync(sharedData);
+                await _chatTranscriptService.SaveTranscriptAsync(requestData.TranscriptData);
                 _logger.LogInformation("Successfully saved chat transcript to PostgreSQL for user {UserId}, session {SessionId}",
                     requestData.TranscriptData.UserId, requestData.TranscriptData.SessionId);
 
@@ -330,41 +328,5 @@ public class SaveChatTranscriptFunction
     }
 }
 
-public class SaveChatTranscriptRequest
-{
-    public ChatTranscriptData TranscriptData { get; set; } = null!;
-    public Dictionary<string, object>? Metadata { get; set; }
-    public string? ContainerName { get; set; }
-    public string? FileName { get; set; }
-}
-
-public class ChatTranscriptData
-{
-    public string UserId { get; set; } = "";
-    public string SessionId { get; set; } = "";
-    public string CreatedAt { get; set; } = "";
-    public string LastUpdated { get; set; } = "";
-    public string? SessionEndedAt { get; set; }
-    public bool IsActive { get; set; } = true;
-    public List<ChatMessageData> Messages { get; set; } = new();
-    public ChatSessionMetadata? Metadata { get; set; }
-}
-
-public class ChatMessageData
-{
-    public string Id { get; set; } = "";
-    public string Role { get; set; } = ""; // "user", "assistant", "system"
-    public string Content { get; set; } = "";
-    public string Timestamp { get; set; } = "";
-    public string? MessageType { get; set; } // Optional: "phq-assessment", "general-chat", etc.
-    public Dictionary<string, object>? AdditionalData { get; set; }
-}
-
-public class ChatSessionMetadata
-{
-    public string? UserAgent { get; set; }
-    public string? ClientTimezone { get; set; }
-    public string? IpAddress { get; set; }
-    public string? Platform { get; set; }
-    public Dictionary<string, object>? CustomData { get; set; }
-}
+// Models (SaveChatTranscriptRequest, ChatTranscriptData, ChatMessageData, ChatSessionMetadata)
+// are defined in BehavioralHealthSystem.Helpers.Models.ChatTranscriptModels

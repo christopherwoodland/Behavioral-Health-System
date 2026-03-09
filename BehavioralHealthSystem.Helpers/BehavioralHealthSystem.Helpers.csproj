@@ -4,6 +4,12 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>BehavioralHealthSystem.Helpers</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>christopherwoodland</Authors>
+    <Description>Shared helpers, models, configuration, and services for the Behavioral Health System.</Description>
+    <RepositoryUrl>https://github.com/christopherwoodland/Behavioral-Health-System</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

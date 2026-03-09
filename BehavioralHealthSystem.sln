@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Agents", "BehavioralHealthSystem.Agents\BehavioralHealthSystem.Agents.csproj", "{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BehavioralHealthSystem.Dam", "BehavioralHealthSystem.Dam\BehavioralHealthSystem.Dam.csproj", "{BD57E296-AFD6-4F59-AC64-3C206F9998DA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -69,6 +71,18 @@ Global
 		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x64.Build.0 = Release|Any CPU
 		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x86.ActiveCfg = Release|Any CPU
 		{3EE8E44D-5BC9-44EC-82C1-8AF31F7120BD}.Release|x86.Build.0 = Release|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Debug|x64.Build.0 = Debug|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Debug|x86.Build.0 = Debug|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Release|x64.ActiveCfg = Release|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Release|x64.Build.0 = Release|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Release|x86.ActiveCfg = Release|Any CPU
+		{BD57E296-AFD6-4F59-AC64-3C206F9998DA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

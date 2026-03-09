@@ -8,6 +8,7 @@ COPY BehavioralHealthSystem.sln ./
 COPY BehavioralHealthSystem.Functions/BehavioralHealthSystem.Functions.csproj ./BehavioralHealthSystem.Functions/
 COPY BehavioralHealthSystem.Helpers/BehavioralHealthSystem.Helpers.csproj ./BehavioralHealthSystem.Helpers/
 COPY BehavioralHealthSystem.Agents/BehavioralHealthSystem.Agents.csproj ./BehavioralHealthSystem.Agents/
+COPY BehavioralHealthSystem.Dam/BehavioralHealthSystem.Dam.csproj ./BehavioralHealthSystem.Dam/
 
 # Restore dependencies
 RUN dotnet restore BehavioralHealthSystem.Functions/BehavioralHealthSystem.Functions.csproj
@@ -32,6 +33,9 @@ COPY BehavioralHealthSystem.Agents/DependencyInjection/ ./BehavioralHealthSystem
 COPY BehavioralHealthSystem.Agents/Interfaces/ ./BehavioralHealthSystem.Agents/Interfaces/
 COPY BehavioralHealthSystem.Agents/Models/ ./BehavioralHealthSystem.Agents/Models/
 COPY BehavioralHealthSystem.Agents/Plugins/ ./BehavioralHealthSystem.Agents/Plugins/
+COPY BehavioralHealthSystem.Dam/*.cs ./BehavioralHealthSystem.Dam/
+COPY BehavioralHealthSystem.Dam/Services/ ./BehavioralHealthSystem.Dam/Services/
+COPY BehavioralHealthSystem.Dam/DependencyInjection/ ./BehavioralHealthSystem.Dam/DependencyInjection/
 
 # Build and publish with Release configuration
 WORKDIR /src/BehavioralHealthSystem.Functions

@@ -109,7 +109,14 @@ public class LocalFileRetrievalPlugin
                 "or provide a full file path.");
         }
 
-        var resolved = Path.Combine(baseDir, filePath);
+        var resolved = Path.GetFullPath(Path.Combine(baseDir, filePath));
+        var fullBaseDir = Path.GetFullPath(baseDir);
+        if (!resolved.StartsWith(fullBaseDir, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new UnauthorizedAccessException(
+                $"Path traversal detected. Resolved path '{resolved}' is outside the recordings directory.");
+        }
+
         _logger.LogDebug("[{PluginName}] Resolved relative path '{RelativePath}' to '{ResolvedPath}'",
             nameof(LocalFileRetrievalPlugin), filePath, resolved);
         return resolved;

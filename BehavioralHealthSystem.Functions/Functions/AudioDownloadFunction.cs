@@ -63,6 +63,21 @@ public class AudioDownloadFunction
                 return badRequest;
             }
 
+            // Validate the blob URL host matches our configured storage account
+            var expectedHost = _blobServiceClient.Uri.Host;
+            if (!blobUri.Host.Equals(expectedHost, StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogWarning("Blob URL host mismatch. Expected: {ExpectedHost}, Got: {ActualHost}",
+                    expectedHost, blobUri.Host);
+                var forbidden = req.CreateResponse(HttpStatusCode.Forbidden);
+                await forbidden.WriteAsJsonAsync(new
+                {
+                    success = false,
+                    message = "Blob URL does not belong to the configured storage account"
+                });
+                return forbidden;
+            }
+
             // Extract container name and blob path from URL
             // URL format: https://<account>.blob.core.windows.net/<container>/<blob-path>
             var pathSegments = blobUri.AbsolutePath.TrimStart('/').Split('/', 2);

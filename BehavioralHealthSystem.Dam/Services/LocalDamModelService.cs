@@ -1,6 +1,8 @@
 using System.Net.Http.Json;
+using BehavioralHealthSystem.Configuration;
+using BehavioralHealthSystem.Models;
 
-namespace BehavioralHealthSystem.Functions.Services;
+namespace BehavioralHealthSystem.Dam.Services;
 
 public class LocalDamModelService : ILocalDamModelService
 {

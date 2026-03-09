@@ -87,6 +87,9 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 │  ├── BehavioralHealthSystem.Agents  │  Semantic Kernel audio pipeline
 │  │   (Fetch → Convert → Predict)   │  (Fetch → Convert → DAM Predict)
 │  │                                  │
+│  ├── BehavioralHealthSystem.Dam     │  DAM pipeline client (NuGet)
+│  │   (Shared DAM Library)           │  Session init, predict, warmup
+│  │                                  │
 │  └── BehavioralHealthSystem.Helpers │  Shared models, services,
 │      (Shared Library)              │  validators, configuration
 └──────────────┬──────────────────────┘
@@ -112,7 +115,9 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 ```
 Functions ──references──► Helpers (models, services, validators)
 Functions ──references──► Agents  (Semantic Kernel audio pipeline)
+Functions ──references──► Dam     (DAM pipeline client)
 Agents   ──references──► Helpers
+Dam      ──references──► Helpers  (models, config, retry policies)
 DSM5Import ─references──► Helpers (DSM5DataService, AzureContentUnderstandingService)
 Tests    ──tests──► Functions, Helpers
 ```
@@ -123,6 +128,7 @@ Tests    ──tests──► Functions, Helpers
 |---------|-------------|--------|
 | **BehavioralHealthSystem.Web** | React/TypeScript SPA — clinical workflow UI | [README](BehavioralHealthSystem.Web/README.md) |
 | **BehavioralHealthSystem.Functions** | .NET 8 Azure Functions API — all server-side operations | [README](BehavioralHealthSystem.Functions/README.md) |
+| **BehavioralHealthSystem.Dam** | Shared DAM pipeline client — NuGet package for cross-project reuse | [README](BehavioralHealthSystem.Dam/README.md) |
 | **BehavioralHealthSystem.Helpers** | Shared .NET library — models, services, validators, config | [README](BehavioralHealthSystem.Helpers/README.md) |
 | **BehavioralHealthSystem.Agents** | Semantic Kernel audio processing pipeline | [README](BehavioralHealthSystem.Agents/README.md) |
 | **BehavioralHealthSystem.DSM5Import** | CLI tool for DSM-5 diagnostic data import | [README](BehavioralHealthSystem.DSM5Import/README.md) |
@@ -287,6 +293,23 @@ See the [Web README](BehavioralHealthSystem.Web/README.md) for details.
 ```powershell
 .\scripts\build-and-push-containers.ps1 -Environment production -Tag vX.Y.Z
 ```
+
+### NuGet Package Publish
+
+The **Dam** and **Helpers** libraries are published to [GitHub Packages](https://github.com/christopherwoodland/Behavioral-Health-System/packages) for consumption by external projects (e.g., evaluation harnesses).
+
+```powershell
+# Set your GitHub PAT (needs write:packages scope)
+$env:GITHUB_TOKEN = "<your-pat>"
+
+# Pack and push both packages
+.\scripts\publish-nuget-packages.ps1 -Version 1.0.0
+
+# Pack only (no push)
+.\scripts\publish-nuget-packages.ps1 -PackOnly
+```
+
+See the [Dam README](BehavioralHealthSystem.Dam/README.md) for consuming the package in another project.
 
 ### Azure Bicep Deployment
 

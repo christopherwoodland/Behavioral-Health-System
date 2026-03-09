@@ -1,4 +1,4 @@
-namespace BehavioralHealthSystem.Functions.Services;
+namespace BehavioralHealthSystem.Dam.Services;
 
 public sealed class LocalDamWarmupHostedService : IHostedService
 {

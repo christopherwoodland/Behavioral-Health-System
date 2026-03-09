@@ -43,15 +43,16 @@ public class AudioUploadFunctions
     {
         _logger.LogInformation("🎤 Processing audio file upload request");
 
-        // Validate API key (skipped in development mode)
-        if (!_apiKeyValidation.ValidateApiKey(req))
+        // Validate request using async method to support Entra ID Bearer tokens
+        var validationResult = await _apiKeyValidation.ValidateRequestAsync(req);
+        if (!validationResult.IsValid)
         {
-            _logger.LogWarning("API key validation failed for upload-audio request");
+            _logger.LogWarning("Request validation failed for upload-audio request");
             var unauthorizedResponse = req.CreateResponse(HttpStatusCode.Unauthorized);
             await unauthorizedResponse.WriteAsJsonAsync(new
             {
                 success = false,
-                message = "Unauthorized - valid API key required"
+                message = "Unauthorized - valid credentials required"
             });
             return unauthorizedResponse;
         }

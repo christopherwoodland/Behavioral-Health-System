@@ -33,6 +33,10 @@ public class AudioDownloadFunctionTests
         _mockBlobClient = new Mock<BlobClient>();
 
         _mockBlobServiceClient
+            .Setup(x => x.Uri)
+            .Returns(new Uri("https://storageaccount.blob.core.windows.net"));
+
+        _mockBlobServiceClient
             .Setup(x => x.GetBlobContainerClient(It.IsAny<string>()))
             .Returns(_mockContainerClient.Object);
 
@@ -111,6 +115,41 @@ public class AudioDownloadFunctionTests
 
         // Assert
         Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    #endregion
+
+    #region SSRF Protection Tests
+
+    [TestMethod]
+    public async Task DownloadAudio_DifferentStorageHost_ReturnsForbidden()
+    {
+        // Arrange - URL pointing to a different storage account
+        var blobUrl = Uri.EscapeDataString(
+            "https://malicious.blob.core.windows.net/audio-uploads/users/user1/session-123.wav");
+        var request = CreateMockHttpRequest(
+            $"http://localhost/api/audio/download?url={blobUrl}");
+
+        // Act
+        var response = await _function.DownloadAudioAsync(request.Object);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [TestMethod]
+    public async Task DownloadAudio_ExternalHost_ReturnsForbidden()
+    {
+        // Arrange - URL pointing to an external host
+        var blobUrl = Uri.EscapeDataString("https://evil.com/sensitive-data");
+        var request = CreateMockHttpRequest(
+            $"http://localhost/api/audio/download?url={blobUrl}");
+
+        // Act
+        var response = await _function.DownloadAudioAsync(request.Object);
+
+        // Assert
+        Assert.AreEqual(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     #endregion

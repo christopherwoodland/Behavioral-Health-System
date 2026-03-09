@@ -26,6 +26,7 @@ services:
       - FUNCTIONS_WORKER_RUNTIME=dotnet-isolated
       - ASPNETCORE_ENVIRONMENT=Development
       - AZURE_FUNCTIONS_ENVIRONMENT=Development
+      - WEBSITE_HOSTNAME=localhost:80
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
@@ -67,7 +68,7 @@ services:
       # Azure Storage
       - AZURE_STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}
       # Local DAM Model
-      - LOCAL_DAM_BASE_URL=http://host.docker.internal:8000
+      - LOCAL_DAM_BASE_URL=http://dam:8000
       - LOCAL_DAM_INITIATE_PATH=initiate
       - LOCAL_DAM_PREDICTION_PATH=predict
       - LOCAL_DAM_MODEL_ID=KintsugiHealth/dam
@@ -99,6 +100,29 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    depends_on:
+      dam:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # DAM Model Server - Development
+  # Self-hosted Depression & Anxiety Model for audio analysis
+  dam:
+    image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest
+    container_name: bhs-dam-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - DAM_MOCK_MODE=false
+      - DAM_PRELOAD_ON_STARTUP=true
+      - DAM_PROCESS_START_METHOD=spawn
+      - UVICORN_WORKERS=2
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
     restart: unless-stopped
 
   # BHS Web UI - Development Environment

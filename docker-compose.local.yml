@@ -16,8 +16,10 @@ services:
     ports:
       - "7071:80"
     environment:
-      # Storage connection - Uses Managed Identity (account name only)
-      - AzureWebJobsStorage__accountName=${STORAGE_ACCOUNT_NAME}
+      # Storage connection - Use local Azurite for Durable Functions (avoids lease conflicts with deployed Azure instance)
+      - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
+      # Override hub name to avoid conflicts with deployed instances
+      - AzureFunctionsJobHost__extensions__durableTask__hubName=KintsugiHealthHubLocal
       - DSM5_STORAGE_ACCOUNT_NAME=${DSM5_STORAGE_ACCOUNT_NAME}
       # Application Insights - Key Vault reference
       - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
@@ -94,6 +96,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
+      azurite:
+        condition: service_healthy
       db:
         condition: service_healthy
       dam:
@@ -104,6 +108,26 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    restart: unless-stopped
+
+  # Azurite - Local Azure Storage Emulator
+  # Required for Durable Functions orchestration (task hub queues, tables, blobs)
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    container_name: bhs-azurite-local
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    volumes:
+      - bhs-azurite-local:/data
+    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "10001"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # PostgreSQL Database - Local
@@ -183,6 +207,9 @@ services:
     restart: unless-stopped
 
 volumes:
+  bhs-azurite-local:
+    name: bhs-azurite-local
+    driver: local
   bhs-pgdata-local:
     name: bhs-pgdata-local
     driver: local

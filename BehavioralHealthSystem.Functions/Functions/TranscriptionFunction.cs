@@ -124,33 +124,13 @@ public class TranscriptionFunction
             }
             else if (detectedFormat == "webm")
             {
-                // WebM with Opus codec - Azure Speech Fast Transcription API does NOT support WebM container
-                // We need to convert to WAV. Try using MediaFoundation if available on the system.
-                _logger.LogInformation("[{FunctionName}] Audio is WebM format - attempting conversion to WAV", nameof(TranscribeAudio));
-
-                try
-                {
-                    processedAudioData = ConvertToWavUsingMediaFoundation(audioData, detectedFormat);
-                    fileExtension = "wav";
-                    mimeType = "audio/wav";
-                    _logger.LogInformation("[{FunctionName}] Successfully converted WebM to WAV: {OriginalSize} -> {NewSize} bytes",
-                        nameof(TranscribeAudio), audioData.Length, processedAudioData.Length);
-                }
-                catch (Exception ex)
-                {
-                    // MediaFoundation conversion failed - WebM is not supported
-                    _logger.LogError(ex, "[{FunctionName}] Failed to convert WebM to WAV. WebM/Opus format is not supported by Azure Speech Fast Transcription API. Please record audio in WAV or MP3 format.",
-                        nameof(TranscribeAudio));
-
-                    var unsupportedResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                    await unsupportedResponse.WriteStringAsync(JsonSerializer.Serialize(new
-                    {
-                        error = "Unsupported audio format",
-                        details = "WebM/Opus audio format is not supported. Please record in WAV or MP3 format.",
-                        detectedFormat = detectedFormat
-                    }));
-                    return unsupportedResponse;
-                }
+                // WebM/Opus is supported by the Azure Speech Fast Transcription API natively.
+                // Pass directly without conversion — MediaFoundation is Windows-only and not
+                // available in Linux containers.
+                processedAudioData = audioData;
+                fileExtension = "webm";
+                mimeType = "audio/webm";
+                _logger.LogInformation("[{FunctionName}] Audio is WebM format - passing directly to Azure Speech API", nameof(TranscribeAudio));
             }
             else if (detectedFormat == "m4a" || detectedFormat == "mp4")
             {

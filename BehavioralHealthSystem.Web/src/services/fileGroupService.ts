@@ -139,7 +139,13 @@ class FileGroupService {
 
       return response.fileGroup || null;
     } catch (error) {
-      log.error('Error getting file group from API, falling back to localStorage:', error);
+      // 404 means the group only exists in localStorage (e.g. created before API was available)
+      const is404 = error instanceof Error && 'code' in error && (error as { code: string }).code === 'HTTP_404';
+      if (is404) {
+        log.debug('[FileGroupService] File group not found in API, falling back to localStorage:', { groupId });
+      } else {
+        log.error('Error getting file group from API, falling back to localStorage:', error);
+      }
       // Fallback to localStorage
       const localResponse = await this.getFileGroupsFromLocalStorage();
       return localResponse.fileGroups.find(g => g.groupId === groupId) || null;

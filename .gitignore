@@ -878,6 +878,10 @@ appsettings.*.json
 secrets.json
 *.secrets.json
 
+# Bicep parameter files with actual secrets (use *.template.json for templates)
+# private.parameters.json contains kintsugiApiKey (@secure param) — never commit with real values
+infrastructure/bicep/parameters/private.parameters.json
+
 # User secrets and sensitive configuration
 **/UserSecrets/
 **/.microsoft/usersecrets/
@@ -893,5 +897,8 @@ BehavioralHealthSystem.DSM5Import/dsm/single-pages/*.pdf
 
 # Import progress files (may contain file paths and error details)
 **/dsm5-import-progress.json
+
+# AKS deployment temp directory (contains patched k8s manifests with real endpoint/key values)
+infrastructure/scripts/.aks-deploy-tmp/
 
 

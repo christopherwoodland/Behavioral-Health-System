@@ -1,0 +1,31 @@
+title = "Behavioral Health System - Gitleaks Configuration"
+
+# ---------------------------------------------------------------------------
+# Allowlist: known-safe values that would otherwise trigger false positives
+# ---------------------------------------------------------------------------
+[allowlist]
+  description = "Known safe / public values"
+
+  regexes = [
+    # Azurite (Azure Storage Emulator) default DEVELOPMENT key.
+    # This is the publicly documented, hardcoded key shipped with every Azurite
+    # installation — it provides no access to real Azure resources.
+    # Ref: https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite#well-known-storage-account-and-key
+    "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==",
+
+    # ARM template listKeys() expressions in compiled Bicep JSON.
+    # These are ARM template language functions evaluated by the ARM engine at
+    # deploy time — they are NOT embedded secret values.
+    "listKeys\\(",
+  ]
+
+  # Files that are safe to skip entirely (build artifacts / compiled Bicep)
+  paths = [
+    # Compiled Bicep outputs — ARM template functions only, no real secrets
+    "infrastructure/bicep/main.json",
+    "infrastructure/bicep/main-aks.json",
+    "infrastructure/bicep/update-container-apps.json",
+    "infrastructure/bicep/modules/function-app.json",
+    # Legacy ARM template
+    "BehavioralHealthSystem.Helpers/Deploy/azuredeploy.json",
+  ]

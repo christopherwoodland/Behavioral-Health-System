@@ -1,0 +1,99 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "_comment": "TEMPLATE FILE — Copy to aks-dev.parameters.json (or aks-prod.parameters.json) and fill in your values. The aks-dev.parameters.json file for the shared dev environment is committed so all devs share the same config. For your own environment or production, create a new file and do not commit secrets.",
+  "parameters": {
+    "environment": {
+      "value": "dev",
+      "_comment": "Allowed: dev"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "appName": {
+      "value": "bhs"
+    },
+    "resourceGroupName": {
+      "value": "bhs-aks",
+      "_comment": "Resource group that will be created for all AKS resources"
+    },
+    "tags": {
+      "value": {
+        "Application": "Behavioral Health System",
+        "Environment": "dev",
+        "ManagedBy": "Bicep",
+        "NetworkMode": "Private",
+        "DeploymentMode": "AKS",
+        "CostCenter": "Engineering",
+        "Project": "BHS"
+      }
+    },
+
+    "existingServicesResourceGroup": {
+      "value": "<SHARED-SERVICES-RG>",
+      "_comment": "Resource group containing the pre-existing ACR, Key Vault, AI Services. Typically 'bhs-development-public'."
+    },
+    "acrName": {
+      "value": "<ACR-NAME>",
+      "_comment": "Azure Container Registry name (without .azurecr.io). Get from: az acr list -g <existingServicesResourceGroup> --query '[].name' -o tsv"
+    },
+    "acrLoginServer": {
+      "value": "<ACR-NAME>.azurecr.io",
+      "_comment": "Full ACR login server hostname"
+    },
+    "keyVaultName": {
+      "value": "<KEY-VAULT-NAME>",
+      "_comment": "Key Vault name. Get from: az keyvault list -g <existingServicesResourceGroup> --query '[].name' -o tsv"
+    },
+    "keyVaultUri": {
+      "value": "https://<KEY-VAULT-NAME>.vault.azure.net/",
+      "_comment": "Key Vault URI"
+    },
+    "speechAccountName": {
+      "value": "<SPEECH-ACCOUNT-NAME>",
+      "_comment": "Azure Speech or AI Services account name (in existingServicesResourceGroup)"
+    },
+    "aiServicesAccountName": {
+      "value": "<AI-SERVICES-ACCOUNT-NAME>",
+      "_comment": "Azure AI Services / Cognitive Services account name used for OpenAI + Speech"
+    },
+    "openAiEndpoint": {
+      "value": "https://<AI-SERVICES-ACCOUNT-NAME>.cognitiveservices.azure.com/",
+      "_comment": "IMPORTANT: Use the custom-subdomain endpoint (*.cognitiveservices.azure.com), NOT the regional endpoint (*.api.cognitive.microsoft.com). The regional endpoint does not support managed identity token auth."
+    },
+
+    "postgresHost": {
+      "value": "<PG-SERVER-NAME>.postgres.database.azure.com",
+      "_comment": "PostgreSQL Flexible Server FQDN. Get from: az postgres flexible-server list --query '[].fullyQualifiedDomainName' -o tsv"
+    },
+    "postgresDatabase": {
+      "value": "bhs_dev"
+    },
+    "postgresUser": {
+      "value": "bhs-api-dam",
+      "_comment": "Managed identity user for Postgres — must be created via Fix-PostgresRole.ps1 after first deploy"
+    },
+
+    "azureAdTenantId": {
+      "value": "<TENANT-ID>",
+      "_comment": "Azure AD / Entra ID tenant ID"
+    },
+    "azureAdClientId": {
+      "value": "<UI-APP-CLIENT-ID>",
+      "_comment": "Entra ID app registration Client ID for the frontend SPA. Run Setup-EntraID.ps1 to create."
+    },
+    "azureAdApiClientId": {
+      "value": "<API-APP-CLIENT-ID>",
+      "_comment": "Entra ID app registration Client ID for the backend API. Run Setup-EntraID.ps1 to create."
+    },
+
+    "damImage": {
+      "value": "<ACR-NAME>.azurecr.io/bhs-dam-selfhost:latest",
+      "_comment": "DAM model image — pulled from ACR. Must be imported from the DAM release registry."
+    },
+    "containerImageTag": {
+      "value": "development",
+      "_comment": "Image tag for bhs-api and bhs-web. Use 'development' for dev, 'latest' for prod."
+    }
+  }
+}

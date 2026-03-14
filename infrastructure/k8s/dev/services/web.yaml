@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bhs-web-svc
+  namespace: bhs
+  labels:
+    app: bhs-web
+    environment: dev
+spec:
+  type: ClusterIP
+  selector:
+    app: bhs-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP

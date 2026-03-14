@@ -77,7 +77,7 @@ param contentUnderstandingEndpoint string = 'https://bhs-development-public-foun
 param azureAdClientId string = '7d8eeaee-1790-43b3-93d5-0f9ed9f6e18b'
 
 @description('Azure Tenant ID')
-param tenantId string = '36584371-2a86-4e03-afee-c2ba00e5e30e'
+param tenantId string = '16b3c013-d300-468d-ac64-7eda0820b6d3'
 
 // Agent Configuration
 @description('Extended Assessment OpenAI Deployment')

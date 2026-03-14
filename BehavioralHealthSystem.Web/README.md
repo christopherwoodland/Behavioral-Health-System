@@ -83,10 +83,26 @@ Key `VITE_*` variables (set in `.env` or `.env.local`):
 |----------|---------|
 | `VITE_API_BASE_URL` | Functions API base URL (default: `http://localhost:7071/api`) |
 | `VITE_ENABLE_ENTRA_AUTH` | Enable Microsoft Entra ID authentication |
-| `VITE_AZURE_TENANT_ID` | Entra ID tenant |
-| `VITE_AZURE_CLIENT_ID` | Entra ID app client ID |
+| `VITE_AZURE_TENANT_ID` | Entra ID tenant ID |
+| `VITE_AZURE_CLIENT_ID` | Frontend SPA app registration client ID (`BHS Development UI`) |
+| `VITE_AZURE_API_CLIENT_ID` | Backend API app registration client ID (`BHS Development API`). Used to acquire the API access token, which carries the `roles` claim. **Required for role-based access to work.** |
+| `VITE_AZURE_AUTHORITY` | Entra ID authority URL (`https://login.microsoftonline.com/{tenantId}`) |
+| `VITE_AZURE_REDIRECT_URI` | Auth redirect URI |
 | `VITE_STORAGE_CONTAINER_NAME` | Azure Blob container for uploads |
 | `VITE_ENABLE_DEBUG_LOGGING` | Enable verbose console logging |
+
+#### Authentication / Authorization Model
+
+The app uses a **two-app-registration** Entra ID model:
+
+| Registration | Purpose |
+|---|---|
+| `BHS Development UI` | SPA app — hosts the redirect URIs, initiates login |
+| `BHS Development API` | API app — exposes `access_as_user` scope, carries `roles` claim |
+
+**How roles are resolved:** At sign-in, MSAL requests `api://{VITE_AZURE_API_CLIENT_ID}/access_as_user` alongside the standard Graph scopes. After login, `AuthContext` silently acquires an API access token and decodes its `roles` claim (assigned via the API enterprise app) to determine the user's role (`Admin` or `ControlPanel`).
+
+**Consent:** The API app uses `preAuthorizedApplications` to pre-authorize the UI client — no user or admin consent dialog appears. Run `.\infrastructure\scripts\Setup-EntraID.ps1` to configure this.
 
 ## Testing
 

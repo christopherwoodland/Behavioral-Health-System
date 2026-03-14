@@ -109,7 +109,7 @@
     },
     "tenantId": {
       "type": "string",
-      "defaultValue": "36584371-2a86-4e03-afee-c2ba00e5e30e",
+      "defaultValue": "16b3c013-d300-468d-ac64-7eda0820b6d3",
       "metadata": {
         "description": "Azure Tenant ID"
       }

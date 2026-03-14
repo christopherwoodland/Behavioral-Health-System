@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: bhs-dam-svc
+  namespace: bhs
+  labels:
+    app: bhs-dam
+    environment: dev
+spec:
+  # ClusterIP only — DAM is never exposed externally
+  type: ClusterIP
+  selector:
+    app: bhs-dam
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP

@@ -14,9 +14,6 @@ param location string = 'eastus2'
 @description('Application name prefix')
 param appName string = 'bhs'
 
-@description('Your IP address for Key Vault firewall (for initial setup)')
-param deploymentClientIP string
-
 @description('Optional custom resource group name (defaults to appName-environment-rg)')
 param resourceGroupName string = ''
 
@@ -132,7 +129,7 @@ module keyVault './modules/keyvault.bicep' = {
     uniqueSuffix: uniqueSuffix
     tags: tags
     privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
-    deploymentClientIP: deploymentClientIP
+    vnetId: networking.outputs.vnetId
   }
 }
 

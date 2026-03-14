@@ -16,11 +16,12 @@ param tags object
 @description('Private endpoint subnet ID')
 param privateEndpointSubnetId string
 
-@description('Deployment client IP for initial access')
-param deploymentClientIP string
+@description('VNet ID for private DNS zone link')
+param vnetId string
 
-var keyVaultName = '${appName}-${environment}-kv-${uniqueSuffix}'
-var privateEndpointName = '${keyVaultName}-pe'
+var keyVaultName    = '${appName}-${environment}-kv-${uniqueSuffix}'
+var peName          = '${keyVaultName}-pe'
+var dnsZoneName     = 'privatelink.vaultcore.azure.net'
 
 // Key Vault
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
@@ -40,35 +41,57 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     networkAcls: {
       bypass: 'AzureServices'
       defaultAction: 'Deny'
-      ipRules: [
-        {
-          value: deploymentClientIP
-        }
-      ]
+      ipRules: []
       virtualNetworkRules: []
     }
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: 'Disabled'
   }
 }
 
-// Private Endpoint for Key Vault
+// Private Endpoint
 resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-05-01' = {
-  name: privateEndpointName
+  name: peName
   location: location
   tags: tags
   properties: {
-    subnet: {
-      id: privateEndpointSubnetId
-    }
+    subnet: { id: privateEndpointSubnetId }
     privateLinkServiceConnections: [
       {
-        name: privateEndpointName
+        name: peName
         properties: {
           privateLinkServiceId: keyVault.id
-          groupIds: [
-            'vault'
-          ]
+          groupIds: [ 'vault' ]
         }
+      }
+    ]
+  }
+}
+
+// Private DNS Zone
+resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
+  name: dnsZoneName
+  location: 'global'
+  tags: tags
+}
+
+resource dnsZoneLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
+  parent: privateDnsZone
+  name: '${keyVaultName}-dns-link'
+  location: 'global'
+  properties: {
+    virtualNetwork: { id: vnetId }
+    registrationEnabled: false
+  }
+}
+
+resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-05-01' = {
+  parent: privateEndpoint
+  name: 'kv-dns-zone-group'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'vault'
+        properties: { privateDnsZoneId: privateDnsZone.id }
       }
     ]
   }

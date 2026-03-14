@@ -1,0 +1,118 @@
+# ConfigMap: non-sensitive environment variables for api and web pods.
+# Secrets (KintsugiApiKey, App Insights connection string) are mounted via the
+# SecretProviderClass (Key Vault CSI driver) — see secretproviderclass.yaml.
+# The AZURE_CLIENT_ID / AZURE_TENANT_ID / AZURE_FEDERATED_TOKEN_FILE vars for
+# Workload Identity are injected automatically by the AKS mutating webhook.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bhs-api-config
+  namespace: bhs
+  labels:
+    app: bhs-api
+    environment: dev
+data:
+  # ── Azure Functions runtime ─────────────────────────────────────────────────
+  FUNCTIONS_WORKER_RUNTIME: "dotnet-isolated"
+  ASPNETCORE_ENVIRONMENT: "Development"
+  AZURE_FUNCTIONS_ENVIRONMENT: "Development"
+  WEBSITE_HOSTNAME: "bhs-api-svc:80"
+
+  # ── Storage (Managed Identity — account name only) ──────────────────────────
+  # AzureWebJobsStorage__accountName is set from Bicep output (Deploy-AKS.ps1
+  # patches this ConfigMap with the real storage account name).
+  DSM5_STORAGE_ACCOUNT_NAME: "__AKS_STORAGE_ACCOUNT_NAME__"
+  AzureWebJobsStorage__accountName: "__AKS_STORAGE_ACCOUNT_NAME__"
+  AZURE_STORAGE_ACCOUNT_NAME: "__AKS_STORAGE_ACCOUNT_NAME__"
+  DSM5_CONTAINER_NAME: "dsm5-data"
+  DSM5_EXTRACTION_METHOD: "CONTENT_UNDERSTANDING"
+
+  # ── PostgreSQL (Managed Identity) ────────────────────────────────────────────
+  STORAGE_BACKEND: "PostgreSQL"
+  POSTGRES_HOST: "__POSTGRES_HOST__"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DATABASE: "__POSTGRES_DATABASE__"
+  POSTGRES_USERNAME: "__POSTGRES_USER__"
+  POSTGRES_PASSWORD: ""
+  POSTGRES_USE_MANAGED_IDENTITY: "true"
+
+  # ── Azure Speech ─────────────────────────────────────────────────────────────
+  # Must be a custom-subdomain URL (e.g. https://<name>.cognitiveservices.azure.com/)
+  # for managed identity token auth to work. Regional endpoints (eastus2.api.cognitive.microsoft.com)
+  # do NOT support token auth and will return BadRequest.
+  AZURE_SPEECH_ENDPOINT: "__OPENAI_ENDPOINT__"
+  AZURE_SPEECH_REGION: "eastus2"
+  AZURE_SPEECH_LOCALE: "en-US"
+  AZURE_SPEECH_API_VERSION: "2024-11-15"
+
+  # ── Azure OpenAI ─────────────────────────────────────────────────────────────
+  AZURE_OPENAI_ENABLED: "true"
+  AZURE_OPENAI_API_VERSION: "2025-04-01-preview"
+  AZURE_OPENAI_DEPLOYMENT: "gpt-5-mini"
+  AZURE_OPENAI_ENDPOINT: "__OPENAI_ENDPOINT__"
+
+  # ── Extended Assessment OpenAI ───────────────────────────────────────────────
+  EXTENDED_ASSESSMENT_OPENAI_ENABLED: "true"
+  EXTENDED_ASSESSMENT_OPENAI_API_VERSION: "2025-04-01-preview"
+  EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT: "gpt-5.2"
+  EXTENDED_ASSESSMENT_OPENAI_ENDPOINT: "__OPENAI_ENDPOINT__"
+  EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS: "4000"
+  EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE: "0.2"
+  EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS: "120"
+  EXTENDED_ASSESSMENT_USE_FALLBACK: "false"
+
+  # ── Content Understanding / Document Intelligence ────────────────────────────
+  AZURE_CONTENT_UNDERSTANDING_ENDPOINT: "__OPENAI_ENDPOINT__"
+  DocumentIntelligenceEndpoint: "__OPENAI_ENDPOINT__"
+  DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT: "__OPENAI_ENDPOINT__"
+
+  # ── Agent ────────────────────────────────────────────────────────────────────
+  AGENT_ENDPOINT: "__OPENAI_ENDPOINT__"
+  AGENT_MODEL_DEPLOYMENT: "gpt-5.2"
+  AGENT_ENABLED: "true"
+  AGENT_SUPPORTS_TEMPERATURE: "false"
+  AGENT_SUPPORTS_MAX_TOKENS: "false"
+  AGENT_TIMEOUT_SECONDS: "60"
+  GRAMMAR_AGENT_NAME: "GrammarCorrectionAgent"
+  GRAMMAR_AGENT_INCLUDE_EXPLANATIONS: "false"
+  GRAMMAR_AGENT_PRESERVE_FORMATTING: "true"
+  GRAMMAR_AGENT_SUGGEST_ALTERNATIVES: "false"
+
+  # ── DAM (local — ClusterIP service) ──────────────────────────────────────────
+  LOCAL_DAM_BASE_URL: "http://bhs-dam-svc:8000"
+  LOCAL_DAM_INITIATE_PATH: "initiate"
+  LOCAL_DAM_PREDICTION_PATH: "predict"
+  LOCAL_DAM_MODEL_ID: "KintsugiHealth/dam"
+  LOCAL_DAM_TIMEOUT_SECONDS: "300"
+  LOCAL_DAM_WARMUP_ON_STARTUP: "true"
+  LOCAL_DAM_HEALTH_PATH: "health"
+  LOCAL_DAM_WARMUP_TIMEOUT_SECONDS: "600"
+  LOCAL_DAM_WARMUP_POLL_SECONDS: "5"
+
+  # ── Entra ID ──────────────────────────────────────────────────────────────────
+  ENTRA_TENANT_ID: "__AZURE_AD_TENANT_ID__"
+  ENTRA_CLIENT_ID: "__AZURE_AD_API_CLIENT_ID__"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bhs-web-config
+  namespace: bhs
+  labels:
+    app: bhs-web
+    environment: dev
+data:
+  # Runtime environment injection (docker-entrypoint-inject-env.sh reads these)
+  VITE_API_BASE_URL: "/api"
+  VITE_ENABLE_AUTH: "true"
+  VITE_ENABLE_ENTRA_AUTH: "true"
+  VITE_ENABLE_DEBUG_LOGGING: "true"
+  VITE_AZURE_TENANT_ID: "__AZURE_AD_TENANT_ID__"
+  VITE_AZURE_CLIENT_ID: "__AZURE_AD_CLIENT_ID__"
+  VITE_AZURE_API_CLIENT_ID: "__AZURE_AD_API_CLIENT_ID__"
+  VITE_AZURE_AUTHORITY: "https://login.microsoftonline.com/__AZURE_AD_TENANT_ID__"
+  VITE_AZURE_KNOWN_AUTHORITIES: "login.microsoftonline.com"
+  VITE_AZURE_REDIRECT_URI: "https://__APP_GATEWAY_FQDN__"
+  VITE_AZURE_ADMIN_GROUP_ID: ""
+  VITE_AZURE_CONTROL_PANEL_GROUP_ID: ""

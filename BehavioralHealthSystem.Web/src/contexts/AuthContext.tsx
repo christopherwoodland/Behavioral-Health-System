@@ -4,6 +4,7 @@ import {
   EventMessage,
   AccountInfo,
   InteractionStatus,
+  InteractionRequiredAuthError,
   PopupRequest,
   RedirectRequest
 } from '@azure/msal-browser';
@@ -14,7 +15,7 @@ import {
   AuthenticatedTemplate as MsalAuthenticatedTemplate,
   UnauthenticatedTemplate as MsalUnauthenticatedTemplate
 } from '@azure/msal-react';
-import { loginRequest, ROLE_CLAIMS, APP_ROLES } from '@/config/authConfig';
+import { loginRequest, apiRequest, ROLE_CLAIMS, APP_ROLES } from '@/config/authConfig';
 import { setAuthenticatedUserId } from '@/utils';
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
@@ -154,18 +155,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Update user info when account changes
+  // Update user info when account changes; also enrich roles from API access token
+  // (roles claim lives on the API app registration's enterprise app, not the frontend SPA's).
   useEffect(() => {
+    if (!account) {
+      setUser(null);
+      setAuthenticatedUserId(null);
+      return;
+    }
+
     const userInfo = createUserInfo(account);
     setUser(userInfo);
+    if (userInfo) setAuthenticatedUserId(userInfo.id);
 
-    // Update the global user ID for API calls
-    if (userInfo) {
-      setAuthenticatedUserId(userInfo.id);
-    } else {
-      setAuthenticatedUserId(null);
+    // Silently acquire API access token and merge its `roles` claim so that
+    // role assignments made on the API enterprise app are honoured by the UI.
+    if (inProgress === InteractionStatus.None) {
+      instance.acquireTokenSilent({ ...apiRequest, account })
+        .then(result => {
+          try {
+            const payload = result.accessToken.split('.')[1];
+            const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            const apiRoles: string[] = Array.isArray(decoded?.roles)
+              ? decoded.roles
+              : decoded?.roles ? [decoded.roles] : [];
+            if (apiRoles.length > 0) {
+              setUser(prev => {
+                if (!prev) return prev;
+                const merged = [...new Set([...prev.roles, ...apiRoles])];
+                const primaryRole = merged.includes(APP_ROLES.ADMIN)
+                  ? APP_ROLES.ADMIN
+                  : merged.includes(APP_ROLES.CONTROL_PANEL)
+                    ? APP_ROLES.CONTROL_PANEL
+                    : prev.primaryRole;
+                return { ...prev, roles: merged, primaryRole };
+              });
+            }
+          } catch {
+            // Ignore token decode errors — ID token roles already applied
+          }
+        })
+        .catch((err) => {
+          // If consent is needed, redirect to login with API scope included so user
+          // is prompted once and the token (with roles) is then available silently.
+          if (err instanceof InteractionRequiredAuthError && inProgress === InteractionStatus.None) {
+            instance.loginRedirect({ ...loginRequest });
+          }
+          // Other failures (network, config) are ignored — roles default to empty
+        });
     }
-  }, [account]);
+  }, [account, inProgress, instance]);
 
   // Update loading state based on MSAL interaction status
   useEffect(() => {

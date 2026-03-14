@@ -1,0 +1,56 @@
+# AGIC-managed Ingress — the Application Gateway Ingress Controller reads this
+# and configures the WAF_v2 App Gateway to route traffic accordingly.
+# Path rules:  /api/*  → bhs-api-svc:80
+#              /*      → bhs-web-svc:80
+# TLS: HTTPS is terminated at the App Gateway using a self-signed certificate
+#      stored in Key Vault (cert name: __APP_GW_TLS_CERT_NAME__).
+#      HTTP → HTTPS redirect is enforced by the ssl-redirect annotation.
+# DAM is never exposed through ingress (ClusterIP-only).
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bhs-ingress
+  namespace: bhs
+  labels:
+    app: behavioral-health-system
+    environment: dev
+  annotations:
+    # Health probe overrides to match our /api/health and / endpoints
+    appgw.ingress.kubernetes.io/health-probe-path: "/"
+    appgw.ingress.kubernetes.io/health-probe-status-codes: "200-399"
+    # Request timeout for long-running API calls (DAM can take up to 5 minutes)
+    appgw.ingress.kubernetes.io/request-timeout: "300"
+    # Rewrite /api/ prefix so the backend receives the original path
+    appgw.ingress.kubernetes.io/use-private-ip: "false"
+    # TLS: reference the self-signed certificate pre-loaded into App Gateway by Deploy-AKS.ps1
+    appgw.ingress.kubernetes.io/ssl-certificate: "__APP_GW_TLS_CERT_NAME__"
+    # Redirect all HTTP traffic to HTTPS at the App Gateway level
+    appgw.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  tls:
+    - hosts:
+        - __APP_GATEWAY_FQDN__
+      # secretName is required for AGIC to derive port 443 and create an HTTPS listener.
+      # The ssl-certificate annotation overrides the actual cert used (App Gateway KV cert),
+      # so this secret does not need to exist as a K8s secret.
+      secretName: bhs-tls-placeholder
+  ingressClassName: azure-application-gateway
+  rules:
+    - host: __APP_GATEWAY_FQDN__
+      http:
+        paths:
+          - path: /api/*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: bhs-api-svc
+                port:
+                  number: 80
+          - path: /*
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: bhs-web-svc
+                port:
+                  number: 80

@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bhs-api
+  namespace: bhs
+  labels:
+    app: bhs-api
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bhs-api
+  template:
+    metadata:
+      labels:
+        app: bhs-api
+        environment: dev
+        # Required label for Workload Identity mutating webhook
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: bhs-api-sa
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: api
+          image: "__ACR_LOGIN_SERVER__/bhs-api:__IMAGE_TAG__"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          envFrom:
+            # Non-sensitive configuration
+            - configMapRef:
+                name: bhs-api-config
+            # Key Vault-synced secrets (KintsugiApiKey, App Insights conn string)
+            - secretRef:
+                name: bhs-api-kv-synced
+          # CSI secret store volume mount (required to trigger secret sync)
+          volumeMounts:
+            - name: kv-secrets
+              mountPath: /mnt/secrets-store
+              readOnly: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 3
+      volumes:
+        - name: kv-secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: bhs-api-kv-secrets
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: bhs-api

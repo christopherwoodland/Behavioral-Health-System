@@ -35,7 +35,7 @@
       "_comment": "Azure AD API Client ID (same as frontend)"
     },
     "azureAdTenantId": {
-      "value": "36584371-2a86-4e03-afee-c2ba00e5e30e",
+      "value": "16b3c013-d300-468d-ac64-7eda0820b6d3",
       "_comment": "Azure AD Tenant ID"
     },
     "containerImageTag": {

@@ -1,0 +1,37 @@
+# ServiceAccount for the api pod — annotated for Workload Identity.
+# The azure.workload.identity/client-id annotation tells the AKS mutating webhook
+# which UAMI to use. Deploy-AKS.ps1 patches __UAMI_CLIENT_ID__ before applying,
+# and creates the federated credential binding after AKS is up.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bhs-api-sa
+  namespace: bhs
+  labels:
+    app: bhs-api
+    environment: dev
+    azure.workload.identity/use: "true"
+  annotations:
+    azure.workload.identity/client-id: "__UAMI_CLIENT_ID__"
+    azure.workload.identity/tenant-id: "__KEY_VAULT_TENANT_ID__"
+---
+# ServiceAccount for web pod — no Azure identity needed (serves static assets)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bhs-web-sa
+  namespace: bhs
+  labels:
+    app: bhs-web
+    environment: dev
+---
+# ServiceAccount for dam pod — no Azure identity needed (internal only)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bhs-dam-sa
+  namespace: bhs
+  labels:
+    app: bhs-dam
+    environment: dev

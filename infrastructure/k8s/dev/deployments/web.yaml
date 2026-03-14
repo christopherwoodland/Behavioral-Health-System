@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bhs-web
+  namespace: bhs
+  labels:
+    app: bhs-web
+    environment: dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bhs-web
+  template:
+    metadata:
+      labels:
+        app: bhs-web
+        environment: dev
+    spec:
+      serviceAccountName: bhs-web-sa
+      # Security context: run as non-root nginx user
+      securityContext:
+        runAsNonRoot: false  # nginx needs uid 0 for port binding workaround; image handles this
+        fsGroup: 101
+      containers:
+        - name: web
+          image: "__ACR_LOGIN_SERVER__/bhs-web:__IMAGE_TAG__"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          envFrom:
+            - configMapRef:
+                name: bhs-web-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: bhs-web

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8745288655258993089"
+      "templateHash": "11553662572197799783"
     }
   },
   "parameters": {
@@ -33,12 +33,6 @@
       "defaultValue": "bhs",
       "metadata": {
         "description": "Application name prefix"
-      }
-    },
-    "deploymentClientIP": {
-      "type": "string",
-      "metadata": {
-        "description": "Your IP address for Key Vault firewall (for initial setup)"
       }
     },
     "resourceGroupName": {
@@ -346,8 +340,8 @@
           "privateEndpointSubnetId": {
             "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.privateEndpointSubnetId.value]"
           },
-          "deploymentClientIP": {
-            "value": "[parameters('deploymentClientIP')]"
+          "vnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgName')), 'Microsoft.Resources/deployments', 'networking-deployment'), '2025-04-01').outputs.vnetId.value]"
           }
         },
         "template": {
@@ -357,7 +351,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "9044732765760878579"
+              "templateHash": "5344510001176423783"
             }
           },
           "parameters": {
@@ -397,16 +391,17 @@
                 "description": "Private endpoint subnet ID"
               }
             },
-            "deploymentClientIP": {
+            "vnetId": {
               "type": "string",
               "metadata": {
-                "description": "Deployment client IP for initial access"
+                "description": "VNet ID for private DNS zone link"
               }
             }
           },
           "variables": {
             "keyVaultName": "[format('{0}-{1}-kv-{2}', parameters('appName'), parameters('environment'), parameters('uniqueSuffix'))]",
-            "privateEndpointName": "[format('{0}-pe', variables('keyVaultName'))]"
+            "peName": "[format('{0}-pe', variables('keyVaultName'))]",
+            "dnsZoneName": "privatelink.vaultcore.azure.net"
           },
           "resources": [
             {
@@ -428,20 +423,16 @@
                 "networkAcls": {
                   "bypass": "AzureServices",
                   "defaultAction": "Deny",
-                  "ipRules": [
-                    {
-                      "value": "[parameters('deploymentClientIP')]"
-                    }
-                  ],
+                  "ipRules": [],
                   "virtualNetworkRules": []
                 },
-                "publicNetworkAccess": "Enabled"
+                "publicNetworkAccess": "Disabled"
               }
             },
             {
               "type": "Microsoft.Network/privateEndpoints",
               "apiVersion": "2023-05-01",
-              "name": "[variables('privateEndpointName')]",
+              "name": "[variables('peName')]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "properties": {
@@ -450,7 +441,7 @@
                 },
                 "privateLinkServiceConnections": [
                   {
-                    "name": "[variables('privateEndpointName')]",
+                    "name": "[variables('peName')]",
                     "properties": {
                       "privateLinkServiceId": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
                       "groupIds": [
@@ -462,6 +453,47 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[variables('dnsZoneName')]",
+              "location": "global",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', variables('dnsZoneName'), format('{0}-dns-link', variables('keyVaultName')))]",
+              "location": "global",
+              "properties": {
+                "virtualNetwork": {
+                  "id": "[parameters('vnetId')]"
+                },
+                "registrationEnabled": false
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('dnsZoneName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', variables('peName'), 'kv-dns-zone-group')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "vault",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', variables('dnsZoneName'))]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', variables('dnsZoneName'))]",
+                "[resourceId('Microsoft.Network/privateEndpoints', variables('peName'))]"
               ]
             }
           ],
@@ -480,11 +512,11 @@
             },
             "privateEndpointName": {
               "type": "string",
-              "value": "[variables('privateEndpointName')]"
+              "value": "[variables('peName')]"
             },
             "privateEndpointId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('privateEndpointName'))]"
+              "value": "[resourceId('Microsoft.Network/privateEndpoints', variables('peName'))]"
             }
           }
         }
@@ -2267,7 +2299,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "17753027472225599914"
+              "templateHash": "6390533398920017497"
             }
           },
           "parameters": {
@@ -2305,6 +2337,8 @@
           },
           "variables": {
             "cognitiveServicesUserRoleId": "a97b65f3-24c7-4388-baec-2e87135dc908",
+            "cognitiveServicesOpenAiUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+            "cognitiveServicesSpeechUserRoleId": "f2dc8367-1007-4938-bd23-fe263f013447",
             "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
             "storageTableDataContributorRoleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3",
             "storageQueueDataContributorRoleId": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
@@ -2351,6 +2385,28 @@
               "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('functionAppPrincipalId'), variables('storageQueueDataContributorRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageQueueDataContributorRoleId'))]",
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('documentIntelligenceName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesOpenAiUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAiUserRoleId'))]",
+                "principalId": "[parameters('functionAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('documentIntelligenceName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('functionAppPrincipalId'), variables('cognitiveServicesSpeechUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesSpeechUserRoleId'))]",
                 "principalId": "[parameters('functionAppPrincipalId')]",
                 "principalType": "ServicePrincipal"
               }

@@ -100,6 +100,20 @@ try {
     $functionApps = az functionapp list --resource-group $ResourceGroupName --query "[0]" --output json | ConvertFrom-Json
     $functionAppUrl = "https://$($functionApps.defaultHostName)/api"
 
+    # Fetch Entra ID values from Bicep deployment outputs if available
+    $entraClientId = ""
+    $entraApiClientId = ""
+    $entraTenantId = ""
+    try {
+        $latestDeploy = az deployment sub list --query "sort_by([?starts_with(name,'bhs-aks-')],&properties.timestamp)[-1].name" -o tsv 2>$null
+        if ($latestDeploy) {
+            $deployOutputs = az deployment sub show --name $latestDeploy --query "properties.outputs" -o json 2>$null | ConvertFrom-Json
+            $entraClientId    = $deployOutputs.azureAdClientId.value
+            $entraApiClientId = $deployOutputs.azureAdApiClientId.value
+            $entraTenantId    = $deployOutputs.azureAdTenantId.value
+        }
+    } catch { }
+
     if (-not (Test-Path $envPath)) {
         Write-Status "Creating .env.development for React frontend..."
         $envContent = @"
@@ -107,10 +121,15 @@ try {
 VITE_API_BASE_URL=$functionAppUrl
 
 # Azure AD / Entra ID Authentication
+# VITE_AZURE_CLIENT_ID   = BHS Development UI  app registration (frontend SPA)
+# VITE_AZURE_API_CLIENT_ID = BHS Development API app registration (backend)
+# Both must be created in the same Entra ID tenant.
+# Run .\Setup-EntraID.ps1 to create / configure them if they don't exist.
 VITE_ENABLE_ENTRA_AUTH=true
-VITE_AZURE_CLIENT_ID=63e9b3fd-de9d-4083-879c-9c13f3aac54d
-VITE_AZURE_TENANT_ID=3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
-VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/3d6eb90f-fb5d-4624-99d7-1b8c4e077d07
+VITE_AZURE_CLIENT_ID=$entraClientId
+VITE_AZURE_API_CLIENT_ID=$entraApiClientId
+VITE_AZURE_TENANT_ID=$entraTenantId
+VITE_AZURE_AUTHORITY=https://login.microsoftonline.com/$entraTenantId
 VITE_AZURE_REDIRECT_URI=http://localhost:5173
 VITE_AZURE_POST_LOGOUT_REDIRECT_URI=http://localhost:5173
 "@

@@ -62,6 +62,10 @@ export const loginRequest: RedirectRequest = {
     'profile',
     'email',
     'User.Read', // Microsoft Graph API scope for reading user profile
+    // Include API scope here so consent is requested once at sign-in time.
+    // This ensures the access token (which carries the `roles` claim) is
+    // obtainable silently on subsequent calls without additional consent prompts.
+    ...(env.AZURE_API_CLIENT_ID ? [`api://${env.AZURE_API_CLIENT_ID}/access_as_user`] : []),
   ],
 };
 
@@ -75,9 +79,8 @@ export const loginRequest: RedirectRequest = {
  */
 export const apiRequest: PopupRequest = {
   scopes: [
-    // Use the API's app ID with user_impersonation scope
-    // Format: api://{api-identifier}/user_impersonation
-    `api://${env.AZURE_API_CLIENT_ID}/user_impersonation`,
+    // Use the API's app ID with access_as_user scope (the scope exposed by the API app registration)
+    `api://${env.AZURE_API_CLIENT_ID}/access_as_user`,
   ],
 };
 

@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bhs-dam
+  namespace: bhs
+  labels:
+    app: bhs-dam
+    environment: dev
+spec:
+  # Single replica to conserve memory on D4s_v3 node pool.
+  # HPA handles scale-out — see hpa.yaml.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bhs-dam
+  template:
+    metadata:
+      labels:
+        app: bhs-dam
+        environment: dev
+    spec:
+      serviceAccountName: bhs-dam-sa
+      # Toleration to land on the DAM-dedicated node pool (taint workload=dam:NoSchedule)
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "dam"
+          effect: "NoSchedule"
+      # Prefer the DAM node pool via nodeAffinity (belt-and-suspenders with the taint)
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: agentpool
+                    operator: In
+                    values:
+                      - damnodepool
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: dam
+          # Deploy-AKS.ps1 substitutes __DAM_IMAGE__ with the full image reference
+          image: "__DAM_IMAGE__"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DAM_MOCK_MODE
+              value: "false"
+            - name: DAM_PRELOAD_ON_STARTUP
+              value: "true"
+            - name: DAM_PROCESS_START_METHOD
+              value: "spawn"
+            - name: UVICORN_WORKERS
+              value: "2"
+            # Point HuggingFace cache to a writable emptyDir volume.
+            # Without this, transformers tries to write to /.cache which is
+            # not writable when running as non-root user 1000.
+            - name: HF_HOME
+              value: "/cache/huggingface"
+            - name: TRANSFORMERS_CACHE
+              value: "/cache/huggingface/hub"
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "4Gi"
+            limits:
+              cpu: "3500m"
+              memory: "12Gi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            # DAM takes several minutes to preload on startup
+            initialDelaySeconds: 90
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 10
+          volumeMounts:
+            - name: hf-cache
+              mountPath: /cache
+      volumes:
+        - name: hf-cache
+          emptyDir: {}

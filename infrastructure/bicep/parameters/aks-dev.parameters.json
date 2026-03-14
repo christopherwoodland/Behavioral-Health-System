@@ -1,0 +1,82 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "appName": {
+      "value": "bhs"
+    },
+    "resourceGroupName": {
+      "value": "bhs-aks"
+    },
+    "tags": {
+      "value": {
+        "Application": "Behavioral Health System",
+        "Environment": "dev",
+        "ManagedBy": "Bicep",
+        "NetworkMode": "Private",
+        "DeploymentMode": "AKS",
+        "CostCenter": "Engineering",
+        "Project": "BHS"
+      }
+    },
+
+    "existingServicesResourceGroup": {
+      "value": "bhs-development-public"
+    },
+    "acrName": {
+      "value": "bhsdevelopmentacr4znv2wxlxs4xq"
+    },
+    "acrLoginServer": {
+      "value": "bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io"
+    },
+    "keyVaultName": {
+      "value": "bhs-dev-kv-4exbxrzknexso"
+    },
+    "keyVaultUri": {
+      "value": "https://bhs-dev-kv-4exbxrzknexso.vault.azure.net/"
+    },
+    "speechAccountName": {
+      "value": "misco-speech-eastus2"
+    },
+    "aiServicesAccountName": {
+      "value": "bhs-development-public-foundry-r"
+    },
+
+    "openAiEndpoint": {
+      "value": "https://bhs-development-public-foundry-r.cognitiveservices.azure.com/"
+    },
+
+    "postgresHost": {
+      "value": "bhs-dev-postgres.postgres.database.azure.com"
+    },
+    "postgresDatabase": {
+      "value": "bhs_dev"
+    },
+    "postgresUser": {
+      "value": "bhs-api-dam"
+    },
+
+    "azureAdTenantId": {
+      "value": "16b3c013-d300-468d-ac64-7eda0820b6d3"
+    },
+    "azureAdClientId": {
+      "value": "16bd4645-402e-44ba-9c6f-414af87f7d6e"
+    },
+    "azureAdApiClientId": {
+      "value": "687b082f-65b5-4d2f-ab94-8d1949ba1f87"
+    },
+
+    "damImage": {
+      "value": "bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest"
+    },
+    "containerImageTag": {
+      "value": "development"
+    }
+  }
+}

@@ -1,16 +1,51 @@
 #!/usr/bin/env pwsh
-# One-shot script: fixes the bhs-api-dam Postgres role OID to match the AKS UAMI.
-# Run after deploy if you see "oid mismatch" errors in bhs-api pod logs.
-# Requires: az CLI, psql on PATH (or in C:\Program Files\PostgreSQL\*\bin\)
-#           Must be run as an Entra admin of the Postgres server.
+<#
+.SYNOPSIS
+    Fixes (or creates) the bhs-api-dam Postgres role so its pgaadauth OID matches the
+    current AKS UAMI.  Run after any deploy that recreates the UAMI.
+
+.DESCRIPTION
+    When the UAMI is recreated (e.g. full teardown + redeploy) the PostgreSQL role
+    retains a stale `pgaadauth` OID.  This script drops and recreates the role with
+    the correct OID and grants all required permissions.
+
+.PARAMETER PgServer
+    FQDN of the PostgreSQL Flexible Server.  Default: bhs-dev-postgres2.postgres.database.azure.com
+
+.PARAMETER PgDatabase
+    Application database name.  Default: bhs_dev
+
+.PARAMETER PgAdminUser
+    Entra ID display name of the admin user (must have Entra admin rights on the server).
+    Default: Christopher Woodland
+
+.PARAMETER UamiOid
+    Object ID (principalId) of the AKS UAMI for the api workload.
+    Default: debf1bc2-f14a-4eab-80e6-d38824a3bceb
+    Retrieve with: az identity show -g bhs-aks -n <uami-name> --query principalId -o tsv
+
+.EXAMPLE
+    # Run with defaults (bhs-dev-postgres2 in bhs-aks)
+    .\Fix-PostgresRole.ps1
+
+.EXAMPLE
+    # Run against a custom server
+    .\Fix-PostgresRole.ps1 -PgServer myserver.postgres.database.azure.com -UamiOid <oid>
+#>
+param(
+    [string]$PgServer   = "bhs-dev-postgres2.postgres.database.azure.com",
+    [string]$PgDatabase = "bhs_dev",
+    [string]$PgAdminUser = "Christopher Woodland",
+    [string]$UamiOid    = "debf1bc2-f14a-4eab-80e6-d38824a3bceb"
+)
 
 $ErrorActionPreference = "Stop"
 $env:AZURE_CORE_ONLY_SHOW_ERRORS = "true"
 
-$pg_server   = "bhs-dev-postgres.postgres.database.azure.com"
-$pg_database = "bhs_dev"
-$pg_user     = "Christopher Woodland"  # Entra admin user (matches UPN)
-$uamiOid     = "debf1bc2-f14a-4eab-80e6-d38824a3bceb"  # UAMI principalId
+$pg_server   = $PgServer
+$pg_database = $PgDatabase
+$pg_user     = $PgAdminUser  # Entra admin user (display name matches UPN)
+$uamiOid     = $UamiOid      # UAMI principalId
 $roleName    = "bhs-api-dam"
 
 # Find psql

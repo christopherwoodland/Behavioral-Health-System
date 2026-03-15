@@ -66,7 +66,7 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 
 **Local development**: Docker Compose includes a `db` service (postgres:16-alpine) with a named volume for persistence.
 
-**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`, Burstable B1ms, v16) via public endpoint with SSL. Authentication uses **Microsoft Entra ID managed identity** (passwordless) — the Container App's system-assigned MI maps to a PostgreSQL role `bhs-api-dam`.
+**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres2`, Burstable B1ms, v16) via private endpoint (inside AKS VNet). Authentication uses **Microsoft Entra ID managed identity** (passwordless) — the AKS UAMI for the api pod maps to a PostgreSQL role `bhs-api-dam`.
 
 ---
 
@@ -329,29 +329,33 @@ infrastructure/scripts/Configure-Permissions.ps1
 infrastructure/scripts/Setup-LocalDev.ps1
 ```
 
-### Azure Database for PostgreSQL Flexible Server (Dev/Test)
+### Azure Database for PostgreSQL Flexible Server (Dev)
 
-The development environment uses **Azure Database for PostgreSQL Flexible Server** for session persistence.
+The AKS development environment uses **Azure Database for PostgreSQL Flexible Server** for session persistence.  The server lives in the **`bhs-aks`** resource group alongside the AKS cluster, connected via private endpoint (no public access).
 
 | Property | Value |
 |----------|-------|
-| Server name | `bhs-dev-postgres` |
-| Host | `bhs-dev-postgres.postgres.database.azure.com` |
+| Server name | `bhs-dev-postgres2` |
+| Host | `bhs-dev-postgres2.postgres.database.azure.com` |
+| Resource Group | `bhs-aks` |
 | Tier | Burstable B1ms |
 | Version | PostgreSQL 16 |
 | Storage | 32 GB |
 | Database | `bhs_dev` |
 | Authentication | **Microsoft Entra ID** (managed identity) — passwordless |
-| MI PG Role | `bhs-api-dam` (mapped to Container App system-assigned MI) |
-| Admin user | `bhs_admin` (password auth available in parallel mode) |
+| MI PG Role | `bhs-api-dam` (mapped to AKS UAMI for the api workload) |
+| Admin user | `bhs_admin` |
 | SSL | Required |
-| Access | Public (Azure services firewall rule) |
+| Access | Private endpoint only (no public network access) |
+
+> The server was created by PITR-restoring `bhs-dev-postgres` (from the former `bhs-development-local-dam-public` RG, which has been deleted) and moving it into `bhs-aks` so all AKS infrastructure is co-located in one resource group.
 
 ```powershell
+# Re-provision from scratch (only needed if full teardown occurred)
 # 1. Create the Flexible Server
 az postgres flexible-server create `
-  --name bhs-dev-postgres `
-  --resource-group bhs-development-local-dam-public `
+  --name bhs-dev-postgres2 `
+  --resource-group bhs-aks `
   --location eastus2 `
   --tier Burstable `
   --sku-name Standard_B1ms `
@@ -359,60 +363,51 @@ az postgres flexible-server create `
   --version 16 `
   --admin-user bhs_admin `
   --admin-password "<password>" `
-  --public-access 0.0.0.0 `
+  --public-access None `
   --yes
 
 # 2. Create the application database
 az postgres flexible-server db create `
-  --server-name bhs-dev-postgres `
-  -g bhs-development-local-dam-public `
+  --server-name bhs-dev-postgres2 `
+  -g bhs-aks `
   --database-name bhs_dev
 
-# 3. Enable Entra ID auth on the PG server and set yourself as admin
+# 3. Enable Entra ID auth
 az postgres flexible-server update `
-  --name bhs-dev-postgres `
-  -g bhs-development-local-dam-public `
+  --name bhs-dev-postgres2 `
+  -g bhs-aks `
   --active-directory-auth Enabled `
   --password-auth Enabled
 
 az postgres flexible-server microsoft-entra-admin create `
-  --server-name bhs-dev-postgres `
-  -g bhs-development-local-dam-public `
+  --server-name bhs-dev-postgres2 `
+  -g bhs-aks `
   --display-name "<your-display-name>" `
   --object-id "<your-entra-object-id>" `
   --type User
 
-# 4. Create the managed identity role in PostgreSQL
-#    Run the setup script (requires psycopg2: pip install psycopg2-binary)
-$env:PG_TOKEN = az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv
-python scripts/setup-mi-postgres.py
+# 4. Create the private endpoint (AKS private-ep subnet)
+$pgId = az postgres flexible-server show -g bhs-aks -n bhs-dev-postgres2 --query id -o tsv
+az network private-endpoint create `
+  --name bhs-dev-postgres2-aks-pe `
+  --resource-group bhs-aks `
+  --vnet-name bhs-dev-aks-vnet `
+  --subnet private-ep-subnet `
+  --private-connection-resource-id $pgId `
+  --group-id postgresqlServer `
+  --connection-name bhs-dev-postgres2-aks-conn
 
-# 5. Set PostgreSQL env vars on the API app (managed identity, no password)
-az containerapp update `
-  --name bhs-api-dam `
-  -g bhs-development-local-dam-public `
-  --set-env-vars `
-    "STORAGE_BACKEND=PostgreSQL" `
-    "POSTGRES_HOST=bhs-dev-postgres.postgres.database.azure.com" `
-    "POSTGRES_PORT=5432" `
-    "POSTGRES_USERNAME=bhs-api-dam" `
-    "POSTGRES_DATABASE=bhs_dev" `
-    "POSTGRES_USE_MANAGED_IDENTITY=true"
+# 5. Add DNS A-record to the private DNS zone
+$peNicId = az network private-endpoint show -g bhs-aks -n bhs-dev-postgres2-aks-pe --query 'networkInterfaces[0].id' -o tsv
+$peIp    = az network nic show --ids $peNicId --query 'ipConfigurations[0].privateIPAddress' -o tsv
+az network private-dns record-set a add-record `
+  -g bhs-aks `
+  -z privatelink.postgres.database.azure.com `
+  -n bhs-dev-postgres2 `
+  -a $peIp
 
-# 5. Grant storage roles to the app's managed identity
-$principalId = az containerapp identity show `
-  --name bhs-api-dam -g bhs-development-local-dam-public `
-  --query "principalId" -o tsv
-$storageId = az storage account show `
-  --name bhsdevstg4exbxrzknexso -g bhs-development-public `
-  --query "id" -o tsv
-
-az role assignment create --assignee $principalId `
-  --role "Storage Blob Data Contributor" --scope $storageId
-az role assignment create --assignee $principalId `
-  --role "Storage Queue Data Contributor" --scope $storageId
-az role assignment create --assignee $principalId `
-  --role "Storage Table Data Contributor" --scope $storageId
+# 6. Fix the pgaadauth role (UAMI OID)
+.\infrastructure\scripts\Fix-PostgresRole.ps1
 ```
 
 ---
@@ -680,7 +675,7 @@ The Container Apps PostgreSQL **add-on** was previously attempted but has two co
 2. **Without binding**, the add-on's TCP port is **not reachable** (`service.type` restricts network to bound apps only).
 3. **TCP ingress** on regular Container Apps in this environment also fails (tested and confirmed — `pg_isready` returns "no response" even from inside the same environment).
 
-**Resolution**: Migrated to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres`), which provides reliable public-endpoint connectivity with SSL.
+**Resolution**: Migrated to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres2` in `bhs-aks`), connected via private endpoint inside the AKS VNet.
 
 ### Storage/Auth Failures
 

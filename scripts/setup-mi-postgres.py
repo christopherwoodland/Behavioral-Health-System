@@ -22,12 +22,12 @@ import sys
 import os
 
 # Configuration — update these for your environment
-PG_HOST = "bhs-dev-postgres.postgres.database.azure.com"
+PG_HOST = "bhs-dev-postgres2.postgres.database.azure.com"
 PG_ADMIN_DB = "postgres"       # pgaadauth extension lives here
 PG_APP_DB = "bhs_dev"
 PG_ENTRA_ADMIN_USER = "Christopher Woodland"  # Display name of the Entra admin
 CONTAINER_APP_NAME = "bhs-api-dam"
-RESOURCE_GROUP = "bhs-development-local-dam-public"
+RESOURCE_GROUP = "bhs-aks"
 MI_ROLE_NAME = "bhs-api-dam"   # PG role name for the managed identity
 
 # Full path to az CLI (fallback if not in PATH)

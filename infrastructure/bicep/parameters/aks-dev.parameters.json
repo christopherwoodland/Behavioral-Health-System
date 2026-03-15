@@ -53,7 +53,7 @@
     },
 
     "postgresHost": {
-      "value": "bhs-dev-postgres.postgres.database.azure.com"
+      "value": "bhs-dev-postgres2.postgres.database.azure.com"
     },
     "postgresDatabase": {
       "value": "bhs_dev"

@@ -16,9 +16,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+bool IsAirGapMode(IConfiguration config)
+{
+    return config.GetValue<bool>("AIR_GAP_MODE", false)
+        || config.GetValue<bool>("ENABLE_AIR_GAP", false);
+}
+
 // Helper to get secrets from Key Vault
 SecretClient? GetKeyVaultClient(IConfiguration config)
 {
+    if (IsAirGapMode(config))
+    {
+        Console.WriteLine("AIR_GAP_MODE enabled. Skipping Key Vault client initialization.");
+        return null;
+    }
+
     // Try KEY_VAULT_URI first (from Bicep), then KEY_VAULT_URL for backwards compatibility
     var keyVaultUrl = config["KEY_VAULT_URI"] ?? config["KEY_VAULT_URL"];
     if (string.IsNullOrWhiteSpace(keyVaultUrl))
@@ -36,21 +48,6 @@ SecretClient? GetKeyVaultClient(IConfiguration config)
     }
 }
 
-string? GetSecretFromKeyVault(SecretClient? client, string secretName, string? fallbackValue = null)
-{
-    if (client == null) return fallbackValue;
-    try
-    {
-        var secret = client.GetSecret(secretName);
-        return secret.Value?.Value ?? fallbackValue;
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Warning: Could not retrieve {secretName} from Key Vault: {ex.Message}");
-        return fallbackValue;
-    }
-}
-
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults(worker =>
     {
@@ -60,6 +57,7 @@ var host = new HostBuilder()
     .ConfigureServices((context, services) =>
     {
         var config = context.Configuration;
+        var isAirGapMode = IsAirGapMode(config);
         var keyVaultClient = GetKeyVaultClient(config);
 
         // DAM pipeline services (shared library)
@@ -69,27 +67,63 @@ var host = new HostBuilder()
         services.Configure<AzureOpenAIOptions>(options =>
         {
             var config = context.Configuration;
-            options.Endpoint = config["AZURE_OPENAI_ENDPOINT"] ?? string.Empty;
-            options.ApiKey = config["AZURE_OPENAI_API_KEY"] ?? string.Empty;
-            options.DeploymentName = config["AZURE_OPENAI_DEPLOYMENT"] ?? "gpt-4o";
-            options.ApiVersion = config["AZURE_OPENAI_API_VERSION"] ?? "2024-02-01";
+            options.Endpoint = isAirGapMode
+                ? config["AIR_GAP_OPENAI_ENDPOINT"] ?? config["LOCAL_OPENAI_ENDPOINT"] ?? config["AZURE_OPENAI_ENDPOINT"] ?? string.Empty
+                : config["AZURE_OPENAI_ENDPOINT"] ?? string.Empty;
+            options.ApiKey = isAirGapMode
+                ? config["AIR_GAP_OPENAI_API_KEY"] ?? config["LOCAL_OPENAI_API_KEY"] ?? config["AZURE_OPENAI_API_KEY"] ?? string.Empty
+                : config["AZURE_OPENAI_API_KEY"] ?? string.Empty;
+            options.DeploymentName = isAirGapMode
+                ? config["AIR_GAP_OPENAI_DEPLOYMENT"] ?? config["LOCAL_OPENAI_DEPLOYMENT"] ?? config["AZURE_OPENAI_DEPLOYMENT"] ?? "gpt-oss-20b"
+                : config["AZURE_OPENAI_DEPLOYMENT"] ?? "gpt-4o";
+            options.ApiVersion = isAirGapMode
+                ? config["AIR_GAP_OPENAI_API_VERSION"] ?? config["LOCAL_OPENAI_API_VERSION"] ?? config["AZURE_OPENAI_API_VERSION"] ?? "2024-02-01"
+                : config["AZURE_OPENAI_API_VERSION"] ?? "2024-02-01";
             options.MaxTokens = config.GetValue<int>("AZURE_OPENAI_MAX_TOKENS", 1500);
             options.Temperature = config.GetValue<double>("AZURE_OPENAI_TEMPERATURE", 0.3);
-            options.Enabled = config.GetValue<bool>("AZURE_OPENAI_ENABLED", false);
+            options.Enabled = config.GetValue<bool>("AZURE_OPENAI_ENABLED", isAirGapMode);
         });
 
         // Extended Assessment (GPT-5/O3) Configuration
         services.Configure<ExtendedAssessmentOpenAIOptions>(options =>
         {
             var config = context.Configuration;
-            options.Endpoint = config["EXTENDED_ASSESSMENT_OPENAI_ENDPOINT"] ?? string.Empty;
-            options.ApiKey = config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"] ?? string.Empty;
-            options.DeploymentName = config["EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT"] ?? string.Empty;
-            options.ApiVersion = config["EXTENDED_ASSESSMENT_OPENAI_API_VERSION"] ?? "2024-08-01-preview";
+            options.Endpoint = isAirGapMode
+                ? config["AIR_GAP_EXTENDED_OPENAI_ENDPOINT"]
+                    ?? config["AIR_GAP_OPENAI_ENDPOINT"]
+                    ?? config["LOCAL_EXTENDED_OPENAI_ENDPOINT"]
+                    ?? config["LOCAL_OPENAI_ENDPOINT"]
+                    ?? config["EXTENDED_ASSESSMENT_OPENAI_ENDPOINT"]
+                    ?? string.Empty
+                : config["EXTENDED_ASSESSMENT_OPENAI_ENDPOINT"] ?? string.Empty;
+            options.ApiKey = isAirGapMode
+                ? config["AIR_GAP_EXTENDED_OPENAI_API_KEY"]
+                    ?? config["AIR_GAP_OPENAI_API_KEY"]
+                    ?? config["LOCAL_EXTENDED_OPENAI_API_KEY"]
+                    ?? config["LOCAL_OPENAI_API_KEY"]
+                    ?? config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"]
+                    ?? string.Empty
+                : config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"] ?? string.Empty;
+            options.DeploymentName = isAirGapMode
+                ? config["AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT"]
+                    ?? config["AIR_GAP_OPENAI_DEPLOYMENT"]
+                    ?? config["LOCAL_EXTENDED_OPENAI_DEPLOYMENT"]
+                    ?? config["LOCAL_OPENAI_DEPLOYMENT"]
+                    ?? config["EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT"]
+                    ?? "gpt-oss-20b"
+                : config["EXTENDED_ASSESSMENT_OPENAI_DEPLOYMENT"] ?? string.Empty;
+            options.ApiVersion = isAirGapMode
+                ? config["AIR_GAP_EXTENDED_OPENAI_API_VERSION"]
+                    ?? config["AIR_GAP_OPENAI_API_VERSION"]
+                    ?? config["LOCAL_EXTENDED_OPENAI_API_VERSION"]
+                    ?? config["LOCAL_OPENAI_API_VERSION"]
+                    ?? config["EXTENDED_ASSESSMENT_OPENAI_API_VERSION"]
+                    ?? "2024-08-01-preview"
+                : config["EXTENDED_ASSESSMENT_OPENAI_API_VERSION"] ?? "2024-08-01-preview";
             options.MaxTokens = config.GetValue<int>("EXTENDED_ASSESSMENT_OPENAI_MAX_TOKENS", 4000);
             options.Temperature = config.GetValue<double>("EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE", 0.2);
             options.TimeoutSeconds = config.GetValue<int>("EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS", 120);
-            options.Enabled = config.GetValue<bool>("EXTENDED_ASSESSMENT_OPENAI_ENABLED", false);
+            options.Enabled = config.GetValue<bool>("EXTENDED_ASSESSMENT_OPENAI_ENABLED", isAirGapMode);
             options.UseFallbackToStandardConfig = config.GetValue<bool>("EXTENDED_ASSESSMENT_USE_FALLBACK", true);
         });
 
@@ -134,7 +168,6 @@ var host = new HostBuilder()
                 var credentialOptions = new DefaultAzureCredentialOptions
                 {
                     ExcludeManagedIdentityCredential = false,
-                    ExcludeSharedTokenCacheCredential = true,
                     ExcludeVisualStudioCredential = true,
                     ExcludeVisualStudioCodeCredential = true,
                     ExcludeAzurePowerShellCredential = true,

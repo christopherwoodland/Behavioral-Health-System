@@ -38,6 +38,8 @@ public class ApiKeyValidationService : IApiKeyValidationService
     private readonly IEntraIdValidationService _entraIdValidation;
     private readonly string? _configuredApiKey;
     private readonly bool _isDevelopmentMode;
+    private readonly bool _isAirGapMode;
+    private readonly bool _isAirGapBypassActive;
 
     private const string ApiKeyHeaderName = "X-API-Key";
     private const string ApiKeyQueryParam = "code";
@@ -55,6 +57,15 @@ public class ApiKeyValidationService : IApiKeyValidationService
                        ?? "Production";
 
         _isDevelopmentMode = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+        _isAirGapMode =
+            string.Equals(Environment.GetEnvironmentVariable("AIR_GAP_MODE"), "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ENABLE_AIR_GAP"), "true", StringComparison.OrdinalIgnoreCase);
+        _isAirGapBypassActive =
+            _isAirGapMode
+            && (
+                _isDevelopmentMode
+                || string.Equals(Environment.GetEnvironmentVariable("AIR_GAP_AUTH_BYPASS_APPROVED"), "true", StringComparison.OrdinalIgnoreCase)
+            );
 
         // Get the configured API key (fallback for non-browser clients)
         _configuredApiKey = Environment.GetEnvironmentVariable("FUNCTIONS_API_KEY");
@@ -62,6 +73,15 @@ public class ApiKeyValidationService : IApiKeyValidationService
         if (_isDevelopmentMode)
         {
             _logger.LogInformation("API validation running in DEVELOPMENT mode");
+        }
+
+        if (_isAirGapBypassActive)
+        {
+            _logger.LogInformation("API validation running in AIR_GAP_MODE (auth bypass enabled by configuration)");
+        }
+        else if (_isAirGapMode)
+        {
+            _logger.LogInformation("AIR_GAP_MODE enabled without bypass approval - API validation remains required.");
         }
 
         if (_entraIdValidation.IsAuthenticationEnabled)
@@ -80,6 +100,12 @@ public class ApiKeyValidationService : IApiKeyValidationService
     /// </summary>
     public bool ValidateApiKey(HttpRequestData request)
     {
+        if (_isAirGapBypassActive)
+        {
+            _logger.LogDebug("AIR_GAP_MODE - skipping API key validation");
+            return true;
+        }
+
         // Skip validation in development mode if auth is not configured
         if (_isDevelopmentMode && !_entraIdValidation.IsAuthenticationEnabled)
         {
@@ -140,6 +166,18 @@ public class ApiKeyValidationService : IApiKeyValidationService
     /// </summary>
     public async Task<TokenValidationResult> ValidateRequestAsync(HttpRequestData request)
     {
+        if (_isAirGapBypassActive)
+        {
+            _logger.LogDebug("AIR_GAP_MODE - allowing request without credentials");
+            return new TokenValidationResult
+            {
+                IsValid = true,
+                UserId = "air-gap-user",
+                UserEmail = "airgap@localhost",
+                UserName = "Air Gap User"
+            };
+        }
+
         // Check for Entra ID bearer token first
         if (request.Headers.TryGetValues("Authorization", out var authValues))
         {

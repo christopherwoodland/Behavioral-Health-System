@@ -7,6 +7,8 @@
     "CORSCredentials": false
   },
   "Values": {
+    "AIR_GAP_MODE": "false",
+    "AIR_GAP_AUTH_BYPASS_APPROVED": "false",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
     "AzureWebJobsStorage": "",
     "AzureWebJobsStorage__accountName": "<storage-account-name>",
@@ -29,6 +31,15 @@
     "EXTENDED_ASSESSMENT_OPENAI_TEMPERATURE": "0.2",
     "EXTENDED_ASSESSMENT_OPENAI_TIMEOUT_SECONDS": "120",
     "EXTENDED_ASSESSMENT_USE_FALLBACK": "false",
+
+    "AIR_GAP_OPENAI_ENDPOINT": "http://localhost:11434/v1",
+    "AIR_GAP_OPENAI_API_KEY": "",
+    "AIR_GAP_OPENAI_DEPLOYMENT": "gpt-oss-20b",
+    "AIR_GAP_OPENAI_API_VERSION": "2024-02-01",
+    "AIR_GAP_EXTENDED_OPENAI_ENDPOINT": "http://localhost:11434/v1",
+    "AIR_GAP_EXTENDED_OPENAI_API_KEY": "",
+    "AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT": "gpt-oss-20b",
+    "AIR_GAP_EXTENDED_OPENAI_API_VERSION": "2024-02-01",
 
     "LOCAL_DAM_BASE_URL": "http://localhost:8000",
     "LOCAL_DAM_INITIATE_PATH": "initiate",

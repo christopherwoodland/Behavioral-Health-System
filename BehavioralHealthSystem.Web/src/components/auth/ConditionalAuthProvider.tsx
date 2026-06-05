@@ -14,10 +14,13 @@ interface ConditionalAuthProviderProps {
 }
 
 // Create MSAL instance only if authentication is enabled
-const isAuthEnabled = env.ENABLE_ENTRA_AUTH;
+const isAuthEnabled = env.ENABLE_ENTRA_AUTH && !env.AIR_GAP_MODE;
 
 // Log authentication mode for debugging
-log.info('Authentication mode', { mode: isAuthEnabled ? 'Entra ID enabled' : 'Mock authentication enabled' });
+log.info('Authentication mode', {
+  mode: isAuthEnabled ? 'Entra ID enabled' : 'Mock authentication enabled',
+  airGapMode: env.AIR_GAP_MODE,
+});
 log.debug('VITE_ENABLE_ENTRA_AUTH', { value: env.ENABLE_ENTRA_AUTH });
 
 const msalInstance = isAuthEnabled ? new PublicClientApplication(msalConfig) : null;

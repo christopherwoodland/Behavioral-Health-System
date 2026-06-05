@@ -64,6 +64,9 @@ public class EntraIdValidationService : IEntraIdValidationService
     private readonly ILogger<EntraIdValidationService> _logger;
     private readonly EntraIdOptions _options;
     private readonly bool _isDevelopmentMode;
+    private readonly bool _isAirGapMode;
+    private readonly bool _isAirGapAuthBypassApproved;
+    private readonly bool _isAirGapBypassActive;
     private readonly bool _isAuthenticationEnabled;
     private readonly ConfigurationManager<OpenIdConnectConfiguration>? _configManager;
     private readonly JwtSecurityTokenHandler _tokenHandler;
@@ -79,6 +82,13 @@ public class EntraIdValidationService : IEntraIdValidationService
                        ?? "Production";
 
         _isDevelopmentMode = environment.Equals("Development", StringComparison.OrdinalIgnoreCase);
+        _isAirGapMode =
+            string.Equals(Environment.GetEnvironmentVariable("AIR_GAP_MODE"), "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(Environment.GetEnvironmentVariable("ENABLE_AIR_GAP"), "true", StringComparison.OrdinalIgnoreCase);
+        _isAirGapAuthBypassApproved =
+            _isDevelopmentMode
+            || string.Equals(Environment.GetEnvironmentVariable("AIR_GAP_AUTH_BYPASS_APPROVED"), "true", StringComparison.OrdinalIgnoreCase);
+        _isAirGapBypassActive = _isAirGapMode && _isAirGapAuthBypassApproved;
 
         // Load Entra ID configuration from environment variables
         _options = new EntraIdOptions
@@ -91,9 +101,17 @@ public class EntraIdValidationService : IEntraIdValidationService
         };
 
         // Authentication is enabled if we have the required configuration
-        _isAuthenticationEnabled = !string.IsNullOrEmpty(_options.TenantId) && !string.IsNullOrEmpty(_options.ClientId);
+        _isAuthenticationEnabled = !_isAirGapBypassActive && !string.IsNullOrEmpty(_options.TenantId) && !string.IsNullOrEmpty(_options.ClientId);
 
-        if (_isAuthenticationEnabled)
+        if (_isAirGapBypassActive)
+        {
+            _logger.LogWarning("AIR_GAP_MODE enabled with bypass approval - Entra ID authentication is disabled.");
+        }
+        else if (_isAirGapMode)
+        {
+            _logger.LogInformation("AIR_GAP_MODE enabled without bypass approval - Entra ID authentication remains required.");
+        }
+        else if (_isAuthenticationEnabled)
         {
             // Set up OpenID Connect configuration manager for token validation
             var metadataAddress = $"https://login.microsoftonline.com/{_options.TenantId}/v2.0/.well-known/openid-configuration";
@@ -119,6 +137,19 @@ public class EntraIdValidationService : IEntraIdValidationService
 
     public async Task<TokenValidationResult> ValidateTokenAsync(FunctionsHttpRequestData request)
     {
+        // In air-gapped mode, allow all requests (paired with network controls)
+        if (_isAirGapBypassActive)
+        {
+            _logger.LogDebug("AIR_GAP_MODE - skipping token validation");
+            return new TokenValidationResult
+            {
+                IsValid = true,
+                UserId = "air-gap-user",
+                UserEmail = "airgap@localhost",
+                UserName = "Air Gap User"
+            };
+        }
+
         // In development mode without auth configured, allow all requests
         if (_isDevelopmentMode && !_isAuthenticationEnabled)
         {

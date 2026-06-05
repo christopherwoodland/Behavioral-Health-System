@@ -204,6 +204,57 @@ The `docker.env.example` template includes all required and optional variables w
 .\scripts\docker-manage.ps1 -Action status
 ```
 
+### Air-Gap Mode (Config Toggle)
+
+Set these values in `docker.env` (or `local.settings.json`) to run in strict air-gap mode without code changes:
+
+| Variable | Purpose |
+|----------|---------|
+| `AIR_GAP_MODE=true` | Backend air-gap mode: disables Entra auth validation and uses local-model endpoint overrides |
+| `AIR_GAP_AUTH_BYPASS_APPROVED=true` | Explicitly approves auth bypass when `AIR_GAP_MODE=true`. Without this flag, auth remains required (fail-closed). |
+| `VITE_AIR_GAP_MODE=true` | Frontend air-gap mode: forces mock auth and local FFmpeg core loading |
+| `VITE_FFMPEG_CORE_BASE_URL=/ffmpeg-core` | Path where `ffmpeg-core.js` and `ffmpeg-core.wasm` are hosted |
+| `AIR_GAP_OPENAI_ENDPOINT` | OpenAI-compatible local model endpoint (e.g. `http://host.docker.internal:11434/v1`) |
+| `AIR_GAP_OPENAI_DEPLOYMENT` | Local model name for standard risk assessment (recommended: `gpt-oss-20b`) |
+| `AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT` | Local model name for extended assessments (recommended: `gpt-oss-20b`) |
+
+### Offline Vendor Scripts
+
+Use these scripts on a connected machine to prepare artifacts for transfer into an air-gapped environment:
+
+```powershell
+# Download offline model artifacts (Ollama, Whisper, Piper)
+.\scripts\vendor-offline\download-models.ps1
+
+# Vendor NuGet packages into an offline feed folder
+.\scripts\vendor-offline\vendor-nuget-packages.ps1
+
+# Vendor npm packages for BehavioralHealthSystem.Web
+.\scripts\vendor-offline\vendor-npm-packages.ps1
+```
+
+On the air-gapped machine, run:
+
+```powershell
+# Build an air-gap env file with safe defaults and local endpoint checks
+.\scripts\airgap-bootstrap.ps1
+
+# Stage browser FFmpeg assets into Web public folder
+.\scripts\vendor-offline\stage-ffmpeg-core.ps1 -TarballPath <path-to-ffmpeg-core-tarball-if-offline>
+
+# Restore .NET dependencies from the vendored NuGet feed only
+.\scripts\vendor-offline\install-nuget-offline.ps1
+
+# Restore Web npm dependencies from vendored tarballs only
+.\scripts\vendor-offline\install-npm-offline.ps1
+
+# One-shot startup helper (bootstrap + dependency restore + ffmpeg stage + compose up)
+.\scripts\airgap-up.ps1
+
+# Optional: allow startup without staged FFmpeg core assets (not recommended)
+.\scripts\airgap-up.ps1 -AllowMissingFfmpegAssets
+```
+
 ---
 
 ## Environment Model

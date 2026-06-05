@@ -1,6 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { config } from '@/config/constants';
+import { env } from '@/utils/env';
 import { createAppError } from '@/utils';
 import { Logger } from '@/utils/logger';
 import type { AudioConversionOptions, SilenceRemovalOptions } from '@/types';
@@ -43,20 +44,29 @@ export class AudioProcessor {
     }
 
     try {
-      // Load FFmpeg with CDN URLs for better reliability
-      const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+      if (env.AIR_GAP_MODE) {
+        // In strict air-gap mode, FFmpeg core assets must be served locally.
+        const basePath = env.FFMPEG_CORE_BASE_URL.replace(/\/$/, '');
+        await this.ffmpeg.load({
+          coreURL: `${basePath}/ffmpeg-core.js`,
+          wasmURL: `${basePath}/ffmpeg-core.wasm`,
+        });
+      } else {
+        // Default online behavior uses CDN-hosted FFmpeg core assets.
+        const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
 
-      await this.ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
-      });
+        await this.ffmpeg.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm'),
+        });
+      }
 
       this.isLoaded = true;
     } catch (error) {
       this.loadingPromise = null;
       throw createAppError(
         'FFMPEG_LOAD_ERROR',
-        'Failed to load FFmpeg. Please check your internet connection and try again.',
+        'Failed to load FFmpeg assets. Verify FFmpeg core files are reachable in the current environment.',
         { originalError: error }
       );
     }

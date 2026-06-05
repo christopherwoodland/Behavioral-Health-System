@@ -69,6 +69,7 @@ export const env = {
   get AZURE_ADMIN_GROUP_ID() { return getEnvVar('VITE_AZURE_ADMIN_GROUP_ID'); },
   get AZURE_CONTROL_PANEL_GROUP_ID() { return getEnvVar('VITE_AZURE_CONTROL_PANEL_GROUP_ID'); },
   get ENABLE_ENTRA_AUTH() { return getEnvVarBool('VITE_ENABLE_ENTRA_AUTH', false); },
+  get AIR_GAP_MODE() { return getEnvVarBool('VITE_AIR_GAP_MODE', false); },
   // API App Registration ID - separate from frontend client ID for token scopes
   get AZURE_API_CLIENT_ID() { return getEnvVar('VITE_AZURE_API_CLIENT_ID', getEnvVar('VITE_AZURE_CLIENT_ID')); },
 
@@ -82,6 +83,7 @@ export const env = {
   get ENABLE_TRANSCRIPTION() { return getEnvVarBool('VITE_ENABLE_TRANSCRIPTION', true); },
   get ENABLE_AI_RISK_ASSESSMENT() { return getEnvVarBool('VITE_ENABLE_AI_RISK_ASSESSMENT', true); },
   get OFFLINE_MODE() { return getEnvVarBool('VITE_OFFLINE_MODE', false); },
+  get FFMPEG_CORE_BASE_URL() { return getEnvVar('VITE_FFMPEG_CORE_BASE_URL', '/ffmpeg-core'); },
 
   // Polling Configuration
   get CONTROL_PANEL_REFRESH_INTERVAL() { return getEnvVarInt('VITE_CONTROL_PANEL_REFRESH_INTERVAL', 30); },

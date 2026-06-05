@@ -8,6 +8,8 @@
   },
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AIR_GAP_MODE": "false",
+    "AIR_GAP_AUTH_BYPASS_APPROVED": "false",
     "AzureWebJobsStorage__accountName": "<storage-account-name>",
     "DSM5_STORAGE_ACCOUNT_NAME": "<storage-account-name>",
     "APPLICATIONINSIGHTS_CONNECTION_STRING": "@Microsoft.KeyVault(SecretUri=<keyvault-uri>/secrets/AppInsightsConnectionString/)",
@@ -61,6 +63,15 @@
     "POSTGRES_USERNAME": "<mi-role-name-or-admin-user>",
     "POSTGRES_PASSWORD": "",
     "POSTGRES_DATABASE": "bhs_dev",
-    "POSTGRES_USE_MANAGED_IDENTITY": "true"
+    "POSTGRES_USE_MANAGED_IDENTITY": "true",
+
+    "AIR_GAP_OPENAI_ENDPOINT": "http://localhost:11434/v1",
+    "AIR_GAP_OPENAI_API_KEY": "",
+    "AIR_GAP_OPENAI_DEPLOYMENT": "gpt-oss-20b",
+    "AIR_GAP_OPENAI_API_VERSION": "2024-02-01",
+    "AIR_GAP_EXTENDED_OPENAI_ENDPOINT": "http://localhost:11434/v1",
+    "AIR_GAP_EXTENDED_OPENAI_API_KEY": "",
+    "AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT": "gpt-oss-20b",
+    "AIR_GAP_EXTENDED_OPENAI_API_VERSION": "2024-02-01"
   }
 }

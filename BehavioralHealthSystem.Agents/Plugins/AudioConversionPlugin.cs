@@ -15,6 +15,7 @@ namespace BehavioralHealthSystem.Agents.Plugins;
 /// </summary>
 public class AudioConversionPlugin
 {
+    private const int TinyOutputRetryThresholdBytes = 512;
     private readonly ILogger<AudioConversionPlugin> _logger;
     private readonly AudioConversionOptions _options;
 
@@ -49,7 +50,7 @@ public class AudioConversionPlugin
         var sw = Stopwatch.StartNew();
         var inputExtension = Path.GetExtension(inputFileName).ToLowerInvariant();
         if (string.IsNullOrEmpty(inputExtension))
-            inputExtension = ".wav";
+            inputExtension = string.Empty;
 
         // ── Fast path: skip conversion if input is already at target spec ──
         if (_options.SkipFiltersIfCleanWav && IsCleanWav(audioData, inputExtension))
@@ -71,20 +72,39 @@ public class AudioConversionPlugin
             };
         }
 
+        var usePipeMode = _options.UsePipeMode && !RequiresSeekableInput(inputExtension);
+        if (_options.UsePipeMode && !usePipeMode)
+        {
+            _logger.LogInformation(
+                "[{PluginName}] Disabling pipe mode for input format {InputFormat}; using temp-file mode for reliable demux.",
+                nameof(AudioConversionPlugin), inputExtension);
+        }
+
         _logger.LogInformation(
             "[{PluginName}] Starting audio conversion. InputSize={InputSize} bytes, InputFormat={InputFormat}, Mode={Mode}",
             nameof(AudioConversionPlugin), audioData.Length, inputExtension,
-            _options.UsePipeMode ? "pipe" : _options.UseTmpfs ? "tmpfs" : "disk");
+            usePipeMode ? "pipe" : _options.UseTmpfs ? "tmpfs" : "disk");
 
         // ── Choose conversion strategy ──
         byte[] convertedData;
-        if (_options.UsePipeMode)
+        if (usePipeMode)
         {
-            convertedData = await ConvertViaPipeAsync(audioData, inputExtension, cancellationToken);
+            convertedData = await ConvertViaPipeAsync(audioData, inputExtension, _options.EnableSilenceRemoval, cancellationToken);
         }
         else
         {
-            convertedData = await ConvertViaTempFilesAsync(audioData, inputExtension, cancellationToken);
+            convertedData = await ConvertViaTempFilesAsync(audioData, inputExtension, _options.EnableSilenceRemoval, cancellationToken);
+        }
+
+        if (_options.EnableSilenceRemoval && convertedData.Length > 0 && convertedData.Length <= TinyOutputRetryThresholdBytes)
+        {
+            _logger.LogWarning(
+                "[{PluginName}] Converted output is suspiciously small ({OutputBytes} bytes). Retrying without silence removal.",
+                nameof(AudioConversionPlugin), convertedData.Length);
+
+            convertedData = usePipeMode
+                ? await ConvertViaPipeAsync(audioData, inputExtension, includeSilenceRemoval: false, cancellationToken)
+                : await ConvertViaTempFilesAsync(audioData, inputExtension, includeSilenceRemoval: false, cancellationToken);
         }
 
         sw.Stop();
@@ -165,9 +185,13 @@ public class AudioConversionPlugin
     /// Runs ffmpeg with audio data piped via stdin and output read from stdout.
     /// Avoids all disk I/O.
     /// </summary>
-    private async Task<byte[]> ConvertViaPipeAsync(byte[] audioData, string inputExtension, CancellationToken cancellationToken)
+    private async Task<byte[]> ConvertViaPipeAsync(
+        byte[] audioData,
+        string inputExtension,
+        bool includeSilenceRemoval,
+        CancellationToken cancellationToken)
     {
-        var filterChain = BuildFilterChain();
+        var filterChain = BuildFilterChain(includeSilenceRemoval);
 
         // -f <format> tells ffmpeg the input container format for stdin
         var inputFormat = GetFfmpegFormat(inputExtension);
@@ -264,7 +288,11 @@ public class AudioConversionPlugin
     /// <summary>
     /// Runs ffmpeg with temp files. Uses /dev/shm (RAM-backed tmpfs) on Linux when enabled.
     /// </summary>
-    private async Task<byte[]> ConvertViaTempFilesAsync(byte[] audioData, string inputExtension, CancellationToken cancellationToken)
+    private async Task<byte[]> ConvertViaTempFilesAsync(
+        byte[] audioData,
+        string inputExtension,
+        bool includeSilenceRemoval,
+        CancellationToken cancellationToken)
     {
         var tempDir = GetTempDirectory();
         var inputTempPath = Path.Combine(tempDir, $"sk-audio-in-{Guid.NewGuid():N}{inputExtension}");
@@ -274,7 +302,7 @@ public class AudioConversionPlugin
         {
             await File.WriteAllBytesAsync(inputTempPath, audioData, cancellationToken);
 
-            var ffmpegArgs = BuildFfmpegArguments(inputTempPath, outputTempPath);
+            var ffmpegArgs = BuildFfmpegArguments(inputTempPath, outputTempPath, includeSilenceRemoval);
 
             _logger.LogInformation(
                 "[{PluginName}] Running ffmpeg (file mode, dir={TempDir}): {Args}",
@@ -338,13 +366,21 @@ public class AudioConversionPlugin
         _ => null
     };
 
+    private static bool RequiresSeekableInput(string extension) => extension switch
+    {
+        ".mp4" => true,
+        ".m4a" => true,
+        ".mov" => true,
+        _ => false
+    };
+
     /// <summary>
     /// Builds the full ffmpeg argument string for temp-file mode.
     /// Delegates filter construction to the shared BuildFilterChain() helper.
     /// </summary>
-    private string BuildFfmpegArguments(string inputPath, string outputPath)
+    private string BuildFfmpegArguments(string inputPath, string outputPath, bool includeSilenceRemoval)
     {
-        var filterChain = BuildFilterChain();
+        var filterChain = BuildFilterChain(includeSilenceRemoval);
         var durationArg = _options.MaxDurationSeconds > 0
             ? $"-t {_options.MaxDurationSeconds} "
             : "";
@@ -356,14 +392,14 @@ public class AudioConversionPlugin
     /// <summary>
     /// Builds the audio filter chain string (shared by pipe and file modes).
     /// </summary>
-    private string BuildFilterChain()
+    private string BuildFilterChain(bool includeSilenceRemoval)
     {
         var filterParts = new List<string>();
 
         filterParts.Add($"highpass=f={_options.HighPassFrequency}");
         filterParts.Add($"lowpass=f={_options.LowPassFrequency}");
 
-        if (_options.EnableSilenceRemoval)
+        if (includeSilenceRemoval)
         {
             filterParts.Add(
                 $"silenceremove=start_periods=1:start_duration={_options.SilenceMinDuration}:" +

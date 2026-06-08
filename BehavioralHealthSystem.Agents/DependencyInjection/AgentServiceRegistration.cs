@@ -32,10 +32,22 @@ public static class AgentServiceRegistration
                 options.FfmpegPath = config["FFMPEG_PATH"] ?? "ffmpeg";
                 if (int.TryParse(config["FFMPEG_SAMPLE_RATE"], out var sampleRate))
                     options.SampleRate = sampleRate;
+                if (int.TryParse(config["FFMPEG_CHANNELS"], out var channels))
+                    options.Channels = channels;
                 if (int.TryParse(config["FFMPEG_MAX_DURATION_SECONDS"], out var maxDuration))
                     options.MaxDurationSeconds = maxDuration;
                 if (int.TryParse(config["FFMPEG_PROCESS_TIMEOUT_SECONDS"], out var timeout))
                     options.ProcessTimeoutSeconds = timeout;
+                if (int.TryParse(config["FFMPEG_HIGHPASS_FREQUENCY"], out var highPass))
+                    options.HighPassFrequency = highPass;
+                if (int.TryParse(config["FFMPEG_LOWPASS_FREQUENCY"], out var lowPass))
+                    options.LowPassFrequency = lowPass;
+                if (bool.TryParse(config["FFMPEG_ENABLE_SILENCE_REMOVAL"], out var enableSilenceRemoval))
+                    options.EnableSilenceRemoval = enableSilenceRemoval;
+                if (int.TryParse(config["FFMPEG_SILENCE_THRESHOLD_DB"], out var silenceThresholdDb))
+                    options.SilenceThresholdDb = silenceThresholdDb;
+                if (double.TryParse(config["FFMPEG_SILENCE_MIN_DURATION"], out var silenceMinDuration))
+                    options.SilenceMinDuration = silenceMinDuration;
                 if (bool.TryParse(config["FFMPEG_SKIP_CLEAN_WAV"], out var skipClean))
                     options.SkipFiltersIfCleanWav = skipClean;
                 if (bool.TryParse(config["FFMPEG_USE_TMPFS"], out var useTmpfs))

@@ -67,12 +67,16 @@ var host = new HostBuilder()
         services.Configure<AzureOpenAIOptions>(options =>
         {
             var config = context.Configuration;
+            var configuredApiKey = isAirGapMode
+                ? config["AIR_GAP_OPENAI_API_KEY"] ?? config["LOCAL_OPENAI_API_KEY"] ?? config["AZURE_OPENAI_API_KEY"]
+                : config["AZURE_OPENAI_API_KEY"];
+            var effectiveApiKey = isAirGapMode && string.IsNullOrWhiteSpace(configuredApiKey)
+                ? "air-gap-local"
+                : configuredApiKey ?? string.Empty;
             options.Endpoint = isAirGapMode
                 ? config["AIR_GAP_OPENAI_ENDPOINT"] ?? config["LOCAL_OPENAI_ENDPOINT"] ?? config["AZURE_OPENAI_ENDPOINT"] ?? string.Empty
                 : config["AZURE_OPENAI_ENDPOINT"] ?? string.Empty;
-            options.ApiKey = isAirGapMode
-                ? config["AIR_GAP_OPENAI_API_KEY"] ?? config["LOCAL_OPENAI_API_KEY"] ?? config["AZURE_OPENAI_API_KEY"] ?? string.Empty
-                : config["AZURE_OPENAI_API_KEY"] ?? string.Empty;
+            options.ApiKey = effectiveApiKey;
             options.DeploymentName = isAirGapMode
                 ? config["AIR_GAP_OPENAI_DEPLOYMENT"] ?? config["LOCAL_OPENAI_DEPLOYMENT"] ?? config["AZURE_OPENAI_DEPLOYMENT"] ?? "gpt-oss-20b"
                 : config["AZURE_OPENAI_DEPLOYMENT"] ?? "gpt-4o";
@@ -88,6 +92,16 @@ var host = new HostBuilder()
         services.Configure<ExtendedAssessmentOpenAIOptions>(options =>
         {
             var config = context.Configuration;
+            var configuredApiKey = isAirGapMode
+                ? config["AIR_GAP_EXTENDED_OPENAI_API_KEY"]
+                    ?? config["AIR_GAP_OPENAI_API_KEY"]
+                    ?? config["LOCAL_EXTENDED_OPENAI_API_KEY"]
+                    ?? config["LOCAL_OPENAI_API_KEY"]
+                    ?? config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"]
+                : config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"];
+            var effectiveApiKey = isAirGapMode && string.IsNullOrWhiteSpace(configuredApiKey)
+                ? "air-gap-local"
+                : configuredApiKey ?? string.Empty;
             options.Endpoint = isAirGapMode
                 ? config["AIR_GAP_EXTENDED_OPENAI_ENDPOINT"]
                     ?? config["AIR_GAP_OPENAI_ENDPOINT"]
@@ -96,14 +110,7 @@ var host = new HostBuilder()
                     ?? config["EXTENDED_ASSESSMENT_OPENAI_ENDPOINT"]
                     ?? string.Empty
                 : config["EXTENDED_ASSESSMENT_OPENAI_ENDPOINT"] ?? string.Empty;
-            options.ApiKey = isAirGapMode
-                ? config["AIR_GAP_EXTENDED_OPENAI_API_KEY"]
-                    ?? config["AIR_GAP_OPENAI_API_KEY"]
-                    ?? config["LOCAL_EXTENDED_OPENAI_API_KEY"]
-                    ?? config["LOCAL_OPENAI_API_KEY"]
-                    ?? config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"]
-                    ?? string.Empty
-                : config["EXTENDED_ASSESSMENT_OPENAI_API_KEY"] ?? string.Empty;
+            options.ApiKey = effectiveApiKey;
             options.DeploymentName = isAirGapMode
                 ? config["AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT"]
                     ?? config["AIR_GAP_OPENAI_DEPLOYMENT"]

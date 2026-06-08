@@ -12,6 +12,7 @@ param(
     [string]$InputEnvFile = (Join-Path $PSScriptRoot '..\docker.env.example'),
     [string]$OutputEnvFile = (Join-Path $PSScriptRoot '..\docker.env.airgap'),
     [string]$OpenAiEndpoint = 'http://host.docker.internal:11434/v1',
+    [string]$ApiBaseUrl = 'http://localhost:7071/api',
     [string]$DamHealthEndpoint = 'http://localhost:8000/health',
     [string]$OllamaTagsEndpoint = 'http://localhost:11434/api/tags',
     [switch]$SkipChecks
@@ -86,6 +87,7 @@ $envMap = Read-EnvFile -Path $InputEnvFile
 $envMap['AIR_GAP_MODE'] = 'true'
 $envMap['VITE_AIR_GAP_MODE'] = 'true'
 $envMap['VITE_ENABLE_ENTRA_AUTH'] = 'false'
+$envMap['VITE_API_BASE_URL'] = $ApiBaseUrl
 $envMap['VITE_OFFLINE_MODE'] = 'true'
 $envMap['VITE_FFMPEG_CORE_BASE_URL'] = '/ffmpeg-core'
 

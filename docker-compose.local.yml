@@ -18,9 +18,10 @@ services:
     environment:
       # Storage connection - Use local Azurite for Durable Functions (avoids lease conflicts with deployed Azure instance)
       - AzureWebJobsStorage=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
+      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
       # Override hub name to avoid conflicts with deployed instances
       - AzureFunctionsJobHost__extensions__durableTask__hubName=KintsugiHealthHubLocal
-      - DSM5_STORAGE_ACCOUNT_NAME=${DSM5_STORAGE_ACCOUNT_NAME}
+      - DSM5_STORAGE_ACCOUNT_NAME=${DSM5_STORAGE_ACCOUNT_NAME:-devstoreaccount1}
       # Application Insights - Key Vault reference
       - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
       # Functions runtime
@@ -45,6 +46,7 @@ services:
       - AIR_GAP_OPENAI_ENDPOINT=${AIR_GAP_OPENAI_ENDPOINT}
       - AIR_GAP_OPENAI_API_KEY=${AIR_GAP_OPENAI_API_KEY}
       - AIR_GAP_OPENAI_DEPLOYMENT=${AIR_GAP_OPENAI_DEPLOYMENT:-gpt-oss-20b}
+      - AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT=${AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT:-phi4-mini}
       # Extended Assessment OpenAI - Managed Identity (no key)
       - EXTENDED_ASSESSMENT_OPENAI_ENABLED=true
       - EXTENDED_ASSESSMENT_OPENAI_API_VERSION=2025-04-01-preview
@@ -74,7 +76,7 @@ services:
       - GRAMMAR_AGENT_PRESERVE_FORMATTING=true
       - GRAMMAR_AGENT_SUGGEST_ALTERNATIVES=false
       # Azure Storage
-      - AZURE_STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}
+      - AZURE_STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-devstoreaccount1}
       # Local DAM Model
       - LOCAL_DAM_BASE_URL=http://dam:8000
       - LOCAL_DAM_INITIATE_PATH=initiate

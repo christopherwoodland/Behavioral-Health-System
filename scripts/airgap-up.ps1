@@ -28,22 +28,21 @@ $ComposeFile = [System.IO.Path]::GetFullPath($ComposeFile)
 
 if (-not $SkipBootstrap) {
     & (Join-Path $PSScriptRoot 'airgap-bootstrap.ps1') -OutputEnvFile $EnvFile
-    if ($LASTEXITCODE -ne 0) { throw 'airgap-bootstrap failed' }
 }
 
 if (-not $SkipDependencyRestore) {
     & (Join-Path $PSScriptRoot 'vendor-offline\install-nuget-offline.ps1')
-    if ($LASTEXITCODE -ne 0) { throw 'install-nuget-offline failed' }
 
     & (Join-Path $PSScriptRoot 'vendor-offline\install-npm-offline.ps1')
-    if ($LASTEXITCODE -ne 0) { throw 'install-npm-offline failed' }
 }
 
 if (-not $SkipFfmpegStage) {
     $stageScript = Join-Path $PSScriptRoot 'vendor-offline\stage-ffmpeg-core.ps1'
+    $stageExecuted = $false
     if ([string]::IsNullOrWhiteSpace($FfmpegTarballPath)) {
         $vendoredTarball = Get-ChildItem -Path (Join-Path $repoRoot 'vendor\\npm-tarballs') -Filter 'core-*.tgz' -File -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($vendoredTarball) {
+            $stageExecuted = $true
             & $stageScript -TarballPath $vendoredTarball.FullName
         }
         else {
@@ -56,10 +55,11 @@ if (-not $SkipFfmpegStage) {
         }
     }
     else {
+        $stageExecuted = $true
         & $stageScript -TarballPath $FfmpegTarballPath
     }
 
-    if ($LASTEXITCODE -ne 0) { throw 'stage-ffmpeg-core failed' }
+    if ($stageExecuted -and $LASTEXITCODE -ne 0) { throw 'stage-ffmpeg-core failed' }
 }
 
 Push-Location $repoRoot

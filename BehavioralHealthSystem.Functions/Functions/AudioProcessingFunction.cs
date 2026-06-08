@@ -197,6 +197,7 @@ public class AudioProcessingFunction
             string? userId = null;
             string? sessionId = null;
             string? originalFileName = null;
+            string? uploadedContentType = null;
             byte[]? fileData = null;
 
             Microsoft.AspNetCore.WebUtilities.MultipartSection? section;
@@ -217,7 +218,8 @@ public class AudioProcessingFunction
                 }
                 else if (string.Equals(fieldName, "file", StringComparison.OrdinalIgnoreCase))
                 {
-                    originalFileName = GetFileName(disposition) ?? "upload.wav";
+                    originalFileName = GetFileName(disposition) ?? "upload";
+                    uploadedContentType = section.ContentType;
                     using var ms = new MemoryStream();
                     await section.Body.CopyToAsync(ms);
                     fileData = ms.ToArray();
@@ -235,7 +237,10 @@ public class AudioProcessingFunction
 
             // Save uploaded file to temp directory
             var extension = Path.GetExtension(originalFileName);
-            if (string.IsNullOrEmpty(extension)) extension = ".wav";
+            if (string.IsNullOrEmpty(extension))
+            {
+                extension = GuessExtensionFromContentType(uploadedContentType) ?? ".bin";
+            }
             tempFilePath = Path.Combine(Path.GetTempPath(), $"dam-upload-{Guid.NewGuid():N}{extension}");
             await File.WriteAllBytesAsync(tempFilePath, fileData);
 
@@ -400,6 +405,31 @@ public class AudioProcessingFunction
         var match = System.Text.RegularExpressions.Regex.Match(
             contentDisposition, @"filename=""?([^"";\s]+)""?", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         return match.Success ? match.Groups[1].Value : null;
+    }
+
+    /// <summary>
+    /// Maps multipart file content types to a file extension when filename is missing.
+    /// </summary>
+    private static string? GuessExtensionFromContentType(string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(contentType))
+        {
+            return null;
+        }
+
+        var normalized = contentType.Split(';')[0].Trim().ToLowerInvariant();
+        return normalized switch
+        {
+            "audio/webm" => ".webm",
+            "audio/wav" or "audio/x-wav" or "audio/wave" => ".wav",
+            "audio/mpeg" => ".mp3",
+            "audio/mp4" or "audio/m4a" or "audio/x-m4a" => ".m4a",
+            "audio/aac" => ".aac",
+            "audio/ogg" => ".ogg",
+            "audio/flac" => ".flac",
+            "video/mp4" or "application/mp4" => ".mp4",
+            _ => null
+        };
     }
 
     private async Task<HttpResponseData> CreateErrorResponse(

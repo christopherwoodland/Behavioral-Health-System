@@ -1,7 +1,9 @@
 using System.ClientModel;
+using System.Text;
 using Azure;
 using Azure.AI.OpenAI;
 using Azure.Identity;
+using Microsoft.Extensions.Configuration;
 using OpenAI.Chat;
 
 namespace BehavioralHealthSystem.Services;
@@ -10,13 +12,26 @@ public class GrammarCorrectionService : IGrammarCorrectionService
 {
     private readonly ILogger<GrammarCorrectionService> _logger;
     private readonly AzureOpenAIOptions _openAIOptions;
+    private readonly string _deploymentName;
 
     public GrammarCorrectionService(
         ILogger<GrammarCorrectionService> logger,
-        IOptions<AzureOpenAIOptions> openAIOptions)
+        IOptions<AzureOpenAIOptions> openAIOptions,
+        IConfiguration configuration)
     {
         _logger = logger;
         _openAIOptions = openAIOptions.Value;
+
+        var isAirGapMode = string.Equals(configuration["AIR_GAP_MODE"], "true", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(configuration["ENABLE_AIR_GAP"], "true", StringComparison.OrdinalIgnoreCase);
+
+        _deploymentName = isAirGapMode
+            ? configuration["AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT"]
+                ?? configuration["LOCAL_GRAMMAR_OPENAI_DEPLOYMENT"]
+                ?? configuration["AIR_GAP_OPENAI_DEPLOYMENT"]
+                ?? configuration["LOCAL_OPENAI_DEPLOYMENT"]
+                ?? "phi4-mini"
+            : _openAIOptions.DeploymentName;
     }
 
     public async Task<string?> CorrectTextAsync(string text)
@@ -72,7 +87,12 @@ Corrected text:";
         try
         {
             var endpoint = new Uri(_openAIOptions.Endpoint);
-            var deploymentName = _openAIOptions.DeploymentName;
+            var deploymentName = _deploymentName;
+
+            if (IsOpenAICompatibleEndpoint(endpoint))
+            {
+                return await CallOpenAICompatibleAsync(endpoint, deploymentName, prompt);
+            }
 
             // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
             AzureOpenAIClient azureClient = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
@@ -142,5 +162,58 @@ Corrected text:";
             _logger.LogError(ex, "[{MethodName}] Error calling Azure OpenAI API", nameof(CallAzureOpenAIAsync));
             return null;
         }
+    }
+
+    private static bool IsOpenAICompatibleEndpoint(Uri endpoint)
+    {
+        var path = endpoint.AbsolutePath.TrimEnd('/');
+        return path.EndsWith("/v1", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<string?> CallOpenAICompatibleAsync(Uri endpoint, string deploymentName, string prompt)
+    {
+        var requestUri = new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/chat/completions");
+
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(30)
+        };
+
+        if (!string.IsNullOrWhiteSpace(_openAIOptions.ApiKey) && !string.Equals(_openAIOptions.ApiKey, "air-gap-local", StringComparison.Ordinal))
+        {
+            httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _openAIOptions.ApiKey);
+        }
+
+        var payload = new
+        {
+            model = deploymentName,
+            messages = new object[]
+            {
+                new { role = "system", content = "You are an expert editor and proofreader. Your task is to correct grammar, spelling, and punctuation while preserving the original meaning and tone. Return only the corrected text without any explanations." },
+                new { role = "user", content = prompt }
+            },
+            temperature = 0.2,
+            stream = false
+        };
+
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        using var response = await httpClient.PostAsync(requestUri, content);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("[{MethodName}] OpenAI-compatible endpoint returned status {StatusCode} for model {Model}",
+                nameof(CallOpenAICompatibleAsync), (int)response.StatusCode, deploymentName);
+            return null;
+        }
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(responseBody);
+        var correctedText = document.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString();
+
+        return string.IsNullOrWhiteSpace(correctedText) ? null : correctedText.Trim();
     }
 }

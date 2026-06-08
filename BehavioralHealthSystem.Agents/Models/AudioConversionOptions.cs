@@ -23,14 +23,14 @@ public class AudioConversionOptions
     /// <summary>Whether to apply silence removal.</summary>
     public bool EnableSilenceRemoval { get; set; } = true;
 
-    /// <summary>Silence detection threshold in dB (e.g., -35).</summary>
-    public int SilenceThresholdDb { get; set; } = -35;
+    /// <summary>Silence detection threshold in dB (e.g., -50).</summary>
+    public int SilenceThresholdDb { get; set; } = -50;
 
     /// <summary>Minimum silence duration in seconds before removal.</summary>
-    public double SilenceMinDuration { get; set; } = 0.5;
+    public double SilenceMinDuration { get; set; } = 0.1;
 
     /// <summary>Maximum allowed duration in seconds (0 = no limit).</summary>
-    public int MaxDurationSeconds { get; set; } = 0;
+    public int MaxDurationSeconds { get; set; } = 30;
 
     /// <summary>Timeout for ffmpeg process in seconds.</summary>
     public int ProcessTimeoutSeconds { get; set; } = 120;

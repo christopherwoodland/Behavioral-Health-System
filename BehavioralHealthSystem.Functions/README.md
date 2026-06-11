@@ -26,7 +26,7 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/health` | GET | Health check — returns system status |
+| `/api/health` | GET | Health check — returns system status, `airGapMode` flag, and `aiModel` name |
 | `/api/feature-flags` | GET | Feature flag state for frontend |
 
 ### Kintsugi DAM (Depression & Anxiety Model)

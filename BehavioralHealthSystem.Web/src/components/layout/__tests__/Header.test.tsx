@@ -48,6 +48,14 @@ vi.mock('@/hooks/accessibility', () => ({
   })),
 }));
 
+vi.mock('@/hooks/api', () => ({
+  useHealthCheck: vi.fn(() => ({
+    data: { status: 'Healthy', airGapMode: true, aiModel: 'phi4-mini' },
+    isLoading: false,
+    error: null,
+  })),
+}));
+
 describe('Header Component', () => {
   it('should be defined and importable', () => {
     expect(Header).toBeDefined();

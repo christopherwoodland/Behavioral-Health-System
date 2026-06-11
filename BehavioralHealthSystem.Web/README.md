@@ -57,6 +57,13 @@ In air-gap mode, additional contextual messages appear:
 - "Sending prompt to local AI model — this may take 1-3 minutes in air-gap mode"
 - Elapsed time indicator with explanation when the model is thinking (40-80% range)
 
+### Mode Indicator
+The header displays a badge showing the current AI backend mode:
+- **Cloud** (green) — connected to Azure OpenAI
+- **Air-Gap (model-name)** (amber) — running against a local Ollama model
+
+The badge is driven by the `/api/health` response fields `airGapMode` and `aiModel`.
+
 ### Voice Activity Visualization
 Real-time Three.js visualization of audio input during voice recording sessions.
 

@@ -1,4 +1,4 @@
-using BehavioralHealthSystem.Agents.Interfaces;
+sing BehavioralHealthSystem.Agents.Interfaces;
 using BehavioralHealthSystem.Agents.Models;
 
 namespace BehavioralHealthSystem.Functions;

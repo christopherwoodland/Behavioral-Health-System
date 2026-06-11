@@ -115,6 +115,8 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
     return `${(confidence * 100).toFixed(1)}%`;
   };
 
+  const hasTranscribedText = Boolean(transcription?.text?.trim());
+
   const getConfidenceColor = (confidence: number): string => {
     if (confidence >= 0.8) return 'text-green-600 dark:text-green-400';
     if (confidence >= 0.6) return 'text-yellow-600 dark:text-yellow-400';
@@ -240,13 +242,22 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
             </div>
           )}
 
-          {/* Success Indicator */}
-          <div className="flex items-center">
-            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mr-2" aria-hidden="true" />
-            <span className="text-sm text-green-700 dark:text-green-300">
-              Transcription completed successfully
-            </span>
-          </div>
+          {/* Result Indicator */}
+          {hasTranscribedText ? (
+            <div className="flex items-center">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 mr-2" aria-hidden="true" />
+              <span className="text-sm text-green-700 dark:text-green-300">
+                Transcription completed successfully
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center">
+              <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mr-2" aria-hidden="true" />
+              <span className="text-sm text-yellow-700 dark:text-yellow-300">
+                No speech was detected in this audio sample
+              </span>
+            </div>
+          )}
 
           {/* Transcription Text */}
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">

@@ -241,21 +241,21 @@ function Invoke-DockerShell {
 }
 
 function Invoke-SeedData {
-    Write-Header "Seeding DSM-5 Data - $Environment"
+    Write-Header "Seeding Reference Data - $Environment"
 
-    $containerName = if ($Environment -eq "development") { "bhs-db-dev" } else { "bhs-db-prod" }
-    $seedScript = Join-Path $ScriptDir "seed-dsm5-data.ps1"
+    $mode = if ($Environment -eq "development") { "dev" } else { "prod" }
+    $seedScript = Join-Path $ScriptDir "seed-database.ps1"
 
     if (-not (Test-Path $seedScript)) {
         Write-ErrorMsg "Seed script not found: $seedScript"
         return
     }
 
-    Write-Step "Running DSM-5 data seed..."
-    & $seedScript -ContainerName $containerName
+    Write-Step "Running database seed..."
+    & $seedScript -Mode $mode
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "DSM-5 data seeded successfully!"
+        Write-Success "Database seeded successfully!"
     } else {
         Write-ErrorMsg "Seeding failed. Check the output above."
     }

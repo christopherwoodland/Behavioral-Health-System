@@ -34,14 +34,25 @@ class TranscriptionService {
    */
   async transcribeAudio(audioBlob: Blob): Promise<TranscriptionResult> {
     try {
+      if (!this.isTranscriptionEnabled()) {
+        return {
+          text: '',
+          confidence: 0,
+          error: 'Transcription is disabled in this environment.'
+        };
+      }
+
       let blobToSend = audioBlob;
       let contentType = audioBlob.type || 'audio/wav';
 
       log.debug('Transcribing audio', { originalSize: audioBlob.size, type: contentType });
 
-      // If the audio is not WAV, convert it to WAV for Azure Speech API compatibility
-      // Azure Speech Fast Transcription API does NOT support WebM/Opus format
-      if (contentType !== 'audio/wav' && contentType !== 'audio/wave' && contentType !== 'audio/x-wav') {
+      // In air-gap mode, skip frontend WAV conversion — the backend handles format
+      // detection and whisper-asr supports WAV, MP3, OGG, FLAC, and WebM natively.
+      // This avoids requiring FFmpeg WASM assets which may not be available locally.
+      const isAirGap = env.AIR_GAP_MODE;
+
+      if (!isAirGap && contentType !== 'audio/wav' && contentType !== 'audio/wave' && contentType !== 'audio/x-wav') {
         log.debug('Converting audio to WAV for Azure Speech API compatibility...');
         try {
           const wavBlob = await convertAudioToWav(
@@ -60,6 +71,8 @@ class TranscriptionService {
             throw new Error(`Audio format not supported. Please use WAV, MP3, or OGG format. (Original type: ${contentType})`);
           }
         }
+      } else if (isAirGap) {
+        log.debug('Air-gap mode: skipping frontend conversion, backend handles format detection');
       }
 
       log.debug('Sending to transcription API', { size: blobToSend.size, type: contentType });
@@ -78,7 +91,9 @@ class TranscriptionService {
 
         try {
           const errorData = JSON.parse(errorText);
-          errorMessage = errorData.error || errorMessage;
+          const baseError = errorData.error || errorMessage;
+          const detailText = typeof errorData.details === 'string' ? errorData.details.trim() : '';
+          errorMessage = detailText ? `${baseError}: ${detailText}` : baseError;
         } catch {
           errorMessage = errorText || errorMessage;
         }
@@ -87,10 +102,15 @@ class TranscriptionService {
       }
 
       const result = await response.json();
+      const normalizedText = typeof result.text === 'string' ? result.text : '';
+      const hasText = normalizedText.trim().length > 0;
+      const normalizedConfidence = !hasText
+        ? 0.0
+        : (typeof result.confidence === 'number' ? result.confidence : 1.0);
 
       return {
-        text: result.text || '',
-        confidence: result.confidence || 1.0,
+        text: normalizedText,
+        confidence: normalizedConfidence,
         duration: result.duration || 0,
         language: result.language || 'en'
       };
@@ -110,7 +130,7 @@ class TranscriptionService {
    * @returns boolean
    */
   isTranscriptionEnabled(): boolean {
-    // Enable transcription by default unless explicitly disabled
+    // Controlled by feature flag so air-gap can opt-in when local STT is available.
     return env.ENABLE_TRANSCRIPTION;
   }
 

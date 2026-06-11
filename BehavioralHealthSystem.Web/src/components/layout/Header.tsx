@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useKeyboardNavigation } from '@/hooks/accessibility';
+import { useHealthCheck } from '@/hooks/api';
 import { APP_ROLES } from '@/config/authConfig';
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
@@ -16,6 +17,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout, isAuthenticated, isAdmin } = useAuth();
+  const { data: healthStatus } = useHealthCheck();
   const location = useLocation();
   const { handleEnterSpace } = useKeyboardNavigation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -110,6 +112,22 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
               <span className="hidden sm:block">Behavioral Health System</span>
               <span className="sm:hidden">BHS</span>
             </Link>
+            {/* Mode indicator badge */}
+            {healthStatus && (
+              <span
+                className={`ml-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  healthStatus.airGapMode
+                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                    : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                }`}
+                title={healthStatus.airGapMode ? `Air-gap mode: ${healthStatus.aiModel}` : 'Connected to cloud AI'}
+              >
+                <span className="mr-1" role="img" aria-hidden="true">
+                  {healthStatus.airGapMode ? '✈️' : '☁️'}
+                </span>
+                {healthStatus.airGapMode ? `Air-Gap (${healthStatus.aiModel})` : 'Cloud'}
+              </span>
+            )}
           </div>
 
           {/* Navigation */}

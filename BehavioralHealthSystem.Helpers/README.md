@@ -66,7 +66,7 @@ BehavioralHealthSystem.Helpers/
 
 | Service | Purpose |
 |---------|---------|
-| `RiskAssessmentService` | Generates risk assessments via Azure OpenAI — builds clinical prompts from session data, calls GPT, parses structured JSON |
+| `RiskAssessmentService` | Generates risk assessments via Azure OpenAI — builds clinical prompts from session data, calls GPT, parses structured JSON. In air-gap mode, uses a simplified prompt and caps at 2 conditions per request. |
 | `GrammarCorrectionService` | AI-powered grammar correction for transcribed text |
 | `ExtendedAssessmentJobService` | In-memory job tracking for async extended assessments |
 

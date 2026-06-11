@@ -42,7 +42,20 @@ Displays transcribed text from audio recordings processed by the Azure Speech Fa
 Renders AI-generated risk assessments with color-coded severity levels (Low / Moderate / High / Critical), contributing factors, clinical recommendations, and confidence scores.
 
 ### Extended Assessment
-Trigger and view extended multi-condition psychiatric evaluations powered by GPT-5/O3. Includes a DSM-5 condition selector for targeted analysis, per-condition results, and cross-condition differential diagnosis.
+Trigger and view extended multi-condition psychiatric evaluations powered by GPT-5/O3. Includes a DSM-5 condition selector for targeted analysis, per-condition results, and cross-condition differential diagnosis. The progress UI displays 7 named stages with real-time status:
+
+1. **Validating session** (10%)
+2. **Preparing clinical prompt** (30%)
+3. **Sending to AI model** (40%)
+4. **AI model generating assessment** (50%)
+5. **Parsing AI response** (80%)
+6. **Saving assessment results** (90%)
+7. **Finalizing** (100%)
+
+In air-gap mode, additional contextual messages appear:
+- "Air-gap mode: Limited to 2 of N selected conditions (local model context window constraint)"
+- "Sending prompt to local AI model — this may take 1-3 minutes in air-gap mode"
+- Elapsed time indicator with explanation when the model is thinking (40-80% range)
 
 ### Voice Activity Visualization
 Real-time Three.js visualization of audio input during voice recording sessions.

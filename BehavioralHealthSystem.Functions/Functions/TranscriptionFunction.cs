@@ -148,11 +148,25 @@ public class TranscriptionFunction
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogWarning(ex, "[{FunctionName}] Failed to convert {Format} to WAV, trying as MP4 audio",
+                    _logger.LogWarning(ex, "[{FunctionName}] MediaFoundation conversion failed for {Format}, trying FFmpeg conversion",
                         nameof(TranscribeAudio), detectedFormat);
-                    processedAudioData = audioData;
-                    fileExtension = "m4a";
-                    mimeType = "audio/mp4";
+
+                    try
+                    {
+                        processedAudioData = ConvertToWavUsingFfmpeg(audioData, detectedFormat);
+                        fileExtension = "wav";
+                        mimeType = "audio/wav";
+                        _logger.LogInformation("[{FunctionName}] Successfully converted {Format} to WAV using FFmpeg",
+                            nameof(TranscribeAudio), detectedFormat);
+                    }
+                    catch (Exception ffmpegEx)
+                    {
+                        _logger.LogWarning(ffmpegEx, "[{FunctionName}] FFmpeg conversion failed for {Format}, trying as MP4 audio",
+                            nameof(TranscribeAudio), detectedFormat);
+                        processedAudioData = audioData;
+                        fileExtension = "m4a";
+                        mimeType = "audio/mp4";
+                    }
                 }
             }
             else
@@ -182,12 +196,189 @@ public class TranscriptionFunction
             var speechLocale = Environment.GetEnvironmentVariable("AZURE_SPEECH_LOCALE") ?? "en-US";
             var apiVersion = Environment.GetEnvironmentVariable("AZURE_SPEECH_API_VERSION") ?? "2024-11-15";
             var useEnhancedMode = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENHANCED_MODE") ?? "false";
+            var isAirGapMode = string.Equals(
+                Environment.GetEnvironmentVariable("AIR_GAP_MODE"),
+                "true",
+                StringComparison.OrdinalIgnoreCase);
+            var airGapSttEndpoint = Environment.GetEnvironmentVariable("AIR_GAP_STT_ENDPOINT")
+                ?? Environment.GetEnvironmentVariable("AIR_GAP_OPENAI_ENDPOINT");
+            var airGapSttApiKey = GetSecretOrEnvVar("AIR_GAP_STT_API_KEY", "AirGapSttApiKey")
+                ?? Environment.GetEnvironmentVariable("AIR_GAP_OPENAI_API_KEY");
+            var airGapSttModel = Environment.GetEnvironmentVariable("AIR_GAP_STT_MODEL") ?? "whisper-1";
+
+            if (string.IsNullOrEmpty(speechEndpoint)
+                && string.IsNullOrEmpty(speechKey)
+                && isAirGapMode
+                && !string.IsNullOrWhiteSpace(airGapSttEndpoint))
+            {
+                var airGapTranscriptionUrl = airGapSttEndpoint.TrimEnd('/');
+                if (!airGapTranscriptionUrl.EndsWith("/audio/transcriptions", StringComparison.OrdinalIgnoreCase))
+                {
+                    airGapTranscriptionUrl = $"{airGapTranscriptionUrl}/audio/transcriptions";
+                }
+
+                _logger.LogInformation(
+                    "[{FunctionName}] Using air-gap OpenAI-compatible STT endpoint: {Url}, model: {Model}",
+                    nameof(TranscribeAudio),
+                    airGapTranscriptionUrl,
+                    airGapSttModel);
+
+                using var airGapClient = new HttpClient();
+                airGapClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                if (!string.IsNullOrWhiteSpace(airGapSttApiKey))
+                {
+                    airGapClient.DefaultRequestHeaders.Authorization =
+                        new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", airGapSttApiKey);
+                }
+
+                using var airGapForm = new MultipartFormDataContent();
+                var airGapAudio = new ByteArrayContent(processedAudioData);
+                airGapAudio.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+                airGapForm.Add(airGapAudio, "file", $"audio.{fileExtension}");
+                airGapForm.Add(new StringContent(airGapSttModel), "model");
+                airGapForm.Add(new StringContent("json"), "response_format");
+
+                var languageCode = speechLocale.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(languageCode))
+                {
+                    airGapForm.Add(new StringContent(languageCode.ToLowerInvariant()), "language");
+                }
+
+                var airGapResponse = await airGapClient.PostAsync(airGapTranscriptionUrl, airGapForm);
+                var airGapBody = await airGapResponse.Content.ReadAsStringAsync();
+
+                if (airGapResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    var ollamaBaseUrl = airGapSttEndpoint.TrimEnd('/');
+                    if (ollamaBaseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+                    {
+                        ollamaBaseUrl = ollamaBaseUrl[..^3];
+                    }
+
+                    var ollamaTranscribeUrl = $"{ollamaBaseUrl}/api/transcribe";
+                    _logger.LogInformation(
+                        "[{FunctionName}] OpenAI STT route not found, trying Ollama route: {Url}",
+                        nameof(TranscribeAudio),
+                        ollamaTranscribeUrl);
+
+                    using var ollamaForm = new MultipartFormDataContent();
+                    var ollamaAudio = new ByteArrayContent(processedAudioData);
+                    ollamaAudio.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+                    ollamaForm.Add(ollamaAudio, "file", $"audio.{fileExtension}");
+                    ollamaForm.Add(new StringContent(airGapSttModel), "model");
+
+                    airGapResponse = await airGapClient.PostAsync(ollamaTranscribeUrl, ollamaForm);
+                    airGapBody = await airGapResponse.Content.ReadAsStringAsync();
+                }
+
+                if (airGapResponse.StatusCode == HttpStatusCode.NotFound)
+                {
+                    var whisperBaseUrl = airGapSttEndpoint.TrimEnd('/');
+                    if (whisperBaseUrl.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+                    {
+                        whisperBaseUrl = whisperBaseUrl[..^3];
+                    }
+
+                    var language = speechLocale.Split('-', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.ToLowerInvariant() ?? "en";
+                    var whisperUrl = $"{whisperBaseUrl}/asr?encode=true&task=transcribe&language={language}&output=json";
+                    _logger.LogInformation(
+                        "[{FunctionName}] Ollama route not found, trying whisper-asr route: {Url}",
+                        nameof(TranscribeAudio),
+                        whisperUrl);
+
+                    using var whisperForm = new MultipartFormDataContent();
+                    var whisperAudio = new ByteArrayContent(processedAudioData);
+                    whisperAudio.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+                    whisperForm.Add(whisperAudio, "audio_file", $"audio.{fileExtension}");
+
+                    airGapResponse = await airGapClient.PostAsync(whisperUrl, whisperForm);
+                    airGapBody = await airGapResponse.Content.ReadAsStringAsync();
+                }
+
+                if (!airGapResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError(
+                        "[{FunctionName}] Air-gap STT API error: {StatusCode} - {Error}",
+                        nameof(TranscribeAudio),
+                        airGapResponse.StatusCode,
+                        airGapBody);
+
+                    var badGatewayResponse = req.CreateResponse(HttpStatusCode.BadGateway);
+                    await badGatewayResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                    {
+                        error = "Air-gap transcription failed",
+                        details = airGapBody
+                    }));
+                    return badGatewayResponse;
+                }
+
+                string transcribedText = string.Empty;
+                try
+                {
+                    var parsed = JsonSerializer.Deserialize<JsonElement>(airGapBody);
+                    if (parsed.TryGetProperty("text", out var textProperty))
+                    {
+                        transcribedText = textProperty.GetString() ?? string.Empty;
+                    }
+                    else if (parsed.TryGetProperty("transcript", out var transcriptProperty))
+                    {
+                        transcribedText = transcriptProperty.GetString() ?? string.Empty;
+                    }
+
+                    // whisper-asr can return phrase chunks under "segments" even when top-level "text" is empty.
+                    if (string.IsNullOrWhiteSpace(transcribedText)
+                        && parsed.TryGetProperty("segments", out var segments)
+                        && segments.ValueKind == JsonValueKind.Array)
+                    {
+                        var segmentTexts = new List<string>();
+                        foreach (var segment in segments.EnumerateArray())
+                        {
+                            if (segment.TryGetProperty("text", out var segmentTextProperty))
+                            {
+                                var segmentText = segmentTextProperty.GetString();
+                                if (!string.IsNullOrWhiteSpace(segmentText))
+                                {
+                                    segmentTexts.Add(segmentText.Trim());
+                                }
+                            }
+                        }
+
+                        transcribedText = string.Join(" ", segmentTexts);
+                    }
+                }
+                catch (JsonException)
+                {
+                    transcribedText = airGapBody;
+                }
+
+                _logger.LogInformation(
+                    "[{FunctionName}] Air-gap transcription successful: {TextLength} characters",
+                    nameof(TranscribeAudio),
+                    transcribedText.Length);
+
+                var airGapSuccess = req.CreateResponse(HttpStatusCode.OK);
+                airGapSuccess.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                await airGapSuccess.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    text = transcribedText,
+                    confidence = 1.0,
+                    duration = 0,
+                    language = speechLocale
+                }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+                return airGapSuccess;
+            }
 
             if (string.IsNullOrEmpty(speechEndpoint) && string.IsNullOrEmpty(speechKey))
             {
                 _logger.LogError("[{FunctionName}] Speech service not configured (need AZURE_SPEECH_ENDPOINT or AZURE_SPEECH_KEY)", nameof(TranscribeAudio));
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Speech transcription service not configured" }));
+                var errorResponse = req.CreateResponse(HttpStatusCode.ServiceUnavailable);
+                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                {
+                    error = "Speech transcription service not configured",
+                    details = isAirGapMode
+                        ? "Configure AIR_GAP_STT_ENDPOINT (or AIR_GAP_OPENAI_ENDPOINT) for local transcription, or configure AZURE_SPEECH_* for cloud speech."
+                        : "Set AZURE_SPEECH_ENDPOINT (managed identity) or AZURE_SPEECH_KEY."
+                }));
                 return errorResponse;
             }
 
@@ -439,6 +630,63 @@ public class TranscriptionFunction
     }
 
     /// <summary>
+    /// Report transcription runtime capability and selected backend.
+    /// GET /api/transcribe-status
+    /// </summary>
+    [Function("GetTranscriptionStatus")]
+    public async Task<HttpResponseData> GetTranscriptionStatus(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "transcribe-status")] HttpRequestData req)
+    {
+        var isAirGapMode = string.Equals(
+            Environment.GetEnvironmentVariable("AIR_GAP_MODE"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        var transcriptionEnabledRaw = Environment.GetEnvironmentVariable("ENABLE_TRANSCRIPTION");
+        var transcriptionEnabled = !string.Equals(transcriptionEnabledRaw, "false", StringComparison.OrdinalIgnoreCase);
+
+        var speechEndpoint = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENDPOINT");
+        var speechKey = GetSecretOrEnvVar("AZURE_SPEECH_KEY", "AzureSpeechKey");
+        var azureSpeechConfigured = !string.IsNullOrWhiteSpace(speechEndpoint) || !string.IsNullOrWhiteSpace(speechKey);
+
+        var airGapSttEndpoint = Environment.GetEnvironmentVariable("AIR_GAP_STT_ENDPOINT")
+            ?? Environment.GetEnvironmentVariable("AIR_GAP_OPENAI_ENDPOINT");
+        var airGapSttModel = Environment.GetEnvironmentVariable("AIR_GAP_STT_MODEL") ?? "whisper-1";
+        var airGapSttConfigured = !string.IsNullOrWhiteSpace(airGapSttEndpoint);
+
+        var backend = azureSpeechConfigured
+            ? "azure-speech"
+            : (isAirGapMode && airGapSttConfigured ? "air-gap-stt" : "none");
+
+        var canTranscribe = transcriptionEnabled && backend != "none";
+
+        var details = canTranscribe
+            ? $"Transcription ready using {backend}."
+            : !transcriptionEnabled
+                ? "Transcription is disabled via ENABLE_TRANSCRIPTION=false."
+                : isAirGapMode
+                    ? "Set AIR_GAP_STT_ENDPOINT (or AIR_GAP_OPENAI_ENDPOINT) and model availability for air-gap transcription."
+                    : "Set AZURE_SPEECH_ENDPOINT or AZURE_SPEECH_KEY for cloud transcription.";
+
+        var response = req.CreateResponse(HttpStatusCode.OK);
+        response.Headers.Add("Content-Type", "application/json; charset=utf-8");
+        await response.WriteStringAsync(JsonSerializer.Serialize(new
+        {
+            canTranscribe,
+            backend,
+            isAirGapMode,
+            transcriptionEnabled,
+            azureSpeechConfigured,
+            airGapSttConfigured,
+            airGapSttEndpoint,
+            airGapSttModel,
+            details
+        }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+
+        return response;
+    }
+
+    /// <summary>
     /// Detect audio format from magic bytes (file signature)
     /// </summary>
     private static string? DetectAudioFormat(byte[] data)
@@ -517,6 +765,48 @@ public class TranscriptionFunction
         finally
         {
             // Clean up temp files
+            try { if (File.Exists(tempInputPath)) File.Delete(tempInputPath); } catch { }
+            try { if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath); } catch { }
+        }
+    }
+
+    /// <summary>
+    /// Convert audio to WAV using ffmpeg CLI (Linux/container friendly).
+    /// </summary>
+    private static byte[] ConvertToWavUsingFfmpeg(byte[] audioData, string sourceFormat)
+    {
+        var tempInputPath = Path.Combine(Path.GetTempPath(), $"audio_input_{Guid.NewGuid()}.{sourceFormat}");
+        var tempOutputPath = Path.Combine(Path.GetTempPath(), $"audio_output_{Guid.NewGuid()}.wav");
+
+        try
+        {
+            File.WriteAllBytes(tempInputPath, audioData);
+
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "ffmpeg",
+                Arguments = $"-y -i \"{tempInputPath}\" -ac 1 -ar 16000 -acodec pcm_s16le \"{tempOutputPath}\"",
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using var process = Process.Start(processStartInfo)
+                ?? throw new InvalidOperationException("Failed to start ffmpeg process.");
+
+            process.WaitForExit();
+            var ffmpegError = process.StandardError.ReadToEnd();
+
+            if (process.ExitCode != 0 || !File.Exists(tempOutputPath))
+            {
+                throw new InvalidOperationException($"ffmpeg conversion failed with exit code {process.ExitCode}. {ffmpegError}");
+            }
+
+            return File.ReadAllBytes(tempOutputPath);
+        }
+        finally
+        {
             try { if (File.Exists(tempInputPath)) File.Delete(tempInputPath); } catch { }
             try { if (File.Exists(tempOutputPath)) File.Delete(tempOutputPath); } catch { }
         }

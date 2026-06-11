@@ -16,6 +16,7 @@ import { submitToDam, mapDamResultToPrediction } from '../services/damService';
 import type { AppError, SessionMetadata } from '../types';
 import { AccessibleDialog } from '../components/AccessibleDialog';
 import { Logger } from '@/utils/logger';
+import { env } from '@/utils/env';
 
 const log = Logger.create('UploadAnalyze');
 
@@ -244,8 +245,8 @@ const UploadAnalyze: React.FC = () => {
   const [grammarCorrectedText, setGrammarCorrectedText] = useState<string | null>(null);
   const [grammarOriginalText, setGrammarOriginalText] = useState<string>('');
 
-  // Processing options state
-  const [transcribeAudio, setTranscribeAudio] = useState(false); // Default unchecked
+  // Processing options state - default to checked in air-gap mode
+  const [transcribeAudio, setTranscribeAudio] = useState(env.AIR_GAP_MODE);
 
   // Group selection state
   const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);
@@ -381,17 +382,29 @@ const UploadAnalyze: React.FC = () => {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      // Clear source immediately to prevent the browser from retrying a revoked blob URL.
+      audioRef.current.removeAttribute('src');
+      audioRef.current.load();
     }
 
-    // Clean up any URL object references to prevent memory leaks
-    audioFiles.forEach(file => {
-      if (file.url) {
-        URL.revokeObjectURL(file.url);
+    // Clear all in-page audio element sources (single + batch mode players)
+    // before revoking object URLs to avoid ERR_FILE_NOT_FOUND retry noise.
+    document.querySelectorAll('audio').forEach((audioEl) => {
+      try {
+        audioEl.pause();
+        audioEl.removeAttribute('src');
+        audioEl.load();
+      } catch {
+        // no-op: defensive cleanup only
       }
     });
-    if (audioFile?.url) {
-      URL.revokeObjectURL(audioFile.url);
-    }
+
+    // Clear playable URL state before revoking object URLs.
+    setPlayableAudioUrl(null);
+
+    // Do not revoke user-selected file object URLs here.
+    // We clear all audio element sources above; revoking immediately can still race
+    // with browser media fetch and produce noisy ERR_FILE_NOT_FOUND logs.
 
     // Clear file input value
     if (fileInputRef.current) {
@@ -456,6 +469,7 @@ const UploadAnalyze: React.FC = () => {
   // Effect to load playable audio URL for audio element (handles blob storage auth)
   useEffect(() => {
     let isCancelled = false;
+    let createdBlobUrl: string | null = null;
 
     const loadPlayableUrl = async () => {
       if (!audioFile?.url) {
@@ -475,6 +489,7 @@ const UploadAnalyze: React.FC = () => {
         const audioBlob = await apiService.downloadAudioBlob(audioFile.url);
         if (!isCancelled) {
           const blobUrl = URL.createObjectURL(audioBlob);
+          createdBlobUrl = blobUrl;
           setPlayableAudioUrl(blobUrl);
           log.debug('Created playable blob URL', { blobUrl });
         }
@@ -490,9 +505,9 @@ const UploadAnalyze: React.FC = () => {
 
     return () => {
       isCancelled = true;
-      // Clean up old blob URL when audio file changes
-      if (playableAudioUrl && !playableAudioUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(playableAudioUrl);
+      // Clean up blob URL created by this effect when audio file changes/unmounts.
+      if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl);
       }
     };
   }, [audioFile?.url]);
@@ -584,7 +599,12 @@ const UploadAnalyze: React.FC = () => {
       setAudioFiles(prev => {
         const fileToRemove = prev.find(f => f.id === fileId);
         if (fileToRemove) {
-          URL.revokeObjectURL(fileToRemove.url);
+          const audioElement = document.getElementById(`audio-${fileId}`) as HTMLAudioElement | null;
+          if (audioElement) {
+            audioElement.pause();
+            audioElement.removeAttribute('src');
+            audioElement.load();
+          }
         }
         return prev.filter(f => f.id !== fileId);
       });
@@ -3356,7 +3376,7 @@ const UploadAnalyze: React.FC = () => {
                 </div>
                 <ul className="text-sm text-red-700 dark:text-red-300 space-y-1">
                   {csvValidationErrors.map((error, index) => (
-                    <li key={index}>â€¢ {error}</li>
+                    <li key={index}>{'\u2022'} {error}</li>
                   ))}
                 </ul>
               </div>
@@ -3415,7 +3435,7 @@ const UploadAnalyze: React.FC = () => {
                       </p>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         {(audioFile.file.size / 1024 / 1024).toFixed(2)} MB
-                        {audioFile.duration && ` â€¢ ${formatTime(audioFile.duration)}`}
+                        {audioFile.duration && ` \u2022 ${formatTime(audioFile.duration)}`}
                       </p>
                     </div>
                   </div>
@@ -3517,7 +3537,7 @@ const UploadAnalyze: React.FC = () => {
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {(file.file.size / 1024 / 1024).toFixed(2)} MB
-                                {file.duration && ` â€¢ ${formatTime(file.duration)}`}
+                                {file.duration && ` \u2022 ${formatTime(file.duration)}`}
                               </p>
                             </div>
                           </div>
@@ -3855,7 +3875,7 @@ const UploadAnalyze: React.FC = () => {
               <ul className="space-y-1">
                 {result.insights.map((insight, index) => (
                   <li key={index} className="text-gray-600 dark:text-gray-400 text-sm">
-                    â€¢ {insight}
+                    {'\u2022'} {insight}
                   </li>
                 ))}
               </ul>
@@ -4132,7 +4152,7 @@ const UploadAnalyze: React.FC = () => {
                           )}
                         </button>
                         <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {audioFile.file.name} â€¢ {audioFile.duration ? `${Math.round(audioFile.duration)}s` : 'Duration unknown'}
+                          {audioFile.file.name} {'\u2022'} {audioFile.duration ? `${Math.round(audioFile.duration)}s` : 'Duration unknown'}
                         </span>
                       </div>
                       <audio

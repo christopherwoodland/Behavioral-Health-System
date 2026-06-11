@@ -176,6 +176,7 @@ const SessionDetail: React.FC = () => {
   // Effect to load playable audio URL for audio element (handles blob storage auth)
   useEffect(() => {
     let isCancelled = false;
+    let createdBlobUrl: string | null = null;
 
     const loadPlayableUrl = async () => {
       const audioUrl = session?.audioUrl;
@@ -185,9 +186,12 @@ const SessionDetail: React.FC = () => {
         return;
       }
 
-      // If it's already a blob: URL (local file), use it directly
+      // Persisted blob: URLs are page-local and become invalid after navigation/reload.
+      // Ignore them instead of assigning an invalid source that triggers ERR_FILE_NOT_FOUND.
       if (audioUrl.startsWith('blob:')) {
-        setPlayableAudioUrl(audioUrl);
+        log.warn('Ignoring non-persistable blob audioUrl from session data', { audioUrl });
+        setPlayableAudioUrl(null);
+        setAudioFileSize(null);
         return;
       }
 
@@ -197,6 +201,7 @@ const SessionDetail: React.FC = () => {
         const audioBlob = await apiService.downloadAudioBlob(audioUrl);
         if (!isCancelled) {
           const blobUrl = URL.createObjectURL(audioBlob);
+          createdBlobUrl = blobUrl;
           setPlayableAudioUrl(blobUrl);
           setAudioFileSize(audioBlob.size);
           log.debug('Created playable blob URL', { blobUrl, size: audioBlob.size });
@@ -214,9 +219,9 @@ const SessionDetail: React.FC = () => {
 
     return () => {
       isCancelled = true;
-      // Clean up old blob URL when session changes
-      if (playableAudioUrl && playableAudioUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(playableAudioUrl);
+      // Revoke only the blob URL created by this effect execution.
+      if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl);
       }
     };
   }, [session?.audioUrl]);

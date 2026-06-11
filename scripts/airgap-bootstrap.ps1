@@ -85,7 +85,11 @@ $OutputEnvFile = [System.IO.Path]::GetFullPath($OutputEnvFile)
 $envMap = Read-EnvFile -Path $InputEnvFile
 
 $envMap['AIR_GAP_MODE'] = 'true'
+$envMap['AIR_GAP_AUTH_BYPASS_APPROVED'] = 'true'
 $envMap['VITE_AIR_GAP_MODE'] = 'true'
+$envMap['VITE_ENABLE_TRANSCRIPTION'] = 'false'
+$envMap['ENABLE_TRANSCRIPTION'] = 'false'
+$envMap['VITE_ENABLE_AUTH'] = 'false'
 $envMap['VITE_ENABLE_ENTRA_AUTH'] = 'false'
 $envMap['VITE_API_BASE_URL'] = $ApiBaseUrl
 $envMap['VITE_OFFLINE_MODE'] = 'true'

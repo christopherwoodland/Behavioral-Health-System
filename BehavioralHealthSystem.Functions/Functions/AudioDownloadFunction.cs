@@ -78,10 +78,27 @@ public class AudioDownloadFunction
                 return forbidden;
             }
 
-            // Extract container name and blob path from URL
-            // URL format: https://<account>.blob.core.windows.net/<container>/<blob-path>
-            var pathSegments = blobUri.AbsolutePath.TrimStart('/').Split('/', 2);
-            if (pathSegments.Length < 2)
+            // Extract container name and blob path from URL.
+            // Supports both:
+            // 1) Azure style:   https://<account>.blob.core.windows.net/<container>/<blob-path>
+            // 2) Azurite style: http://azurite:10000/<account>/<container>/<blob-path>
+            var pathSegments = blobUri.AbsolutePath.TrimStart('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string containerName;
+            string blobName;
+
+            if (pathSegments.Length >= 3 && !blobUri.Host.Contains(".blob.core.windows.net", StringComparison.OrdinalIgnoreCase))
+            {
+                // Azurite path-style URL: /<account>/<container>/<blob>
+                containerName = pathSegments[1];
+                blobName = string.Join('/', pathSegments.Skip(2));
+            }
+            else if (pathSegments.Length >= 2)
+            {
+                // Azure-hosted URL: /<container>/<blob>
+                containerName = pathSegments[0];
+                blobName = string.Join('/', pathSegments.Skip(1));
+            }
+            else
             {
                 _logger.LogWarning("Could not extract container/blob from URL: {BlobUrl}", blobUrl);
                 var badRequest = req.CreateResponse(HttpStatusCode.BadRequest);
@@ -92,9 +109,6 @@ public class AudioDownloadFunction
                 });
                 return badRequest;
             }
-
-            var containerName = pathSegments[0];
-            var blobName = pathSegments[1];
 
             _logger.LogInformation("🎵 Downloading from container: {Container}, blob: {BlobName}",
                 containerName, blobName);

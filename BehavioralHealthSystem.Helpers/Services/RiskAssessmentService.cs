@@ -56,8 +56,21 @@ public class RiskAssessmentService : IRiskAssessmentService
             if (openAIResponse != null)
             {
                 var riskAssessment = ParseRiskAssessmentResponse(openAIResponse);
-                _logger.LogInformation("[{MethodName}] Risk assessment generated successfully for session {SessionId}", nameof(GenerateRiskAssessmentAsync), sessionData.SessionId);
-                return riskAssessment;
+                if (riskAssessment != null)
+                {
+                    _logger.LogInformation("[{MethodName}] Risk assessment generated successfully for session {SessionId}", nameof(GenerateRiskAssessmentAsync), sessionData.SessionId);
+                    return riskAssessment;
+                }
+
+                _logger.LogWarning("[{MethodName}] Risk assessment response could not be parsed for session {SessionId}",
+                    nameof(GenerateRiskAssessmentAsync), sessionData.SessionId);
+            }
+
+            if (IsOpenAICompatibleEndpoint(new Uri(_openAIOptions.Endpoint)))
+            {
+                _logger.LogWarning("[{MethodName}] Returning fallback risk assessment for session {SessionId} due to unavailable/slow local model response.",
+                    nameof(GenerateRiskAssessmentAsync), sessionData.SessionId);
+                return CreateFallbackRiskAssessment();
             }
 
             return null;
@@ -205,6 +218,19 @@ public class RiskAssessmentService : IRiskAssessmentService
             var endpoint = new Uri(_openAIOptions.Endpoint);
             var deploymentName = _openAIOptions.DeploymentName;
 
+            if (IsOpenAICompatibleEndpoint(endpoint))
+            {
+                return await CallOpenAICompatibleAsync(
+                    endpoint,
+                    deploymentName,
+                    prompt,
+                    systemPrompt: "You are a licensed mental health professional AI assistant. Provide accurate, professional, and ethical clinical assessments.",
+                    timeoutSeconds: 120,
+                    temperature: 0.1,
+                    maxTokens: _openAIOptions.MaxTokens,
+                    apiKey: _openAIOptions.ApiKey);
+            }
+
             // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
             AzureOpenAIClient azureClient = !string.IsNullOrEmpty(_openAIOptions.ApiKey)
                 ? new AzureOpenAIClient(endpoint, new ApiKeyCredential(_openAIOptions.ApiKey))
@@ -265,7 +291,7 @@ public class RiskAssessmentService : IRiskAssessmentService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogError("[{MethodName}] Azure OpenAI API call timed out after 30 seconds", nameof(CallAzureOpenAIAsync));
+            _logger.LogError("[{MethodName}] Azure OpenAI API call timed out", nameof(CallAzureOpenAIAsync));
             return null;
         }
         catch (Exception ex)
@@ -273,6 +299,33 @@ public class RiskAssessmentService : IRiskAssessmentService
             _logger.LogError(ex, "[{MethodName}] Error calling Azure OpenAI API", nameof(CallAzureOpenAIAsync));
             return null;
         }
+    }
+
+    private static RiskAssessment CreateFallbackRiskAssessment()
+    {
+        return new RiskAssessment
+        {
+            OverallRiskLevel = "Unknown",
+            RiskScore = 5,
+            Summary = "Automated risk assessment is temporarily unavailable in air-gap mode. Review transcription, session context, and clinician observations directly.",
+            KeyFactors = new List<string>
+            {
+                "Model response unavailable or timed out"
+            },
+            Recommendations = new List<string>
+            {
+                "Retry AI risk assessment after local model warmup",
+                "Perform clinician-led review using available session data"
+            },
+            ImmediateActions = new List<string>(),
+            FollowUpRecommendations = new List<string>
+            {
+                "Re-run risk assessment when local model resources are available"
+            },
+            ConfidenceLevel = 0.0,
+            GeneratedAt = DateTime.UtcNow.ToString("O"),
+            ModelVersion = "fallback-air-gap"
+        };
     }
 
     private RiskAssessment? ParseRiskAssessmentResponse(string response)
@@ -385,10 +438,29 @@ public class RiskAssessmentService : IRiskAssessmentService
                     nameof(GenerateExtendedRiskAssessmentAsync));
             }
 
-            var prompt = await BuildExtendedRiskAssessmentPromptAsync(sessionData, selectedConditions);
+            // Use simplified prompt for local/air-gap models to avoid context overflow
+            bool isLocalModel = _extendedOpenAIOptions.Enabled
+                && !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint)
+                && IsOpenAICompatibleEndpoint(new Uri(_extendedOpenAIOptions.Endpoint));
 
-            _logger.LogInformation("[{MethodName}] Starting extended risk assessment for session {SessionId}",
-                nameof(GenerateExtendedRiskAssessmentAsync), sessionData.SessionId);
+            // Air-gap local models have limited context windows; cap at 2 conditions to avoid output truncation
+            const int AirGapMaxConditions = 2;
+            if (isLocalModel && selectedConditions.Count > AirGapMaxConditions)
+            {
+                _logger.LogWarning("[{MethodName}] Air-gap mode: Limiting conditions from {Requested} to {Max}. " +
+                    "Local models cannot reliably assess more than {Max} conditions at a time due to context window constraints. " +
+                    "Conditions evaluated: {Conditions}",
+                    nameof(GenerateExtendedRiskAssessmentAsync), selectedConditions.Count, AirGapMaxConditions,
+                    AirGapMaxConditions, string.Join(", ", selectedConditions.Take(AirGapMaxConditions)));
+                selectedConditions = selectedConditions.Take(AirGapMaxConditions).ToList();
+            }
+
+            var prompt = isLocalModel
+                ? BuildSimplifiedExtendedPrompt(sessionData, selectedConditions)
+                : await BuildExtendedRiskAssessmentPromptAsync(sessionData, selectedConditions);
+
+            _logger.LogInformation("[{MethodName}] Starting extended risk assessment for session {SessionId}. LocalModel: {IsLocal}, PromptLength: {Length}",
+                nameof(GenerateExtendedRiskAssessmentAsync), sessionData.SessionId, isLocalModel, prompt.Length);
 
             var openAIResponse = await CallAzureOpenAIForExtendedAssessmentAsync(prompt);
 
@@ -520,7 +592,16 @@ public class RiskAssessmentService : IRiskAssessmentService
             promptBuilder.AppendLine("**Patient Audio Transcription:**");
             promptBuilder.AppendLine("(Analyze speech patterns, organization, thought processes, and content)");
             promptBuilder.AppendLine("```");
-            promptBuilder.AppendLine(sessionData.Transcription);
+            // Truncate transcription for local models to prevent context overflow/Ollama hangs
+            var transcription = sessionData.Transcription;
+            bool isLocalEndpoint = _extendedOpenAIOptions.Enabled
+                && !string.IsNullOrEmpty(_extendedOpenAIOptions.Endpoint)
+                && IsOpenAICompatibleEndpoint(new Uri(_extendedOpenAIOptions.Endpoint));
+            if (isLocalEndpoint && transcription.Length > 2000)
+            {
+                transcription = transcription.Substring(0, 2000) + "\n[... transcription truncated for model context limits ...]";
+            }
+            promptBuilder.AppendLine(transcription);
             promptBuilder.AppendLine("```");
         }
         else
@@ -769,6 +850,88 @@ public class RiskAssessmentService : IRiskAssessmentService
         return promptBuilder.ToString();
     }
 
+    /// <summary>
+    /// Builds a simplified prompt for local/air-gap models (phi4-mini) that fits within 4096 context window.
+    /// Produces the same JSON schema but with a shorter prompt to avoid context overflow.
+    /// </summary>
+    private string BuildSimplifiedExtendedPrompt(SessionData sessionData, List<string> selectedConditions)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine("Based on the clinical data below, produce a JSON psychiatric risk assessment.");
+        sb.AppendLine();
+
+        // Clinical data - keep brief
+        if (sessionData.Prediction != null)
+        {
+            sb.AppendLine($"Depression: {sessionData.Prediction.PredictedScoreDepression}, Anxiety: {sessionData.Prediction.PredictedScoreAnxiety}, Overall: {sessionData.Prediction.PredictedScore}");
+        }
+
+        if (sessionData.AnalysisResults != null)
+        {
+            sb.AppendLine($"Risk: {sessionData.AnalysisResults.RiskLevel}, Confidence: {sessionData.AnalysisResults.Confidence}");
+            if (sessionData.AnalysisResults.Insights.Any())
+            {
+                sb.AppendLine($"Insights: {string.Join("; ", sessionData.AnalysisResults.Insights.Take(3))}");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(sessionData.Transcription))
+        {
+            var t = sessionData.Transcription.Length > 500
+                ? sessionData.Transcription.Substring(0, 500) + "..."
+                : sessionData.Transcription;
+            sb.AppendLine($"Transcription: {t}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"Evaluate conditions: {string.Join(", ", selectedConditions)}");
+        sb.AppendLine();
+        sb.AppendLine("Respond with ONLY this JSON:");
+        sb.AppendLine("{");
+        sb.AppendLine("  \"overallRiskLevel\": \"Low|Moderate|High|Critical\",");
+        sb.AppendLine("  \"riskScore\": 1-10,");
+        sb.AppendLine("  \"summary\": \"brief clinical summary\",");
+        sb.AppendLine("  \"keyFactors\": [\"factor1\"],");
+        sb.AppendLine("  \"recommendations\": [\"rec1\"],");
+        sb.AppendLine("  \"immediateActions\": [\"action1\"],");
+        sb.AppendLine("  \"followUpRecommendations\": [\"followup1\"],");
+        sb.AppendLine("  \"confidenceLevel\": 0.0-1.0,");
+        sb.AppendLine("  \"isExtended\": true,");
+        sb.AppendLine($"  \"isMultiCondition\": {(selectedConditions.Count > 1 ? "true" : "false")},");
+        sb.AppendLine($"  \"evaluatedConditions\": [{string.Join(", ", selectedConditions.Select(id => $"\"{id}\""))}],");
+        sb.AppendLine("  \"overallAssessmentSummary\": \"summary\",");
+        sb.AppendLine("  \"highestRiskCondition\": \"condition name\",");
+        sb.AppendLine("  \"combinedRecommendedActions\": [\"action1\"],");
+        sb.AppendLine("  \"crossConditionDifferentialDiagnosis\": [\"consideration1\"],");
+        sb.AppendLine("  \"conditionAssessments\": [");
+        sb.AppendLine("    {");
+        sb.AppendLine("      \"conditionId\": \"id\",");
+        sb.AppendLine("      \"conditionName\": \"name\",");
+        sb.AppendLine("      \"overallLikelihood\": \"None|Minimal|Low|Moderate|High|Very High\",");
+        sb.AppendLine("      \"confidenceScore\": 0.0-1.0,");
+        sb.AppendLine("      \"conditionRiskScore\": 1-10,");
+        sb.AppendLine("      \"assessmentSummary\": \"narrative\",");
+        sb.AppendLine("      \"criteriaEvaluations\": [],");
+        sb.AppendLine("      \"riskFactorsIdentified\": [\"factor1\"],");
+        sb.AppendLine("      \"recommendedActions\": [\"action1\"],");
+        sb.AppendLine("      \"clinicalNotes\": [\"note1\"],");
+        sb.AppendLine("      \"differentialDiagnosis\": [\"consideration1\"],");
+        sb.AppendLine("      \"durationAssessment\": \"assessment\",");
+        sb.AppendLine("      \"functionalImpairment\": {");
+        sb.AppendLine("        \"impairmentLevel\": \"None|Mild|Moderate|Marked|Severe\",");
+        sb.AppendLine("        \"workFunctioning\": \"text\",");
+        sb.AppendLine("        \"interpersonalRelations\": \"text\",");
+        sb.AppendLine("        \"selfCare\": \"text\",");
+        sb.AppendLine("        \"criterionBMet\": true|false");
+        sb.AppendLine("      }");
+        sb.AppendLine("    }");
+        sb.AppendLine("  ]");
+        sb.AppendLine("}");
+
+        return sb.ToString();
+    }
+
     private async Task<string?> CallAzureOpenAIForExtendedAssessmentAsync(string prompt)
     {
         try
@@ -813,6 +976,31 @@ public class RiskAssessmentService : IRiskAssessmentService
 
             var endpoint = new Uri(effectiveConfig.Endpoint);
             var deploymentName = effectiveConfig.DeploymentName;
+            var timeoutSeconds = effectiveConfig.TimeoutSeconds;
+            var maxTokens = effectiveConfig.MaxTokens;
+
+            // GPT-5/O3 models have limited parameter support
+            bool isAdvancedModel = deploymentName.ToLowerInvariant().Contains("gpt-5") ||
+                                   deploymentName.ToLowerInvariant().Contains("o3");
+
+            if (IsOpenAICompatibleEndpoint(endpoint))
+            {
+                // Local OpenAI-compatible models are slower on extended prompts and can stall on oversized outputs.
+                // Cap at 5 minutes to avoid Ollama deadlock scenarios; retry is better than hanging.
+                timeoutSeconds = Math.Max(timeoutSeconds, 300);
+                timeoutSeconds = Math.Min(timeoutSeconds, 300);
+                maxTokens = Math.Min(maxTokens, 1500);
+
+                return await CallOpenAICompatibleAsync(
+                    endpoint,
+                    deploymentName,
+                    prompt,
+                    systemPrompt: "You are a highly experienced licensed psychiatrist and clinical psychologist with expertise in DSM-5 diagnostic criteria, risk assessment, and differential diagnosis. Provide thorough, evidence-based, professional clinical assessments while acknowledging the limitations of assessment based on available data.",
+                    timeoutSeconds: timeoutSeconds,
+                    temperature: effectiveConfig.Temperature,
+                    maxTokens: maxTokens,
+                    apiKey: effectiveConfig.ApiKey);
+            }
 
             // Use managed identity authentication (DefaultAzureCredential) or API key (local dev)
             AzureOpenAIClient azureClient = !string.IsNullOrEmpty(effectiveConfig.ApiKey)
@@ -820,10 +1008,6 @@ public class RiskAssessmentService : IRiskAssessmentService
                 : new AzureOpenAIClient(endpoint, new DefaultAzureCredential());
 
             var chatClient = azureClient.GetChatClient(deploymentName);
-
-            // GPT-5/O3 models have limited parameter support
-            bool isAdvancedModel = deploymentName.ToLowerInvariant().Contains("gpt-5") ||
-                                   deploymentName.ToLowerInvariant().Contains("o3");
 
             // Build messages
             var messages = new List<ChatMessage>
@@ -854,14 +1038,14 @@ public class RiskAssessmentService : IRiskAssessmentService
             }
 
             // Use configured timeout
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(effectiveConfig.TimeoutSeconds));
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
 
             _logger.LogInformation("[{MethodName}] Calling Azure OpenAI for extended assessment. Model: {Model}, Deployment: {Deployment}, MaxTokens: {MaxTokens}, Timeout: {Timeout}s",
                 nameof(CallAzureOpenAIForExtendedAssessmentAsync),
                 isAdvancedModel ? "GPT-5/O3" : "Standard",
                 deploymentName,
-                isAdvancedModel ? "omitted (GPT-5/O3 limitation)" : effectiveConfig.MaxTokens.ToString(),
-                effectiveConfig.TimeoutSeconds);
+                isAdvancedModel ? "omitted (GPT-5/O3 limitation)" : maxTokens.ToString(),
+                timeoutSeconds);
 
             ClientResult<ChatCompletion> response = await chatClient.CompleteChatAsync(messages, requestOptions, cancellationTokenSource.Token);
 
@@ -889,9 +1073,8 @@ public class RiskAssessmentService : IRiskAssessmentService
         }
         catch (OperationCanceledException)
         {
-            _logger.LogError("[{MethodName}] Extended assessment API call timed out after {Timeout} seconds",
-                nameof(CallAzureOpenAIForExtendedAssessmentAsync),
-                _extendedOpenAIOptions.TimeoutSeconds);
+            _logger.LogError("[{MethodName}] Extended assessment API call timed out",
+                nameof(CallAzureOpenAIForExtendedAssessmentAsync));
             return null;
         }
         catch (Exception ex)
@@ -900,6 +1083,81 @@ public class RiskAssessmentService : IRiskAssessmentService
                 nameof(CallAzureOpenAIForExtendedAssessmentAsync));
             return null;
         }
+    }
+
+    private static bool IsOpenAICompatibleEndpoint(Uri endpoint)
+    {
+        var path = endpoint.AbsolutePath.TrimEnd('/');
+        return path.EndsWith("/v1", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task<string?> CallOpenAICompatibleAsync(
+        Uri endpoint,
+        string deploymentName,
+        string prompt,
+        string systemPrompt,
+        int timeoutSeconds,
+        double temperature,
+        int maxTokens,
+        string? apiKey)
+    {
+        var requestUri = new Uri(endpoint.AbsoluteUri.TrimEnd('/') + "/chat/completions");
+
+        using var httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(timeoutSeconds)
+        };
+
+        if (!string.IsNullOrWhiteSpace(apiKey)
+            && !string.Equals(apiKey, "air-gap-local", StringComparison.Ordinal))
+        {
+            httpClient.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+        }
+
+        var payload = new Dictionary<string, object>
+        {
+            ["model"] = deploymentName,
+            ["messages"] = new object[]
+            {
+                new { role = "system", content = systemPrompt },
+                new { role = "user", content = prompt }
+            },
+            ["temperature"] = temperature,
+            ["stream"] = false
+        };
+
+        if (maxTokens > 0)
+        {
+            payload["max_tokens"] = maxTokens;
+        }
+
+        // Ollama-specific: set num_ctx to prevent context overflow that can cause hangs
+        if (requestUri.Host.Contains("ollama", StringComparison.OrdinalIgnoreCase)
+            || requestUri.Port == 11434)
+        {
+            payload["options"] = new Dictionary<string, object> { ["num_ctx"] = 4096 };
+        }
+
+        using var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        using var response = await httpClient.PostAsync(requestUri, content);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("[{MethodName}] OpenAI-compatible endpoint returned status {StatusCode} for model {Model}. Body: {Body}",
+                nameof(CallOpenAICompatibleAsync), (int)response.StatusCode, deploymentName, responseBody);
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(responseBody);
+        var text = document.RootElement
+            .GetProperty("choices")[0]
+            .GetProperty("message")
+            .GetProperty("content")
+            .GetString();
+
+        return string.IsNullOrWhiteSpace(text) ? null : text.Trim();
     }
 
     private ExtendedRiskAssessment? ParseExtendedRiskAssessmentResponse(string response)

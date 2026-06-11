@@ -49,11 +49,8 @@ public class GrammarCorrectionFunction
 
             if (correctedText == null)
             {
-                _logger.LogError("[{FunctionName}] Grammar correction service returned null", nameof(CorrectGrammar));
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                errorResponse.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new { error = "Grammar correction service unavailable" }));
-                return errorResponse;
+                _logger.LogWarning("[{FunctionName}] Grammar correction service returned null. Falling back to original text.", nameof(CorrectGrammar));
+                correctedText = request.Text;
             }
 
             var response = req.CreateResponse(HttpStatusCode.OK);

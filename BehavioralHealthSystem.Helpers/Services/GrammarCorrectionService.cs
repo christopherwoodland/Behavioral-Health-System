@@ -46,8 +46,8 @@ public class GrammarCorrectionService : IGrammarCorrectionService
 
             if (string.IsNullOrEmpty(_openAIOptions.Endpoint))
             {
-                _logger.LogError("[{MethodName}] Azure OpenAI configuration is incomplete.", nameof(CorrectTextAsync));
-                return null;
+                _logger.LogWarning("[{MethodName}] Azure OpenAI configuration is incomplete. Returning original text.", nameof(CorrectTextAsync));
+                return text;
             }
 
             var prompt = BuildGrammarCorrectionPrompt(text);
@@ -60,14 +60,14 @@ public class GrammarCorrectionService : IGrammarCorrectionService
             }
             else
             {
-                _logger.LogWarning("[{MethodName}] Azure OpenAI returned null response", nameof(CorrectTextAsync));
-                return null;
+                _logger.LogWarning("[{MethodName}] Azure OpenAI returned null response. Returning original text.", nameof(CorrectTextAsync));
+                return text;
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[{MethodName}] Error correcting text grammar", nameof(CorrectTextAsync));
-            return null;
+            return text;
         }
     }
 

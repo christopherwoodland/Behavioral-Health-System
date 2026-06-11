@@ -123,6 +123,8 @@ export interface HealthCheckResponse {
   status: 'Healthy' | 'Degraded' | 'Unhealthy';
   timestamp: string;
   totalDuration?: number;
+  airGapMode?: boolean;
+  aiModel?: string;
   resources?: {
     storageAccount?: string;
     documentIntelligence?: string;

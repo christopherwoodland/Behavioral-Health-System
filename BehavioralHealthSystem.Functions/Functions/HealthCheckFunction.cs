@@ -79,10 +79,20 @@ public class HealthCheckFunction
             var documentIntelligenceEndpoint = _configuration["DocumentIntelligenceEndpoint"] ?? "Not configured";
             var openAiEndpoint = _configuration["AZURE_OPENAI_ENDPOINT"] ?? "Not configured";
 
+            // Detect air-gap mode
+            var extendedEndpoint = _configuration["AIR_GAP_EXTENDED_OPENAI_ENDPOINT"] ?? "";
+            var isAirGap = !string.IsNullOrEmpty(extendedEndpoint) &&
+                (extendedEndpoint.Contains(":11434") || extendedEndpoint.Contains("localhost") || extendedEndpoint.Contains("host.docker.internal"));
+            var aiModel = isAirGap
+                ? (_configuration["AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT"] ?? "local")
+                : "cloud";
+
             var healthResult = new
             {
                 Status = healthReport.Status.ToString(),
                 TotalDuration = healthReport.TotalDuration.TotalMilliseconds,
+                AirGapMode = isAirGap,
+                AiModel = aiModel,
                 Resources = new
                 {
                     StorageAccount = storageAccountName,

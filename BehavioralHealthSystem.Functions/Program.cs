@@ -416,7 +416,7 @@ if (storageBackendInit?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase)
         }
         else
         {
-            Console.WriteLine("DSM-5 data directory not found. Run scripts/seed-dsm5-data.ps1 to seed manually.");
+            Console.WriteLine("DSM-5 data directory not found. Run scripts/seed-database.ps1 to seed manually.");
         }
     }
     else

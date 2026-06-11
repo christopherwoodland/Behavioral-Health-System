@@ -30,6 +30,7 @@ services:
       - AZURE_FUNCTIONS_ENVIRONMENT=Development
       - WEBSITE_HOSTNAME=localhost:80
       - AIR_GAP_MODE=${AIR_GAP_MODE:-false}
+      - AIR_GAP_AUTH_BYPASS_APPROVED=${AIR_GAP_AUTH_BYPASS_APPROVED:-false}
       # Azure Speech - Managed Identity (no key)
       - AZURE_SPEECH_ENDPOINT=${AZURE_SPEECH_ENDPOINT}
       - AZURE_SPEECH_REGION=${AZURE_SPEECH_REGION}
@@ -46,6 +47,9 @@ services:
       - AIR_GAP_OPENAI_ENDPOINT=${AIR_GAP_OPENAI_ENDPOINT}
       - AIR_GAP_OPENAI_API_KEY=${AIR_GAP_OPENAI_API_KEY}
       - AIR_GAP_OPENAI_DEPLOYMENT=${AIR_GAP_OPENAI_DEPLOYMENT:-gpt-oss-20b}
+      - AIR_GAP_STT_ENDPOINT=${AIR_GAP_STT_ENDPOINT}
+      - AIR_GAP_STT_API_KEY=${AIR_GAP_STT_API_KEY}
+      - AIR_GAP_STT_MODEL=${AIR_GAP_STT_MODEL:-whisper-1}
       - AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT=${AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT:-phi4-mini}
       # Extended Assessment OpenAI - Managed Identity (no key)
       - EXTENDED_ASSESSMENT_OPENAI_ENABLED=true
@@ -87,6 +91,15 @@ services:
       - LOCAL_DAM_HEALTH_PATH=health
       - LOCAL_DAM_WARMUP_TIMEOUT_SECONDS=600
       - LOCAL_DAM_WARMUP_POLL_SECONDS=5
+      # Audio conversion standards (DAM input contract)
+      - FFMPEG_SAMPLE_RATE=${FFMPEG_SAMPLE_RATE:-44100}
+      - FFMPEG_CHANNELS=${FFMPEG_CHANNELS:-1}
+      - FFMPEG_MAX_DURATION_SECONDS=${FFMPEG_MAX_DURATION_SECONDS:-30}
+      - FFMPEG_HIGHPASS_FREQUENCY=${FFMPEG_HIGHPASS_FREQUENCY:-80}
+      - FFMPEG_LOWPASS_FREQUENCY=${FFMPEG_LOWPASS_FREQUENCY:-12000}
+      - FFMPEG_ENABLE_SILENCE_REMOVAL=${FFMPEG_ENABLE_SILENCE_REMOVAL:-true}
+      - FFMPEG_SILENCE_THRESHOLD_DB=${FFMPEG_SILENCE_THRESHOLD_DB:--50}
+      - FFMPEG_SILENCE_MIN_DURATION=${FFMPEG_SILENCE_MIN_DURATION:-0.1}
       # Azure Identity for Managed Identity
       - AZURE_TENANT_ID=${AZURE_TENANT_ID}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
@@ -111,6 +124,8 @@ services:
         condition: service_healthy
       dam:
         condition: service_healthy
+      stt:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/api/health"]
       interval: 60s
@@ -129,7 +144,7 @@ services:
       - "10001:10001"
       - "10002:10002"
     volumes:
-      - bhs-azurite-local:/data
+      - ./.local/azurite:/data
     command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data"
     healthcheck:
       test: ["CMD", "nc", "-z", "127.0.0.1", "10001"]
@@ -181,6 +196,18 @@ services:
       start_period: 120s
     restart: unless-stopped
 
+  # Local STT server for air-gap transcription
+  # Provides offline speech-to-text over HTTP
+  stt:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: bhs-stt-local
+    ports:
+      - "9000:9000"
+    environment:
+      - ASR_MODEL=${AIR_GAP_STT_MODEL:-base}
+      - ASR_ENGINE=faster_whisper
+    restart: unless-stopped
+
   # BHS Web UI - Local Environment
   web:
     image: bhs-web:local
@@ -205,8 +232,12 @@ services:
       - VITE_ENABLE_AUTH=${VITE_ENABLE_AUTH}
       - VITE_ENABLE_ENTRA_AUTH=${VITE_ENABLE_ENTRA_AUTH:-false}
       - VITE_ENABLE_DEBUG_LOGGING=${VITE_ENABLE_DEBUG_LOGGING:-true}
+      - VITE_ENABLE_TRANSCRIPTION=${VITE_ENABLE_TRANSCRIPTION:-true}
+      - VITE_OFFLINE_MODE=${VITE_OFFLINE_MODE:-false}
       - VITE_AIR_GAP_MODE=${VITE_AIR_GAP_MODE:-false}
       - VITE_FFMPEG_CORE_BASE_URL=${VITE_FFMPEG_CORE_BASE_URL:-/ffmpeg-core}
+      # API Authentication
+      - VITE_AZURE_API_CLIENT_ID=${VITE_AZURE_API_CLIENT_ID:-}
     depends_on:
       - api
     healthcheck:
@@ -218,9 +249,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  bhs-azurite-local:
-    name: bhs-azurite-local
-    driver: local
   bhs-pgdata-local:
     name: bhs-pgdata-local
     driver: local

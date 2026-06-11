@@ -74,3 +74,10 @@ finally {
 }
 
 Write-Host '[OK] Air-gap stack is up.' -ForegroundColor Green
+
+# Seed reference data (DSM-5 conditions) into the database
+Write-Host '[SEED] Seeding reference data...' -ForegroundColor Cyan
+& (Join-Path $PSScriptRoot 'seed-database.ps1') -Mode airgap
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning 'Database seeding had issues. You can retry manually: .\scripts\seed-database.ps1 -Mode airgap'
+}

@@ -55,7 +55,7 @@ public class RiskAssessmentFunctions
     {
         try
         {
-            _logger.LogInformation("[{FunctionName}] Generating risk assessment for session: {SessionId}", 
+            _logger.LogInformation("[{FunctionName}] Generating risk assessment for session: {SessionId}",
                 nameof(GenerateRiskAssessment), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
@@ -71,7 +71,7 @@ public class RiskAssessmentFunctions
             }
 
             var riskAssessment = await _riskAssessmentService.GenerateRiskAssessmentAsync(sessionData);
-            
+
             if (riskAssessment != null)
             {
                 // Update session with the risk assessment
@@ -90,18 +90,18 @@ public class RiskAssessmentFunctions
             }
             else
             {
-                var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync(JsonSerializer.Serialize(new
+                var unavailableResponse = req.CreateResponse(HttpStatusCode.OK);
+                await unavailableResponse.WriteStringAsync(JsonSerializer.Serialize(new
                 {
                     success = false,
-                    message = "Failed to generate risk assessment"
+                    message = "Risk assessment is temporarily unavailable. Please retry shortly."
                 }, _jsonOptions));
-                return errorResponse;
+                return unavailableResponse;
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error generating risk assessment for session: {SessionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error generating risk assessment for session: {SessionId}",
                 nameof(GenerateRiskAssessment), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
@@ -122,7 +122,7 @@ public class RiskAssessmentFunctions
     {
         try
         {
-                    _logger.LogInformation("[{FunctionName}] Starting risk assessment for session: {SessionId}", 
+                    _logger.LogInformation("[{FunctionName}] Starting risk assessment for session: {SessionId}",
             nameof(GetRiskAssessment), sessionId);
 
             var sessionData = await _sessionStorageService.GetSessionDataAsync(sessionId);
@@ -160,7 +160,7 @@ public class RiskAssessmentFunctions
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[{FunctionName}] Error getting risk assessment for session: {SessionId}", 
+            _logger.LogError(ex, "[{FunctionName}] Error getting risk assessment for session: {SessionId}",
                 nameof(GetRiskAssessment), sessionId);
 
             var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);

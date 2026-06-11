@@ -66,6 +66,12 @@ BehavioralHealthSystem.DSM5Import/
 4. **Store** — persists structured JSON to Azure Blob Storage (`dsm5-data` container)
 5. **Track** — updates `dsm5-import-progress.json` with per-file status
 
+Pre-extracted condition data is available in `data/dsm5-data/conditions/` (58 JSON files). To seed this data into PostgreSQL for any deployment mode, run:
+
+```powershell
+.\scripts\seed-database.ps1 -Mode airgap   # or: local, dev, prod
+```
+
 ## Configuration
 
 Requires the same Azure credentials and storage settings as the Functions project. See the [main README](../README.md) for environment configuration.

@@ -60,8 +60,10 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/extended-assessment/start` | POST | Start async extended multi-condition assessment |
-| `/api/extended-assessment/status/{jobId}` | GET | Check assessment job status |
+| `/api/extended-assessment/status/{jobId}` | GET | Check assessment job status (includes progress %, current step message) |
 | `/api/extended-assessment/result/{jobId}` | GET | Get completed assessment result |
+
+> **Air-gap note**: In air-gap mode, the orchestrator displays contextual progress messages (e.g., "Air-gap mode: Limited to 2 of N selected conditions"). The simplified prompt and 5-minute timeout apply automatically when the endpoint resolves to a local model (port 11434, localhost, or host.docker.internal).
 
 ### Transcription
 

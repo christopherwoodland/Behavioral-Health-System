@@ -334,6 +334,25 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Get descriptive stage info based on progress percentage
+  const getProgressStages = (progress: number) => {
+    const stages = [
+      { label: 'Validating session data', threshold: 10, icon: '🔍' },
+      { label: 'Preparing clinical prompt', threshold: 30, icon: '📋' },
+      { label: 'Sending to AI model', threshold: 40, icon: '🚀' },
+      { label: 'AI model generating assessment', threshold: 50, icon: '🧠' },
+      { label: 'Parsing AI response', threshold: 80, icon: '📊' },
+      { label: 'Saving assessment results', threshold: 90, icon: '💾' },
+      { label: 'Finalizing', threshold: 100, icon: '✅' },
+    ];
+    return stages.map(stage => ({
+      ...stage,
+      status: progress >= stage.threshold ? 'completed' as const
+        : progress >= stage.threshold - 10 ? 'active' as const
+        : 'pending' as const,
+    }));
+  };
+
   // If no assessment exists and not generating/checking, show generate buttons (matching RiskAssessment component)
   if (!assessment && !isLoading && !isChecking) {
     return (
@@ -423,6 +442,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
 
   // Loading state with job progress
   if (isLoading || isChecking) {
+    const stages = getProgressStages(jobProgress);
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -430,18 +450,24 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
           AI Risk Assessment (Extended)
         </h2>
 
-        <div className="text-center py-8">
-          <Loader2 className="w-12 h-12 text-blue-600 mx-auto mb-4 animate-spin" aria-hidden="true" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {isLoading ? 'Processing Extended Assessment...' : 'Checking Status...'}
-          </h3>
+        <div className="py-6">
+          {/* Header with spinner */}
+          <div className="text-center mb-6">
+            <Loader2 className="w-10 h-10 text-blue-600 mx-auto mb-3 animate-spin" aria-hidden="true" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              {isLoading ? 'Generating Extended Assessment' : 'Checking Status...'}
+            </h3>
+          </div>
 
-          {/* Job Progress */}
+          {/* Progress Bar */}
           {isLoading && currentJob && (
-            <div className="max-w-md mx-auto">
-              {/* Progress Bar */}
+            <div className="max-w-lg mx-auto space-y-4">
+              <div className="flex justify-between items-center text-sm text-gray-600 dark:text-gray-300 mb-1">
+                <span className="font-medium">Progress</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">{jobProgress}%</span>
+              </div>
               <div
-                className="bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3"
+                className="bg-gray-200 dark:bg-gray-700 rounded-full h-2.5"
                 role="progressbar"
                 aria-valuenow={jobProgress}
                 aria-valuemin={0}
@@ -449,39 +475,63 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
                 aria-label={`Assessment progress: ${jobProgress}%`}
               >
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
                   style={{'--progress-width': `${jobProgress}%`, width: 'var(--progress-width)'} as React.CSSProperties}
                   aria-hidden="true"
                 ></div>
               </div>
 
-              {/* Progress Info */}
-              <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span>Progress:</span>
-                  <span className="font-medium">{jobProgress}%</span>
-                </div>
-                {jobStep && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {jobStep}
-                  </div>
-                )}
-                {elapsedTime > 0 && (
-                  <div className="flex justify-between items-center text-xs">
-                    <span>Elapsed Time:</span>
-                    <span className="font-medium flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {formatElapsedTime(elapsedTime)}
+              {/* Stage List */}
+              <div className="mt-5 space-y-2">
+                {stages.map((stage) => (
+                  <div
+                    key={stage.label}
+                    className={`flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-all duration-300 ${
+                      stage.status === 'completed'
+                        ? 'text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
+                        : stage.status === 'active'
+                        ? 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 font-medium'
+                        : 'text-gray-400 dark:text-gray-500'
+                    }`}
+                  >
+                    <span className="w-5 text-center flex-shrink-0">
+                      {stage.status === 'completed' ? '✓' : stage.status === 'active' ? stage.icon : '○'}
                     </span>
+                    <span className={stage.status === 'active' ? 'animate-pulse' : ''}>
+                      {stage.label}
+                      {stage.status === 'active' && '...'}
+                    </span>
+                    {stage.status === 'active' && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin ml-auto flex-shrink-0" />
+                    )}
                   </div>
-                )}
+                ))}
               </div>
+
+              {/* Current Step Detail (from backend) */}
+              {jobStep && (
+                <div className="mt-4 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-0.5">Current Step:</p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">{jobStep}</p>
+                </div>
+              )}
+
+              {/* Elapsed Time */}
+              {elapsedTime > 0 && (
+                <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 mt-3 px-1">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    Elapsed: {formatElapsedTime(elapsedTime)}
+                  </span>
+                  {jobProgress >= 40 && jobProgress < 80 && (
+                    <span className="italic">
+                      AI model is thinking — this can take 1-3 min in air-gap mode
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           )}
-
-          <p className="text-gray-600 dark:text-gray-300 mt-4">
-            {isLoading ? 'Generating comprehensive evaluation. This typically takes 30-120 seconds.' : 'Please wait...'}
-          </p>
         </div>
       </div>
     );

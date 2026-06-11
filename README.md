@@ -46,6 +46,8 @@ A deeper, multi-condition psychiatric evaluation powered by a **separate, more c
 - **Cross-Condition Differential Diagnosis**: When multiple conditions are selected, the system provides differential diagnosis analysis highlighting overlapping symptoms and distinguishing features
 - **Async Processing**: Extended assessments use Azure Durable Functions for orchestration — the clinician starts the assessment, receives a job ID, and polls for results — avoiding HTTP timeout issues with complex evaluations
 - **DSM-5 Data**: Diagnostic criteria are imported from DSM-5 source PDFs using the [DSM-5 Import CLI](BehavioralHealthSystem.DSM5Import/README.md) and stored as structured JSON in Azure Blob Storage
+- **Air-Gap Mode**: When running with a local model (e.g., Ollama phi4-mini), the system uses a **simplified prompt** (~1500 tokens) instead of the full DSM-5 criteria dump. A **maximum of 2 conditions** can be assessed per request due to context window constraints (4096 tokens). If more than 2 conditions are selected, the system automatically caps to the first 2 and shows a user-facing message explaining the limitation. The non-air-gap cloud prompt is unaffected.
+- **Progress Indicators**: The frontend displays a stage-based progress UI with 7 named steps (Validating → Preparing prompt → Sending to AI → Generating → Parsing → Saving → Finalizing). In air-gap mode, additional contextual messages indicate the local model constraint and expected timing (1–3 minutes).
 
 ### PHQ Assessments
 
@@ -178,6 +180,8 @@ docker compose --env-file docker.env -f docker-compose.local.yml up -d --build
 docker compose --env-file docker.env -f docker-compose.development.yml up -d --build
 ```
 
+Local and air-gap note: in `docker-compose.local.yml`, Azurite persists data to a host bind mount at `.local/azurite` (mapped to `/data` in the container). This makes uploaded blob artifacts inspectable directly from your machine during troubleshooting.
+
 The `docker.env.example` template includes all required and optional variables with descriptions. Key variables you must set:
 
 | Variable | Required | Purpose |
@@ -215,8 +219,31 @@ Set these values in `docker.env` (or `local.settings.json`) to run in strict air
 | `VITE_AIR_GAP_MODE=true` | Frontend air-gap mode: forces mock auth and local FFmpeg core loading |
 | `VITE_FFMPEG_CORE_BASE_URL=/ffmpeg-core` | Path where `ffmpeg-core.js` and `ffmpeg-core.wasm` are hosted |
 | `AIR_GAP_OPENAI_ENDPOINT` | OpenAI-compatible local model endpoint (e.g. `http://host.docker.internal:11434/v1`) |
-| `AIR_GAP_OPENAI_DEPLOYMENT` | Local model name for standard risk assessment (recommended: `gpt-oss-20b`) |
-| `AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT` | Local model name for extended assessments (recommended: `gpt-oss-20b`) |
+| `AIR_GAP_OPENAI_DEPLOYMENT` | Local model name for standard risk assessment (e.g. `phi4-mini`) |
+| `AIR_GAP_EXTENDED_OPENAI_ENDPOINT` | Local model endpoint for extended assessments (e.g. `http://host.docker.internal:11434/v1`) |
+| `AIR_GAP_EXTENDED_OPENAI_DEPLOYMENT` | Local model name for extended assessments (e.g. `phi4-mini`) |
+| `AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT` | Local model name for grammar correction (e.g. `phi4-mini`) |
+| `AIR_GAP_STT_ENDPOINT` | Local speech-to-text endpoint (e.g. `http://stt:9000`) |
+| `AIR_GAP_STT_MODEL` | STT model name (default: `base`) |
+
+#### Air-Gap Extended Assessment Limitations
+
+When running extended assessments with a local model (Ollama, llama.cpp, etc.):
+
+| Constraint | Value | Reason |
+|------------|-------|--------|
+| **Max conditions per request** | **2** | Local models have 4096-token context windows; output is capped at 1500 tokens. Each condition assessment requires ~300-400 output tokens. |
+| **Prompt style** | Simplified (~1500 tokens) | Full DSM-5 criteria dump (10K+ tokens) exceeds local model context. A compact prompt with clinical summary, condition list, and simplified JSON schema is used instead. |
+| **Transcription truncation** | 500 characters | Long transcriptions are truncated to fit within context limits. |
+| **Timeout** | 5 minutes (300s) | Reduced from 15 minutes to surface failures quickly on CPU-bound local models. |
+| **Context window** | 4096 tokens (`num_ctx`) | Explicitly set for Ollama payloads to prevent infinite generation. |
+
+If a user selects more than 2 conditions in air-gap mode, the system automatically evaluates only the first 2 and displays an informational message in the progress UI. The **non-air-gap (cloud) prompt is completely unaffected** — all conditions are evaluated using the full DSM-5 criteria prompt when connected to Azure OpenAI.
+
+**Recommended local models** (tested):
+- `phi4-mini` (3.8B Q4_K_M) — smallest viable model; works on CPU but slow (1-3 min per assessment)
+- `llama3.1:8b` — better quality but requires more RAM
+- `mistral:7b` — good balance of speed and quality
 
 ### Offline Vendor Scripts
 
@@ -254,6 +281,28 @@ On the air-gapped machine, run:
 # Optional: allow startup without staged FFmpeg core assets (not recommended)
 .\scripts\airgap-up.ps1 -AllowMissingFfmpegAssets
 ```
+
+### Database Seeding
+
+Reference data (DSM-5 diagnostic conditions) must be seeded into PostgreSQL for extended assessments to work. The `airgap-up.ps1` script does this automatically, but you can also run it manually:
+
+```powershell
+# Seed for air-gap mode (uses docker.env.airgap, targets bhs-db-local)
+.\scripts\seed-database.ps1 -Mode airgap
+
+# Seed for local development
+.\scripts\seed-database.ps1 -Mode local
+
+# Seed for dev/prod environments
+.\scripts\seed-database.ps1 -Mode dev
+.\scripts\seed-database.ps1 -Mode prod
+```
+
+The script is **idempotent** — safe to run multiple times. It:
+1. Waits for the PostgreSQL container to become healthy
+2. Creates the `dsm5_conditions` table if it doesn't exist
+3. Loads all 58 DSM-5 condition JSON files from `data/dsm5-data/conditions/`
+4. Skips records that already exist (`ON CONFLICT DO NOTHING`)
 
 ---
 

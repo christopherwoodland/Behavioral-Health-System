@@ -225,6 +225,8 @@ Set these values in `docker.env` (or `local.settings.json`) to run in strict air
 | `AIR_GAP_GRAMMAR_OPENAI_DEPLOYMENT` | Local model name for grammar correction (e.g. `phi4-mini`) |
 | `AIR_GAP_STT_ENDPOINT` | Local speech-to-text endpoint (e.g. `http://stt:9000`) |
 | `AIR_GAP_STT_MODEL` | STT model name (default: `base`) |
+| `DAM_MODEL_DIR` | Host path containing offline DAM model artifacts mounted into the local DAM container |
+| `DAM_MOCK_MODE` | Set to `true` to run the local DAM service without model weights for smoke testing |
 
 #### Air-Gap Extended Assessment Limitations
 
@@ -250,7 +252,7 @@ If a user selects more than 2 conditions in air-gap mode, the system automatical
 Use these scripts on a connected machine to prepare artifacts for transfer into an air-gapped environment:
 
 ```powershell
-# Download offline model artifacts (Ollama, Whisper, Piper)
+# Download offline model artifacts (Ollama, Whisper, Piper, DAM)
 .\scripts\vendor-offline\download-models.ps1
 
 # Vendor NuGet packages into an offline feed folder
@@ -280,6 +282,54 @@ On the air-gapped machine, run:
 
 # Optional: allow startup without staged FFmpeg core assets (not recommended)
 .\scripts\airgap-up.ps1 -AllowMissingFfmpegAssets
+```
+
+Linux / POSIX shells are supported with equivalent entrypoints:
+
+```bash
+# Build an air-gap env file with safe defaults and local endpoint checks
+./scripts/airgap-bootstrap.sh
+
+# Stage browser FFmpeg assets into Web public folder
+./scripts/vendor-offline/stage-ffmpeg-core.sh --tarball /path/to/ffmpeg-core.tgz
+
+# Restore .NET dependencies from the vendored NuGet feed only
+./scripts/vendor-offline/install-nuget-offline.sh
+
+# Restore Web npm dependencies from vendored tarballs only
+./scripts/vendor-offline/install-npm-offline.sh
+
+# One-shot startup helper (bootstrap + dependency restore + ffmpeg stage + compose up)
+./scripts/airgap-up.sh
+```
+
+#### Air-Gap DAM Model Layout
+
+The local DAM container now builds from source in `dam-server/` instead of pulling a private registry image. For non-mock inference, provide model artifacts on disk and mount them into the container with `DAM_MODEL_DIR`.
+
+Expected layout:
+
+```text
+offline-models/
+  dam/
+    config.json
+    preprocessor_config.json
+    model.safetensors
+    ...additional Hugging Face model files...
+```
+
+Relevant variables:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `DAM_MODEL_DIR` | `./offline-models/dam` | Host directory mounted into the container at `/models` |
+| `DAM_MOCK_MODE` | `false` | When `true`, the DAM server skips model loading and returns deterministic mock scores |
+| `LOCAL_DAM_BASE_URL` | `http://dam:8000` | Backend URL for the local DAM service |
+
+Quick smoke test without model weights:
+
+```powershell
+docker compose --env-file docker.env.airgap -f docker-compose.local.yml up -d dam
 ```
 
 ### Database Seeding

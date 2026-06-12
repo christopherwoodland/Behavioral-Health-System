@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD060 -->
+
 # BehavioralHealthSystem.Functions
 
 .NET 8 Azure Functions v4 (isolated worker) API backend for the Behavioral Health System. Provides all server-side operations including session management, audio processing, DAM predictions, risk assessments, transcription, DSM-5 data management, and more.
@@ -95,7 +97,7 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 
 ## Project Structure
 
-```
+```text
 BehavioralHealthSystem.Functions/
 ├── Functions/       # Azure Function endpoint definitions
 ├── Services/        # Function-layer services (DAM client, auth, CORS, feature flags)
@@ -118,6 +120,9 @@ func host start
 ```
 
 The Functions host runs at `http://localhost:7071` by default.
+
+Local Durable Functions startup requires a reachable Azurite endpoint on `127.0.0.1:10000`.
+The repo's local startup script tries to start Azurite via Docker Compose and will stop with a clear error if Docker Desktop is unavailable.
 
 ### Configuration
 
@@ -159,7 +164,7 @@ Key settings in `local.settings.json`:
 
 Dockerfiles are provided for each environment:
 
-```
+```text
 Dockerfile.local         # Local image (password-based PG auth, local Docker PG container)
 Dockerfile.development   # Development image (Managed Identity PG auth, Azure PG Flexible Server)
 Dockerfile.prod          # Production image (Managed Identity PG auth, Azure PG Flexible Server)

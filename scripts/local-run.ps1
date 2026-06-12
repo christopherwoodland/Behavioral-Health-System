@@ -1,6 +1,10 @@
 # local-run.ps1
 # This script builds and runs the .NET Azure Functions project and starts the frontend dev server.
 
+param(
+    [bool]$UseAzuriteStorage = $true
+)
+
 # Set strict mode
 Set-StrictMode -Version Latest
 
@@ -13,6 +17,39 @@ try {
     # Paths relative to solution root
     $functionsPath = "./BehavioralHealthSystem.Functions"
     $webPath = "./BehavioralHealthSystem.Web"
+    $damHealthUrl = "http://localhost:8000/health"
+    $useAzuriteForRun = $UseAzuriteStorage
+
+    if ($UseAzuriteStorage) {
+        $azuriteReachable = $false
+        try {
+            $azuriteReachable = Test-NetConnection -ComputerName "127.0.0.1" -Port 10000 -InformationLevel Quiet
+        }
+        catch {
+            $azuriteReachable = $false
+        }
+
+        if (-not $azuriteReachable) {
+            Write-Warning "Azurite is not reachable on 127.0.0.1:10000. Attempting to start azurite via docker compose..."
+            try {
+                docker compose -f docker-compose.local.yml up -d azurite | Out-Null
+                Start-Sleep -Seconds 2
+                $azuriteReachable = Test-NetConnection -ComputerName "127.0.0.1" -Port 10000 -InformationLevel Quiet
+            }
+            catch {
+                $azuriteReachable = $false
+            }
+        }
+
+        if (-not $azuriteReachable) {
+            Write-Warning "Azurite is still unavailable. Functions will start without forced Azurite env overrides."
+            $useAzuriteForRun = $false
+        }
+
+        if (-not $useAzuriteForRun) {
+            throw "Azurite is required for local Functions startup, but it is not available and Docker-based startup failed. Start Docker Desktop or an Azurite service, then rerun this script."
+        }
+    }
 
     Write-Host "Stopping existing processes..."
 
@@ -91,7 +128,23 @@ try {
 
     Write-Host "Starting Azure Functions host..."
     Push-Location $functionsPath
-    Start-Process "cmd.exe" -ArgumentList '/c func start'
+    $damMockMode = $false
+    try {
+        Invoke-RestMethod -Uri $damHealthUrl -Method Get -TimeoutSec 3 -ErrorAction Stop | Out-Null
+        Write-Host "Local DAM server is reachable at $damHealthUrl"
+    }
+    catch {
+        $damMockMode = $true
+        Write-Warning "Local DAM server is not reachable at $damHealthUrl. Enabling DAM_MOCK_MODE=true for this Functions run."
+    }
+
+    if ($useAzuriteForRun) {
+        # Force local storage emulation for Durable Functions and blob-backed services.
+        # This prevents local host startup failures when cloud storage DNS is unavailable.
+        $azuriteConnection = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;TableEndpoint=http://127.0.0.1:10002/devstoreaccount1;"
+        $funcCommand = "set AzureWebJobsStorage=$azuriteConnection && set AZURE_STORAGE_CONNECTION_STRING=$azuriteConnection && set DSM5_STORAGE_ACCOUNT_NAME=devstoreaccount1 && set AZURE_STORAGE_ACCOUNT_NAME=devstoreaccount1 && set DAM_MOCK_MODE=$damMockMode && func start"
+        Start-Process "cmd.exe" -ArgumentList "/c $funcCommand"
+    }
     Pop-Location
 
     Write-Host "Installing npm dependencies for web project..."

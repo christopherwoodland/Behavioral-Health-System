@@ -178,16 +178,23 @@ services:
 
   # DAM Model Server - Local
   # Self-hosted Depression & Anxiety Model for audio analysis
+  # Build locally from dam-server/ (no private ACR access required for air-gap)
   dam:
-    image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest
+    image: bhs-dam-selfhost:local
     container_name: bhs-dam-local
+    build:
+      context: ./dam-server
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - DAM_MOCK_MODE=false
+      - DAM_MOCK_MODE=${DAM_MOCK_MODE:-false}
       - DAM_PRELOAD_ON_STARTUP=true
       - DAM_PROCESS_START_METHOD=spawn
+      - DAM_MODEL_PATH=/models
       - UVICORN_WORKERS=2
+    volumes:
+      - ${DAM_MODEL_DIR:-./offline-models/dam}:/models:ro
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s

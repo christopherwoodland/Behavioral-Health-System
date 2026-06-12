@@ -53,4 +53,4 @@ ENV DAM_PROCESS_START_METHOD=spawn
 ENV DAM_MODEL_PATH=/models
 ENV UVICORN_WORKERS=2
 
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["sh", "-c", "exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]

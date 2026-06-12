@@ -7,6 +7,7 @@
       1. Ollama models (gpt-oss-20b, phi-4, embeddings)
       2. Whisper model file (for local STT service)
       3. Piper voice files (for local TTS service)
+      4. DAM model weights (for local depression/anxiety prediction)
 
     Copy the output folder to your air-gapped environment and mount/use
     these artifacts from local storage.
@@ -23,6 +24,9 @@
 .PARAMETER PiperVoice
     Piper voice name.
 
+.PARAMETER DamModelId
+    HuggingFace model ID for the DAM model.
+
 .PARAMETER SkipOllama
     Skip Ollama model pull.
 
@@ -31,6 +35,9 @@
 
 .PARAMETER SkipPiper
     Skip Piper voice download.
+
+.PARAMETER SkipDam
+    Skip DAM model download.
 #>
 [CmdletBinding()]
 param(
@@ -38,9 +45,11 @@ param(
     [string[]]$OllamaModels = @('gpt-oss:20b', 'phi4', 'nomic-embed-text'),
     [string]$WhisperModel = 'large-v3',
     [string]$PiperVoice = 'en_US-hfc_female-medium',
+    [string]$DamModelId = 'KintsugiHealth/dam',
     [switch]$SkipOllama,
     [switch]$SkipWhisper,
-    [switch]$SkipPiper
+    [switch]$SkipPiper,
+    [switch]$SkipDam
 )
 
 $ErrorActionPreference = 'Stop'
@@ -148,6 +157,51 @@ if (-not $SkipPiper) {
     }
 
     Write-Host '  [OK] Piper download complete.' -ForegroundColor Green
+}
+
+if (-not $SkipDam) {
+    $damDir = Join-Path $OutputDir 'dam'
+    New-Item -ItemType Directory -Path $damDir -Force | Out-Null
+
+    Write-Host ''
+    Write-Host "[4/4] Downloading DAM model ($DamModelId)..." -ForegroundColor Yellow
+
+    # Use huggingface-cli if available, otherwise fall back to direct download
+    $hfCli = Get-Command huggingface-cli -ErrorAction SilentlyContinue
+    if ($hfCli) {
+        Write-Host "  Using huggingface-cli to download model..."
+        huggingface-cli download $DamModelId --local-dir $damDir --local-dir-use-symlinks False
+        if ($LASTEXITCODE -ne 0) {
+            throw "Failed to download DAM model via huggingface-cli"
+        }
+    }
+    else {
+        # Try pip-installed huggingface_hub
+        $pyCmd = Get-Command python -ErrorAction SilentlyContinue
+        if (-not $pyCmd) { $pyCmd = Get-Command python3 -ErrorAction SilentlyContinue }
+        if ($pyCmd) {
+            Write-Host "  Using Python huggingface_hub to download model..."
+            $pyScript = @"
+from huggingface_hub import snapshot_download
+snapshot_download('$DamModelId', local_dir=r'$damDir', local_dir_use_symlinks=False)
+print('Download complete')
+"@
+            $pyScript | & $pyCmd.Source -
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to download DAM model via huggingface_hub"
+            }
+        }
+        else {
+            Write-Warning "Neither huggingface-cli nor Python found. Install huggingface_hub:"
+            Write-Warning "  pip install huggingface_hub[cli]"
+            Write-Warning "Then re-run this script."
+            throw "Cannot download DAM model without huggingface-cli or Python huggingface_hub"
+        }
+    }
+
+    Write-Host '  [OK] DAM model download complete.' -ForegroundColor Green
+    Write-Host "  Model stored at: $damDir" -ForegroundColor DarkGreen
+    Write-Host "  Mount this directory as /models in the DAM container." -ForegroundColor DarkGreen
 }
 
 $totalBytes = (Get-ChildItem -Path $OutputDir -Recurse -File | Measure-Object -Property Length -Sum).Sum

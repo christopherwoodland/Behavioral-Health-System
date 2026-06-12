@@ -99,3 +99,27 @@ public class MyEvaluationService(ILocalDamModelService damService)
 | `LOCAL_DAM_HEALTH_PATH` | `health` | Health endpoint path |
 | `LOCAL_DAM_WARMUP_TIMEOUT_SECONDS` | `600` | Max warmup wait time |
 | `LOCAL_DAM_WARMUP_POLL_SECONDS` | `5` | Poll interval during warmup |
+
+## Air-Gap Local DAM Server
+
+This repository now includes a buildable local DAM server in `dam-server/` for air-gap and offline deployments. The backend library in this project continues to talk to the service over HTTP using the same `LOCAL_DAM_*` settings.
+
+### Local build and run
+
+```powershell
+docker build -t bhs-dam-selfhost:local .\dam-server
+docker run --rm -p 8000:8000 -e DAM_MOCK_MODE=true bhs-dam-selfhost:local
+```
+
+### Real model inference
+
+For non-mock inference, mount Hugging Face-compatible DAM artifacts into `/models`:
+
+```powershell
+docker run --rm -p 8000:8000 `
+  -v ${PWD}\offline-models\dam:/models `
+  -e DAM_MODEL_PATH=/models `
+  bhs-dam-selfhost:local
+```
+
+The container honors `UVICORN_WORKERS`, `DAM_MODEL_PATH`, and `DAM_MOCK_MODE`. In `docker-compose.local.yml`, the host path is controlled by `DAM_MODEL_DIR` and defaults to `./offline-models/dam`.

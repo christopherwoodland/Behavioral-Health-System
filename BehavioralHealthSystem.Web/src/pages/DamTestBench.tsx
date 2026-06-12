@@ -683,10 +683,13 @@ const DamTestBench: React.FC = () => {
               </label>
               <div className="flex items-center gap-3">
                 <input
+                  id="dam-convert-audioFile"
                   ref={fileInputRef}
                   type="file"
                   accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  aria-label="Select audio file for conversion"
+                  title="Select audio file for conversion"
                   className="hidden"
                 />
                 <button
@@ -1059,11 +1062,11 @@ const DetailItem: React.FC<{ label: string; value: string; sub?: string; classNa
   className = '',
 }) => (
   <div className={className}>
-    <dt className="text-xs text-text-muted-light dark:text-text-muted-dark">{label}</dt>
-    <dd className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate" title={value}>
+    <div className="text-xs text-text-muted-light dark:text-text-muted-dark">{label}</div>
+    <div className="text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate" title={value}>
       {value}
-    </dd>
-    {sub && <dd className="text-xs text-text-muted-light dark:text-text-muted-dark">{sub}</dd>}
+    </div>
+    {sub && <div className="text-xs text-text-muted-light dark:text-text-muted-dark">{sub}</div>}
   </div>
 );
 

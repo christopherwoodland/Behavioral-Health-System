@@ -78,6 +78,10 @@ public static class AgentServiceRegistration
                     options.GpuDeviceId = gpuDeviceId;
                 if (bool.TryParse(config["LOCAL_DAM_USE_FP16"], out var useFp16))
                     options.UseFp16 = useFp16;
+                if (bool.TryParse(config["DAM_MOCK_MODE"], out var damMockMode))
+                    options.MockMode = damMockMode;
+                if (bool.TryParse(config["LOCAL_DAM_MOCK_MODE"], out var localDamMockMode))
+                    options.MockMode = localDamMockMode;
             });
 
         if (configureDam != null)

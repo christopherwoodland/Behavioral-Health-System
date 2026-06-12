@@ -149,11 +149,33 @@ dotnet build
 func start
 ```
 
+```bash
+cd BehavioralHealthSystem.Functions
+dotnet build
+func start
+```
+
 API runs at `http://localhost:7071`. See the [Functions README](BehavioralHealthSystem.Functions/README.md) for configuration details.
+
+For a one-command local startup, use the root helper scripts:
+
+```powershell
+.\scripts\local-run.ps1
+```
+
+```bash
+./scripts/local-run.sh
+```
 
 ### 2) Frontend (React)
 
 ```powershell
+cd BehavioralHealthSystem.Web
+npm install
+npm run dev
+```
+
+```bash
 cd BehavioralHealthSystem.Web
 npm install
 npm run dev
@@ -206,6 +228,14 @@ The `docker.env.example` template includes all required and optional variables w
 .\scripts\docker-manage.ps1 -Action up -Environment production     # Production
 .\scripts\docker-manage.ps1 -Action down -Environment local
 .\scripts\docker-manage.ps1 -Action status
+```
+
+```bash
+./scripts/docker-manage.sh up --env local
+./scripts/docker-manage.sh up --env development
+./scripts/docker-manage.sh up --env production
+./scripts/docker-manage.sh down --env local
+./scripts/docker-manage.sh status
 ```
 
 ### Air-Gap Mode (Config Toggle)

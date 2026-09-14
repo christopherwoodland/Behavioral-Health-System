@@ -27,18 +27,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.6.0+cpu torchaudio==2.6.0+cpu \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Create model and cache directories before switching away from root so model
+# downloads do not need a copy-on-write ownership layer.
+RUN mkdir -p /models /cache/huggingface && chown -R dam:dam /models /cache /app
+
+USER dam
+
+# Pin the public Apache-2.0 model artifacts and cache the Whisper backbone so
+# runtime startup does not depend on access to Hugging Face.
+ARG DAM_REVISION=df83a1e00101d9c06a5042b96b921eb94d5a2528
+ENV HF_HOME=/cache/huggingface
+RUN python -c "from huggingface_hub import snapshot_download; snapshot_download('KintsugiHealth/dam', revision='${DAM_REVISION}', local_dir='/models'); snapshot_download('openai/whisper-small.en')"
 
 # Copy application source
-COPY app/ ./app/
-
-# Create writable cache directory for HuggingFace models
-RUN mkdir -p /cache/huggingface && chown -R dam:dam /cache /app
-ENV HF_HOME=/cache/huggingface
-ENV TRANSFORMERS_CACHE=/cache/huggingface/hub
-
-# Switch to non-root user
-USER dam
+COPY --chown=dam:dam app/ ./app/
 
 EXPOSE 8000
 
@@ -51,6 +58,6 @@ ENV DAM_MOCK_MODE=false
 ENV DAM_PRELOAD_ON_STARTUP=true
 ENV DAM_PROCESS_START_METHOD=spawn
 ENV DAM_MODEL_PATH=/models
-ENV UVICORN_WORKERS=2
+ENV UVICORN_WORKERS=1
 
 CMD ["sh", "-c", "exec python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${UVICORN_WORKERS:-2}"]

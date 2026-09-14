@@ -38,6 +38,9 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 | `/api/sessions/initiate-selected` | POST | Initiate a DAM session with user metadata |
 | `/api/predictions/submit-selected` | POST | Submit audio for DAM prediction |
 | `/api/process-audio-upload` | POST | Full pipeline: upload → convert → predict via Semantic Kernel |
+| `/api/audio-jobs` | POST | Upload raw audio and start the durable FFmpeg → DAM pipeline |
+| `/api/audio-jobs/{jobId}` | GET | Get durable audio job status |
+| `/api/audio-jobs/{jobId}/result` | GET | Get the completed DAM prediction |
 
 ### Sessions
 
@@ -79,6 +82,38 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 |----------|--------|-------------|
 | `/api/upload-audio` | POST | Upload audio file to blob storage |
 | `/api/download-audio/{blobName}` | GET | Download audio from blob storage |
+
+### Asynchronous Audio Preprocessing
+
+`POST /api/audio-jobs` is the long-running production path for audio classification. It accepts the original audio bytes as the request body, writes them to the private `audio-uploads` container, and returns `202 Accepted` before FFmpeg or DAM inference runs.
+
+Required query parameters are `userId`, `sessionId`, and `fileName`. Supported file extensions are `.wav`, `.mp3`, `.mp4`, `.m4a`, `.aac`, `.flac`, `.ogg`, `.webm`, `.mkv`, `.avi`, and `.mov`. Requests require an Entra bearer token or `X-API-Key`. Poll with the same authenticated identity that created the job; another identity receives `404` even if it knows the job ID.
+
+An optional `Idempotency-Key` header makes retries from the same authenticated identity with the same `userId`, `sessionId`, and `fileName` resolve to one job. Blob creation is conditional, so concurrent retries cannot overwrite the first committed audio. Reuse a key only for the same logical upload.
+
+```powershell
+curl.exe -X POST `
+	"$env:FUNCTIONS_URL/api/audio-jobs?userId=user-1&sessionId=session-1&fileName=recording.webm" `
+	-H "Authorization: Bearer $env:ACCESS_TOKEN" `
+	-H "Idempotency-Key: session-1-recording" `
+	-H "Content-Type: audio/webm" `
+	--data-binary "@recording.webm"
+```
+
+```json
+{
+	"success": true,
+	"jobId": "audio-0123456789abcdef0123456789abcdef",
+	"status": "queued",
+	"replayed": false,
+	"statusUrl": "https://functions.example/api/audio-jobs/audio-0123456789abcdef0123456789abcdef",
+	"resultUrl": "https://functions.example/api/audio-jobs/audio-0123456789abcdef0123456789abcdef/result"
+}
+```
+
+Poll `statusUrl` until `status` is `succeeded` or `failed`, then call `resultUrl`. A pending result returns `202` with `Retry-After: 3`; a successful result returns the complete `AudioProcessingResult` and DAM scores.
+
+The Durable orchestration stores identifiers and a one-way caller hash only. Audio bytes remain in Blob Storage and activity memory, never in Durable history. The activity reuses the existing pipeline to normalize audio to 44.1 kHz mono signed 16-bit PCM WAV, apply the configured high-pass, low-pass, and silence-removal filters, and submit base64 audio directly to DAM. The original upload remains in Blob Storage; the normalized WAV is held only in activity memory and is not persisted. The workflow does not ask DAM to fetch an arbitrary `audioFileUrl`.
 
 ### DSM-5 Administration
 
@@ -134,12 +169,26 @@ Key settings in `local.settings.json`:
 | `LOCAL_DAM_BASE_URL` | Kintsugi DAM model endpoint |
 | `LOCAL_DAM_MODEL_ID` | Model identifier (default: `KintsugiHealth/dam`) |
 | `LOCAL_DAM_API_KEY` | DAM model API key |
+| `LOCAL_DAM_MAX_RETRY_ATTEMPTS` | DAM attempts for network, 408, 429, and 5xx failures (default: `3`) |
+| `LOCAL_DAM_RETRY_BASE_DELAY_MS` | Initial exponential retry delay (default: `1000`) |
+| `LOCAL_DAM_USE_GPU` | Request GPU inference; set `false` for the deployed CPU service |
+| `DAM_MOCK_MODE` | Mock prediction mode; keep `false` outside explicit tests |
+| `AUDIO_JOB_MAX_UPLOAD_BYTES` | Maximum streamed audio upload size (default: `26214400`) |
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint for risk assessments |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI key |
 | `AZURE_OPENAI_DEPLOYMENT_NAME` | GPT deployment name (default: `gpt-4o`) |
 | `EXTENDED_ASSESSMENT_OPENAI_*` | Separate OpenAI config for GPT-5/O3 extended assessments |
 | `AZURE_SPEECH_KEY` | Azure Speech service key for transcription |
 | `AZURE_SPEECH_REGION` | Azure Speech region |
+
+The deployed CPU DAM service can be configured without embedding its key in source:
+
+```text
+LOCAL_DAM_BASE_URL=https://bhs-dam.victorioussmoke-ce62b9bb.eastus.azurecontainerapps.io
+LOCAL_DAM_API_KEY=<secret-backed setting>
+LOCAL_DAM_USE_GPU=false
+DAM_MOCK_MODE=false
+```
 
 #### PostgreSQL Configuration
 

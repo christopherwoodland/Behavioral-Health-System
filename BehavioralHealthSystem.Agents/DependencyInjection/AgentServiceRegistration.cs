@@ -72,6 +72,10 @@ public static class AgentServiceRegistration
                 options.ModelId = config["LOCAL_DAM_MODEL_ID"] ?? "KintsugiHealth/dam";
                 if (int.TryParse(config["LOCAL_DAM_TIMEOUT_SECONDS"], out var timeout))
                     options.TimeoutSeconds = timeout;
+                if (int.TryParse(config["LOCAL_DAM_MAX_RETRY_ATTEMPTS"], out var maxRetryAttempts))
+                    options.MaxRetryAttempts = maxRetryAttempts;
+                if (int.TryParse(config["LOCAL_DAM_RETRY_BASE_DELAY_MS"], out var retryBaseDelayMs))
+                    options.RetryBaseDelayMs = retryBaseDelayMs;
                 if (bool.TryParse(config["LOCAL_DAM_USE_GPU"], out var useGpu))
                     options.UseGpu = useGpu;
                 if (int.TryParse(config["LOCAL_DAM_GPU_DEVICE_ID"], out var gpuDeviceId))

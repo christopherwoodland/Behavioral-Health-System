@@ -12,7 +12,7 @@ import uuid
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from app.model import DamModel
@@ -40,6 +40,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="BHS DAM Self-Host", version="1.0.0", lifespan=lifespan)
+
+
+def require_api_key(x_api_key: str | None):
+    expected_api_key = os.environ.get("DAM_API_KEY")
+    if expected_api_key and x_api_key != expected_api_key:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
 # ---------- Request/Response Models ----------
@@ -102,16 +108,18 @@ async def health():
 
 
 @app.post("/initiate", response_model=InitiateResponseBody)
-async def initiate(body: InitiateRequestBody):
+async def initiate(body: InitiateRequestBody, x_api_key: str | None = Header(default=None)):
     """Create a new prediction session."""
+    require_api_key(x_api_key)
     session_id = uuid.uuid4().hex
     logger.info("Session initiated: %s (userId=%s, modelId=%s)", session_id, body.userId, body.modelId)
     return InitiateResponseBody(session_id=session_id)
 
 
 @app.post("/predict", response_model=PredictResponseBody)
-async def predict(body: PredictRequestBody):
+async def predict(body: PredictRequestBody, x_api_key: str | None = Header(default=None)):
     """Submit audio for depression/anxiety prediction."""
+    require_api_key(x_api_key)
     if _model is None or not _model.is_loaded:
         raise HTTPException(status_code=503, detail="Model not loaded yet")
 
@@ -137,5 +145,5 @@ async def predict(body: PredictRequestBody):
         raise HTTPException(status_code=400, detail="No audio data provided (audioData or audioFileUrl required)")
 
     logger.info("Running prediction for session %s (%d bytes audio)", session_id, len(audio_bytes))
-    result = await _model.predict(audio_bytes, session_id)
+    result = await _model.predict(audio_bytes, session_id, body.quantized)
     return result

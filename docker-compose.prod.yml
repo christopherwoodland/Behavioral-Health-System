@@ -77,7 +77,11 @@ services:
       - LOCAL_DAM_INITIATE_PATH=initiate
       - LOCAL_DAM_PREDICTION_PATH=predict
       - LOCAL_DAM_MODEL_ID=KintsugiHealth/dam
+      - LOCAL_DAM_API_KEY=${LOCAL_DAM_API_KEY:-}
       - LOCAL_DAM_TIMEOUT_SECONDS=300
+      - LOCAL_DAM_MAX_RETRY_ATTEMPTS=${LOCAL_DAM_MAX_RETRY_ATTEMPTS:-3}
+      - LOCAL_DAM_RETRY_BASE_DELAY_MS=${LOCAL_DAM_RETRY_BASE_DELAY_MS:-1000}
+      - LOCAL_DAM_USE_GPU=${LOCAL_DAM_USE_GPU:-false}
       - LOCAL_DAM_WARMUP_ON_STARTUP=true
       - LOCAL_DAM_HEALTH_PATH=health
       - LOCAL_DAM_WARMUP_TIMEOUT_SECONDS=600
@@ -91,6 +95,7 @@ services:
       - FFMPEG_ENABLE_SILENCE_REMOVAL=${FFMPEG_ENABLE_SILENCE_REMOVAL:-true}
       - FFMPEG_SILENCE_THRESHOLD_DB=${FFMPEG_SILENCE_THRESHOLD_DB:--50}
       - FFMPEG_SILENCE_MIN_DURATION=${FFMPEG_SILENCE_MIN_DURATION:-0.1}
+      - AUDIO_JOB_MAX_UPLOAD_BYTES=${AUDIO_JOB_MAX_UPLOAD_BYTES:-26214400}
       # Azure Identity for Managed Identity
       - AZURE_TENANT_ID=${AZURE_TENANT_ID}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
@@ -129,6 +134,7 @@ services:
     image: bhsdevelopmentacr4znv2wxlxs4xq.azurecr.io/bhs-dam-selfhost:latest
     container_name: bhs-dam-prod
     environment:
+      - DAM_API_KEY=${LOCAL_DAM_API_KEY:-}
       - DAM_MOCK_MODE=false
       - DAM_PRELOAD_ON_STARTUP=true
       - DAM_PROCESS_START_METHOD=spawn

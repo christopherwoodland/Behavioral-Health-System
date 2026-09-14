@@ -1,13 +1,13 @@
 # Stage 1: Build the React application
-FROM node:20-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (production only for smaller build)
-RUN npm ci --only=production=false
+# Install build dependencies
+RUN npm ci --include=dev
 
 # Copy source code
 COPY . .

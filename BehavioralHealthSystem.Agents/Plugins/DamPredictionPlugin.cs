@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Net;
 using Microsoft.SemanticKernel;
 
 namespace BehavioralHealthSystem.Agents.Plugins;
@@ -59,8 +60,11 @@ public class DamPredictionPlugin
         HttpResponseMessage response;
         try
         {
-            response = await _httpClient.PostAsJsonAsync(
-                _options.InitiatePath, payload, cancellationToken);
+            response = await PostAsJsonWithRetryAsync(
+                _options.InitiatePath,
+                payload,
+                "initiate",
+                cancellationToken);
         }
         catch (HttpRequestException ex) when (_options.MockMode)
         {
@@ -165,8 +169,11 @@ public class DamPredictionPlugin
         HttpResponseMessage response;
         try
         {
-            response = await _httpClient.PostAsJsonAsync(
-                _options.PredictionPath, payload, cancellationToken);
+            response = await PostAsJsonWithRetryAsync(
+                _options.PredictionPath,
+                payload,
+                "predict",
+                cancellationToken);
         }
         catch (HttpRequestException ex) when (_options.MockMode)
         {
@@ -279,6 +286,103 @@ public class DamPredictionPlugin
         }
     }
 
+    private async Task<HttpResponseMessage> PostAsJsonWithRetryAsync<T>(
+        string requestPath,
+        T payload,
+        string operation,
+        CancellationToken cancellationToken)
+    {
+        var maxAttempts = Math.Clamp(_options.MaxRetryAttempts, 1, 5);
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.PostAsJsonAsync(
+                    requestPath,
+                    payload,
+                    cancellationToken);
+            }
+            catch (HttpRequestException exception) when (attempt < maxAttempts)
+            {
+                var delay = GetRetryDelay(response: null, attempt);
+                _logger.LogWarning(
+                    exception,
+                    "[{PluginName}] DAM {Operation} network failure on attempt {Attempt}/{MaxAttempts}; retrying in {DelayMs}ms",
+                    nameof(DamPredictionPlugin),
+                    operation,
+                    attempt,
+                    maxAttempts,
+                    delay.TotalMilliseconds);
+                await Task.Delay(delay, cancellationToken);
+                continue;
+            }
+            catch (OperationCanceledException exception)
+                when (!cancellationToken.IsCancellationRequested && attempt < maxAttempts)
+            {
+                var delay = GetRetryDelay(response: null, attempt);
+                _logger.LogWarning(
+                    exception,
+                    "[{PluginName}] DAM {Operation} timed out on attempt {Attempt}/{MaxAttempts}; retrying in {DelayMs}ms",
+                    nameof(DamPredictionPlugin),
+                    operation,
+                    attempt,
+                    maxAttempts,
+                    delay.TotalMilliseconds);
+                await Task.Delay(delay, cancellationToken);
+                continue;
+            }
+
+            if (!IsTransientStatusCode(response.StatusCode) || attempt == maxAttempts)
+            {
+                return response;
+            }
+
+            var retryDelay = GetRetryDelay(response, attempt);
+            _logger.LogWarning(
+                "[{PluginName}] DAM {Operation} returned transient status {StatusCode} on attempt {Attempt}/{MaxAttempts}; retrying in {DelayMs}ms",
+                nameof(DamPredictionPlugin),
+                operation,
+                (int)response.StatusCode,
+                attempt,
+                maxAttempts,
+                retryDelay.TotalMilliseconds);
+            response.Dispose();
+            await Task.Delay(retryDelay, cancellationToken);
+        }
+
+        throw new InvalidOperationException("DAM retry loop ended unexpectedly.");
+    }
+
+    private TimeSpan GetRetryDelay(HttpResponseMessage? response, int attempt)
+    {
+        var retryAfter = response?.Headers.RetryAfter;
+        var requestedDelay = retryAfter?.Delta;
+        if (requestedDelay is null && retryAfter?.Date is not null)
+        {
+            requestedDelay = retryAfter.Date.Value - DateTimeOffset.UtcNow;
+        }
+
+        if (requestedDelay is { } headerDelay && headerDelay > TimeSpan.Zero)
+        {
+            return headerDelay > TimeSpan.FromSeconds(30)
+                ? TimeSpan.FromSeconds(30)
+                : headerDelay;
+        }
+
+        var baseDelayMs = Math.Clamp(_options.RetryBaseDelayMs, 1, 10_000);
+        var delayMs = Math.Min(30_000, baseDelayMs * Math.Pow(2, attempt - 1));
+        return TimeSpan.FromMilliseconds(delayMs);
+    }
+
+    private static bool IsTransientStatusCode(HttpStatusCode statusCode)
+    {
+        return statusCode is HttpStatusCode.RequestTimeout
+            or HttpStatusCode.TooManyRequests
+            || (int)statusCode >= 500;
+    }
+
     private static PredictionResponse CreateMockPrediction(string sessionId)
     {
         var now = DateTime.UtcNow;
@@ -347,6 +451,12 @@ public class DamPredictionPluginOptions
 
     /// <summary>Timeout in seconds for prediction requests.</summary>
     public int TimeoutSeconds { get; set; } = 300;
+
+    /// <summary>Maximum DAM request attempts for network, 408, 429, and 5xx failures.</summary>
+    public int MaxRetryAttempts { get; set; } = 3;
+
+    /// <summary>Initial retry delay in milliseconds. Subsequent delays use exponential backoff.</summary>
+    public int RetryBaseDelayMs { get; set; } = 1000;
 
     /// <summary>
     /// Whether to request GPU-accelerated inference from the DAM service.

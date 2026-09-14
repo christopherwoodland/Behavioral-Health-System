@@ -17,6 +17,7 @@
 
 # Local development runtime data
 .local/
+.copilot-azure/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

@@ -4,11 +4,14 @@
 // System namespaces
 global using System;
 global using System.Collections.Generic;
+global using System.ComponentModel.DataAnnotations;
+global using System.ComponentModel.DataAnnotations.Schema;
 global using System.Linq;
 global using System.Net.Http;
 global using System.Text;
 global using System.Text.Json;
 global using System.Text.Json.Serialization;
+global using System.Text.RegularExpressions;
 global using System.Threading;
 global using System.Threading.Tasks;
 
@@ -18,6 +21,10 @@ global using Microsoft.Extensions.Logging;
 global using Microsoft.Extensions.Options;
 global using Microsoft.Extensions.Caching.Memory;
 global using Microsoft.EntityFrameworkCore;
+
+// Azure namespaces
+global using Azure.Identity;
+global using Azure.Storage.Blobs.Models;
 
 // Third-party namespaces
 global using FluentValidation;

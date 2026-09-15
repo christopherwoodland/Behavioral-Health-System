@@ -3,6 +3,7 @@
 // System namespaces
 global using System;
 global using System.Collections.Generic;
+global using System.IO;
 global using System.Linq;
 global using System.Net;
 global using System.Text.Json;
@@ -12,6 +13,7 @@ global using System.Threading.Tasks;
 global using Microsoft.Extensions.Configuration;
 global using Microsoft.Extensions.Diagnostics.HealthChecks;
 global using Microsoft.Extensions.Logging;
+global using Microsoft.EntityFrameworkCore;
 
 // MSTest
 global using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -32,3 +34,6 @@ global using BehavioralHealthSystem.Functions;
 global using BehavioralHealthSystem.Models;
 global using BehavioralHealthSystem.Services.Interfaces;
 global using BehavioralHealthSystem.Validators;
+global using BehavioralHealthSystem.Helpers.Data;
+global using BehavioralHealthSystem.Helpers.Models;
+global using BehavioralHealthSystem.Helpers.Services.PostgreSQL;

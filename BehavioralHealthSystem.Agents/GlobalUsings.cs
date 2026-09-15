@@ -3,6 +3,7 @@
 // System namespaces
 global using System;
 global using System.Collections.Generic;
+global using System.ComponentModel;
 global using System.Diagnostics;
 global using System.IO;
 global using System.Linq;
@@ -25,6 +26,7 @@ global using Microsoft.SemanticKernel;
 
 // Azure namespaces
 global using Azure.Storage.Blobs;
+global using Azure.Storage.Blobs.Models;
 
 // Project namespaces
 global using BehavioralHealthSystem.Models;

@@ -5,6 +5,7 @@
 global using System;
 global using System.Collections.Generic;
 global using System.Diagnostics;
+global using System.IO;
 global using System.Linq;
 global using System.Net;
 global using System.Net.Http;
@@ -23,10 +24,13 @@ global using Microsoft.Extensions.Hosting;
 
 // Azure namespaces
 global using Azure.Storage.Blobs;
+global using Azure.Storage.Blobs.Models;
 
 // Azure Functions namespaces
 global using Microsoft.Azure.Functions.Worker;
 global using Microsoft.Azure.Functions.Worker.Http;
+global using Microsoft.DurableTask;
+global using Microsoft.DurableTask.Client;
 
 // Third-party namespaces
 global using FluentValidation;

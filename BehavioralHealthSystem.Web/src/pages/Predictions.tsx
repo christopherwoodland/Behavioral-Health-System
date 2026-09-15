@@ -99,7 +99,7 @@ const Predictions: React.FC = () => {
     session: SessionData,
     type: 'depression' | 'anxiety'
   ): string | number | undefined => {
-    const prediction = session.prediction as any;
+    const prediction = session.prediction;
     const analysisResults = session.analysisResults;
 
     if (type === 'depression') {
@@ -239,7 +239,7 @@ const Predictions: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [announceToScreenReader]);
+  }, [announceToScreenReader, getAuthenticatedUserId]);
 
   useEffect(() => {
     loadPredictions();
@@ -489,7 +489,7 @@ const Predictions: React.FC = () => {
   }, [filteredSessions, getSessionScoreValue, hasScoreValue]);
 
   // Handle filter changes
-  const updateFilter = useCallback((key: keyof PredictionFilters, value: any) => {
+  const updateFilter = useCallback((key: keyof PredictionFilters, value: PredictionFilters[keyof PredictionFilters]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     announceToScreenReader(`Filter ${key} changed to ${value}`);
   }, [announceToScreenReader]);

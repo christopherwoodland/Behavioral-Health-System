@@ -675,7 +675,7 @@ const DamTestBench: React.FC = () => {
           )}
           {(mode === 'convert') && (
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
+              <label htmlFor="dam-convert-audioFile" className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-1">
                 Audio File <span className="text-error-500">*</span>
                 <span className="text-text-muted-light dark:text-text-muted-dark font-normal ml-1">
                   (will be cleaned via ffmpeg — no DAM prediction)
@@ -813,7 +813,9 @@ const DamTestBench: React.FC = () => {
                   src={convertResult.audioUrl}
                   controls
                   className="w-full mb-3"
-                />
+                >
+                  <track kind="captions" />
+                </audio>
                 <div className="flex items-center gap-3">
                   <a
                     href={convertResult.audioUrl}

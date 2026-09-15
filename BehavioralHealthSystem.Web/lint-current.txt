@@ -4,23 +4,7 @@
 
 
 C:\Users\cwoodland\dev\Behavioral-Health-System\BehavioralHealthSystem.Web\src\components\GroupSelector.tsx
-  61:6  warning  React Hook useEffect has a missing dependency: 'loadGroups'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-C:\Users\cwoodland\dev\Behavioral-Health-System\BehavioralHealthSystem.Web\src\contexts\ThemeContext.tsx
-  11:14  warning  Fast refresh only works when a file only exports components. Move your React context(s) to a separate file  react-refresh/only-export-components
-
-C:\Users\cwoodland\dev\Behavioral-Health-System\BehavioralHealthSystem.Web\src\pages\ControlPanel.tsx
-   284:48  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
-   409:50  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
-   468:48  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
-   482:48  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
-   612:46  error    Unexpected any. Specify a different type                                                                    @typescript-eslint/no-explicit-any
-  1497:6   warning  React Hook useEffect has a missing dependency: 'loading'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-
-C:\Users\cwoodland\dev\Behavioral-Health-System\BehavioralHealthSystem.Web\src\pages\DamTestBench.tsx
-  336:6   warning  React Hook useCallback has a missing dependency: 'convertResult.audioUrl'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
-  678:15  error    A form label must be associated with a control                                                                               jsx-a11y/label-has-associated-control
-  812:17  error    Media elements such as <audio> and <video> must have a <track> for captions                                                  jsx-a11y/media-has-caption
+  71:6  warning  React Hook useCallback has a missing dependency: 'loadingState'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
 
 C:\Users\cwoodland\dev\Behavioral-Health-System\BehavioralHealthSystem.Web\src\pages\GroupSessionsDetail.tsx
   197:21  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
@@ -202,5 +186,5 @@ C:\Users\cwoodland\dev\Behavioral-Health-System\BehavioralHealthSystem.Web\src\u
   38:55  error  Unexpected any. Specify a different type                                   @typescript-eslint/no-explicit-any
   39:44  error  Do not access Object.prototype method 'hasOwnProperty' from target object  no-prototype-builtins
 
-Γ£û 151 problems (134 errors, 17 warnings)
+Γ£û 141 problems (127 errors, 14 warnings)
 

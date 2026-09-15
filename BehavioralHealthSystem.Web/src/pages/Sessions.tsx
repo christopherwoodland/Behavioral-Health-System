@@ -106,7 +106,7 @@ const Sessions: React.FC = () => {
       const transformedSessions: SessionWithUI[] = await Promise.all(
         response.sessions.map(async (session) => {
           // Handle both camelCase and snake_case property names from API
-          const prediction = session.prediction as any;
+          const prediction = session.prediction;
           const analysisResults = session.analysisResults;
 
           // Fetch group information if session has a groupId
@@ -223,16 +223,18 @@ const Sessions: React.FC = () => {
         case 'group':
           comparison = (a.groupName || '').localeCompare(b.groupName || '');
           break;
-        case 'depressionScore':
+        case 'depressionScore': {
           const depressionA = getSeverityLevel(a.depressionScore);
           const depressionB = getSeverityLevel(b.depressionScore);
           comparison = depressionA - depressionB;
           break;
-        case 'anxietyScore':
+        }
+        case 'anxietyScore': {
           const anxietyA = getSeverityLevel(a.anxietyScore);
           const anxietyB = getSeverityLevel(b.anxietyScore);
           comparison = anxietyA - anxietyB;
           break;
+        }
       }
 
       return filters.sortOrder === 'desc' ? -comparison : comparison;
@@ -242,7 +244,7 @@ const Sessions: React.FC = () => {
   }, [sessions, filters]);
 
   // Handle filter changes
-  const updateFilter = useCallback((key: keyof SessionFilters, value: any) => {
+  const updateFilter = useCallback((key: keyof SessionFilters, value: SessionFilters[keyof SessionFilters]) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     announceToScreenReader(`Filter ${key} changed to ${value}`);
   }, [announceToScreenReader]);

@@ -21,6 +21,24 @@ public interface IAudioProcessingOrchestrator
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Runs the complete audio processing pipeline with optional demographic inputs for prediction.
+    /// </summary>
+    /// <param name="userId">The user ID who owns the audio recording.</param>
+    /// <param name="sessionId">The session ID associated with the recording.</param>
+    /// <param name="fileName">Optional specific file name. If null, retrieves the most recent recording for the session.</param>
+    /// <param name="age">Optional user age in years.</param>
+    /// <param name="weightKg">Optional user weight in kilograms.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The complete processing result including prediction scores.</returns>
+    Task<AudioProcessingResult> ProcessAudioAsync(
+        string userId,
+        string sessionId,
+        string? fileName,
+        int? age,
+        double? weightKg,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Runs the complete audio processing pipeline using a local directory as the source.
     /// Steps: Fetch from local directory → Convert via ffmpeg → Predict via DAM.
     /// </summary>

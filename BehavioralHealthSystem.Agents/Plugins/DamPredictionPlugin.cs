@@ -125,12 +125,18 @@ public class DamPredictionPlugin
         [Description("The converted audio data as bytes")] byte[] audioData,
         [Description("The audio file name (e.g., 'audio.wav')")] string audioFileName,
         [Description("The DAM session ID from InitiateDamSession")] string sessionId,
+        [Description("Optional user age in years")] int? age = null,
+        [Description("Optional user weight in kilograms")] double? weightKg = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(audioData);
         if (audioData.Length == 0)
             throw new ArgumentException("Audio data cannot be empty.", nameof(audioData));
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId, nameof(sessionId));
+        if (age is < 1 or > 120)
+            throw new ArgumentOutOfRangeException(nameof(age), age, "Age must be from 1 through 120.");
+        if (weightKg.HasValue && (!double.IsFinite(weightKg.Value) || weightKg is < 10 or > 500))
+            throw new ArgumentOutOfRangeException(nameof(weightKg), weightKg, "Weight must be from 10 through 500 kilograms.");
 
         var correlationId = Guid.NewGuid().ToString("N")[..8];
         var sw = Stopwatch.StartNew();
@@ -144,6 +150,8 @@ public class DamPredictionPlugin
             sessionId,
             audioData = Convert.ToBase64String(audioData),
             audioFileName = string.IsNullOrWhiteSpace(audioFileName) ? "audio.wav" : audioFileName,
+            age,
+            weightKg,
             modelId = _options.ModelId,
             quantized = true,
             useGpu = _options.UseGpu,

@@ -93,6 +93,8 @@ public class LocalDamModelService : ILocalDamModelService
             audioData = audioBase64,
             audioFileUrl = audioBase64 is null && !string.IsNullOrWhiteSpace(normalizedAudioFileUrl) ? normalizedAudioFileUrl : null,
             audioFileName = string.IsNullOrWhiteSpace(request.AudioFileName) ? "audio.wav" : request.AudioFileName,
+            age = request.Age,
+            weightKg = request.WeightKg,
             modelId = _options.ModelId,
             quantized = true
         };

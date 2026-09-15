@@ -67,6 +67,8 @@ class PredictRequestBody(BaseModel):
     audioData: str | None = None  # base64-encoded audio bytes
     audioFileUrl: str | None = None
     audioFileName: str = "audio.wav"
+    age: int | None = Field(default=None, ge=1, le=120)
+    weightKg: float | None = Field(default=None, ge=10, le=500)
     modelId: str = "KintsugiHealth/dam"
     quantized: bool = True
 

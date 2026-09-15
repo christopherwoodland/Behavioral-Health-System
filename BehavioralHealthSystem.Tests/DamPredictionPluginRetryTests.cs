@@ -44,6 +44,20 @@ public class DamPredictionPluginRetryTests
         Assert.AreEqual(1, handler.RequestCount);
     }
 
+    [TestMethod]
+    public async Task RunPrediction_InvalidDemographics_RejectsBeforeRequest()
+    {
+        var handler = new SequenceHttpMessageHandler();
+        var plugin = CreatePlugin(handler, maxRetryAttempts: 1);
+
+        await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(
+            () => plugin.RunPredictionAsync(new byte[] { 1 }, "audio.wav", "session-1", age: 0));
+        await Assert.ThrowsExactlyAsync<ArgumentOutOfRangeException>(
+            () => plugin.RunPredictionAsync(new byte[] { 1 }, "audio.wav", "session-1", weightKg: double.NaN));
+
+        Assert.AreEqual(0, handler.RequestCount);
+    }
+
     private static DamPredictionPlugin CreatePlugin(
         HttpMessageHandler handler,
         int maxRetryAttempts)

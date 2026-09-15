@@ -15,4 +15,10 @@ public class PredictionRequest
 
     [JsonPropertyName("audioFileName")]
     public string AudioFileName { get; set; } = string.Empty;
+
+    [JsonPropertyName("age")]
+    public int? Age { get; set; }
+
+    [JsonPropertyName("weightKg")]
+    public double? WeightKg { get; set; }
 }

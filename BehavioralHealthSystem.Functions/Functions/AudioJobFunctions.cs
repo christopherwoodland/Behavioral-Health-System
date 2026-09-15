@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.IO;
+using System.Globalization;
 using System.Threading;
 using Azure;
 using Azure.Storage.Blobs.Models;
@@ -17,6 +18,8 @@ public sealed class AudioJobFunctions
     private const long DefaultMaxUploadBytes = 25 * 1024 * 1024;
     private const int MaxIdentifierLength = 128;
     private const int MaxFileNameLength = 255;
+    private const string AgeHeaderName = "X-User-Age";
+    private const string WeightKgHeaderName = "X-User-Weight-Kg";
 
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -59,14 +62,14 @@ public sealed class AudioJobFunctions
                 "Valid credentials are required.");
         }
 
-            if (!TryCreateOwnerIdHash(validation, out var ownerIdHash))
-            {
-                return await CreateErrorResponseAsync(
+        if (!TryCreateOwnerIdHash(validation, out var ownerIdHash))
+        {
+            return await CreateErrorResponseAsync(
                 request,
                 HttpStatusCode.Forbidden,
                 "caller_identity_unavailable",
                 "The authenticated credential must contain a stable subject identifier.");
-            }
+        }
 
         var query = System.Web.HttpUtility.ParseQueryString(request.Url.Query);
         var userId = query["userId"];
@@ -98,6 +101,15 @@ public sealed class AudioJobFunctions
                 HttpStatusCode.BadRequest,
                 "unsupported_audio_file",
                 $"fileName must be a simple name up to {MaxFileNameLength} characters with one of these extensions: {string.Join(", ", SupportedExtensions.Order())}.");
+        }
+
+        if (!TryReadOptionalDemographics(request, out var age, out var weightKg, out var demographicsError))
+        {
+            return await CreateErrorResponseAsync(
+                request,
+                HttpStatusCode.BadRequest,
+                "invalid_demographics",
+                demographicsError!);
         }
 
         if (TryGetContentLength(request, out var contentLength) && contentLength == 0)
@@ -215,7 +227,9 @@ public sealed class AudioJobFunctions
                 UserId = userId!,
                 SessionId = sessionId!,
                 FileName = storedFileName,
-                OwnerIdHash = ownerIdHash
+                OwnerIdHash = ownerIdHash,
+                Age = age,
+                WeightKg = weightKg
             };
 
             await durableClient.ScheduleNewOrchestrationInstanceAsync(
@@ -285,6 +299,46 @@ public sealed class AudioJobFunctions
                 "audio_job_start_failed",
                 "The audio processing job could not be started.");
         }
+    }
+
+    private static bool TryReadOptionalDemographics(
+        HttpRequestData request,
+        out int? age,
+        out double? weightKg,
+        out string? error)
+    {
+        age = null;
+        weightKg = null;
+        error = null;
+
+        var ageText = GetHeaderValue(request, AgeHeaderName);
+        if (ageText is not null)
+        {
+            if (!int.TryParse(ageText, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedAge)
+                || parsedAge is < 1 or > 120)
+            {
+                error = $"{AgeHeaderName} must be a whole number from 1 through 120.";
+                return false;
+            }
+
+            age = parsedAge;
+        }
+
+        var weightText = GetHeaderValue(request, WeightKgHeaderName);
+        if (weightText is not null)
+        {
+            if (!double.TryParse(weightText, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsedWeight)
+                || !double.IsFinite(parsedWeight)
+                || parsedWeight is < 10 or > 500)
+            {
+                error = $"{WeightKgHeaderName} must be a number from 10 through 500.";
+                return false;
+            }
+
+            weightKg = parsedWeight;
+        }
+
+        return true;
     }
 
     [Function("GetAudioProcessingJobStatus")]

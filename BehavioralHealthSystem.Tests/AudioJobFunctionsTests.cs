@@ -141,7 +141,9 @@ public class AudioJobFunctionsTests
         var request = CreateRequest(
             "http://localhost/api/audio-jobs?userId=user-1&sessionId=session-1&fileName=recording.wav",
             audio,
-            ("Idempotency-Key", "recording-1"));
+            ("Idempotency-Key", "recording-1"),
+            ("X-User-Age", "42"),
+            ("X-User-Weight-Kg", "75.5"));
 
         var response = await _function.StartAudioProcessingJob(request, _durableClient.Object);
 
@@ -152,9 +154,13 @@ public class AudioJobFunctionsTests
         Assert.AreEqual(scheduledOptions.InstanceId, scheduledInput.JobId);
         Assert.AreEqual("user-1", scheduledInput.UserId);
         Assert.AreEqual("session-1", scheduledInput.SessionId);
+        Assert.AreEqual(42, scheduledInput.Age);
+        Assert.AreEqual(75.5, scheduledInput.WeightKg);
         Assert.IsFalse(string.IsNullOrWhiteSpace(scheduledInput.OwnerIdHash));
         StringAssert.EndsWith(scheduledInput.FileName, ".wav");
         Assert.AreEqual(ETag.All, capturedUploadOptions?.Conditions?.IfNoneMatch);
+        Assert.IsFalse(capturedUploadOptions?.Metadata.ContainsKey("age"));
+        Assert.IsFalse(capturedUploadOptions?.Metadata.ContainsKey("weightKg"));
         Assert.IsFalse(typeof(AudioProcessingJobInput).GetProperties()
             .Any(property => property.PropertyType == typeof(byte[])));
 
@@ -162,6 +168,23 @@ public class AudioJobFunctionsTests
             client => client.GetBlobClient(
                 It.Is<string>(name => name == $"users/user-1/{scheduledInput.FileName}")),
             Times.Once);
+    }
+
+    [TestMethod]
+    public async Task StartAudioProcessingJob_NonFiniteWeight_ReturnsBadRequest()
+    {
+        AuthorizeRequests();
+        var request = CreateRequest(
+            "http://localhost/api/audio-jobs?userId=user-1&sessionId=session-1&fileName=recording.wav",
+            new byte[] { 1, 2, 3 },
+            ("X-User-Weight-Kg", "NaN"));
+
+        var response = await _function.StartAudioProcessingJob(request, _durableClient.Object);
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        _blobServiceClient.Verify(
+            client => client.GetBlobContainerClient(It.IsAny<string>()),
+            Times.Never);
     }
 
     [TestMethod]
@@ -423,6 +446,8 @@ public class AudioJobFunctionsTests
                 "user-1",
                 "session-1",
                 "stored.wav",
+                42,
+                75.5,
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(expected);
         var activity = new ProcessAudioJobActivity(
@@ -435,7 +460,9 @@ public class AudioJobFunctionsTests
             UserId = "user-1",
             SessionId = "session-1",
             FileName = "stored.wav",
-            OwnerIdHash = CreateOwnerIdHash("api-key-user")
+            OwnerIdHash = CreateOwnerIdHash("api-key-user"),
+            Age = 42,
+            WeightKg = 75.5
         });
 
         Assert.AreSame(expected, result);

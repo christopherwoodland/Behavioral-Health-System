@@ -44,7 +44,9 @@ public sealed class ProcessAudioJobActivity
         return await _audioProcessingOrchestrator.ProcessAudioAsync(
             input.UserId,
             input.SessionId,
-            input.FileName);
+            input.FileName,
+            input.Age,
+            input.WeightKg);
     }
 }
 
@@ -59,4 +61,8 @@ public sealed class AudioProcessingJobInput
     public required string FileName { get; init; }
 
     public required string OwnerIdHash { get; init; }
+
+    public int? Age { get; init; }
+
+    public double? WeightKg { get; init; }
 }

@@ -26,10 +26,22 @@ public class AudioProcessingOrchestrator : IAudioProcessingOrchestrator
     }
 
     /// <inheritdoc />
+    public Task<AudioProcessingResult> ProcessAudioAsync(
+        string userId,
+        string sessionId,
+        string? fileName = null,
+        CancellationToken cancellationToken = default)
+    {
+        return ProcessAudioAsync(userId, sessionId, fileName, null, null, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<AudioProcessingResult> ProcessAudioAsync(
         string userId,
         string sessionId,
         string? fileName = null,
+        int? age = null,
+        double? weightKg = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
@@ -114,7 +126,9 @@ public class AudioProcessingOrchestrator : IAudioProcessingOrchestrator
                 {
                     ["audioData"] = convertResult.Data,
                     ["audioFileName"] = convertResult.FileName,
-                    ["sessionId"] = damSessionId
+                    ["sessionId"] = damSessionId,
+                    ["age"] = age,
+                    ["weightKg"] = weightKg
                 },
                 cancellationToken);
 
@@ -139,6 +153,13 @@ public class AudioProcessingOrchestrator : IAudioProcessingOrchestrator
                 result.TotalElapsedMs, userId, sessionId);
 
             return result;
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "[Orchestrator] Pipeline canceled. UserId={UserId}, SessionId={SessionId}",
+                userId, sessionId);
+            throw;
         }
         catch (Exception ex)
         {
@@ -273,6 +294,13 @@ public class AudioProcessingOrchestrator : IAudioProcessingOrchestrator
 
             return result;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "[Orchestrator] Local pipeline canceled. UserId={UserId}, SessionId={SessionId}",
+                userId, sessionId);
+            throw;
+        }
         catch (Exception ex)
         {
             pipelineSw.Stop();
@@ -337,6 +365,13 @@ public class AudioProcessingOrchestrator : IAudioProcessingOrchestrator
                 FiltersApplied = convertResult.FiltersApplied,
                 ConversionElapsedMs = convertResult.ConversionElapsedMs
             };
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogInformation(
+                "[Orchestrator] Convert-only pipeline canceled. FileName={FileName}",
+                inputFileName);
+            throw;
         }
         catch (Exception ex)
         {

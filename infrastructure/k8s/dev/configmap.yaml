@@ -67,18 +67,6 @@ data:
   DocumentIntelligenceEndpoint: "__OPENAI_ENDPOINT__"
   DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT: "__OPENAI_ENDPOINT__"
 
-  # ── Agent ────────────────────────────────────────────────────────────────────
-  AGENT_ENDPOINT: "__OPENAI_ENDPOINT__"
-  AGENT_MODEL_DEPLOYMENT: "gpt-5.2"
-  AGENT_ENABLED: "true"
-  AGENT_SUPPORTS_TEMPERATURE: "false"
-  AGENT_SUPPORTS_MAX_TOKENS: "false"
-  AGENT_TIMEOUT_SECONDS: "60"
-  GRAMMAR_AGENT_NAME: "GrammarCorrectionAgent"
-  GRAMMAR_AGENT_INCLUDE_EXPLANATIONS: "false"
-  GRAMMAR_AGENT_PRESERVE_FORMATTING: "true"
-  GRAMMAR_AGENT_SUGGEST_ALTERNATIVES: "false"
-
   # ── DAM (local — ClusterIP service) ──────────────────────────────────────────
   LOCAL_DAM_BASE_URL: "http://bhs-dam-svc:8000"
   LOCAL_DAM_INITIATE_PATH: "initiate"

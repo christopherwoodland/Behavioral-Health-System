@@ -58,7 +58,7 @@ try {    If not specified, reads from local.settings.json.
 
     $extractionResponse = Invoke-RestMethod -Uri "$FunctionBaseUrl/api/dsm5-admin/validate-extraction?code=$FunctionKey" -Method POST -ContentType "application/json" -Body $extractionBody -ErrorAction Stop    Otherwise, just extracts and validates without uploading.
 
-    
+
 
     Write-Host "[SUCCESS] DSM-5 Extraction:" -ForegroundColor Green.PARAMETER SkipValidation
 
@@ -112,35 +112,35 @@ Write-Host ""param(
 
     [string]$PdfUrl = "https://dn790004.ca.archive.org/0/items/APA-DSM-5/DSM5.pdf",
 
-# Test 4: Test extraction with auto-upload (small page range)    
+# Test 4: Test extraction with auto-upload (small page range)
 
 Write-Host "4. Testing extraction with auto-upload..." -ForegroundColor Yellow    [string]$PageRanges = "",
 
-try {    
+try {
 
     $uploadBody = @{    [string]$DocumentIntelligenceEndpoint = "",
 
-        pdfUrl = $PdfUrl    
+        pdfUrl = $PdfUrl
 
         pageRanges = "123-123"  # Just one page for testing    [string]$DocumentIntelligenceKey = "",
 
-        autoUpload = $true    
+        autoUpload = $true
 
     } | ConvertTo-Json    [string]$StorageConnectionString = "",
 
-    
+
 
     $uploadResponse = Invoke-RestMethod -Uri "$FunctionBaseUrl/api/dsm5-admin/validate-extraction?code=$FunctionKey" -Method POST -ContentType "application/json" -Body $uploadBody -ErrorAction Stop    [string]$ContainerName = "dsm5-content",
 
-        
+
 
     Write-Host "[SUCCESS] Extraction with Auto-Upload:" -ForegroundColor Green    [switch]$AutoUpload,
 
-    $uploadResponse | ConvertTo-Json -Depth 3 | Write-Host    
+    $uploadResponse | ConvertTo-Json -Depth 3 | Write-Host
 
 } catch {    [switch]$SkipValidation,
 
-    Write-Host "[ERROR] Extraction with upload: $($_.Exception.Message)" -ForegroundColor Red    
+    Write-Host "[ERROR] Extraction with upload: $($_.Exception.Message)" -ForegroundColor Red
 
 }    [switch]$Force
 
@@ -217,7 +217,7 @@ function Get-LocalSettings {
         Write-Error "local.settings.json not found at: $LocalSettingsPath"
         throw "Configuration file not found"
     }
-    
+
     $settings = Get-Content $LocalSettingsPath -Raw | ConvertFrom-Json
     return $settings.Values
 }
@@ -228,20 +228,20 @@ function Get-ConfigValue {
         [string]$SettingName,
         [string]$DisplayName
     )
-    
+
     if ($ParamValue) {
         Write-Info "$DisplayName provided via parameter"
         return $ParamValue
     }
-    
+
     $settings = Get-LocalSettings
     $value = $settings.$SettingName
-    
+
     if (-not $value) {
         Write-Error "$DisplayName not found in parameters or local.settings.json"
         throw "Missing configuration: $SettingName"
     }
-    
+
     Write-Info "$DisplayName loaded from local.settings.json"
     return $value
 }
@@ -251,13 +251,13 @@ function Test-FunctionsProject {
         Write-Error "Functions project not found at: $FunctionsProjectPath"
         throw "Project file not found"
     }
-    
+
     # Check for Azure.AI.FormRecognizer package
     $projectContent = Get-Content $FunctionsProjectPath -Raw
     if ($projectContent -notmatch "Azure\.AI\.FormRecognizer") {
         Write-Warning "Azure.AI.FormRecognizer package may not be installed"
         Write-Info "Run: dotnet add BehavioralHealthSystem.Functions package Azure.AI.FormRecognizer"
-        
+
         $install = Read-Host "Install package now? (y/n)"
         if ($install -eq "y") {
             Push-Location "BehavioralHealthSystem.Functions"
@@ -268,24 +268,24 @@ function Test-FunctionsProject {
             throw "Required package not installed"
         }
     }
-    
+
     Write-Success "Functions project validated"
 }
 
 function Build-FunctionsProject {
     Write-Section "Building Functions Project"
-    
+
     Push-Location "BehavioralHealthSystem.Functions"
     try {
         Write-Info "Running dotnet build..."
         $buildOutput = dotnet build --configuration Release 2>&1
-        
+
         if ($LASTEXITCODE -ne 0) {
             Write-Error "Build failed"
             Write-Host $buildOutput
             throw "Build failed with exit code $LASTEXITCODE"
         }
-        
+
         Write-Success "Build completed successfully"
     } finally {
         Pop-Location
@@ -299,14 +299,14 @@ function Invoke-PdfExtraction {
         [string]$Url,
         [string]$Pages
     )
-    
+
     Write-Section "Extracting DSM-5 Data from PDF"
-    
+
     $body = @{
         pdfUrl = $Url
         autoUpload = $false
     }
-    
+
     if ($Pages) {
         $body.pageRanges = $Pages
         Write-Info "Processing page ranges: $Pages"
@@ -314,18 +314,18 @@ function Invoke-PdfExtraction {
         Write-Info "Processing entire PDF (~900 pages)"
         Write-Warning "This may take 1-5 minutes depending on Azure tier (Free: ~45 min with throttling)"
     }
-    
+
     # Build Functions app if not already built
-    $dllPath = "BehavioralHealthSystem.Functions\bin\Release\net8.0\BehavioralHealthSystem.Functions.dll"
+    $dllPath = "BehavioralHealthSystem.Functions\bin\Release\net10.0\BehavioralHealthSystem.Functions.dll"
     if (-not (Test-Path $dllPath)) {
         Build-FunctionsProject
     }
-    
+
     Write-Info "Loading Functions assembly..."
     Add-Type -Path $dllPath
-    
+
     # Load dependencies
-    $helpersPath = "BehavioralHealthSystem.Helpers\bin\Release\net8.0\BehavioralHealthSystem.Helpers.dll"
+    $helpersPath = "BehavioralHealthSystem.Helpers\bin\Release\net10.0\BehavioralHealthSystem.Helpers.dll"
     if (-not (Test-Path $helpersPath)) {
         Write-Info "Building Helpers project..."
         Push-Location "BehavioralHealthSystem.Helpers"
@@ -333,17 +333,17 @@ function Invoke-PdfExtraction {
         Pop-Location
     }
     Add-Type -Path $helpersPath
-    
+
     Write-Info "Starting extraction..."
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
+
     # Call extraction service directly
     try {
         # This would require instantiating the service and calling methods
         # For now, we'll use the HTTP endpoint approach which is simpler
         Write-Warning "Direct service invocation requires running Functions host"
         Write-Info "Using HTTP endpoint approach instead..."
-        
+
         return $null
     } catch {
         Write-Error "Extraction failed: $($_.Exception.Message)"
@@ -353,25 +353,25 @@ function Invoke-PdfExtraction {
 
 function Start-FunctionsHost {
     Write-Section "Starting Azure Functions Host"
-    
+
     # Check if already running
     $funcProcess = Get-Process -Name "func" -ErrorAction SilentlyContinue
     if ($funcProcess) {
         Write-Info "Functions host already running (PID: $($funcProcess.Id))"
         return $true
     }
-    
+
     Write-Info "Starting Functions host in background..."
-    
+
     Push-Location "BehavioralHealthSystem.Functions"
     try {
         Start-Process -FilePath "func" -ArgumentList "start","--port","7071" -WindowStyle Hidden
         Start-Sleep -Seconds 10
-        
+
         $funcProcess = Get-Process -Name "func" -ErrorAction SilentlyContinue
         if ($funcProcess) {
             Write-Success "Functions host started (PID: $($funcProcess.Id))"
-            
+
             # Wait for host to be ready
             $maxWait = 30
             $waited = 0
@@ -384,7 +384,7 @@ function Start-FunctionsHost {
                 Start-Sleep -Seconds 2
                 $waited += 2
             }
-            
+
             Write-Warning "Functions host started but may not be fully initialized"
             return $true
         } else {
@@ -402,27 +402,27 @@ function Invoke-ExtractionEndpoint {
         [string]$Pages,
         [bool]$Upload
     )
-    
+
     Write-Section "Calling PDF Extraction Endpoint"
-    
+
     $body = @{
         pdfUrl = $Url
         autoUpload = $Upload
     } | ConvertTo-Json
-    
+
     if ($Pages) {
         $bodyObj = $body | ConvertFrom-Json
         $bodyObj | Add-Member -NotePropertyName "pageRanges" -NotePropertyValue $Pages
         $body = $bodyObj | ConvertTo-Json
     }
-    
+
     $endpoint = "http://localhost:7071/api/admin/dsm5/extract-from-pdf?code=default"
-    
+
     Write-Info "Endpoint: $endpoint"
     Write-Info "Request body: $body"
-    
+
     $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-    
+
     try {
         $result = Invoke-RestMethod `
             -Uri $endpoint `
@@ -430,16 +430,16 @@ function Invoke-ExtractionEndpoint {
             -Body $body `
             -ContentType "application/json" `
             -TimeoutSec 600
-        
+
         $stopwatch.Stop()
         Write-Success "Extraction completed in $($stopwatch.Elapsed.TotalSeconds) seconds"
-        
+
         return $result
     } catch {
         $stopwatch.Stop()
         Write-Error "Extraction failed after $($stopwatch.Elapsed.TotalSeconds) seconds"
         Write-Error "Error: $($_.Exception.Message)"
-        
+
         if ($_.Exception.Response) {
             $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
             $responseBody = $reader.ReadToEnd()
@@ -447,21 +447,21 @@ function Invoke-ExtractionEndpoint {
                 Write-Error "Response: $responseBody"
             }
         }
-        
+
         throw
     }
 }
 
 function Show-ExtractionResults {
     param($Result)
-    
+
     Write-Section "Extraction Results"
-    
+
     Write-Host "📊 SUMMARY:" -ForegroundColor Yellow
     Write-Host "  Conditions extracted: $($Result.extractedCount)" -ForegroundColor White
     Write-Host "  Conditions uploaded:  $($Result.uploadedCount)" -ForegroundColor White
     Write-Host ""
-    
+
     if ($Result.validation) {
         $validation = $Result.validation
         Write-Host "📋 VALIDATION:" -ForegroundColor Yellow
@@ -470,35 +470,35 @@ function Show-ExtractionResults {
         Write-Host "  Valid conditions: $($validation.validConditions)" -ForegroundColor White
         Write-Host "  Total issues:     $($validation.totalIssues)" -ForegroundColor White
         Write-Host ""
-        
+
         if ($validation.issues -and $validation.issues.Count -gt 0) {
             Write-Host "⚠️  ISSUES FOUND:" -ForegroundColor Yellow
-            
+
             $criticalIssues = $validation.issues | Where-Object { $_.severity -eq "Critical" }
             $errorIssues = $validation.issues | Where-Object { $_.severity -eq "Error" }
             $warningIssues = $validation.issues | Where-Object { $_.severity -eq "Warning" }
-            
+
             if ($criticalIssues) {
                 Write-Host "  🔴 Critical: $($criticalIssues.Count)" -ForegroundColor Red
                 $criticalIssues | Select-Object -First 5 | ForEach-Object {
                     Write-Host "     - $($_.conditionName): $($_.description)" -ForegroundColor Red
                 }
             }
-            
+
             if ($errorIssues) {
                 Write-Host "  🟠 Errors: $($errorIssues.Count)" -ForegroundColor DarkYellow
                 $errorIssues | Select-Object -First 5 | ForEach-Object {
                     Write-Host "     - $($_.conditionName): $($_.description)" -ForegroundColor DarkYellow
                 }
             }
-            
+
             if ($warningIssues) {
                 Write-Host "  🟡 Warnings: $($warningIssues.Count)" -ForegroundColor Yellow
             }
-            
+
             Write-Host ""
         }
-        
+
         if ($validation.successRate -ge 70) {
             Write-Success "Validation passed (≥70% success rate)"
         } else {
@@ -506,7 +506,7 @@ function Show-ExtractionResults {
             Write-Info "Review issues and consider refining parsing logic"
         }
     }
-    
+
     if ($Result.sampleConditions -and $Result.sampleConditions.Count -gt 0) {
         Write-Host ""
         Write-Host "📝 SAMPLE CONDITIONS (first 3):" -ForegroundColor Yellow
@@ -528,41 +528,41 @@ function Show-ExtractionResults {
 
 try {
     Write-Banner "DSM-5 Data Extraction Tool"
-    
+
     # Validate environment
     Write-Section "Validating Environment"
-    
+
     if (-not (Test-Path $LocalSettingsPath)) {
         Write-Error "Not in BehavioralHealthSystem root directory"
         Write-Info "Please run this script from the repository root"
         exit 1
     }
-    
+
     Test-FunctionsProject
-    
+
     # Load configuration
     Write-Section "Loading Configuration"
-    
+
     $endpoint = Get-ConfigValue $DocumentIntelligenceEndpoint "DocumentIntelligenceEndpoint" "Document Intelligence Endpoint"
     $key = Get-ConfigValue $DocumentIntelligenceKey "DocumentIntelligenceKey" "Document Intelligence Key"
     $connectionString = Get-ConfigValue $StorageConnectionString "AzureWebJobsStorage" "Storage Connection String"
-    
+
     Write-Success "Configuration loaded"
     Write-Info "PDF URL: $PdfUrl"
     Write-Info "Container: $ContainerName"
-    
+
     if ($PageRanges) {
         Write-Info "Page ranges: $PageRanges"
     } else {
         Write-Warning "Processing entire PDF (~900 pages)"
     }
-    
+
     if ($AutoUpload) {
         Write-Info "Auto-upload: ENABLED (will upload if validation ≥70%)"
     } else {
         Write-Warning "Auto-upload: DISABLED (extract and validate only)"
     }
-    
+
     # Start Functions host
     $hostStarted = Start-FunctionsHost
     if (-not $hostStarted) {
@@ -570,20 +570,20 @@ try {
         Write-Info "Please start Functions host manually: cd BehavioralHealthSystem.Functions; func start"
         exit 1
     }
-    
+
     # Wait a bit more to ensure host is fully ready
     Write-Info "Waiting for Functions host to fully initialize..."
     Start-Sleep -Seconds 5
-    
+
     # Call extraction endpoint
     $result = Invoke-ExtractionEndpoint -Url $PdfUrl -Pages $PageRanges -Upload $AutoUpload.IsPresent
-    
+
     # Show results
     Show-ExtractionResults $result
-    
+
     # Summary
     Write-Banner "Extraction Complete"
-    
+
     if ($result.uploadedCount -gt 0) {
         Write-Success "Successfully uploaded $($result.uploadedCount) conditions to blob storage"
         Write-Info "Container: $ContainerName"
@@ -595,7 +595,7 @@ try {
         Write-Info "Extraction completed (auto-upload not enabled)"
         Write-Info "Run with -AutoUpload flag to upload results"
     }
-    
+
     Write-Host ""
     Write-Info "Next steps:"
     if (-not $AutoUpload) {
@@ -608,9 +608,9 @@ try {
         Write-Host "     GET http://localhost:7071/api/dsm5/conditions" -ForegroundColor White
         Write-Host "  3. Proceed with Phase 2 (multi-condition backend integration)" -ForegroundColor White
     }
-    
+
     Write-Host ""
-    
+
 } catch {
     Write-Host ""
     Write-Error "Script failed: $($_.Exception.Message)"

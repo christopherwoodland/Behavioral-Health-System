@@ -105,18 +105,30 @@ public sealed class LocalDamWarmupHostedService : IHostedService
             using var json = JsonDocument.Parse(healthContent);
             var root = json.RootElement;
 
-            if (!root.TryGetProperty("status", out var statusElement) ||
-                !string.Equals(statusElement.GetString(), "ok", StringComparison.OrdinalIgnoreCase))
+            if (!root.TryGetProperty("status", out var statusElement))
             {
                 return false;
             }
 
-            if (!root.TryGetProperty("pipeline", out var pipelineElement))
+            var status = statusElement.GetString();
+            var statusIsReady = string.Equals(status, "ok", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(status, "healthy", StringComparison.OrdinalIgnoreCase);
+            if (!statusIsReady)
             {
-                return true;
+                return false;
             }
 
-            return string.Equals(pipelineElement.GetString(), "loaded", StringComparison.OrdinalIgnoreCase);
+            if (root.TryGetProperty("model_loaded", out var modelLoadedElement))
+            {
+                return modelLoadedElement.ValueKind == JsonValueKind.True;
+            }
+
+            if (root.TryGetProperty("pipeline", out var pipelineElement))
+            {
+                return string.Equals(pipelineElement.GetString(), "loaded", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return false;
         }
         catch
         {

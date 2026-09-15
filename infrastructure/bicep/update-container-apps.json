@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "16653572968377723682"
+      "version": "0.46.1.21595",
+      "templateHash": "4695840081416136068"
     }
   },
   "parameters": {
@@ -121,11 +121,39 @@
         "description": "Extended Assessment OpenAI Deployment"
       }
     },
-    "agentModelDeployment": {
-      "type": "string",
-      "defaultValue": "gpt-5.2",
+    "usePostgresManagedIdentity": {
+      "type": "bool",
+      "defaultValue": false,
       "metadata": {
-        "description": "Agent Model Deployment"
+        "description": "Use Managed Identity for PostgreSQL (Azure PG Flexible Server)"
+      }
+    },
+    "postgresHost": {
+      "type": "string",
+      "defaultValue": "localhost",
+      "metadata": {
+        "description": "PostgreSQL host (Azure PG Flexible Server FQDN, e.g. myserver.postgres.database.azure.com). Required when usePostgresManagedIdentity=true."
+      }
+    },
+    "postgresPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "PostgreSQL admin password (only used when usePostgresManagedIdentity=false)"
+      }
+    },
+    "postgresDatabase": {
+      "type": "string",
+      "defaultValue": "bhs_dev",
+      "metadata": {
+        "description": "PostgreSQL database name"
+      }
+    },
+    "postgresUser": {
+      "type": "string",
+      "defaultValue": "bhs_admin",
+      "metadata": {
+        "description": "PostgreSQL username. For MI: the PG role matching the Container App MI. For sidecar: admin username."
       }
     },
     "createRoleAssignments": {
@@ -554,48 +582,36 @@
                   "value": "false"
                 },
                 {
-                  "name": "AGENT_ENDPOINT",
-                  "value": "[parameters('openaiEndpoint')]"
-                },
-                {
-                  "name": "AGENT_MODEL_DEPLOYMENT",
-                  "value": "[parameters('agentModelDeployment')]"
-                },
-                {
-                  "name": "AGENT_ENABLED",
-                  "value": "true"
-                },
-                {
-                  "name": "AGENT_SUPPORTS_TEMPERATURE",
-                  "value": "false"
-                },
-                {
-                  "name": "AGENT_SUPPORTS_MAX_TOKENS",
-                  "value": "false"
-                },
-                {
-                  "name": "AGENT_TIMEOUT_SECONDS",
-                  "value": "60"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_NAME",
-                  "value": "GrammarCorrectionAgent"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_INCLUDE_EXPLANATIONS",
-                  "value": "false"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_PRESERVE_FORMATTING",
-                  "value": "true"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_SUGGEST_ALTERNATIVES",
-                  "value": "false"
-                },
-                {
                   "name": "ALLOWED_ORIGINS",
                   "value": "[format('https://{0}.{1}', parameters('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                },
+                {
+                  "name": "STORAGE_BACKEND",
+                  "value": "PostgreSQL"
+                },
+                {
+                  "name": "POSTGRES_HOST",
+                  "value": "[parameters('postgresHost')]"
+                },
+                {
+                  "name": "POSTGRES_PORT",
+                  "value": "5432"
+                },
+                {
+                  "name": "POSTGRES_DATABASE",
+                  "value": "[parameters('postgresDatabase')]"
+                },
+                {
+                  "name": "POSTGRES_USERNAME",
+                  "value": "[parameters('postgresUser')]"
+                },
+                {
+                  "name": "POSTGRES_PASSWORD",
+                  "value": "[if(parameters('usePostgresManagedIdentity'), '', parameters('postgresPassword'))]"
+                },
+                {
+                  "name": "POSTGRES_USE_MANAGED_IDENTITY",
+                  "value": "[string(parameters('usePostgresManagedIdentity'))]"
                 }
               ],
               "probes": [
@@ -616,6 +632,28 @@
                   },
                   "initialDelaySeconds": 15,
                   "periodSeconds": 10
+                }
+              ]
+            },
+            {
+              "name": "postgres-sidecar",
+              "image": "postgres:16-alpine",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "POSTGRES_USER",
+                  "value": "[parameters('postgresUser')]"
+                },
+                {
+                  "name": "POSTGRES_PASSWORD",
+                  "value": "[parameters('postgresPassword')]"
+                },
+                {
+                  "name": "POSTGRES_DB",
+                  "value": "[parameters('postgresDatabase')]"
                 }
               ]
             }
@@ -641,7 +679,7 @@
       "condition": "[parameters('createRoleAssignments')]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
       "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '4633458b-17de-408a-b874-0445c86b69e6')]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2024-03-01', 'full').identity.principalId]",
@@ -656,7 +694,7 @@
       "condition": "[parameters('createRoleAssignments')]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
       "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '4633458b-17de-408a-b874-0445c86b69e6')]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]",
@@ -671,7 +709,7 @@
       "condition": "[parameters('createRoleAssignments')]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
       "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2024-03-01', 'full').identity.principalId]",
@@ -686,7 +724,7 @@
       "condition": "[parameters('createRoleAssignments')]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
       "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]",
@@ -701,7 +739,7 @@
       "condition": "[parameters('createRoleAssignments')]",
       "type": "Microsoft.Authorization/roleAssignments",
       "apiVersion": "2022-04-01",
-      "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+      "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
       "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), resourceId('Microsoft.App/containerApps', parameters('apiAppName')), 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]",
       "properties": {
         "principalId": "[reference(resourceId('Microsoft.App/containerApps', parameters('apiAppName')), '2024-03-01', 'full').identity.principalId]",

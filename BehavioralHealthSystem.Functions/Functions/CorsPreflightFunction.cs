@@ -1,6 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using System.Net;
+using BehavioralHealthSystem.Functions.Services;
 
 namespace BehavioralHealthSystem.Functions.Functions;
 
@@ -9,15 +10,6 @@ namespace BehavioralHealthSystem.Functions.Functions;
 /// </summary>
 public class CorsPreflightFunction
 {
-    private static readonly string[] AllowedOrigins = new[]
-    {
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "https://localhost:5173",
-        "https://localhost:5174",
-        "https://portal.azure.com"
-    };
-
     /// <summary>
     /// Catch-all handler for OPTIONS preflight requests
     /// </summary>
@@ -31,31 +23,9 @@ public class CorsPreflightFunction
             ? originValues.FirstOrDefault()
             : null;
 
-        AddCorsHeaders(response, origin);
+        CorsPolicy.AddHeaders(response, origin);
 
         return response;
     }
 
-    private static void AddCorsHeaders(HttpResponseData response, string? origin)
-    {
-        var allowedOrigin = "*";
-        if (!string.IsNullOrEmpty(origin))
-        {
-            var allowedOriginsEnv = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS");
-            var originsToCheck = !string.IsNullOrEmpty(allowedOriginsEnv)
-                ? allowedOriginsEnv.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                : AllowedOrigins;
-
-            if (originsToCheck.Any(o => o.Equals(origin, StringComparison.OrdinalIgnoreCase)))
-            {
-                allowedOrigin = origin;
-            }
-        }
-
-        response.Headers.Add("Access-Control-Allow-Origin", allowedOrigin);
-        response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
-        response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin, X-API-Key, X-User-ID, X-User-Principal");
-        response.Headers.Add("Access-Control-Allow-Credentials", "true");
-        response.Headers.Add("Access-Control-Max-Age", "86400");
-    }
 }

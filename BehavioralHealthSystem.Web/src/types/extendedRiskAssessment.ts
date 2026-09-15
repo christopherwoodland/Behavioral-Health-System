@@ -3,10 +3,14 @@
  * Maps to C# models in BehavioralHealthSystem.Helpers/Models/ExtendedRiskAssessment.cs
  */
 
-export type PresenceLevel = 'Not Present' | 'Possible' | 'Likely' | 'Present' | 'Clearly Present';
-export type SchizophreniaLikelihood = 'None' | 'Minimal' | 'Low' | 'Moderate' | 'High' | 'Very High';
-export type ImpairmentLevel = 'None' | 'Mild' | 'Moderate' | 'Marked' | 'Severe';
-export type RiskLevel = 'Low' | 'Moderate' | 'High' | 'Critical';
+export type PresenceLevel =
+  'Not Present' | 'Possible' | 'Likely' | 'Present' | 'Clearly Present';
+export type SchizophreniaLikelihood =
+  'None' | 'Minimal' | 'Low' | 'Moderate' | 'High' | 'Very High';
+export type ImpairmentLevel =
+  'None' | 'Mild' | 'Moderate' | 'Marked' | 'Severe';
+export type RiskLevel =
+  'Indeterminate' | 'Low' | 'Moderate' | 'High' | 'Critical';
 
 export interface SymptomPresence {
   presenceLevel: PresenceLevel;
@@ -49,20 +53,22 @@ export interface SchizophreniaAssessment {
 export interface ExtendedRiskAssessment {
   // Base risk assessment fields
   overallRiskLevel: RiskLevel;
-  riskScore: number; // 1-10
+  riskScore: number; // 0 when indeterminate; otherwise 1-10
+  evidenceSufficiency?: 'Sufficient' | 'Insufficient';
+  modelSignalRiskLevel?: string;
   summary: string;
   keyFactors: string[];
   recommendations: string[];
   immediateActions: string[];
   followUpRecommendations: string[];
   confidenceLevel: number; // 0.0-1.0
-  
+
   // Extended assessment specific fields
   isExtended: boolean;
   generatedAt: string; // ISO 8601 datetime
   modelVersion: string;
   processingTimeMs: number;
-  
+
   // Schizophrenia evaluation
   schizophreniaAssessment: SchizophreniaAssessment;
 }
@@ -110,7 +116,9 @@ export const getSeverityColor = (severity: number): string => {
   return 'text-gray-500';
 };
 
-export const getLikelihoodColor = (likelihood: SchizophreniaLikelihood): string => {
+export const getLikelihoodColor = (
+  likelihood: SchizophreniaLikelihood
+): string => {
   switch (likelihood) {
     case 'None':
     case 'Minimal':
@@ -147,6 +155,8 @@ export const getImpairmentColor = (level: ImpairmentLevel): string => {
 
 export const getRiskLevelColor = (level: RiskLevel): string => {
   switch (level) {
+    case 'Indeterminate':
+      return 'text-gray-700 bg-gray-100 dark:text-gray-200 dark:bg-gray-700';
     case 'Low':
       return 'text-green-600 bg-green-50';
     case 'Moderate':
@@ -171,7 +181,8 @@ export const formatProcessingTime = (ms: number): string => {
 
 // ==================== MULTI-CONDITION ASSESSMENT TYPES ====================
 
-export type DisorderLikelihood = 'None' | 'Minimal' | 'Low' | 'Moderate' | 'High' | 'Very High';
+export type DisorderLikelihood =
+  'None' | 'Minimal' | 'Low' | 'Moderate' | 'High' | 'Very High';
 
 export interface SubCriterionEvaluationResult {
   subCriterionId: string;
@@ -220,20 +231,22 @@ export interface ConditionAssessmentResult {
 export interface MultiConditionExtendedRiskAssessment {
   // Base risk assessment fields
   overallRiskLevel: RiskLevel;
-  riskScore: number; // 1-10
+  riskScore: number; // 0 when indeterminate; otherwise 1-10
+  evidenceSufficiency?: 'Sufficient' | 'Insufficient';
+  modelSignalRiskLevel?: string;
   summary: string;
   keyFactors: string[];
   recommendations: string[];
   immediateActions: string[];
   followUpRecommendations: string[];
   confidenceLevel: number; // 0.0-1.0
-  
+
   // Extended assessment specific fields
   isExtended: boolean;
   generatedAt: string; // ISO 8601 datetime
   modelVersion: string;
   processingTimeMs: number;
-  
+
   // Multi-condition specific fields
   isMultiCondition: boolean;
   evaluatedConditions: string[];
@@ -242,7 +255,7 @@ export interface MultiConditionExtendedRiskAssessment {
   combinedRecommendedActions: string[];
   crossConditionDifferentialDiagnosis: string[];
   conditionAssessments: ConditionAssessmentResult[];
-  
+
   // Legacy field for backwards compatibility
   schizophreniaAssessment?: SchizophreniaAssessment;
 }
@@ -262,7 +275,9 @@ export interface MultiConditionAssessmentResponse {
 }
 
 // Helper functions for multi-condition UI
-export const getConditionLikelihoodColor = (likelihood: DisorderLikelihood): string => {
+export const getConditionLikelihoodColor = (
+  likelihood: DisorderLikelihood
+): string => {
   switch (likelihood) {
     case 'None':
     case 'Minimal':
@@ -281,7 +296,7 @@ export const getConditionLikelihoodColor = (likelihood: DisorderLikelihood): str
 };
 
 export const getCriterionMetBadge = (isMet: boolean): string => {
-  return isMet 
+  return isMet
     ? 'bg-green-100 text-green-800 border-green-200'
     : 'bg-gray-100 text-gray-800 border-gray-200';
 };

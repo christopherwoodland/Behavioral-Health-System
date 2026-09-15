@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "12326026037868581241"
+      "version": "0.46.1.21595",
+      "templateHash": "13665025276999812507"
     }
   },
   "parameters": {
@@ -130,13 +130,6 @@
         "description": "Extended Assessment OpenAI Deployment"
       }
     },
-    "agentModelDeployment": {
-      "type": "string",
-      "defaultValue": "gpt-5.2",
-      "metadata": {
-        "description": "Agent Model Deployment"
-      }
-    },
     "bandServiceUrl": {
       "type": "string",
       "defaultValue": "",
@@ -149,6 +142,41 @@
       "defaultValue": false,
       "metadata": {
         "description": "Enable Smart Band integration"
+      }
+    },
+    "usePostgresManagedIdentity": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Use Managed Identity for PostgreSQL (Azure PG Flexible Server)"
+      }
+    },
+    "postgresHost": {
+      "type": "string",
+      "defaultValue": "localhost",
+      "metadata": {
+        "description": "PostgreSQL host (Azure PG Flexible Server FQDN). Required when usePostgresManagedIdentity=true."
+      }
+    },
+    "postgresPassword": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "PostgreSQL admin password (only used when usePostgresManagedIdentity=false)"
+      }
+    },
+    "postgresDatabase": {
+      "type": "string",
+      "defaultValue": "bhs_dev",
+      "metadata": {
+        "description": "PostgreSQL database name"
+      }
+    },
+    "postgresUser": {
+      "type": "string",
+      "defaultValue": "bhs_admin",
+      "metadata": {
+        "description": "PostgreSQL username. For MI: the PG role matching the Container App MI. For sidecar: admin username."
       }
     }
   },
@@ -473,6 +501,10 @@
                   "value": "dotnet-isolated"
                 },
                 {
+                  "name": "WEBSITE_HOSTNAME",
+                  "value": "[format('{0}.{1}', variables('apiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                },
+                {
                   "name": "AzureWebJobsStorage__accountName",
                   "value": "[parameters('storageAccountName')]"
                 },
@@ -609,46 +641,6 @@
                   "value": "false"
                 },
                 {
-                  "name": "AGENT_ENDPOINT",
-                  "value": "[parameters('openaiEndpoint')]"
-                },
-                {
-                  "name": "AGENT_MODEL_DEPLOYMENT",
-                  "value": "[parameters('agentModelDeployment')]"
-                },
-                {
-                  "name": "AGENT_ENABLED",
-                  "value": "true"
-                },
-                {
-                  "name": "AGENT_SUPPORTS_TEMPERATURE",
-                  "value": "false"
-                },
-                {
-                  "name": "AGENT_SUPPORTS_MAX_TOKENS",
-                  "value": "false"
-                },
-                {
-                  "name": "AGENT_TIMEOUT_SECONDS",
-                  "value": "60"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_NAME",
-                  "value": "GrammarCorrectionAgent"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_INCLUDE_EXPLANATIONS",
-                  "value": "false"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_PRESERVE_FORMATTING",
-                  "value": "true"
-                },
-                {
-                  "name": "GRAMMAR_AGENT_SUGGEST_ALTERNATIVES",
-                  "value": "false"
-                },
-                {
                   "name": "ALLOWED_ORIGINS",
                   "value": "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
                 },
@@ -659,6 +651,34 @@
                 {
                   "name": "ENTRA_CLIENT_ID",
                   "value": "[parameters('azureAdApiClientId')]"
+                },
+                {
+                  "name": "STORAGE_BACKEND",
+                  "value": "PostgreSQL"
+                },
+                {
+                  "name": "POSTGRES_HOST",
+                  "value": "[parameters('postgresHost')]"
+                },
+                {
+                  "name": "POSTGRES_PORT",
+                  "value": "5432"
+                },
+                {
+                  "name": "POSTGRES_DATABASE",
+                  "value": "[parameters('postgresDatabase')]"
+                },
+                {
+                  "name": "POSTGRES_USERNAME",
+                  "value": "[parameters('postgresUser')]"
+                },
+                {
+                  "name": "POSTGRES_PASSWORD",
+                  "value": "[if(parameters('usePostgresManagedIdentity'), '', parameters('postgresPassword'))]"
+                },
+                {
+                  "name": "POSTGRES_USE_MANAGED_IDENTITY",
+                  "value": "[string(parameters('usePostgresManagedIdentity'))]"
                 }
               ],
               "probes": [
@@ -679,6 +699,28 @@
                   },
                   "initialDelaySeconds": 15,
                   "periodSeconds": 10
+                }
+              ]
+            },
+            {
+              "name": "postgres-sidecar",
+              "image": "postgres:16-alpine",
+              "resources": {
+                "cpu": "[json('0.5')]",
+                "memory": "1Gi"
+              },
+              "env": [
+                {
+                  "name": "POSTGRES_USER",
+                  "value": "[parameters('postgresUser')]"
+                },
+                {
+                  "name": "POSTGRES_PASSWORD",
+                  "value": "[parameters('postgresPassword')]"
+                },
+                {
+                  "name": "POSTGRES_DB",
+                  "value": "[parameters('postgresDatabase')]"
                 }
               ]
             }

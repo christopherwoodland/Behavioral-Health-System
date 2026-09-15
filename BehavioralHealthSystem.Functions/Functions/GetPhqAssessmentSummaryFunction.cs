@@ -134,7 +134,11 @@ public class GetPhqAssessmentSummaryFunction
             var prefix = $"users/{userId}/conversations/";
             var blobsList = new List<BlobItem>();
 
-            await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: prefix))
+            await foreach (var blobItem in containerClient.GetBlobsAsync(
+                traits: BlobTraits.None,
+                states: BlobStates.None,
+                prefix: prefix,
+                cancellationToken: CancellationToken.None))
             {
                 // Filter by sessionId if specified
                 if (!string.IsNullOrEmpty(sessionId) && !blobItem.Name.Contains(sessionId))

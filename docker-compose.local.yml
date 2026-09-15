@@ -21,7 +21,7 @@ services:
       - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
       # Override hub name to avoid conflicts with deployed instances
       - AzureFunctionsJobHost__extensions__durableTask__hubName=KintsugiHealthHubLocal
-      - DSM5_STORAGE_ACCOUNT_NAME=${DSM5_STORAGE_ACCOUNT_NAME:-devstoreaccount1}
+      - DSM5_STORAGE_ACCOUNT_NAME=devstoreaccount1
       # Application Insights - Key Vault reference
       - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING}
       # Functions runtime
@@ -45,6 +45,13 @@ services:
       - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4.1}
       - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
       - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      # Foundry analysis agents (online mode)
+      - FOUNDRY_PROJECT_ENDPOINT=${FOUNDRY_PROJECT_ENDPOINT:-https://cwoodland-0035-test-002-resource.services.ai.azure.com/api/projects/cwoodland-0035-test-002}
+      - FOUNDRY_DEEP_ANALYSIS_ENABLED=${FOUNDRY_DEEP_ANALYSIS_ENABLED:-true}
+      - FOUNDRY_DEEP_ANALYSIS_AGENT_NAME=${FOUNDRY_DEEP_ANALYSIS_AGENT_NAME:-bhs-deep-analysis}
+      - FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION=${FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION:-4}
+      - FOUNDRY_DEEP_ANALYSIS_TIMEOUT_SECONDS=${FOUNDRY_DEEP_ANALYSIS_TIMEOUT_SECONDS:-300}
+      - FOUNDRY_DEEP_ANALYSIS_USE_FALLBACK=${FOUNDRY_DEEP_ANALYSIS_USE_FALLBACK:-true}
       - AIR_GAP_OPENAI_ENDPOINT=${AIR_GAP_OPENAI_ENDPOINT}
       - AIR_GAP_OPENAI_API_KEY=${AIR_GAP_OPENAI_API_KEY}
       - AIR_GAP_OPENAI_DEPLOYMENT=${AIR_GAP_OPENAI_DEPLOYMENT:-gpt-oss-20b}
@@ -70,19 +77,8 @@ services:
       # Document Intelligence - Managed Identity (no key)
       - DocumentIntelligenceEndpoint=${DOCUMENT_INTELLIGENCE_ENDPOINT}
       - DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT=${DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT}
-      # Grammar Correction Agent - Managed Identity (no API key)
-      - AGENT_ENDPOINT=${AGENT_ENDPOINT}
-      - AGENT_MODEL_DEPLOYMENT=${AGENT_MODEL_DEPLOYMENT:-gpt-5.4-1}
-      - AGENT_ENABLED=true
-      - AGENT_SUPPORTS_TEMPERATURE=false
-      - AGENT_SUPPORTS_MAX_TOKENS=false
-      - AGENT_TIMEOUT_SECONDS=60
-      - GRAMMAR_AGENT_NAME=GrammarCorrectionAgent
-      - GRAMMAR_AGENT_INCLUDE_EXPLANATIONS=false
-      - GRAMMAR_AGENT_PRESERVE_FORMATTING=true
-      - GRAMMAR_AGENT_SUGGEST_ALTERNATIVES=false
       # Azure Storage
-      - AZURE_STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME:-devstoreaccount1}
+      - AZURE_STORAGE_ACCOUNT_NAME=devstoreaccount1
       # Local DAM Model
       - LOCAL_DAM_BASE_URL=http://dam:8000
       - LOCAL_DAM_INITIATE_PATH=initiate
@@ -167,7 +163,7 @@ services:
     image: postgres:16-alpine
     container_name: bhs-db-local
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-bhs_admin}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
@@ -200,9 +196,7 @@ services:
       - DAM_PRELOAD_ON_STARTUP=true
       - DAM_PROCESS_START_METHOD=spawn
       - DAM_MODEL_PATH=/models
-      - UVICORN_WORKERS=2
-    volumes:
-      - ${DAM_MODEL_DIR:-./offline-models/dam}:/models:ro
+      - UVICORN_WORKERS=1
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -231,7 +225,7 @@ services:
       context: ./BehavioralHealthSystem.Web
       dockerfile: Dockerfile.development
     ports:
-      - "5173:80"
+      - "${WEB_HOST_PORT:-5173}:80"
     environment:
       # API Configuration
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}

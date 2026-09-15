@@ -1,6 +1,6 @@
 # BehavioralHealthSystem.Dam
 
-Shared .NET 8 class library containing the DAM (Depression Assessment Model) HTTP client pipeline. This library encapsulates all communication with the Kintsugi Health DAM API and can be consumed by any .NET project via NuGet.
+Shared .NET 10 class library containing the DAM (Depression Assessment Model) HTTP client pipeline. This library encapsulates all communication with the Kintsugi Health DAM API and can be consumed by any .NET project via NuGet.
 
 ## Overview
 

@@ -121,7 +121,7 @@ export interface PredictionResult {
 
 export interface HealthCheckResponse {
   status: 'Healthy' | 'Degraded' | 'Unhealthy';
-  timestamp: string;
+  timestamp?: string;
   totalDuration?: number;
   airGapMode?: boolean;
   aiModel?: string;
@@ -129,8 +129,15 @@ export interface HealthCheckResponse {
     storageAccount?: string;
     documentIntelligence?: string;
     openAI?: string;
+    speechToText?: string;
+    foundryAgents?: string;
   };
   checks?: Record<string, {
+    status: string;
+    description?: string;
+    duration?: number;
+  }>;
+  entries?: Record<string, {
     status: string;
     description?: string;
     duration?: number;

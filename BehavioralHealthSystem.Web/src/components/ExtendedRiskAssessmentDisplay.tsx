@@ -37,6 +37,10 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
   const criterionA = schizo?.criterionAEvaluation;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'disorders' | 'details'>('overview');
+  const hasSufficientSafetyEvidence = assessment.evidenceSufficiency === 'Sufficient';
+  const displayedRiskLevel = hasSufficientSafetyEvidence ? assessment.overallRiskLevel : 'Indeterminate';
+  const modelSignalRiskLevel = assessment.modelSignalRiskLevel
+    ?? (!assessment.evidenceSufficiency ? assessment.overallRiskLevel : undefined);
 
   // Render symptom card
   const renderSymptomCard = (title: string, symptom: SymptomPresence, description: string) => (
@@ -177,10 +181,18 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
         {activeTab === 'overview' && (
           <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className={`flex flex-col gap-2 p-6 rounded-lg border-2 ${getRiskLevelColor(assessment.overallRiskLevel)}`}>
-                <span className="text-sm font-medium uppercase tracking-wide">Overall Risk Level</span>
-                <span className="text-3xl font-bold">{assessment.overallRiskLevel}</span>
-                <span className="text-sm opacity-80">Score: {assessment.riskScore}/10</span>
+              <div className={`flex flex-col gap-2 p-6 rounded-lg border-2 ${getRiskLevelColor(displayedRiskLevel)}`}>
+                <span className="text-sm font-medium uppercase tracking-wide">Immediate Clinical Safety Risk</span>
+                <span className="text-3xl font-bold">{displayedRiskLevel}</span>
+                <span className="text-sm opacity-80">
+                  {displayedRiskLevel === 'Indeterminate' ? 'Not scored - clinician review required' : `Score: ${assessment.riskScore}/10`}
+                </span>
+                <span className="text-xs opacity-80">
+                  Evidence: {assessment.evidenceSufficiency ?? 'Insufficient'}
+                </span>
+                {modelSignalRiskLevel && (
+                  <span className="text-xs opacity-80">DAM model signal: {modelSignalRiskLevel} (unverified)</span>
+                )}
               </div>
 
               {/* Show disorder likelihood cards based on assessment type */}

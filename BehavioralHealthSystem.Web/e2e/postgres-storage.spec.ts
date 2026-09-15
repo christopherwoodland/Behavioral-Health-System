@@ -314,7 +314,7 @@ test.describe('PostgreSQL Storage Backend — UI Flows', () => {
   });
 
   test('Dashboard loads with navigation links', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Behavioral Health System' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'MindBridge overview' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Upload & Analyze/ })).toBeVisible();
     await expect(page.getByRole('link', { name: /View Sessions/ })).toBeVisible();
   });

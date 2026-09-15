@@ -1,4 +1,10 @@
+using Azure.Core.Serialization;
+using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using System.IO;
+using System.Threading;
 
 namespace BehavioralHealthSystem.Tests
 {
@@ -52,5 +58,68 @@ namespace BehavioralHealthSystem.Tests
         }
 
         #endregion
+
+        [TestMethod]
+        public async Task HealthCheck_ConfiguredSpeechAndFoundry_ReturnsDashboardResourceStatuses()
+        {
+            var healthReport = new HealthReport(
+                new Dictionary<string, HealthReportEntry>(),
+                TimeSpan.FromMilliseconds(12));
+            _healthCheckServiceMock
+                .Setup(service => service.CheckHealthAsync(
+                    It.IsAny<Func<HealthCheckRegistration, bool>?>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(healthReport);
+
+            var configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["AZURE_SPEECH_ENDPOINT"] = "https://example.cognitiveservices.azure.com/",
+                    ["AZURE_SPEECH_ENHANCED_MODEL"] = "mai-transcribe-1.5",
+                    ["AZURE_SPEECH_TRANSCRIBE_STYLE"] = "verbatim",
+                    ["FOUNDRY_PROJECT_ENDPOINT"] = "https://example.services.ai.azure.com/api/projects/test",
+                    ["FOUNDRY_DEEP_ANALYSIS_ENABLED"] = "true",
+                    ["FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION"] = "4"
+                })
+                .Build();
+            var function = new HealthCheckFunction(
+                _loggerMock.Object,
+                _healthCheckServiceMock.Object,
+                configuration);
+
+            var response = await function.HealthCheck(CreateRequest());
+
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+            response.Body.Position = 0;
+            using var document = await JsonDocument.ParseAsync(response.Body);
+            var resources = document.RootElement.GetProperty("resources");
+            Assert.AreEqual("mai-transcribe-1.5 / verbatim", resources.GetProperty("speechToText").GetString());
+            Assert.AreEqual("Extended v4", resources.GetProperty("foundryAgents").GetString());
+        }
+
+        private static HttpRequestData CreateRequest()
+        {
+            var services = new ServiceCollection();
+            services.AddOptions<WorkerOptions>()
+                .Configure(options => options.Serializer = new JsonObjectSerializer());
+            var serviceProvider = services.BuildServiceProvider();
+
+            var context = new Mock<FunctionContext>();
+            context.SetupGet(value => value.InstanceServices).Returns(serviceProvider);
+
+            var request = new Mock<HttpRequestData>(MockBehavior.Loose, context.Object);
+            request.Setup(value => value.CreateResponse())
+                .Returns(() => CreateResponse(context.Object));
+            return request.Object;
+        }
+
+        private static HttpResponseData CreateResponse(FunctionContext context)
+        {
+            var response = new Mock<HttpResponseData>(MockBehavior.Loose, context);
+            response.SetupProperty(value => value.StatusCode, HttpStatusCode.OK);
+            response.SetupGet(value => value.Headers).Returns(new HttpHeadersCollection());
+            response.SetupGet(value => value.Body).Returns(new MemoryStream());
+            return response.Object;
+        }
     }
 }

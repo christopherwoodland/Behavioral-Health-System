@@ -48,7 +48,7 @@ ACTIVE SERVICES (Deployed):
 │
 ├─ Backend APIs
 │  └─ Flex Consumption Function App (FC1)
-│     ├─ .NET 8 isolated runtime
+│     ├─ .NET 10 isolated runtime
 │     ├─ VNet integration for secure network access
 │     ├─ Private endpoint for secure Function invocation
 │     ├─ System-assigned managed identity

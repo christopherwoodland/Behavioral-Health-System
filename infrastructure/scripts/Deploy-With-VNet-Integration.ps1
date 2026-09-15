@@ -12,7 +12,7 @@ SERVICES DEPLOYED:
 - Networking: VNet with delegated subnets for Function App and Web App integration
 - Security: Key Vault with private endpoint and firewall
 - Storage: Blob storage account with private endpoint
-- Backend APIs: Flex Consumption Function App (.NET 8 isolated) with VNet integration
+- Backend APIs: Flex Consumption Function App (.NET 10 isolated) with VNet integration
 - Frontend UI: App Service (Linux Node.js 20) for React with VNet integration
 - AI Services: Azure OpenAI, Document Intelligence, Content Understanding (all with private endpoints)
 - Monitoring: Application Insights & Log Analytics Workspace
@@ -300,7 +300,7 @@ Write-Host "OK - Networking (VNet with delegated subnets)"
 Write-Host "OK - Key Vault (with private endpoint)"
 Write-Host "OK - Storage Account (with private endpoint)"
 Write-Host "OK - Function App - Flex Consumption (FC1) with:"
-Write-Host "     - .NET 8 isolated runtime"
+Write-Host "     - .NET 10 isolated runtime"
 Write-Host "     - VNet integration enabled"
 Write-Host "     - Private endpoint"
 Write-Host "     - System-assigned managed identity"

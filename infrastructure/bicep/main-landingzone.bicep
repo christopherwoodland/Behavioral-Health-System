@@ -115,9 +115,6 @@ param azureAdTenantId string = subscription().tenantId
 @description('Extended Assessment OpenAI Deployment')
 param extendedAssessmentDeployment string = 'gpt-5.2'
 
-@description('Agent Model Deployment')
-param agentModelDeployment string = 'gpt-5.2'
-
 @secure()
 @description('Kintsugi API Key')
 param kintsugiApiKey string = ''
@@ -321,7 +318,6 @@ module containerApps 'modules/landingzone/container-apps-landingzone.bicep' = {
     uiImageTag: containerImageTag
     apiImageTag: containerImageTag
     extendedAssessmentDeployment: extendedAssessmentDeployment
-    agentModelDeployment: agentModelDeployment
     kintsugiBaseUrl: kintsugiBaseUrl
     bandServiceUrl: bandServiceUrl
     enableSmartBand: enableSmartBand

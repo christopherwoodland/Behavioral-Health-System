@@ -50,9 +50,6 @@ param acrName string
 @description('Extended Assessment OpenAI Deployment')
 param extendedAssessmentDeployment string = 'gpt-5.2'
 
-@description('Agent Model Deployment')
-param agentModelDeployment string = 'gpt-5.2'
-
 // ============================================================================
 // SMART BAND CONFIGURATION
 // ============================================================================
@@ -75,7 +72,7 @@ DEPLOYED SERVICES:
 │  ├─ Azure Container Registry (ACR)
 │  └─ Container Apps Environment
 │     ├─ UI Container App (React + Nginx)
-│     └─ API Container App (.NET 8 Functions)
+│     └─ API Container App (.NET 10 Functions)
 │
 ├─ Security & Storage
 │  ├─ Key Vault (public access, RBAC-enabled)
@@ -92,7 +89,7 @@ DEPLOYED SERVICES:
 
 CONTAINER IMAGES REQUIRED:
 ├─ bhs-ui:latest    - React frontend with Nginx
-└─ bhs-api:latest   - .NET 8 isolated Functions
+└─ bhs-api:latest   - .NET 10 isolated Functions
 
 DIFFERENCES FROM APP SERVICE VERSION:
 ├─ Uses Container Apps instead of App Service Web + Function App
@@ -190,7 +187,6 @@ module containerApps './modules/container-apps-public.bicep' = {
     apiImageTag: containerImageTag
     // Agent configuration
     extendedAssessmentDeployment: extendedAssessmentDeployment
-    agentModelDeployment: agentModelDeployment
     // Smart Band configuration
     bandServiceUrl: bandServiceUrl
     enableSmartBand: enableSmartBand

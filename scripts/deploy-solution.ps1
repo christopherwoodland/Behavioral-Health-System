@@ -5,7 +5,7 @@
 #
 # FEATURES:
 # =========
-# - Validates solution structure and prerequisites  
+# - Validates solution structure and prerequisites
 # - Builds the complete solution in Release configuration
 # - Deploys Azure infrastructure using ARM templates
 # - Provides comprehensive deployment validation
@@ -14,7 +14,7 @@
 # REQUIREMENTS:
 # =============
 # - Can be run from either the solution root OR the scripts directory
-# - .NET 8 SDK installed
+# - .NET 10 SDK installed
 # - Azure CLI installed and authenticated
 # - Azure Functions Core Tools v4 (for code deployment)
 #
@@ -44,31 +44,31 @@
 param(
     [Parameter(Mandatory=$false, HelpMessage="Enter the Azure Resource Group name (auto-generated if using -QuickDeploy)")]
     [string]$ResourceGroupName = "",
-    
+
     [Parameter(Mandatory=$true, HelpMessage="Enter a globally unique Function App name")]
     [ValidatePattern("^[a-zA-Z0-9\-]{3,60}$")]
     [string]$FunctionAppName,
-    
+
     [Parameter(Mandatory=$false, HelpMessage="Enter a globally unique Web App name (auto-generated if not provided)")]
     [ValidatePattern("^[a-zA-Z0-9\-]{3,60}$")]
     [string]$WebAppName = "",
-    
+
     [Parameter(Mandatory=$true, HelpMessage="Enter your Kintsugi Health API key")]
     [ValidateNotNullOrEmpty()]
     [string]$KintsugiApiKey,
-    
+
     [Parameter(Mandatory=$false)]
     [string]$Location = "East US",
-    
+
     [Parameter(Mandatory=$false)]
     [string]$SubscriptionId = $null,
-    
+
     [Parameter(Mandatory=$false, HelpMessage="Enable quick deploy with auto-generated resource group")]
     [switch]$QuickDeploy,
-    
+
     [Parameter(Mandatory=$false, HelpMessage="Deploy application code after infrastructure (default: true)")]
     [bool]$DeployCode = $true,
-    
+
     [Parameter(Mandatory=$false, HelpMessage="Skip web application deployment")]
     [switch]$SkipWebApp
 )
@@ -155,7 +155,7 @@ try {
         Write-Host "BUILD TROUBLESHOOTING:" -ForegroundColor Red
         Write-Host "   • Check for compilation errors in your code" -ForegroundColor Yellow
         Write-Host "   • Ensure all NuGet packages are restored" -ForegroundColor Yellow
-        Write-Host "   • Verify .NET 8 SDK is installed: dotnet --version" -ForegroundColor Yellow
+        Write-Host "   • Verify .NET 10 SDK is installed: dotnet --version" -ForegroundColor Yellow
         Write-Host "   • Try cleaning first: dotnet clean" -ForegroundColor Yellow
         exit 1
     }
@@ -177,22 +177,22 @@ try {
         KintsugiApiKey = $KintsugiApiKey
         Location = $Location
     }
-    
+
     # Add optional parameters
     if ($WebAppName) {
         $deployParams.WebAppName = $WebAppName
     }
-    
+
     & $deployScript @deployParams
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "   + Infrastructure deployment completed successfully" -ForegroundColor Green
-        
+
         # Deploy application code if requested
         if ($DeployCode) {
             Write-Host ""
             Write-Host "APPLICATION CODE DEPLOYMENT:" -ForegroundColor Yellow
-            
+
             # Deploy environment variables to Function App
             Write-Host "   Deploying environment variables to Function App..." -ForegroundColor Cyan
             $envScript = Join-Path $ScriptDir "deploy-environment-variables.ps1"
@@ -202,7 +202,7 @@ try {
                 } else {
                     & $envScript -FunctionAppName $FunctionAppName -ResourceGroupName $ResourceGroupName
                 }
-                
+
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "   + Environment variables deployed successfully" -ForegroundColor Green
                 } else {
@@ -212,13 +212,13 @@ try {
             catch {
                 Write-Host "   ! Environment variable deployment error: $($_.Exception.Message)" -ForegroundColor Yellow
             }
-            
+
             # Deploy Function App code
             Write-Host "   Deploying Function App code..." -ForegroundColor Cyan
             $codeScript = Join-Path $ScriptDir "deploy-code-only.ps1"
             try {
                 & $codeScript -AppServiceName $WebAppName -ResourceGroupName $ResourceGroupName -TargetFunctionAppName $FunctionAppName
-                
+
                 if ($LASTEXITCODE -eq 0) {
                     Write-Host "   + Function App code deployed successfully" -ForegroundColor Green
                 } else {
@@ -228,14 +228,14 @@ try {
             catch {
                 Write-Host "   ! Function App deployment error: $($_.Exception.Message)" -ForegroundColor Yellow
             }
-            
+
             # Deploy Web App if not skipped
             if (-not $SkipWebApp) {
                 Write-Host "   Deploying Web App..." -ForegroundColor Cyan
                 $uiScript = Join-Path $ScriptDir "deploy-ui.ps1"
                 try {
                     & $uiScript -DeploymentTarget "app-service" -ResourceName $WebAppName -ResourceGroupName $ResourceGroupName -FunctionAppName $FunctionAppName
-                    
+
                     if ($LASTEXITCODE -eq 0) {
                         Write-Host "   + Web App deployed successfully" -ForegroundColor Green
                     } else {
@@ -249,7 +249,7 @@ try {
                 Write-Host "   [SKIPPED] Web App deployment" -ForegroundColor Gray
             }
         }
-        
+
         Write-Host ""
         Write-Host "================================================================================" -ForegroundColor Green
         Write-Host "                    SOLUTION DEPLOYMENT COMPLETE!                             " -ForegroundColor Green
@@ -270,7 +270,7 @@ try {
             Write-Host "   Web Application: https://$WebAppName.azurewebsites.net" -ForegroundColor White
         }
         Write-Host ""
-        
+
         if ($DeployCode) {
             Write-Host "VERIFICATION STEPS:" -ForegroundColor Cyan
             Write-Host "   1. Test health endpoint:" -ForegroundColor Gray
@@ -299,7 +299,7 @@ try {
                 Write-Host ""
             }
         }
-        
+
         Write-Host "MONITORING & MANAGEMENT:" -ForegroundColor Cyan
         Write-Host "   • Azure Portal > Resource Groups > $ResourceGroupName" -ForegroundColor Gray
         Write-Host "   • Application Insights for logs and metrics" -ForegroundColor Gray

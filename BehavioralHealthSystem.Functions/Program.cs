@@ -88,6 +88,26 @@ var host = new HostBuilder()
             options.Enabled = config.GetValue<bool>("AZURE_OPENAI_ENABLED", isAirGapMode);
         });
 
+        services.Configure<FoundryQuickAnalysisOptions>(options =>
+        {
+            options.Enabled = !isAirGapMode && config.GetValue<bool>("FOUNDRY_QUICK_ANALYSIS_ENABLED", false);
+            options.ProjectEndpoint = config["FOUNDRY_PROJECT_ENDPOINT"] ?? string.Empty;
+            options.AgentName = config["FOUNDRY_QUICK_ANALYSIS_AGENT_NAME"] ?? "bhs-quick-analysis";
+            options.AgentVersion = config["FOUNDRY_QUICK_ANALYSIS_AGENT_VERSION"] ?? string.Empty;
+            options.TimeoutSeconds = config.GetValue<int>("FOUNDRY_QUICK_ANALYSIS_TIMEOUT_SECONDS", 120);
+            options.UseDirectCompletionFallback = config.GetValue<bool>("FOUNDRY_QUICK_ANALYSIS_USE_FALLBACK", true);
+        });
+
+        services.Configure<FoundryDeepAnalysisOptions>(options =>
+        {
+            options.Enabled = !isAirGapMode && config.GetValue<bool>("FOUNDRY_DEEP_ANALYSIS_ENABLED", false);
+            options.ProjectEndpoint = config["FOUNDRY_PROJECT_ENDPOINT"] ?? string.Empty;
+            options.AgentName = config["FOUNDRY_DEEP_ANALYSIS_AGENT_NAME"] ?? "bhs-deep-analysis";
+            options.AgentVersion = config["FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION"] ?? string.Empty;
+            options.TimeoutSeconds = config.GetValue<int>("FOUNDRY_DEEP_ANALYSIS_TIMEOUT_SECONDS", 300);
+            options.UseDirectCompletionFallback = config.GetValue<bool>("FOUNDRY_DEEP_ANALYSIS_USE_FALLBACK", true);
+        });
+
         // Extended Assessment (GPT-5/O3) Configuration
         services.Configure<ExtendedAssessmentOpenAIOptions>(options =>
         {
@@ -139,6 +159,8 @@ var host = new HostBuilder()
         services.AddSingleton<IApiKeyValidationService, ApiKeyValidationService>();
 
         // Application Services
+        services.AddHttpClient<IQuickAnalysisAgentService, FoundryQuickAnalysisAgentService>();
+        services.AddHttpClient<IDeepAnalysisAgentService, FoundryDeepAnalysisAgentService>();
         services.AddScoped<IRiskAssessmentService, RiskAssessmentService>();
         services.AddScoped<IAzureContentUnderstandingService, AzureContentUnderstandingService>();
         services.AddMemoryCache();
@@ -204,6 +226,8 @@ var host = new HostBuilder()
         var storageBackend = config["STORAGE_BACKEND"] ?? "BlobStorage";
         if (storageBackend.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
         {
+            Npgsql.NpgsqlDataSource? postgresDataSource = null;
+
             // Support multiple PostgreSQL connection formats:
             // 1. POSTGRES_CONNECTION_STRING (Npgsql format: Host=...;Port=...;Database=...)
             // 2. POSTGRES_URL (URI format from Container Apps service binding: postgresql://user:pass@host:port/db)
@@ -233,23 +257,33 @@ var host = new HostBuilder()
 
                 // Azure Managed Identity: acquire Entra token as the PG password
                 if (!string.IsNullOrEmpty(host)
+                    && !string.IsNullOrEmpty(user)
                     && host.Contains(".postgres.database.azure.com", StringComparison.OrdinalIgnoreCase)
                     && string.Equals(useManagedIdentity, "true", StringComparison.OrdinalIgnoreCase))
                 {
                     var credential = new DefaultAzureCredential();
-                    var tokenResult = credential.GetToken(
-                        new Azure.Core.TokenRequestContext(new[] { "https://ossrdbms-aad.database.windows.net/.default" }));
 
                     var builder = new Npgsql.NpgsqlConnectionStringBuilder
                     {
                         Host = host,
                         Port = int.TryParse(port, out var pMi) ? pMi : 5432,
                         Database = db,
-                        Username = user,           // PG role name mapped to the MI
-                        Password = tokenResult.Token,
+                        Username = user,
                         SslMode = Npgsql.SslMode.Require
                     };
 
+                    var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(builder.ConnectionString);
+                    dataSourceBuilder.UsePeriodicPasswordProvider(
+                        async (_, cancellationToken) =>
+                        {
+                            var tokenResult = await credential.GetTokenAsync(
+                                new Azure.Core.TokenRequestContext(new[] { "https://ossrdbms-aad.database.windows.net/.default" }),
+                                cancellationToken);
+                            return tokenResult.Token;
+                        },
+                        TimeSpan.FromMinutes(50),
+                        TimeSpan.FromSeconds(5));
+                    postgresDataSource = dataSourceBuilder.Build();
                     pgConnectionString = builder.ConnectionString;
                     Console.WriteLine("PostgreSQL: Using Managed Identity (Entra ID token) authentication.");
                 }
@@ -282,8 +316,17 @@ var host = new HostBuilder()
                     "Set POSTGRES_CONNECTION_STRING, POSTGRES_URL, or individual vars (POSTGRES_HOST, POSTGRES_USERNAME, POSTGRES_PASSWORD).");
             }
 
-            services.AddDbContext<BhsDbContext>(options =>
-                options.UseNpgsql(pgConnectionString));
+            if (postgresDataSource is not null)
+            {
+                services.AddSingleton(postgresDataSource);
+                services.AddDbContext<BhsDbContext>((serviceProvider, options) =>
+                    options.UseNpgsql(serviceProvider.GetRequiredService<Npgsql.NpgsqlDataSource>()));
+            }
+            else
+            {
+                services.AddDbContext<BhsDbContext>(options =>
+                    options.UseNpgsql(pgConnectionString));
+            }
 
             // Override blob-based registrations with PostgreSQL implementations
             services.AddScoped<ISessionStorageService, PgSessionStorageService>();
@@ -331,26 +374,16 @@ if (storageBackendInit?.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase)
             else
             {
                 // Database already exists — EnsureCreatedAsync does NOT update schema.
-                // Run raw SQL to create any missing tables so new entity types are available.
+                // Make the generated PostgreSQL create script idempotent so every missing
+                // entity table and index is provisioned without replacing existing data.
                 Console.WriteLine("PostgreSQL database already exists. Checking for missing tables...");
-                var pendingScript = db.Database.GenerateCreateScript();
-                // Execute individual CREATE TABLE IF NOT EXISTS blocks
-                try
-                {
-                    // Use the generated script but wrap in a safety block
-                    await db.Database.ExecuteSqlRawAsync(
-                        "DO $$ BEGIN " +
-                        "IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'file_groups') THEN " +
-                        "CREATE TABLE file_groups (\"GroupId\" text NOT NULL, \"GroupName\" text NOT NULL, \"Description\" text, \"CreatedAt\" text NOT NULL, \"UpdatedAt\" text NOT NULL, \"CreatedBy\" text NOT NULL, \"SessionCount\" integer NOT NULL DEFAULT 0, \"Status\" text NOT NULL, CONSTRAINT \"PK_file_groups\" PRIMARY KEY (\"GroupId\")); " +
-                        "RAISE NOTICE 'Created file_groups table'; " +
-                        "END IF; " +
-                        "END $$;");
-                    Console.WriteLine("Missing table check complete.");
-                }
-                catch (Exception schemaEx)
-                {
-                    Console.WriteLine($"Schema update warning (non-fatal): {schemaEx.Message}");
-                }
+                var pendingScript = db.Database.GenerateCreateScript()
+                    .Replace("CREATE TABLE ", "CREATE TABLE IF NOT EXISTS ", StringComparison.Ordinal)
+                    .Replace("CREATE SEQUENCE ", "CREATE SEQUENCE IF NOT EXISTS ", StringComparison.Ordinal)
+                    .Replace("CREATE UNIQUE INDEX ", "CREATE UNIQUE INDEX IF NOT EXISTS ", StringComparison.Ordinal)
+                    .Replace("CREATE INDEX ", "CREATE INDEX IF NOT EXISTS ", StringComparison.Ordinal);
+                await db.Database.ExecuteSqlRawAsync(pendingScript);
+                Console.WriteLine("Missing table check complete.");
             }
             break;
         }

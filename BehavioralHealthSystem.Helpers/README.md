@@ -1,6 +1,6 @@
 # BehavioralHealthSystem.Helpers
 
-Shared .NET 8 class library containing models, services, validators, and configuration used across the Behavioral Health System backend.
+Shared .NET 10 class library containing models, services, validators, and configuration used across the MindBridge backend.
 
 ## Overview
 
@@ -8,7 +8,7 @@ This project defines the core data contracts and business logic shared by the [F
 
 ## Tech Stack
 
-- **.NET 8** class library
+- **.NET 10** class library
 - **Azure.AI.OpenAI** — risk assessment and grammar correction via GPT models
 - **Azure Blob Storage** — session, file group, and assessment persistence
 - **Azure Document Intelligence** — DSM-5 PDF content extraction

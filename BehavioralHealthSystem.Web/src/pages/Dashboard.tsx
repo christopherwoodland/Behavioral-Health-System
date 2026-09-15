@@ -50,41 +50,31 @@ export const Dashboard: React.FC = () => {
     }
   ];
 
-  const getActionClasses = (color: string, disabled: boolean = false) => {
-    const baseClasses = disabled
-      ? 'block p-4 rounded-lg border-2 transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-not-allowed opacity-60'
-      : 'block p-4 rounded-lg border-2 transition-all hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2';
-
-    switch (color) {
-      case 'primary':
-        return `${baseClasses} border-primary-200 bg-primary-50 ${!disabled && 'hover:border-primary-300 hover:bg-primary-100'} dark:border-primary-800 dark:bg-primary-900 ${!disabled && 'dark:hover:border-primary-700 dark:hover:bg-primary-800'} focus:ring-primary-500`;
-      case 'secondary':
-        return `${baseClasses} border-secondary-200 bg-secondary-50 ${!disabled && 'hover:border-secondary-300 hover:bg-secondary-100'} dark:border-secondary-800 dark:bg-secondary-900 ${!disabled && 'dark:hover:border-secondary-700 dark:hover:bg-secondary-800'} focus:ring-secondary-500`;
-      case 'accent':
-        return `${baseClasses} border-accent-200 bg-accent-50 ${!disabled && 'hover:border-accent-300 hover:bg-accent-100'} dark:border-accent-800 dark:bg-accent-900 ${!disabled && 'dark:hover:border-accent-700 dark:hover:bg-accent-800'} focus:ring-accent-500`;
-      case 'warning':
-        return `${baseClasses} border-warning-200 bg-warning-50 ${!disabled && 'hover:border-warning-300 hover:bg-warning-100'} dark:border-teal-600 dark:bg-teal-800 ${!disabled && 'dark:hover:border-teal-500 dark:hover:bg-teal-700'} focus:ring-warning-500`;
-      default:
-        return `${baseClasses} border-gray-200 bg-gray-50 ${!disabled && 'hover:border-gray-300 hover:bg-gray-100'} dark:border-gray-700 dark:bg-gray-800 ${!disabled && 'dark:hover:border-gray-600 dark:hover:bg-gray-700'} focus:ring-gray-500`;
-    }
+  const getActionClasses = (_color: string, disabled: boolean = false) => {
+    return disabled
+      ? 'block min-h-36 cursor-not-allowed rounded border border-gray-300 bg-white p-5 opacity-60 dark:border-gray-700 dark:bg-gray-800'
+      : 'block min-h-36 rounded border border-gray-300 bg-white p-5 transition-colors hover:border-primary-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-600 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary-400 dark:hover:bg-gray-700';
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {/* Page header */}
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-text-primary-light dark:text-text-primary-dark">
-          Behavioral Health System
+      <div className="border-b border-gray-300 pb-5 dark:border-gray-700">
+        <p className="mb-1 text-xs font-semibold uppercase text-primary-700 dark:text-primary-300">
+          Clinical workspace
+        </p>
+        <h1 className="text-2xl font-semibold text-text-primary-light dark:text-text-primary-dark">
+          MindBridge overview
         </h1>
-        <p className="mt-2 text-lg text-text-secondary-light dark:text-text-secondary-dark">
+        <p className="mt-1 text-sm text-text-secondary-light dark:text-text-secondary-dark">
           Audio-based mental health prediction and analysis
         </p>
       </div>
 
       {/* Quick actions */}
       <div>
-        <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-6">
-          Quick Actions
+        <h2 className="mb-3 text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+          Quick actions
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {quickActions.map((action) => {
@@ -96,14 +86,14 @@ export const Dashboard: React.FC = () => {
                   className={`${getActionClasses(action.color, true)} relative`}
                   aria-label={`${action.title}: Disabled`}
                 >
-                  <div className="text-center">
-                    <div className="mb-2 flex justify-center" role="img" aria-hidden="true">
-                      <IconComponent size={32} className="text-text-primary-light dark:text-text-primary-dark" />
+                  <div>
+                    <div className="mb-4 flex h-8 w-8 items-center justify-center rounded bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-primary-300" aria-hidden="true">
+                      <IconComponent size={18} />
                     </div>
                     <h3 className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
                       {action.title}
                     </h3>
-                    <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                       {action.description}
                     </p>
                   </div>
@@ -126,20 +116,20 @@ export const Dashboard: React.FC = () => {
                 className={`${getActionClasses(action.color, false)} relative`}
                 aria-label={`${action.title}: ${action.description}`}
               >
-                <div className="text-center">
-                  <div className="mb-2 flex justify-center" role="img" aria-hidden="true">
-                    <IconComponent size={32} className="text-text-primary-light dark:text-text-primary-dark" />
+                <div>
+                  <div className="mb-4 flex h-8 w-8 items-center justify-center rounded bg-primary-50 text-primary-700 dark:bg-primary-900 dark:text-primary-300" aria-hidden="true">
+                    <IconComponent size={18} />
                   </div>
                   <h3 className="text-base font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
                     {action.title}
                   </h3>
-                  <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                  <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
                     {action.description}
                   </p>
                 </div>
                 {/* NEW badge for Agent Experience */}
                 {action.title === 'Agent Experience' && (
-                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg animate-pulse">
+                  <div className="absolute right-3 top-3 rounded-sm bg-success-100 px-2 py-1 text-xs font-semibold text-success-800 dark:bg-success-900 dark:text-success-200">
                     NEW
                   </div>
                 )}
@@ -151,11 +141,11 @@ export const Dashboard: React.FC = () => {
 
       {/* Summary Access - Only for authorized users */}
       {canAccessControlPanel() && (
-        <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
+        <div className="card">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-text-primary-light dark:text-text-primary-dark mb-2">
-                📊 Summary
+                Summary
               </h2>
               <p className="text-text-secondary-light dark:text-text-secondary-dark">
                 Advanced analytics dashboard
@@ -163,7 +153,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <Link
               to="/summary"
-              className="px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 inline-block"
+              className="btn btn--primary"
             >
               View Summary
             </Link>
@@ -172,7 +162,7 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Recent activity */}
-      <div className="card border-2 border-primary-200 bg-gradient-to-r from-primary-50 to-secondary-50 dark:border-primary-800 dark:from-primary-900 dark:to-secondary-900">
+      <div className="card">
         <h2 className="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark mb-4">
           Recent Activity
         </h2>
@@ -269,10 +259,10 @@ export const Dashboard: React.FC = () => {
         ) : (
           <div className="flex items-center space-x-2 text-success-600 dark:text-success-400">
             <span role="img" aria-label="Healthy">✅</span>
-            <span>All systems operational</span>
-            {healthStatus?.checks && (
+            <span>API available</span>
+            {(healthStatus?.entries || healthStatus?.checks) && (
               <span className="text-text-muted-light dark:text-text-muted-dark">
-                ({Object.keys(healthStatus.checks).length} services checked)
+                ({Object.keys(healthStatus.entries ?? healthStatus.checks ?? {}).length} component checks)
               </span>
             )}
           </div>

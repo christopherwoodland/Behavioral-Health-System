@@ -78,6 +78,11 @@ public class HealthCheckFunction
                 ?? "Not configured";
             var documentIntelligenceEndpoint = _configuration["DocumentIntelligenceEndpoint"] ?? "Not configured";
             var openAiEndpoint = _configuration["AZURE_OPENAI_ENDPOINT"] ?? "Not configured";
+            var speechEndpoint = _configuration["AZURE_SPEECH_ENDPOINT"] ?? "Not configured";
+            var speechModel = _configuration["AZURE_SPEECH_ENHANCED_MODEL"] ?? "mai-transcribe-1.5";
+            var speechStyle = _configuration["AZURE_SPEECH_TRANSCRIBE_STYLE"] ?? "verbatim";
+            var foundryProjectEndpoint = _configuration["FOUNDRY_PROJECT_ENDPOINT"];
+            var deepAgentEnabled = _configuration.GetValue<bool>("FOUNDRY_DEEP_ANALYSIS_ENABLED", false);
 
             // Detect air-gap mode
             var extendedEndpoint = _configuration["AIR_GAP_EXTENDED_OPENAI_ENDPOINT"] ?? "";
@@ -97,7 +102,11 @@ public class HealthCheckFunction
                 {
                     StorageAccount = storageAccountName,
                     DocumentIntelligence = ExtractResourceName(documentIntelligenceEndpoint),
-                    OpenAI = ExtractResourceName(openAiEndpoint)
+                    OpenAI = ExtractResourceName(openAiEndpoint),
+                    SpeechToText = speechEndpoint == "Not configured"
+                        ? speechEndpoint
+                        : $"{speechModel} / {speechStyle}",
+                    FoundryAgents = GetFoundryAgentStatus(foundryProjectEndpoint, deepAgentEnabled)
                 },
                 Entries = healthReport.Entries.ToDictionary(
                     kvp => kvp.Key,
@@ -158,5 +167,14 @@ public class HealthCheckFunction
         }
 
         return endpoint;
+    }
+
+    private string GetFoundryAgentStatus(string? projectEndpoint, bool deepEnabled)
+    {
+        if (string.IsNullOrWhiteSpace(projectEndpoint))
+            return "Not configured";
+
+        var deepVersion = _configuration["FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION"];
+        return deepEnabled ? $"Extended v{deepVersion ?? "latest"}" : "Extended disabled";
     }
 }

@@ -10,7 +10,7 @@ The pipeline is invoked by the [Functions API](../BehavioralHealthSystem.Functio
 
 ## Tech Stack
 
-- **.NET 8** class library
+- **.NET 10** class library
 - **Microsoft Semantic Kernel 1.54.0** — plugin orchestration framework
 - **Azure Blob Storage** — audio file retrieval
 - References [Helpers library](../BehavioralHealthSystem.Helpers/README.md) for shared models

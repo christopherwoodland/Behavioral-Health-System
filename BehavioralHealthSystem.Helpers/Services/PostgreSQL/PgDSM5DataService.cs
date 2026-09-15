@@ -117,15 +117,10 @@ public class PgDSM5DataService : IDSM5DataService
 
                 _logger.LogInformation("[{MethodName}] Using Document Intelligence for extraction", nameof(ExtractDiagnosticCriteriaAsync));
 
-                var analyzeRequest = new AnalyzeDocumentContent
-                {
-                    Base64Source = BinaryData.FromBytes(pdfBytes)
-                };
-
                 var operation = await _documentClient.AnalyzeDocumentAsync(
                     WaitUntil.Completed,
                     "prebuilt-layout",
-                    analyzeRequest);
+                    BinaryData.FromBytes(pdfBytes));
 
                 if (!operation.HasCompleted || operation.Value == null)
                     throw new InvalidOperationException("Document analysis did not complete successfully");

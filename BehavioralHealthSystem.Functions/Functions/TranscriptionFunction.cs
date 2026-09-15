@@ -194,8 +194,11 @@ public class TranscriptionFunction
             var speechKey = GetSecretOrEnvVar("AZURE_SPEECH_KEY", "AzureSpeechKey");
             var speechRegion = GetSecretOrEnvVar("AZURE_SPEECH_REGION", "AzureSpeechRegion") ?? "eastus2";
             var speechLocale = Environment.GetEnvironmentVariable("AZURE_SPEECH_LOCALE") ?? "en-US";
-            var apiVersion = Environment.GetEnvironmentVariable("AZURE_SPEECH_API_VERSION") ?? "2024-11-15";
-            var useEnhancedMode = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENHANCED_MODE") ?? "false";
+            var apiVersion = Environment.GetEnvironmentVariable("AZURE_SPEECH_API_VERSION") ?? "2025-10-15";
+            var useEnhancedMode = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENHANCED_MODE") ?? "true";
+            var enhancedModel = Environment.GetEnvironmentVariable("AZURE_SPEECH_ENHANCED_MODEL") ?? "mai-transcribe-1.5";
+            var transcribeStyle = Environment.GetEnvironmentVariable("AZURE_SPEECH_TRANSCRIBE_STYLE") ?? "verbatim";
+            var phraseListJson = Environment.GetEnvironmentVariable("AZURE_SPEECH_PHRASE_LIST_JSON");
             var isAirGapMode = string.Equals(
                 Environment.GetEnvironmentVariable("AIR_GAP_MODE"),
                 "true",
@@ -431,16 +434,39 @@ public class TranscriptionFunction
             if (bool.TryParse(useEnhancedMode, out var enhanced) && enhanced)
             {
                 // Enhanced mode definition (API version 2025-10-15+)
-                definitionObj = new
+                var enhancedDefinition = new Dictionary<string, object>
                 {
-                    locales = new[] { speechLocale },
-                    enhancedMode = new
+                    ["locales"] = new[] { speechLocale },
+                    ["enhancedMode"] = new
                     {
                         enabled = true,
-                        task = "transcribe"
+                        model = enhancedModel,
+                        transcribeStyle
                     }
                 };
-                _logger.LogInformation("[{FunctionName}] Using enhanced transcription mode", nameof(TranscribeAudio));
+                var configuredPhraseCount = 0;
+
+                if (!string.IsNullOrWhiteSpace(phraseListJson))
+                {
+                    var configuredPhrases = JsonSerializer.Deserialize<string[]>(phraseListJson)
+                        ?.Where(phrase => !string.IsNullOrWhiteSpace(phrase))
+                        .Select(phrase => phrase.Trim())
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToArray() ?? [];
+                    if (configuredPhrases.Length > 0)
+                    {
+                        enhancedDefinition["phraseList"] = new { phrases = configuredPhrases };
+                        configuredPhraseCount = configuredPhrases.Length;
+                    }
+                }
+
+                definitionObj = enhancedDefinition;
+                _logger.LogInformation(
+                    "[{FunctionName}] Using enhanced transcription model {Model} with {Style} style and {PhraseCount} configured phrases",
+                    nameof(TranscribeAudio),
+                    enhancedModel,
+                    transcribeStyle,
+                    configuredPhraseCount);
             }
             else
             {

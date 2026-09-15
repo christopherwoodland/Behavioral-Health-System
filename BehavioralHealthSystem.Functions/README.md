@@ -2,7 +2,7 @@
 
 # BehavioralHealthSystem.Functions
 
-.NET 8 Azure Functions v4 (isolated worker) API backend for the Behavioral Health System. Provides all server-side operations including session management, audio processing, DAM predictions, risk assessments, transcription, DSM-5 data management, and more.
+.NET 10 Azure Functions v4 (isolated worker) API backend for MindBridge. Provides server-side operations including session management, audio processing, DAM predictions, evidence-aware extended assessments, transcription, and DSM-5 data management.
 
 ## Overview
 
@@ -10,7 +10,7 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 
 ## Tech Stack
 
-- **.NET 8** — isolated worker process
+- **.NET 10** — isolated worker process
 - **Azure Functions v4** — serverless compute
 - **Azure Blob Storage** — session data, audio files, transcripts, assessments
 - **Azure Key Vault** — secrets management
@@ -53,14 +53,7 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 | `/api/sessions/user/{userId}` | GET | List sessions for a user |
 | `/api/sessions/all` | GET | List all sessions (admin) |
 
-### Risk Assessment
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/risk-assessment/generate` | POST | Generate AI risk assessment from session data |
-| `/api/risk-assessment/{sessionId}` | GET | Retrieve existing risk assessment |
-
-### Extended Assessment (GPT-5/O3)
+### Extended Assessment (Foundry Agent)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -68,7 +61,11 @@ This project is the central API layer. The [React frontend](../BehavioralHealthS
 | `/api/extended-assessment/status/{jobId}` | GET | Check assessment job status (includes progress %, current step message) |
 | `/api/extended-assessment/result/{jobId}` | GET | Get completed assessment result |
 
-> **Air-gap note**: In air-gap mode, the orchestrator displays contextual progress messages (e.g., "Air-gap mode: Limited to 2 of N selected conditions"). The simplified prompt and 5-minute timeout apply automatically when the endpoint resolves to a local model (port 11434, localhost, or host.docker.internal).
+Cloud extended assessments prefer the stateless `bhs-deep-analysis` Foundry agent and use the direct extended OpenAI configuration as a configurable fallback.
+
+The Extended result is the authoritative user-facing assessment. Immediate clinical safety risk is evidence-gated and is reported independently from both DSM-5 condition likelihood and the unverified DAM signal. Insufficient patient-specific evidence produces `Indeterminate` with `riskScore: 0`. Legacy Quick endpoints remain available only for stored-client compatibility and are not enabled or documented for new integrations.
+
+> **Air-gap note**: In air-gap mode, Foundry is disabled. The orchestrator displays contextual progress messages (e.g., "Air-gap mode: Limited to 2 of N selected conditions"). The simplified prompt and 5-minute timeout apply automatically when the endpoint resolves to a local model (port 11434, localhost, or host.docker.internal).
 
 ### Transcription
 
@@ -150,7 +147,7 @@ BehavioralHealthSystem.Functions/
 dotnet build
 
 # Run locally (requires Azurite for storage emulation)
-cd bin/Debug/net8.0
+cd bin/Debug/net10.0
 func host start
 ```
 
@@ -174,10 +171,12 @@ Key settings in `local.settings.json`:
 | `LOCAL_DAM_USE_GPU` | Request GPU inference; set `false` for the deployed CPU service |
 | `DAM_MOCK_MODE` | Mock prediction mode; keep `false` outside explicit tests |
 | `AUDIO_JOB_MAX_UPLOAD_BYTES` | Maximum streamed audio upload size (default: `26214400`) |
-| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint for risk assessments |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint for grammar correction and compatibility fallbacks |
 | `AZURE_OPENAI_API_KEY` | Azure OpenAI key |
 | `AZURE_OPENAI_DEPLOYMENT_NAME` | GPT deployment name (default: `gpt-4o`) |
-| `EXTENDED_ASSESSMENT_OPENAI_*` | Separate OpenAI config for GPT-5/O3 extended assessments |
+| `FOUNDRY_PROJECT_ENDPOINT` | Shared Microsoft Foundry project endpoint |
+| `FOUNDRY_DEEP_ANALYSIS_*` | Extended-analysis agent name, version, timeout, and direct fallback policy |
+| `EXTENDED_ASSESSMENT_OPENAI_*` | Direct extended completion configuration used in local mode or as fallback |
 | `AZURE_SPEECH_KEY` | Azure Speech service key for transcription |
 | `AZURE_SPEECH_REGION` | Azure Speech region |
 

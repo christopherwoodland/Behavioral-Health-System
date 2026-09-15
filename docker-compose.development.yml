@@ -61,17 +61,6 @@ services:
       # Document Intelligence - Managed Identity (no key)
       - DocumentIntelligenceEndpoint=${DOCUMENT_INTELLIGENCE_ENDPOINT}
       - DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT=${DSM5_DOCUMENT_INTELLIGENCE_ENDPOINT}
-      # Grammar Correction Agent - Managed Identity (no API key)
-      - AGENT_ENDPOINT=${AGENT_ENDPOINT}
-      - AGENT_MODEL_DEPLOYMENT=gpt-5.2
-      - AGENT_ENABLED=true
-      - AGENT_SUPPORTS_TEMPERATURE=false
-      - AGENT_SUPPORTS_MAX_TOKENS=false
-      - AGENT_TIMEOUT_SECONDS=60
-      - GRAMMAR_AGENT_NAME=GrammarCorrectionAgent
-      - GRAMMAR_AGENT_INCLUDE_EXPLANATIONS=false
-      - GRAMMAR_AGENT_PRESERVE_FORMATTING=true
-      - GRAMMAR_AGENT_SUGGEST_ALTERNATIVES=false
       # Azure Storage
       - AZURE_STORAGE_ACCOUNT_NAME=${STORAGE_ACCOUNT_NAME}
       # Local DAM Model

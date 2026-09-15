@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { RefreshCw, AlertCircle, Activity, Info, Database, Cloud, Brain, FileText } from 'lucide-react';
+import { RefreshCw, AlertCircle, Activity, Info, Database, Cloud, Brain, FileText, CheckCircle2, Clock3, CalendarClock, XCircle, CircleHelp, TriangleAlert } from 'lucide-react';
 import { useHealthCheck } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
 
@@ -18,20 +18,21 @@ export { default as ControlPanel } from './ControlPanel';
 
 
 export const SystemHealth: React.FC = () => {
-  const { data: healthStatus, isLoading, error, refetch } = useHealthCheck();
+  const { data: healthStatus, isLoading, error, refetch, dataUpdatedAt } = useHealthCheck();
   const { announce } = useAnnouncements();
+  const serviceChecks = healthStatus?.entries ?? healthStatus?.checks ?? {};
 
   React.useEffect(() => {
     announce('System Health page loaded', 'polite');
   }, [announce]);
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return 'Just now';
+  const formatTimestamp = (timestamp?: string | number) => {
+    if (!timestamp) return 'Not available';
 
     try {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) {
-        return 'Just now';
+        return 'Not available';
       }
 
       return date.toLocaleString(undefined, {
@@ -43,8 +44,14 @@ export const SystemHealth: React.FC = () => {
         second: '2-digit'
       });
     } catch (error) {
-      return 'Just now';
+      return 'Not available';
     }
+  };
+
+  const formatDuration = (duration?: number) => {
+    if (duration === undefined) return 'Not reported';
+    if (duration < 0.01) return '< 0.01 ms';
+    return `${duration.toFixed(2)} ms`;
   };
 
   const getStatusColor = (status: string) => {
@@ -63,13 +70,13 @@ export const SystemHealth: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'healthy':
-        return '✅';
+        return <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" aria-hidden="true" />;
       case 'degraded':
-        return '⚠️';
+        return <TriangleAlert className="h-5 w-5 text-yellow-600 dark:text-yellow-400" aria-hidden="true" />;
       case 'unhealthy':
-        return '❌';
+        return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />;
       default:
-        return '❓';
+        return <CircleHelp className="h-5 w-5 text-gray-500 dark:text-gray-400" aria-hidden="true" />;
     }
   };
 
@@ -129,11 +136,14 @@ export const SystemHealth: React.FC = () => {
             <AlertCircle className="w-6 h-6 text-red-500 mr-3" aria-hidden="true" />
             <div>
               <h3 className="text-lg font-medium text-red-900 dark:text-red-200">
-                Health Check Failed
+                API health unavailable
               </h3>
               <p className="text-red-700 dark:text-red-300 mt-1">
-                {error.message || 'Unable to retrieve system health status'}
+                The web app could not reach the health endpoint. Check the API configuration or try again.
               </p>
+              {error.message && (
+                <p className="mt-2 font-mono text-xs text-red-700 dark:text-red-300">{error.message}</p>
+              )}
               <button type="button"
                 onClick={() => refetch()}
                 className="mt-3 text-sm text-red-800 dark:text-red-200 hover:text-red-900 dark:hover:text-red-100 underline"
@@ -152,7 +162,7 @@ export const SystemHealth: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Overall System Status
+                API Status
               </h2>
               <div className={getStatusBadge(healthStatus.status)}>
                 <span className="mr-1">{getStatusIcon(healthStatus.status)}</span>
@@ -162,7 +172,7 @@ export const SystemHealth: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
-                <div className="text-3xl mb-2">{getStatusIcon(healthStatus.status)}</div>
+                <div className="mb-2 flex h-8 items-center justify-center">{getStatusIcon(healthStatus.status)}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Status</div>
                 <div className={`font-medium ${getStatusColor(healthStatus.status)}`}>
                   {healthStatus.status}
@@ -170,25 +180,25 @@ export const SystemHealth: React.FC = () => {
               </div>
 
               <div className="text-center">
-                <div className="text-3xl mb-2">⏱️</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Response Time</div>
+                <Clock3 className="mx-auto mb-2 h-8 w-8 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                <div className="text-sm text-gray-500 dark:text-gray-400">Health Check Duration</div>
                 <div className="font-medium text-gray-900 dark:text-white">
-                  {healthStatus.totalDuration ? `${healthStatus.totalDuration}ms` : 'N/A'}
+                  {formatDuration(healthStatus.totalDuration)}
                 </div>
               </div>
 
               <div className="text-center">
-                <div className="text-3xl mb-2">📅</div>
+                <CalendarClock className="mx-auto mb-2 h-8 w-8 text-gray-600 dark:text-gray-300" aria-hidden="true" />
                 <div className="text-sm text-gray-500 dark:text-gray-400">Last Checked</div>
                 <div className="font-medium text-gray-900 dark:text-white">
-                  {formatTimestamp(healthStatus.timestamp)}
+                  {formatTimestamp(healthStatus.timestamp ?? dataUpdatedAt)}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Individual Service Checks */}
-          {healthStatus.checks && Object.keys(healthStatus.checks).length > 0 && (
+          {Object.keys(serviceChecks).length > 0 && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                 <Activity className="w-5 h-5 mr-2" aria-hidden="true" />
@@ -196,7 +206,7 @@ export const SystemHealth: React.FC = () => {
               </h3>
 
               <div className="space-y-4">
-                {Object.entries(healthStatus.checks).map(([serviceName, serviceStatus]) => (
+                {Object.entries(serviceChecks).map(([serviceName, serviceStatus]) => (
                   <div key={serviceName} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <span className="text-lg">{getStatusIcon(serviceStatus.status)}</span>
@@ -249,26 +259,26 @@ export const SystemHealth: React.FC = () => {
                   </div>
                 )}
 
-                {healthStatus.resources.documentIntelligence && (
+                {healthStatus.resources.speechToText && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <FileText className="w-4 h-4 text-green-500" aria-hidden="true" />
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Document Intelligence</span>
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Speech to Text</span>
                     </div>
                     <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
-                      {healthStatus.resources.documentIntelligence}
+                      {healthStatus.resources.speechToText}
                     </div>
                   </div>
                 )}
 
-                {healthStatus.resources.openAI && (
+                {healthStatus.resources.foundryAgents && (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                     <div className="flex items-center space-x-2 mb-2">
                       <Brain className="w-4 h-4 text-purple-500" aria-hidden="true" />
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Azure OpenAI</span>
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Microsoft Foundry Agents</span>
                     </div>
                     <div className="font-mono text-sm text-gray-900 dark:text-white break-all">
-                      {healthStatus.resources.openAI}
+                      {healthStatus.resources.foundryAgents}
                     </div>
                   </div>
                 )}
@@ -285,19 +295,19 @@ export const SystemHealth: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">API Endpoints</h4>
+                <h4 className="font-medium text-gray-900 dark:text-white mb-3">API Routes</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">Health Check:</span>
-                    <span className="font-mono text-gray-900 dark:text-white">/health</span>
+                    <span className="font-mono text-gray-900 dark:text-white">GET /api/health</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">Sessions:</span>
-                    <span className="font-mono text-gray-900 dark:text-white">/sessions</span>
+                    <span className="font-mono text-gray-900 dark:text-white">GET /api/sessions</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500 dark:text-gray-400">Predictions:</span>
-                    <span className="font-mono text-gray-900 dark:text-white">/predictions</span>
+                    <span className="font-mono text-gray-900 dark:text-white">GET /api/predictions</span>
                   </div>
                 </div>
               </div>
@@ -306,16 +316,16 @@ export const SystemHealth: React.FC = () => {
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">Connection Status</h4>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div className="w-2 h-2 bg-green-500 rounded-full" aria-hidden="true"></div>
                     <span className="text-gray-900 dark:text-white">API Connected</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-gray-900 dark:text-white">Real-time Updates</span>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full" aria-hidden="true"></div>
+                    <span className="text-gray-900 dark:text-white">Cloud services mode</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                    <span className="text-gray-900 dark:text-white">Auto-refresh Enabled</span>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full" aria-hidden="true"></div>
+                    <span className="text-gray-900 dark:text-white">Refresh on demand</span>
                   </div>
                 </div>
               </div>

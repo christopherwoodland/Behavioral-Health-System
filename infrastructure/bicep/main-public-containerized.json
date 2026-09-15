@@ -4,8 +4,8 @@
   "metadata": {
     "_generator": {
       "name": "bicep",
-      "version": "0.39.26.7824",
-      "templateHash": "3637665901199762820"
+      "version": "0.46.1.21595",
+      "templateHash": "9244065597430874670"
     }
   },
   "parameters": {
@@ -103,13 +103,6 @@
         "description": "Extended Assessment OpenAI Deployment"
       }
     },
-    "agentModelDeployment": {
-      "type": "string",
-      "defaultValue": "gpt-5.2",
-      "metadata": {
-        "description": "Agent Model Deployment"
-      }
-    },
     "bandServiceUrl": {
       "type": "string",
       "defaultValue": "",
@@ -170,8 +163,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "16205072288902963072"
+              "version": "0.46.1.21595",
+              "templateHash": "12436072517801734509"
             }
           },
           "parameters": {
@@ -289,8 +282,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "16844347410710459310"
+              "version": "0.46.1.21595",
+              "templateHash": "5057594188975476935"
             }
           },
           "parameters": {
@@ -532,8 +525,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "10235198692655630277"
+              "version": "0.46.1.21595",
+              "templateHash": "3054147569745298078"
             }
           },
           "parameters": {
@@ -660,8 +653,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "15879706926088746120"
+              "version": "0.46.1.21595",
+              "templateHash": "13802378757284644682"
             }
           },
           "parameters": {
@@ -837,9 +830,6 @@
           "extendedAssessmentDeployment": {
             "value": "[parameters('extendedAssessmentDeployment')]"
           },
-          "agentModelDeployment": {
-            "value": "[parameters('agentModelDeployment')]"
-          },
           "bandServiceUrl": {
             "value": "[parameters('bandServiceUrl')]"
           },
@@ -853,8 +843,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "12326026037868581241"
+              "version": "0.46.1.21595",
+              "templateHash": "13665025276999812507"
             }
           },
           "parameters": {
@@ -979,13 +969,6 @@
                 "description": "Extended Assessment OpenAI Deployment"
               }
             },
-            "agentModelDeployment": {
-              "type": "string",
-              "defaultValue": "gpt-5.2",
-              "metadata": {
-                "description": "Agent Model Deployment"
-              }
-            },
             "bandServiceUrl": {
               "type": "string",
               "defaultValue": "",
@@ -998,6 +981,41 @@
               "defaultValue": false,
               "metadata": {
                 "description": "Enable Smart Band integration"
+              }
+            },
+            "usePostgresManagedIdentity": {
+              "type": "bool",
+              "defaultValue": false,
+              "metadata": {
+                "description": "Use Managed Identity for PostgreSQL (Azure PG Flexible Server)"
+              }
+            },
+            "postgresHost": {
+              "type": "string",
+              "defaultValue": "localhost",
+              "metadata": {
+                "description": "PostgreSQL host (Azure PG Flexible Server FQDN). Required when usePostgresManagedIdentity=true."
+              }
+            },
+            "postgresPassword": {
+              "type": "securestring",
+              "defaultValue": "",
+              "metadata": {
+                "description": "PostgreSQL admin password (only used when usePostgresManagedIdentity=false)"
+              }
+            },
+            "postgresDatabase": {
+              "type": "string",
+              "defaultValue": "bhs_dev",
+              "metadata": {
+                "description": "PostgreSQL database name"
+              }
+            },
+            "postgresUser": {
+              "type": "string",
+              "defaultValue": "bhs_admin",
+              "metadata": {
+                "description": "PostgreSQL username. For MI: the PG role matching the Container App MI. For sidecar: admin username."
               }
             }
           },
@@ -1322,6 +1340,10 @@
                           "value": "dotnet-isolated"
                         },
                         {
+                          "name": "WEBSITE_HOSTNAME",
+                          "value": "[format('{0}.{1}', variables('apiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
+                        },
+                        {
                           "name": "AzureWebJobsStorage__accountName",
                           "value": "[parameters('storageAccountName')]"
                         },
@@ -1458,46 +1480,6 @@
                           "value": "false"
                         },
                         {
-                          "name": "AGENT_ENDPOINT",
-                          "value": "[parameters('openaiEndpoint')]"
-                        },
-                        {
-                          "name": "AGENT_MODEL_DEPLOYMENT",
-                          "value": "[parameters('agentModelDeployment')]"
-                        },
-                        {
-                          "name": "AGENT_ENABLED",
-                          "value": "true"
-                        },
-                        {
-                          "name": "AGENT_SUPPORTS_TEMPERATURE",
-                          "value": "false"
-                        },
-                        {
-                          "name": "AGENT_SUPPORTS_MAX_TOKENS",
-                          "value": "false"
-                        },
-                        {
-                          "name": "AGENT_TIMEOUT_SECONDS",
-                          "value": "60"
-                        },
-                        {
-                          "name": "GRAMMAR_AGENT_NAME",
-                          "value": "GrammarCorrectionAgent"
-                        },
-                        {
-                          "name": "GRAMMAR_AGENT_INCLUDE_EXPLANATIONS",
-                          "value": "false"
-                        },
-                        {
-                          "name": "GRAMMAR_AGENT_PRESERVE_FORMATTING",
-                          "value": "true"
-                        },
-                        {
-                          "name": "GRAMMAR_AGENT_SUGGEST_ALTERNATIVES",
-                          "value": "false"
-                        },
-                        {
                           "name": "ALLOWED_ORIGINS",
                           "value": "[format('https://{0}.{1}', variables('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', variables('containerAppsEnvName')), '2024-03-01').defaultDomain)]"
                         },
@@ -1508,6 +1490,34 @@
                         {
                           "name": "ENTRA_CLIENT_ID",
                           "value": "[parameters('azureAdApiClientId')]"
+                        },
+                        {
+                          "name": "STORAGE_BACKEND",
+                          "value": "PostgreSQL"
+                        },
+                        {
+                          "name": "POSTGRES_HOST",
+                          "value": "[parameters('postgresHost')]"
+                        },
+                        {
+                          "name": "POSTGRES_PORT",
+                          "value": "5432"
+                        },
+                        {
+                          "name": "POSTGRES_DATABASE",
+                          "value": "[parameters('postgresDatabase')]"
+                        },
+                        {
+                          "name": "POSTGRES_USERNAME",
+                          "value": "[parameters('postgresUser')]"
+                        },
+                        {
+                          "name": "POSTGRES_PASSWORD",
+                          "value": "[if(parameters('usePostgresManagedIdentity'), '', parameters('postgresPassword'))]"
+                        },
+                        {
+                          "name": "POSTGRES_USE_MANAGED_IDENTITY",
+                          "value": "[string(parameters('usePostgresManagedIdentity'))]"
                         }
                       ],
                       "probes": [
@@ -1528,6 +1538,28 @@
                           },
                           "initialDelaySeconds": 15,
                           "periodSeconds": 10
+                        }
+                      ]
+                    },
+                    {
+                      "name": "postgres-sidecar",
+                      "image": "postgres:16-alpine",
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      },
+                      "env": [
+                        {
+                          "name": "POSTGRES_USER",
+                          "value": "[parameters('postgresUser')]"
+                        },
+                        {
+                          "name": "POSTGRES_PASSWORD",
+                          "value": "[parameters('postgresPassword')]"
+                        },
+                        {
+                          "name": "POSTGRES_DB",
+                          "value": "[parameters('postgresDatabase')]"
                         }
                       ]
                     }
@@ -1648,8 +1680,8 @@
           "metadata": {
             "_generator": {
               "name": "bicep",
-              "version": "0.39.26.7824",
-              "templateHash": "8774386396043813254"
+              "version": "0.46.1.21595",
+              "templateHash": "11294676665275293159"
             }
           },
           "parameters": {
@@ -1706,6 +1738,8 @@
           },
           "variables": {
             "cognitiveServicesUserRoleId": "a97b65f3-24c7-4388-baec-2e87135dc908",
+            "cognitiveServicesOpenAiUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+            "cognitiveServicesSpeechUserRoleId": "f2dc8367-1007-4938-bd23-fe263f013447",
             "storageBlobDataContributorRoleId": "ba92f5b4-2d11-453d-a403-e96b0029c9fe",
             "storageQueueDataContributorRoleId": "974c5e8b-45b9-4653-ba55-5f855dd0fb88",
             "storageTableDataContributorRoleId": "0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3",
@@ -1716,7 +1750,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
               "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('apiAppPrincipalId'), variables('storageBlobDataContributorRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
@@ -1727,7 +1761,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
               "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('apiAppPrincipalId'), variables('storageQueueDataContributorRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageQueueDataContributorRoleId'))]",
@@ -1738,7 +1772,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
               "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('apiAppPrincipalId'), variables('storageTableDataContributorRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageTableDataContributorRoleId'))]",
@@ -1749,7 +1783,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
               "name": "[guid(resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName')), parameters('apiAppPrincipalId'), variables('keyVaultSecretsUserRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('keyVaultSecretsUserRoleId'))]",
@@ -1760,7 +1794,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('documentIntelligenceName'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
@@ -1771,7 +1805,7 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('contentUnderstandingName'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
@@ -1783,7 +1817,7 @@
               "condition": "[not(empty(parameters('openAiResourceName')))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.CognitiveServices/accounts/{0}', parameters('openAiResourceName'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiResourceName'))]",
               "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiResourceName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesUserRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesUserRoleId'))]",
@@ -1792,9 +1826,65 @@
               }
             },
             {
+              "condition": "[not(empty(parameters('openAiResourceName')))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.Storage/storageAccounts/{0}', parameters('storageAccountName'))]",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiResourceName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('openAiResourceName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesOpenAiUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAiUserRoleId'))]",
+                "principalId": "[parameters('apiAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesOpenAiUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAiUserRoleId'))]",
+                "principalId": "[parameters('apiAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesOpenAiUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAiUserRoleId'))]",
+                "principalId": "[parameters('apiAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('documentIntelligenceName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesSpeechUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesSpeechUserRoleId'))]",
+                "principalId": "[parameters('apiAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName'))]",
+              "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', parameters('contentUnderstandingName')), parameters('apiAppPrincipalId'), variables('cognitiveServicesSpeechUserRoleId'))]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesSpeechUserRoleId'))]",
+                "principalId": "[parameters('apiAppPrincipalId')]",
+                "principalType": "ServicePrincipal"
+              }
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
               "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), parameters('uiAppPrincipalId'), variables('storageBlobDataContributorRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('storageBlobDataContributorRoleId'))]",
@@ -1806,7 +1896,7 @@
               "condition": "[not(empty(parameters('acrName')))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
               "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('uiAppPrincipalId'), variables('acrPullRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleId'))]",
@@ -1818,7 +1908,7 @@
               "condition": "[not(empty(parameters('acrName')))]",
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName'))]",
               "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('apiAppPrincipalId'), variables('acrPullRoleId'))]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', variables('acrPullRoleId'))]",

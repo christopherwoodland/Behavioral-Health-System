@@ -1,8 +1,7 @@
 import { ReactNode } from 'react';
-import { Header } from './Header';
+import { AppShell } from './AppShell';
 import { useSkipToContent } from '@/hooks/accessibility';
 import { A11Y } from '@/config/constants';
-import { MicrosoftLogo } from '@/components/icons';
 
 interface LayoutProps {
   children: ReactNode;
@@ -26,13 +25,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
         Skip to main content
       </a>
 
-      {/* Header */}
-      <Header />
+      <AppShell />
 
       {/* Main content */}
       <main
         id={A11Y.SKIP_TO_CONTENT_ID}
-        className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ${className}`}
+        className={`mindbridge-main ${className}`}
         tabIndex={-1}
       >
         {children}
@@ -48,30 +46,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, className = '' }) => {
 
       {/* Footer */}
       <footer
-        className="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-gray-700 mt-auto"
+        className="mindbridge-footer"
         role="contentinfo"
         aria-label="Site footer"
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col items-center space-y-4">
-            {/* Microsoft Logo */}
-            <div className="flex items-center space-x-2">
-              <MicrosoftLogo size={24} className="opacity-80" />
-              <span className="text-sm text-text-muted-light dark:text-text-muted-dark font-medium">
-                Powered by Microsoft
-              </span>
-            </div>
-
-            {/* Copyright and Compliance */}
-            <div className="text-center text-sm text-text-muted-light dark:text-text-muted-dark">
-              <p>
-                Behavioral Health System &copy; {new Date().getFullYear()}
-              </p>
-              <p className="mt-1">
-                WCAG 2.2 AA Compliant • Section 508 Compliant
-              </p>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <img src="/mbv.svg" alt="" className="h-6 w-6 object-contain" />
+            <span>MindBridge &copy; {new Date().getFullYear()}</span>
           </div>
+          <span>WCAG 2.2 AA &middot; Section 508</span>
         </div>
       </footer>
     </div>

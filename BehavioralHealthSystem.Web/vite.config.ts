@@ -41,11 +41,11 @@ export default defineConfig({
     open: true,
     cors: true,
     proxy: {
-      // Proxy API requests to the Azure Functions host to avoid CORS issues
+      // Keep local requests same-origin while using the deployed Functions backend.
       '/api': {
-        target: 'http://127.0.0.1:7071',
+        target: 'https://bhs-functions.victorioussmoke-ce62b9bb.eastus.azurecontainerapps.io',
         changeOrigin: true,
-        secure: false,
+        secure: true,
       },
 
     },

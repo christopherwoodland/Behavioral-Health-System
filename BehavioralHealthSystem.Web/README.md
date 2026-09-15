@@ -1,10 +1,10 @@
-# BehavioralHealthSystem.Web
+# MindBridge Web
 
-React/TypeScript single-page application providing the clinician and user-facing interface for the Behavioral Health System.
+React/TypeScript single-page application providing the clinician and user-facing MindBridge interface.
 
 ## Overview
 
-This frontend delivers the complete clinical workflow — from audio upload and voice biomarker analysis through AI-generated risk assessments and DSM-5 condition evaluations. It communicates with the [Functions API](../BehavioralHealthSystem.Functions/README.md) backend for all server-side operations.
+This frontend delivers the complete clinical workflow, from audio upload and voice biomarker analysis through evidence-aware Extended assessment and DSM-5 condition evaluation. It communicates with the [Functions API](../BehavioralHealthSystem.Functions/README.md) backend for all server-side operations.
 
 ## Tech Stack
 
@@ -26,7 +26,7 @@ This frontend delivers the complete clinical workflow — from audio upload and 
 | **Dashboard** | Overview of recent sessions, system health, and quick actions |
 | **Upload & Analyze** | Audio file upload with the Kintsugi DAM prediction pipeline — upload → convert → predict |
 | **Sessions** | Browse, search, and manage assessment sessions |
-| **Session Detail** | Full session view with prediction results, risk assessment, transcription, and extended assessment |
+| **Session Detail** | Full session view with prediction results, transcription, and the Extended assessment |
 | **Predictions** | View DAM prediction results — depression and anxiety scores with severity categories |
 | **Control Panel** | Administrative panel (role-gated) for system management |
 
@@ -38,11 +38,8 @@ Upload voice recordings for analysis by the Kintsugi Health Depression & Anxiety
 ### Transcription
 Displays transcribed text from audio recordings processed by the Azure Speech Fast Transcription API. Includes AI-powered grammar correction for improved readability.
 
-### Risk Assessment Display
-Renders AI-generated risk assessments with color-coded severity levels (Low / Moderate / High / Critical), contributing factors, clinical recommendations, and confidence scores.
-
 ### Extended Assessment
-Trigger and view extended multi-condition psychiatric evaluations powered by GPT-5/O3. Includes a DSM-5 condition selector for targeted analysis, per-condition results, and cross-condition differential diagnosis. The progress UI displays 7 named stages with real-time status:
+Trigger and view multi-condition psychiatric evaluations powered by Microsoft Foundry or the configured Azure OpenAI fallback. Immediate clinical safety risk is shown separately from DSM-5 condition likelihood and the unverified DAM model signal. High and Critical safety ratings require patient-specific evidence; otherwise the display fails closed to `Indeterminate` and `Not scored`. The progress UI displays 7 named stages with real-time status:
 
 1. **Validating session** (10%)
 2. **Preparing clinical prompt** (30%)

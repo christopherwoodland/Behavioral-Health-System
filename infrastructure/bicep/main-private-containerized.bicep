@@ -47,9 +47,6 @@ param azureAdTenantId string = subscription().tenantId
 @description('Extended Assessment OpenAI Deployment')
 param extendedAssessmentDeployment string = 'gpt-5.2'
 
-@description('Agent Model Deployment')
-param agentModelDeployment string = 'gpt-5.2'
-
 // ============================================================================
 // SMART BAND CONFIGURATION
 // ============================================================================
@@ -98,7 +95,7 @@ DEPLOYED SERVICES:
 │  │  └─ Private Endpoint
 │  └─ Container Apps Environment (VNet Integrated)
 │     ├─ UI Container App (React + Nginx)
-│     └─ API Container App (.NET 8 Functions)
+│     └─ API Container App (.NET 10 Functions)
 │
 ├─ Security & Storage
 │  ├─ Key Vault (Private Endpoint, RBAC-enabled)
@@ -277,7 +274,6 @@ module containerApps './modules/container-apps-private.bicep' = {
     apiImageTag: containerImageTag
     // Agent configuration
     extendedAssessmentDeployment: extendedAssessmentDeployment
-    agentModelDeployment: agentModelDeployment
     // Kintsugi configuration
     kintsugiBaseUrl: kintsugiBaseUrl
     // Smart Band configuration

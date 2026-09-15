@@ -35,7 +35,6 @@ const log = Logger.create('SessionDetail');
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { formatDateTime, formatRelativeTime, formatQuantizedScoreLabel } from '../utils';
-import RiskAssessmentComponent from '../components/RiskAssessment';
 import TranscriptionComponent from '../components/TranscriptionComponent';
 import { ExtendedRiskAssessmentButton } from '../components/ExtendedRiskAssessmentButton';
 import { DSM5ConditionSelector } from '../components/DSM5ConditionSelector';
@@ -83,7 +82,6 @@ const SessionDetail: React.FC = () => {
   // Collapsible section states
   const [isTranscriptionExpanded, setIsTranscriptionExpanded] = useState(true);
   const [isAnalysisExpanded, setIsAnalysisExpanded] = useState(true);
-  const [isRiskAssessmentExpanded, setIsRiskAssessmentExpanded] = useState(true);
   const [isExtendedRiskExpanded, setIsExtendedRiskExpanded] = useState(true);
 
   // Toast notifications state
@@ -1073,51 +1071,6 @@ const SessionDetail: React.FC = () => {
             </div>
           )}
         </div>
-      )}
-
-      {/* AI Risk Assessment (Quick) - Conditionally rendered based on feature flag */}
-      {isAIRiskAssessmentEnabled && (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => setIsRiskAssessmentExpanded(!isRiskAssessmentExpanded)}
-          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-          aria-expanded={isRiskAssessmentExpanded}
-          aria-controls="risk-assessment-content"
-        >
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-            <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
-            AI Risk Assessment (Quick)
-          </h2>
-          {isRiskAssessmentExpanded ? (
-            <ChevronUp className="w-5 h-5 text-gray-500" aria-hidden="true" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-gray-500" aria-hidden="true" />
-          )}
-        </button>
-        {isRiskAssessmentExpanded && (
-          <div id="risk-assessment-content" className="border-t border-gray-200 dark:border-gray-700">
-                  <RiskAssessmentComponent
-              sessionId={session.sessionId}
-              existingAssessment={session.riskAssessment || null}
-              onAssessmentUpdated={(assessment) => {
-                setSession(prev => prev ? { ...prev, riskAssessment: assessment } : null);
-              }}
-              onStart={() => {
-                addToast('info', 'Generating Assessment', 'AI Risk Assessment generation started...');
-                announceToScreenReader('AI risk assessment generation started');
-              }}
-              onSuccess={(assessment) => {
-                addToast('success', 'Assessment Complete', `AI Risk Assessment generated successfully with ${assessment.overallRiskLevel} risk level`);
-                announceToScreenReader('AI risk assessment completed successfully');
-              }}
-              onError={(errorMessage) => {
-                addToast('error', 'Assessment Failed', `AI risk assessment failed: ${errorMessage}`);
-                announceToScreenReader(`AI assessment error: ${errorMessage}`);
-              }}
-            />
-          </div>
-        )}
-      </div>
       )}
 
       {/* Extended AI Risk Assessment - Conditionally rendered based on feature flag */}

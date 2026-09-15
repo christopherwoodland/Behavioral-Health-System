@@ -1,0 +1,49 @@
+name: Bug report
+description: Report a reproducible problem in MindBridge
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials, patient data, protected health information, or security vulnerabilities. Report vulnerabilities through SECURITY.md.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest sanitized reproduction possible.
+      placeholder: |
+        1. Start...
+        2. Submit...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include OS, browser, .NET/Node versions, deployment mode, and relevant component versions.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs
+      description: Remove tokens, account identifiers, patient data, and other sensitive values.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials and sensitive or patient-identifying information.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

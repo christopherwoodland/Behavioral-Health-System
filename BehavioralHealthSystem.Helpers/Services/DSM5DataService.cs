@@ -159,15 +159,10 @@ public class DSM5DataService : IDSM5DataService
                 _logger.LogInformation("[{MethodName}] Using Document Intelligence for extraction", nameof(ExtractDiagnosticCriteriaAsync));
 
                 // Step 1: Analyze the PDF with Document Intelligence
-                var analyzeRequest = new AnalyzeDocumentContent
-                {
-                    Base64Source = BinaryData.FromBytes(pdfBytes)
-                };
-
                 var operation = await _documentClient.AnalyzeDocumentAsync(
                     WaitUntil.Completed,
                     "prebuilt-layout", // Use layout model for structured text extraction
-                    analyzeRequest);
+                    BinaryData.FromBytes(pdfBytes));
 
                 if (!operation.HasCompleted || operation.Value == null)
                 {
@@ -237,7 +232,11 @@ public class DSM5DataService : IDSM5DataService
             var conditions = new List<DSM5ConditionData>();
 
             // Get all condition blobs
-            await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: $"{CONDITIONS_FOLDER}/"))
+            await foreach (var blobItem in containerClient.GetBlobsAsync(
+                traits: BlobTraits.None,
+                states: BlobStates.None,
+                prefix: $"{CONDITIONS_FOLDER}/",
+                cancellationToken: CancellationToken.None))
             {
                 try
                 {
@@ -438,7 +437,11 @@ public class DSM5DataService : IDSM5DataService
             var blobCount = 0;
             DateTime? lastUpdated = null;
 
-            await foreach (var blobItem in containerClient.GetBlobsAsync(prefix: $"{CONDITIONS_FOLDER}/"))
+            await foreach (var blobItem in containerClient.GetBlobsAsync(
+                traits: BlobTraits.None,
+                states: BlobStates.None,
+                prefix: $"{CONDITIONS_FOLDER}/",
+                cancellationToken: CancellationToken.None))
             {
                 blobCount++;
                 totalSize += blobItem.Properties.ContentLength ?? 0;

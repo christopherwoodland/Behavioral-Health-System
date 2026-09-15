@@ -98,6 +98,7 @@ public class AudioRetrievalPlugin
 
         await foreach (var blobItem in containerClient.GetBlobsAsync(
             traits: BlobTraits.Metadata,
+            states: BlobStates.None,
             prefix: prefix,
             cancellationToken: cancellationToken))
         {

@@ -36,7 +36,7 @@ vi.mock('@/services/transcriptionService', () => ({
     transcribe: vi.fn(),
     transcribeAudio: vi.fn(),
     isAvailable: vi.fn(() => true),
-    isTranscriptionEnabled: vi.fn(() => false),
+    isTranscriptionEnabled: vi.fn(() => true),
   },
   TranscriptionResult: {},
 }));
@@ -118,5 +118,12 @@ describe('UploadAnalyze', () => {
     const uploadArea = document.querySelector('[class*="upload"], [class*="drop"], input[type="file"]');
     // Even if no exact match, the component rendered without error
     expect(document.body.innerHTML.length).toBeGreaterThan(0);
+  });
+
+  it('should select audio transcription by default', async () => {
+    const { default: UploadAnalyze } = await import('../../pages/UploadAnalyze');
+    render(React.createElement(UploadAnalyze));
+
+    expect(screen.getByRole('checkbox', { name: 'Transcribe Audio' })).toBeChecked();
   });
 });

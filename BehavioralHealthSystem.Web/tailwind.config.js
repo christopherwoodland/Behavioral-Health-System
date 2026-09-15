@@ -10,12 +10,12 @@ export default {
       colors: {
         // Light mode pastel colors with good contrast
         background: {
-          light: '#F8FAFC',
-          dark: '#0B1220'
+          light: '#F5F5F5',
+          dark: '#1B1A19'
         },
         surface: {
           light: '#FFFFFF',
-          dark: '#111827'
+          dark: '#252423'
         },
         primary: {
           light: '#93C5FD',
@@ -99,11 +99,10 @@ export default {
       },
       fontFamily: {
         sans: [
-          'system-ui',
+          '"Segoe UI"',
+          'Segoe UI Web (West European)',
           '-apple-system',
           'BlinkMacSystemFont',
-          '"Segoe UI"',
-          'Roboto',
           'sans-serif'
         ]
       },

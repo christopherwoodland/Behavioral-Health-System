@@ -11,7 +11,7 @@ uses simpler networking (no VNet, private endpoints, or private DNS zones).
 SERVICES DEPLOYED:
 - Security: Key Vault (public access, RBAC-enabled)
 - Storage: Blob storage account (public access)
-- Backend APIs: Consumption Plan Function App (.NET 8 isolated) OR Container App
+- Backend APIs: Consumption Plan Function App (.NET 10 isolated) OR Container App
 - Frontend UI: App Service (Linux Node.js 20 for React) OR Container App
 - AI Services: Azure OpenAI, Document Intelligence, Content Understanding (all public)
 - Monitoring: Application Insights & Log Analytics Workspace
@@ -472,12 +472,12 @@ if ($UseContainerApps) {
     Write-Host "     - Auto-scaling (1-10 replicas)"
     Write-Host "     - Health checks configured"
     Write-Host "OK - API Container App (Functions) with:"
-    Write-Host "     - .NET 8 isolated runtime"
+    Write-Host "     - .NET 10 isolated runtime"
     Write-Host "     - Auto-scaling (1-10 replicas)"
     Write-Host "     - System-assigned managed identity"
 } else {
     Write-Host "OK - Function App - Consumption Plan with:"
-    Write-Host "     - .NET 8 isolated runtime"
+    Write-Host "     - .NET 10 isolated runtime"
     Write-Host "     - Public endpoint"
     Write-Host "     - System-assigned managed identity"
     Write-Host "     - RBAC roles for all services"

@@ -10,7 +10,7 @@ This project contains MSTest-based tests covering the [Functions API](../Behavio
 
 ## Tech Stack
 
-- **.NET 8**
+- **.NET 10**
 - **MSTest** — test framework
 - **Moq** — mocking (where needed)
 
@@ -39,7 +39,8 @@ This project contains MSTest-based tests covering the [Functions API](../Behavio
 
 ### Functions
 - `HealthCheckFunctionTests` — health endpoint
-- `RiskAssessmentFunctionsTests` — risk assessment endpoint behavior
+- `RiskAssessmentFunctionsTests` — legacy compatibility and Extended assessment endpoint behavior
+- `FoundryDeepAnalysisRoutingTests` — Extended-agent routing and evidence-gated safety normalization
 - `SessionStorageFunctionsTests` — session CRUD endpoints
 - `SaveChatTranscriptFunctionTests` — transcript persistence
 - `AudioDownloadFunctionTests` — audio download endpoint

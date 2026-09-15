@@ -16,7 +16,6 @@ import { submitToDam, mapDamResultToPrediction } from '../services/damService';
 import type { AppError, SessionMetadata } from '../types';
 import { AccessibleDialog } from '../components/AccessibleDialog';
 import { Logger } from '@/utils/logger';
-import { env } from '@/utils/env';
 
 const log = Logger.create('UploadAnalyze');
 
@@ -245,8 +244,8 @@ const UploadAnalyze: React.FC = () => {
   const [grammarCorrectedText, setGrammarCorrectedText] = useState<string | null>(null);
   const [grammarOriginalText, setGrammarOriginalText] = useState<string>('');
 
-  // Processing options state - default to checked in air-gap mode
-  const [transcribeAudio, setTranscribeAudio] = useState(env.AIR_GAP_MODE);
+  // Processing options state
+  const [transcribeAudio, setTranscribeAudio] = useState(true);
 
   // Group selection state
   const [selectedGroupId, setSelectedGroupId] = useState<string | undefined>(undefined);

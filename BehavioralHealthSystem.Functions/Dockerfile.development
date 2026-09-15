@@ -1,5 +1,5 @@
 # Stage 1: Build the .NET Function App
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 
 WORKDIR /src
 
@@ -42,7 +42,7 @@ WORKDIR /src/BehavioralHealthSystem.Functions
 RUN dotnet publish -c Release -o /app/publish
 
 # Stage 2: Runtime image with Azure Functions runtime
-FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
+FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated10.0
 
 # Install ffmpeg for server-side audio conversion pipeline
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \

@@ -83,9 +83,6 @@ param tenantId string = '16b3c013-d300-468d-ac64-7eda0820b6d3'
 @description('Extended Assessment OpenAI Deployment')
 param extendedAssessmentDeployment string = 'gpt-5.2'
 
-@description('Agent Model Deployment')
-param agentModelDeployment string = 'gpt-5.2'
-
 // ============================================================================
 // POSTGRESQL CONFIGURATION
 // ============================================================================
@@ -551,48 +548,6 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             }
             {
               name: 'AZURE_SPEECH_ENHANCED_MODE'
-              value: 'false'
-            }
-            // Grammar Correction Agent Configuration
-            {
-              name: 'AGENT_ENDPOINT'
-              value: openaiEndpoint
-            }
-            {
-              name: 'AGENT_MODEL_DEPLOYMENT'
-              value: agentModelDeployment
-            }
-            {
-              name: 'AGENT_ENABLED'
-              value: 'true'
-            }
-            {
-              name: 'AGENT_SUPPORTS_TEMPERATURE'
-              value: 'false'
-            }
-            {
-              name: 'AGENT_SUPPORTS_MAX_TOKENS'
-              value: 'false'
-            }
-            {
-              name: 'AGENT_TIMEOUT_SECONDS'
-              value: '60'
-            }
-            // Grammar Agent Configuration
-            {
-              name: 'GRAMMAR_AGENT_NAME'
-              value: 'GrammarCorrectionAgent'
-            }
-            {
-              name: 'GRAMMAR_AGENT_INCLUDE_EXPLANATIONS'
-              value: 'false'
-            }
-            {
-              name: 'GRAMMAR_AGENT_PRESERVE_FORMATTING'
-              value: 'true'
-            }
-            {
-              name: 'GRAMMAR_AGENT_SUGGEST_ALTERNATIVES'
               value: 'false'
             }
             // CORS Configuration

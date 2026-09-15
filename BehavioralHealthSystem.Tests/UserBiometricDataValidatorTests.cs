@@ -323,7 +323,7 @@ public class UserBiometricDataValidatorTests
 
         var result = _validator.TestValidate(data);
 
-        result.ShouldHaveAnyValidationError();
+        Assert.IsNotEmpty(result.Errors);
     }
 
     [TestMethod]
@@ -334,7 +334,7 @@ public class UserBiometricDataValidatorTests
 
         var result = _validator.TestValidate(data);
 
-        result.ShouldHaveAnyValidationError();
+        Assert.IsNotEmpty(result.Errors);
     }
 
     [TestMethod]

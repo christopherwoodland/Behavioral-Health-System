@@ -46,7 +46,7 @@ DEPLOYED SERVICES:
 │
 ├─ Backend APIs
 │  └─ Consumption Plan Function App
-│     ├─ .NET 8 isolated runtime
+│     ├─ .NET 10 isolated runtime
 │     ├─ Public endpoint
 │     ├─ System-assigned managed identity
 │     └─ RBAC for all service access

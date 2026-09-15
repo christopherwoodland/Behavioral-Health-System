@@ -1,6 +1,16 @@
-# Behavioral Health System
+# MindBridge
 
-A multi-component platform for behavioral health screening and assessment. The system combines **voice biomarker analysis** (via Kintsugi Health ML models), **AI-powered risk assessments** (via Azure OpenAI), **audio transcription** (via Azure Speech), and **DSM-5 diagnostic evaluations** to support clinical behavioral health workflows.
+A multi-component platform for behavioral health screening and assessment. MindBridge combines **voice biomarker analysis** (via Kintsugi Health ML models), **evidence-aware extended assessments** (via Microsoft Foundry or Azure OpenAI), **audio transcription** (via Azure Speech), and **DSM-5 diagnostic evaluations** to support clinical behavioral health workflows.
+
+> MindBridge provides clinical decision support and is not an emergency service or autonomous diagnostic system. AI and voice-model outputs require qualified clinical review.
+
+## Community and Support
+
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Security policy](SECURITY.md)
+- [Support](SUPPORT.md)
+- [MIT License](LICENSE)
 
 ---
 
@@ -12,7 +22,7 @@ This project integrates with [Kintsugi Health](https://huggingface.co/KintsugiHe
 
 - **Hugging Face**: <https://huggingface.co/KintsugiHealth>
 - **Model**: Depression & Anxiety Model (DAM) — `KintsugiHealth/dam`
-- **How it works**: A clinician or user uploads a short audio recording. The system initiates a DAM session with user metadata (age, gender, ethnicity), converts the audio to WAV format (16kHz, mono), and submits it to the model. The DAM returns **depression and anxiety scores** with severity categories and calibration status.
+- **How it works**: A clinician or user uploads a short audio recording. The system stores it in Blob Storage, starts a Durable Functions job, converts the audio to signed 16-bit WAV (44.1 kHz, mono), and submits it to the model. The DAM returns **depression and anxiety scores** with severity categories and calibration status.
 - **Pipeline**: The audio processing is orchestrated by a [Semantic Kernel pipeline](BehavioralHealthSystem.Agents/README.md) that runs three steps in sequence: **Fetch** (retrieve audio from blob storage) → **Convert** (ffmpeg WAV conversion) → **Predict** (DAM model submission).
 
 ### Audio Transcription
@@ -24,25 +34,14 @@ Converts uploaded voice recordings into text using the **Azure Speech Fast Trans
 - **Grammar correction**: Transcribed text can be refined using Azure OpenAI-powered grammar correction for improved clinical readability
 - **Feature-flagged**: Transcription can be enabled/disabled via the `ENABLE_TRANSCRIPTION` feature flag
 
-### AI Risk Assessment
+### Extended Assessment
 
-After a DAM prediction is obtained, the system can generate a **comprehensive clinical risk assessment** using Azure OpenAI (GPT-4o by default).
-
-- **Input**: The service builds a detailed clinical prompt from all available session data — DAM prediction scores, transcribed text, user demographics, and biometric data
-- **Output**: A structured assessment containing:
-  - **Risk score** (1–10 scale)
-  - **Severity level** (Low / Moderate / High / Critical)
-  - **Key contributing factors** identified from the data
-  - **Clinical recommendations** for follow-up
-  - **Confidence score** reflecting data completeness
-- **Display**: The frontend renders the assessment with color-coded severity indicators and expandable detail sections
-
-### Extended Assessment (GPT-5/O3)
-
-A deeper, multi-condition psychiatric evaluation powered by a **separate, more capable Azure OpenAI deployment** (GPT-5 or O3 models). This feature enables targeted DSM-5 condition analysis.
+The user-facing assessment is a multi-condition psychiatric evaluation powered by a Microsoft Foundry agent or a configured Azure OpenAI deployment. It keeps three concepts separate: immediate clinical safety risk, the unverified DAM model signal, and DSM-5 condition likelihood.
 
 - **DSM-5 Condition Selection**: Clinicians select specific psychiatric conditions (e.g., Major Depressive Disorder, Generalized Anxiety Disorder, PTSD) for evaluation using the DSM-5 condition selector
 - **Multi-Condition Analysis**: The system evaluates the patient against each selected condition, producing per-condition assessments with evidence-based reasoning
+- **Evidence-Gated Safety Risk**: High and Critical safety ratings require explicit patient-specific evidence. When evidence is missing or insufficient, the result is `Indeterminate` with no numeric score (`0` in the API contract)
+- **DAM Signal Separation**: DAM output is retained as an unverified model signal and cannot independently raise the clinical safety rating
 - **Cross-Condition Differential Diagnosis**: When multiple conditions are selected, the system provides differential diagnosis analysis highlighting overlapping symptoms and distinguishing features
 - **Async Processing**: Extended assessments use Azure Durable Functions for orchestration — the clinician starts the assessment, receives a job ID, and polls for results — avoiding HTTP timeout issues with complex evaluations
 - **DSM-5 Data**: Diagnostic criteria are imported from DSM-5 source PDFs using the [DSM-5 Import CLI](BehavioralHealthSystem.DSM5Import/README.md) and stored as structured JSON in Azure Blob Storage
@@ -68,7 +67,7 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 
 **Local development**: Docker Compose includes a `db` service (postgres:16-alpine) with a named volume for persistence.
 
-**Azure Container Apps**: Connects to **Azure Database for PostgreSQL Flexible Server** (`bhs-dev-postgres2`, Burstable B1ms, v16) via private endpoint (inside AKS VNet). Authentication uses **Microsoft Entra ID managed identity** (passwordless) — the AKS UAMI for the api pod maps to a PostgreSQL role `bhs-api-dam`.
+**Azure Container Apps**: The current `bhs` deployment targets **Azure Database for PostgreSQL Flexible Server** (`bhs-postgres-sql`) with Microsoft Entra managed-identity authentication. The `bhs-functions` system identity maps to a PostgreSQL role of the same name; no database password is stored by the application.
 
 ---
 
@@ -82,7 +81,7 @@ Session data (sessions, file groups, biometric data) can be persisted to **Postg
 └────────────┬───────────────────┘
              │ HTTP API
 ┌────────────▼───────────────────┐
-│   BehavioralHealthSystem.Functions  │  .NET 8 Azure Functions API
+│   BehavioralHealthSystem.Functions  │  .NET 10 Azure Functions API
 │   (Backend API)                     │  Sessions, predictions, risk
 │                                     │  assessments, transcription
 ├─────────────────────────────────────┤
@@ -129,7 +128,7 @@ Tests    ──tests──► Functions, Helpers
 | Project | Description | README |
 |---------|-------------|--------|
 | **BehavioralHealthSystem.Web** | React/TypeScript SPA — clinical workflow UI | [README](BehavioralHealthSystem.Web/README.md) |
-| **BehavioralHealthSystem.Functions** | .NET 8 Azure Functions API — all server-side operations | [README](BehavioralHealthSystem.Functions/README.md) |
+| **BehavioralHealthSystem.Functions** | .NET 10 Azure Functions API — all server-side operations | [README](BehavioralHealthSystem.Functions/README.md) |
 | **BehavioralHealthSystem.Dam** | Shared DAM pipeline client — NuGet package for cross-project reuse | [README](BehavioralHealthSystem.Dam/README.md) |
 | **BehavioralHealthSystem.Helpers** | Shared .NET library — models, services, validators, config | [README](BehavioralHealthSystem.Helpers/README.md) |
 | **BehavioralHealthSystem.Agents** | Semantic Kernel audio processing pipeline | [README](BehavioralHealthSystem.Agents/README.md) |
@@ -604,7 +603,7 @@ Internet
   ▼  (port 443 HTTPS / port 80 → 301 redirect to HTTPS)
 Application Gateway v2 (WAF_v2) ── OWASP 3.2 + BotManager 1.0 (Detection mode for dev / Prevention for prod)
   │   SSL termination: self-signed cert stored in Key Vault
-  │   /api/*  ──────────────────────────────────────────► bhs-api  (.NET 8 Functions)
+  │   /api/*  ──────────────────────────────────────────► bhs-api  (.NET 10 Functions)
   │   /*       ─────────────────────────────────────────► bhs-web  (Nginx / React SPA)
   │
   │                           (internal ClusterIP only)
@@ -710,7 +709,7 @@ All manifests live in `infrastructure/k8s/dev/`.  `Deploy-AKS.ps1` copies them t
 | `secretproviderclass.yaml` | Key Vault CSI driver → K8s Secret sync |
 | `workload-identity.yaml` | ServiceAccounts with Workload Identity annotations |
 | `deployments/web.yaml` | Nginx/React frontend |
-| `deployments/api.yaml` | .NET 8 Azure Functions backend |
+| `deployments/api.yaml` | .NET 10 Azure Functions backend |
 | `deployments/dam.yaml` | Python FastAPI DAM model (DAM node pool) |
 | `services/` | ClusterIP services for all three workloads |
 | `ingress.yaml` | AGIC Ingress (path-based routing) |
@@ -829,12 +828,12 @@ The App Gateway uses a self-signed TLS certificate generated by `Deploy-AKS.ps1`
 
 The `AZURE_SPEECH_ENDPOINT` in `configmap.yaml` **must** be a custom-subdomain URL such as `https://<name>.cognitiveservices.azure.com/`. The old regional endpoint format (`https://eastus2.api.cognitive.microsoft.com/`) does **not** support managed identity token authentication and returns `BadRequest: Please provide a custom subdomain`.
 
-The AKS configmap template uses `__OPENAI_ENDPOINT__` for this value so it automatically resolves to the `bhs-development-public-foundry-r` AIServices resource endpoint (which supports both OpenAI and Speech). If you see 502 errors on `/api/transcribe-audio`, check:
+For MAI transcription, configure the dedicated `bhs-transcription-eastus` AIServices endpoint. The Foundry agent project remains independent. If you see 502 errors on `/api/transcribe-audio`, check:
 ```powershell
 kubectl get configmap bhs-api-config -n bhs -o jsonpath='{.data.AZURE_SPEECH_ENDPOINT}'
-# Must print: https://bhs-development-public-foundry-r.cognitiveservices.azure.com/
+# Must print: https://bhs-transcription-eastus.cognitiveservices.azure.com/
 # Fix if wrong:
-kubectl patch configmap bhs-api-config -n bhs --patch-file <(echo '{"data":{"AZURE_SPEECH_ENDPOINT":"https://bhs-development-public-foundry-r.cognitiveservices.azure.com/"}}')
+kubectl patch configmap bhs-api-config -n bhs --patch-file <(echo '{"data":{"AZURE_SPEECH_ENDPOINT":"https://bhs-transcription-eastus.cognitiveservices.azure.com/"}}')
 kubectl rollout restart deployment/bhs-api -n bhs
 ```
 

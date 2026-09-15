@@ -10,7 +10,7 @@ The imported DSM-5 data powers the **Extended Risk Assessment** feature, enablin
 
 ## Tech Stack
 
-- **.NET 8** console application
+- **.NET 10** console application
 - **System.CommandLine** — CLI argument parsing
 - **Azure Document Intelligence** — PDF content extraction
 - **Azure Blob Storage** — structured data persistence

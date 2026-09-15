@@ -106,11 +106,10 @@ export const Header: React.FC<HeaderProps> = ({ className = '' }) => {
             <Link
               to="/"
               className="flex items-center space-x-3 text-xl font-bold text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 rounded-md px-2 py-1 group"
-              aria-label="Behavioral Health System - Go to Dashboard"
+              aria-label="MindBridge - Go to Dashboard"
             >
-              <span className="text-2xl group-hover:brain-throb transition-all duration-300 group-hover:scale-105" role="img" aria-label="Brain icon">🧠</span>
-              <span className="hidden sm:block">Behavioral Health System</span>
-              <span className="sm:hidden">BHS</span>
+              <img src="/mbv.svg" alt="" className="h-10 w-10 object-contain" />
+              <span>MindBridge</span>
             </Link>
             {/* Mode indicator badge */}
             {healthStatus && (

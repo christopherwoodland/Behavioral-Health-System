@@ -4,7 +4,7 @@
  * Uses async job pattern to handle long-running GPT-5/O3 calls without timeout issues
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Brain, Loader2, AlertCircle, RefreshCw, Clock } from 'lucide-react';
 import { ExtendedRiskAssessmentDisplay } from './ExtendedRiskAssessmentDisplay';
 import {
@@ -105,6 +105,43 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
     };
   }, []);
 
+  // Fetch existing assessment
+  const fetchAssessment = useCallback(async () => {
+    log.debug('Fetching existing assessment for session:', { sessionId });
+    try {
+      const response = await apiGet<ExtendedRiskAssessmentResponse>(
+        `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment`
+      );
+
+      log.debug('Fetch response:', response);
+
+      // Check both wrapper success and inner API response success
+      if (response.success && response.data) {
+        // Parse data if it's a string (sometimes API returns stringified JSON)
+        const parsedData = typeof response.data === 'string'
+          ? JSON.parse(response.data)
+          : response.data;
+
+        log.debug('Wrapper success: true, checking inner response...', { success: parsedData.success, hasAssessment: !!parsedData.extendedRiskAssessment });
+
+        if (parsedData.success && parsedData.extendedRiskAssessment) {
+          log.info('Assessment fetched successfully');
+          setAssessment(parsedData.extendedRiskAssessment);
+          setIsLoading(false); // Make sure to stop loading when we get the result
+          onComplete?.(parsedData.extendedRiskAssessment);
+        } else if (parsedData.success && parsedData.hasExtendedAssessment === false) {
+          log.info('No assessment generated yet for this session');
+        } else {
+          log.warn('Inner response missing success or extendedRiskAssessment');
+        }
+      } else {
+        log.warn('Wrapper response failed or no data');
+      }
+    } catch (err) {
+      log.error('Error fetching assessment', err);
+    }
+  }, [sessionId, apiBaseUrl, onComplete]);
+
   // Load existing assessment on mount or when it changes
   useEffect(() => {
     log.debug('Component mounted for session:', { sessionId });
@@ -118,7 +155,7 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       // Check if assessment exists on the server
       fetchAssessment();
     }
-  }, [sessionId, existingAssessment]);
+  }, [sessionId, existingAssessment, fetchAssessment]);
 
   // Check status of extended risk assessment
   const checkStatus = async () => {
@@ -156,43 +193,6 @@ export const ExtendedRiskAssessmentButton: React.FC<ExtendedRiskAssessmentButton
       onError?.(errorMsg);
     } finally {
       setIsChecking(false);
-    }
-  };
-
-  // Fetch existing assessment
-  const fetchAssessment = async () => {
-    log.debug('Fetching existing assessment for session:', { sessionId });
-    try {
-      const response = await apiGet<ExtendedRiskAssessmentResponse>(
-        `${apiBaseUrl}/sessions/${sessionId}/extended-risk-assessment`
-      );
-
-      log.debug('Fetch response:', response);
-
-      // Check both wrapper success and inner API response success
-      if (response.success && response.data) {
-        // Parse data if it's a string (sometimes API returns stringified JSON)
-        const parsedData = typeof response.data === 'string'
-          ? JSON.parse(response.data)
-          : response.data;
-
-        log.debug('Wrapper success: true, checking inner response...', { success: parsedData.success, hasAssessment: !!parsedData.extendedRiskAssessment });
-
-        if (parsedData.success && parsedData.extendedRiskAssessment) {
-          log.info('Assessment fetched successfully');
-          setAssessment(parsedData.extendedRiskAssessment);
-          setIsLoading(false); // Make sure to stop loading when we get the result
-          onComplete?.(parsedData.extendedRiskAssessment);
-        } else if (parsedData.success && parsedData.hasExtendedAssessment === false) {
-          log.info('No assessment generated yet for this session');
-        } else {
-          log.warn('Inner response missing success or extendedRiskAssessment');
-        }
-      } else {
-        log.warn('Wrapper response failed or no data');
-      }
-    } catch (err) {
-      log.error('Error fetching assessment', err);
     }
   };
 

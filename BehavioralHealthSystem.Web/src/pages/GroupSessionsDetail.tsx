@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { AccessibleDialog } from '../components/AccessibleDialog';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel, createAppError } from '../utils';

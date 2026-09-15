@@ -49,7 +49,7 @@ vi.mock('@/hooks/useAccessibility', () => ({
   }),
 }));
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/contexts/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     user: { id: 'test-user', name: 'Test User' },

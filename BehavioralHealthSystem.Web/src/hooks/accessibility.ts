@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { announceToScreenReader, focusElement, trapFocus, debounce } from '@/utils';
 import { A11Y } from '@/config/constants';
 // import type { A11yAnnouncement } from '@/types'; // Commented out until used
@@ -6,7 +6,7 @@ import { A11Y } from '@/config/constants';
 // Screen reader announcements
 export const useAnnouncements = () => {
   const announce = useCallback((
-    message: string, 
+    message: string,
     priority: 'polite' | 'assertive' = 'polite'
   ) => {
     announceToScreenReader(message, priority);
@@ -38,7 +38,7 @@ export const useFocusManagement = () => {
     const firstFocusable = target.querySelector(
       'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
     ) as HTMLElement;
-    
+
     if (firstFocusable) {
       firstFocusable.focus();
     }
@@ -131,7 +131,7 @@ export const useAriaLive = () => {
 export const useProgressAnnouncement = () => {
   const lastAnnouncedProgress = useRef(-1);
 
-  const debouncedProgressAnnounce = debounce((...args: unknown[]) => {
+  const announceProgress = useMemo(() => debounce((...args: unknown[]) => {
     const progress = args[0] as number;
     const message = args[1] as string;
     // Only announce significant progress changes
@@ -139,9 +139,7 @@ export const useProgressAnnouncement = () => {
       announceToScreenReader(`${message} ${progress}% complete`, 'polite');
       lastAnnouncedProgress.current = progress;
     }
-  }, A11Y.DEBOUNCE_MS);
-
-  const announceProgress = useCallback(debouncedProgressAnnounce, []);
+  }, A11Y.DEBOUNCE_MS), []);
 
   return { announceProgress };
 };
@@ -172,11 +170,11 @@ export const useFormAccessibility = () => {
     };
 
     const describedBy: string[] = [];
-    
+
     if (hasError) {
       describedBy.push(getErrorId(name));
     }
-    
+
     if (hasDescription) {
       describedBy.push(getDescriptionId(name));
     }

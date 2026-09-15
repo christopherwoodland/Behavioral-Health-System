@@ -168,7 +168,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
             }
             {
               name: 'FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION'
-              value: '4'
+              value: '5'
             }
             {
               name: 'AZURE_SPEECH_ENDPOINT'

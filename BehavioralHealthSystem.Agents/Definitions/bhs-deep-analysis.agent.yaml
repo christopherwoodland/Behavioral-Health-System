@@ -1,5 +1,5 @@
 name: bhs-deep-analysis
-version: "4"
+version: "5"
 kind: prompt
 model: gpt-6-astra
 description: Produces comprehensive extended behavioral health and DSM-5 decision-support assessments.

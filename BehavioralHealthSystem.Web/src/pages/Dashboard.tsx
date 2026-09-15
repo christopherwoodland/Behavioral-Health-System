@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Eye, Upload, History, TrendingUp } from 'lucide-react';
 import { useHealthCheck, useUserSessions } from '@/hooks/api';
 import { useAnnouncements } from '@/hooks/accessibility';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { getUserId } from '@/utils';
 
 export const Dashboard: React.FC = () => {

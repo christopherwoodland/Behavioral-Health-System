@@ -95,9 +95,9 @@ export const GrammarCorrectionModal: React.FC<GrammarCorrectionModalProps> = ({
               <div className="space-y-4">
                 {/* Original Text */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Original Text
-                  </label>
+                  </span>
                   <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
                     <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">
                       {originalText}
@@ -107,9 +107,9 @@ export const GrammarCorrectionModal: React.FC<GrammarCorrectionModalProps> = ({
 
                 {/* Corrected Text */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Corrected Text
-                  </label>
+                  </span>
                   <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg p-4">
                     <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">
                       {correctedText}

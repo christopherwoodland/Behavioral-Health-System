@@ -29,7 +29,7 @@ describe('SystemHealth', () => {
         resources: {
           storageAccount: 'cwacstest001',
           speechToText: 'mai-transcribe-1.5 / verbatim',
-          foundryAgents: 'Extended v4',
+          foundryAgents: 'Extended v5',
         },
         entries: {
           database: {
@@ -51,7 +51,7 @@ describe('SystemHealth', () => {
 
     expect(screen.getByRole('heading', { name: 'API Status' })).toBeInTheDocument();
     expect(screen.getByText('mai-transcribe-1.5 / verbatim')).toBeInTheDocument();
-    expect(screen.getByText('Extended v4')).toBeInTheDocument();
+    expect(screen.getByText('Extended v5')).toBeInTheDocument();
     expect(screen.getByText('Database connection succeeded')).toBeInTheDocument();
     expect(screen.getByText('Refresh on demand')).toBeInTheDocument();
     expect(screen.queryByText('Auto-refresh Enabled')).not.toBeInTheDocument();

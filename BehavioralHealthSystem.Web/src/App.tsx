@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
       retry: (failureCount, error) => {
         // Don't retry on 4xx errors except 408 (timeout)
         if (error && typeof error === 'object' && 'code' in error) {
-          const errorCode = (error as any).code;
+          const errorCode = (error as { code?: string }).code;
           if (errorCode?.startsWith('HTTP_4') && errorCode !== 'HTTP_408') {
             return false;
           }

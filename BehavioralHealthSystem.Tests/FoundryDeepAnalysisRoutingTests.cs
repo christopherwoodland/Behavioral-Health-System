@@ -12,7 +12,7 @@ public class FoundryDeepAnalysisRoutingTests
         string? capturedInput = null;
         var deepAgent = new Mock<IDeepAnalysisAgentService>();
         deepAgent.SetupGet(service => service.IsEnabled).Returns(true);
-        deepAgent.SetupGet(service => service.ModelVersion).Returns("foundry-agent:bhs-deep-analysis@4");
+        deepAgent.SetupGet(service => service.ModelVersion).Returns("foundry-agent:bhs-deep-analysis@5");
         deepAgent
             .Setup(service => service.GenerateAssessmentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<string, CancellationToken>((input, _) => capturedInput = input)
@@ -56,7 +56,7 @@ public class FoundryDeepAnalysisRoutingTests
 
         Assert.IsNotNull(result);
         Assert.AreEqual("Moderate", result.OverallRiskLevel);
-        Assert.AreEqual("foundry-agent:bhs-deep-analysis@4", result.ModelVersion);
+        Assert.AreEqual("foundry-agent:bhs-deep-analysis@5", result.ModelVersion);
         Assert.IsTrue(result.IsExtended);
         StringAssert.Contains(capturedInput, "<clinical-data>");
         StringAssert.Contains(capturedInput, "Synthetic reported symptom");
@@ -73,7 +73,7 @@ public class FoundryDeepAnalysisRoutingTests
     {
         var deepAgent = new Mock<IDeepAnalysisAgentService>();
         deepAgent.SetupGet(service => service.IsEnabled).Returns(true);
-        deepAgent.SetupGet(service => service.ModelVersion).Returns("foundry-agent:bhs-deep-analysis@4");
+        deepAgent.SetupGet(service => service.ModelVersion).Returns("foundry-agent:bhs-deep-analysis@5");
         deepAgent
             .Setup(service => service.GenerateAssessmentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("""

@@ -8,7 +8,7 @@ import { apiService } from '../services/api';
 import { transcriptionService, TranscriptionResult } from '../services/transcriptionService';
 import { useAccessibility } from '../hooks/useAccessibility';
 import { getStoredProcessingMode, setStoredProcessingMode, getStoredProcessingModeBoolean, getUserId } from '../utils';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import GroupSelector from '../components/GroupSelector';
 import { fileGroupService } from '../services/fileGroupService';
 import GrammarCorrectionModal from '../components/GrammarCorrectionModal';

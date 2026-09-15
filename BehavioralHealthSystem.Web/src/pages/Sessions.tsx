@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Filter, ChevronDown, ChevronUp, Eye, Download, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, XCircle, ArrowUpDown } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel } from '../utils';
@@ -362,7 +362,7 @@ const Sessions: React.FC = () => {
 
     const sessionIds = Array.from(selectedSessions);
     let successCount = 0;
-    let failedSessions: string[] = [];
+    const failedSessions: string[] = [];
 
     // Process deletions sequentially to avoid overwhelming the server
     for (const sessionId of sessionIds) {

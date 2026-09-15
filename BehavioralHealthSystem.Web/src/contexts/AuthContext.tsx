@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useEffect, useState, ReactNode } from 'react';
 import {
   EventType,
   EventMessage,
@@ -60,23 +60,14 @@ interface AuthContextType {
 // Create the context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Export the context so MockAuthProvider can use the same one
+// Export the context so MockAuthProvider and the useAuth hook (see ./useAuth) can use it
 export { AuthContext };
-
-// Hook to use the auth context
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 /**
  * Extract user roles from account info based on group membership or token claims
  */
 const extractUserRoles = (account: AccountInfo): string[] => {
-  const claims = account.idTokenClaims as any;
+  const claims = account.idTokenClaims as Record<string, unknown>;
   const roles: string[] = [];
 
   // Check for roles in token claims (preferred method)
@@ -131,7 +122,7 @@ const createUserInfo = (account: AccountInfo | null): UserInfo | null => {
 
   const roles = extractUserRoles(account);
   const primaryRole = getPrimaryRole(roles);
-  const claims = account.idTokenClaims as any;
+  const claims = account.idTokenClaims as Record<string, unknown>;
 
   return {
     id: account.localAccountId || account.homeAccountId,
@@ -259,9 +250,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Use redirect login (avoids COOP warnings with Azure AD)
       await instance.loginRedirect(loginRequestWithDefaults);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Login error', error);
-      setError(error.message || 'Login failed');
+      const message = error instanceof Error ? error.message : 'Login failed';
+      setError(message);
       throw error;
     } finally {
       setIsLoading(false);
@@ -280,9 +272,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // Use redirect logout (avoids COOP warnings with Azure AD)
       await instance.logoutRedirect(logoutRequest);
-    } catch (error: any) {
+    } catch (error: unknown) {
       log.error('Logout error', error);
-      setError(error.message || 'Logout failed');
+      const message = error instanceof Error ? error.message : 'Logout failed';
+      setError(message);
       throw error;
     } finally {
       setIsLoading(false);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DSM5ConditionData } from '../types/dsm5Types';
 import { dsm5Service } from '../services/dsm5Service';
 import { createAppError } from '../utils';
@@ -40,7 +40,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
 
   useEffect(() => {
     categorizeConditions();
-  }, [availableConditions, searchTerm, selectedCategory]);
+  }, [availableConditions, searchTerm, selectedCategory, categorizeConditions]);
 
   const loadAvailableConditions = async () => {
     try {
@@ -62,7 +62,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
     }
   };
 
-  const categorizeConditions = () => {
+  const categorizeConditions = useCallback(() => {
     let filteredConditions = availableConditions;
 
     // Apply search filter
@@ -107,7 +107,7 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
     if (searchTerm.trim() || categorized.length <= 3) {
       setExpandedCategories(new Set(categorized.map(c => c.category)));
     }
-  };
+  }, [availableConditions, searchTerm, selectedCategory]);
 
   const handleConditionToggle = (conditionId: string) => {
     if (disabled) return;

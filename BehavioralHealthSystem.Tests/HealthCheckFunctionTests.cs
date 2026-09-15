@@ -79,7 +79,7 @@ namespace BehavioralHealthSystem.Tests
                     ["AZURE_SPEECH_TRANSCRIBE_STYLE"] = "verbatim",
                     ["FOUNDRY_PROJECT_ENDPOINT"] = "https://example.services.ai.azure.com/api/projects/test",
                     ["FOUNDRY_DEEP_ANALYSIS_ENABLED"] = "true",
-                    ["FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION"] = "4"
+                    ["FOUNDRY_DEEP_ANALYSIS_AGENT_VERSION"] = "5"
                 })
                 .Build();
             var function = new HealthCheckFunction(
@@ -94,7 +94,7 @@ namespace BehavioralHealthSystem.Tests
             using var document = await JsonDocument.ParseAsync(response.Body);
             var resources = document.RootElement.GetProperty("resources");
             Assert.AreEqual("mai-transcribe-1.5 / verbatim", resources.GetProperty("speechToText").GetString());
-            Assert.AreEqual("Extended v4", resources.GetProperty("foundryAgents").GetString());
+            Assert.AreEqual("Extended v5", resources.GetProperty("foundryAgents").GetString());
         }
 
         private static HttpRequestData CreateRequest()

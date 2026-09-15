@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 import { getStoredTheme, setStoredTheme } from '@/utils';
 import type { Theme } from '@/types';
 
-interface ThemeContextType {
+export interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
   setTheme: (theme: Theme) => void;
@@ -10,13 +10,8 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-};
+// Export the context so useTheme (see ./useTheme) can use it
+export { ThemeContext };
 
 interface ThemeProviderProps {
   children: React.ReactNode;
@@ -43,7 +38,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     // Listen for system theme changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       const storedTheme = localStorage.getItem('bh_theme');
       if (!storedTheme) {

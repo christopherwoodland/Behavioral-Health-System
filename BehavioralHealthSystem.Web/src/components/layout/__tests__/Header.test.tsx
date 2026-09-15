@@ -1,15 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { AnchorHTMLAttributes, ReactNode } from 'react';
 import { Header } from '../Header';
 
 // Mock the dependencies
-vi.mock('@/contexts/ThemeContext', () => ({
+vi.mock('@/contexts/useTheme', () => ({
   useTheme: vi.fn(() => ({
     theme: 'light',
     toggleTheme: vi.fn(),
   })),
 }));
 
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/contexts/useAuth', () => ({
   useAuth: vi.fn(() => ({
     user: null,
     isAuthenticated: false,
@@ -25,7 +26,7 @@ vi.mock('react-router-dom', async () => {
   return {
     ...actual,
     useLocation: vi.fn(() => ({ pathname: '/' })),
-    Link: ({ children, ...props }: any) => <a {...props}>{children}</a>,
+    Link: ({ children, ...props }: AnchorHTMLAttributes<HTMLAnchorElement> & { to?: string; children?: ReactNode }) => <a {...props}>{children}</a>,
   };
 });
 

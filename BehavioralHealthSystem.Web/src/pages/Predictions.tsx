@@ -20,7 +20,7 @@ import {
   Minus
 } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
 import { getUserId, formatRelativeTime, formatQuantizedScoreLabel } from '../utils';

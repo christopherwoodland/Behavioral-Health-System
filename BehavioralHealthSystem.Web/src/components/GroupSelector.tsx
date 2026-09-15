@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Users, Search, Calendar, Trash2 } from 'lucide-react';
 import { fileGroupService } from '../services/fileGroupService';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/useAuth';
 import { getUserId } from '../utils';
 import { Logger } from '@/utils/logger';
 import { useLoadingState, useFieldState, useConfirmDialog } from '../utils/ui';
@@ -55,12 +55,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
 
   const { user } = useAuth();
 
-  // Load existing groups
-  useEffect(() => {
-    loadGroups();
-  }, []);
-
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     try {
       loadingState.setLoading(true);
       const userId = user?.id || getUserId();
@@ -73,7 +68,12 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
     } finally {
       loadingState.resetLoading();
     }
-  };
+  }, [user, loadingState.setLoading, loadingState.resetLoading]);
+
+  // Load existing groups
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   const handleCreateGroup = async () => {
     if (!groupName.value.trim() || !groupName.validate()) return;
@@ -88,7 +88,7 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
         // If onCreateGroup callback is provided, use it for creation
         try {
           createdGroupId = await onCreateGroup(groupName.value.trim(), groupDescription.value.trim() || undefined);
-        } catch (error) {
+        } catch {
           // Handle errors from the callback - this will be shown in the field error
           groupName.setValue(groupName.value); // This will trigger validation and show error
           return;
@@ -181,7 +181,10 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
         {/* Group Selection */}
         <div className="space-y-3">
           {/* No Group Option */}
-          <label className="flex items-center space-x-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+          <label
+            className="flex items-center space-x-3 p-3 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+            aria-label="No Group - Process files individually without grouping"
+          >
             <input
               type="radio"
               name="group-selection"
@@ -291,11 +294,12 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
             <div className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700">
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="group-name-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Group Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
+                    id="group-name-input"
                     value={groupName.value}
                     onChange={(e) => groupName.setValue(e.target.value)}
                     onBlur={() => groupName.setTouched()}
@@ -313,10 +317,11 @@ const GroupSelector: React.FC<GroupSelectorProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="group-description-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Description (Optional)
                   </label>
                   <textarea
+                    id="group-description-input"
                     value={groupDescription.value}
                     onChange={(e) => groupDescription.setValue(e.target.value)}
                     placeholder="Enter group description..."

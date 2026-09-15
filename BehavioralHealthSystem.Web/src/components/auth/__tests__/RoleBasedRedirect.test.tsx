@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { RoleBasedRedirect } from '../RoleBasedRedirect';
 
 // Mock the dependencies
-vi.mock('@/contexts/AuthContext', () => ({
+vi.mock('@/contexts/useAuth', () => ({
   useAuth: vi.fn(),
 }));
 

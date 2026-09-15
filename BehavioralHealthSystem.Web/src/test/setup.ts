@@ -3,15 +3,15 @@ import { vi, beforeAll, afterAll } from 'vitest';
 
 // Mock FFmpeg and related imports
 vi.mock('@ffmpeg/ffmpeg', () => ({
-  FFmpeg: vi.fn(() => ({
-    load: vi.fn(),
-    writeFile: vi.fn(),
-    exec: vi.fn(),
-    readFile: vi.fn(),
-    deleteFile: vi.fn(),
-    on: vi.fn(),
-    off: vi.fn(),
-  })),
+  FFmpeg: class MockFFmpeg {
+    load = vi.fn();
+    writeFile = vi.fn();
+    exec = vi.fn();
+    readFile = vi.fn();
+    deleteFile = vi.fn();
+    on = vi.fn();
+    off = vi.fn();
+  },
 }));
 
 vi.mock('@ffmpeg/util', () => ({

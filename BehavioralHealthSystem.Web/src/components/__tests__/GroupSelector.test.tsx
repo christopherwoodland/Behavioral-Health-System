@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import GroupSelector from '../GroupSelector';
 
 // vi.mock is hoisted—cannot reference variables declared below.
@@ -21,7 +20,7 @@ vi.mock('../../services/fileGroupService', () => ({
   fileGroupService: mockFileGroupService,
 }));
 
-vi.mock('../../contexts/AuthContext', () => ({
+vi.mock('../../contexts/useAuth', () => ({
   useAuth: () => ({
     isAuthenticated: true,
     user: { id: 'test-user-id', name: 'Test User' },
@@ -41,7 +40,7 @@ vi.mock('../../utils/ui', () => ({
     setLoading: vi.fn(),
     resetLoading: vi.fn(),
   }),
-  useFieldState: (initial: any) => ({
+  useFieldState: (initial: string) => ({
     value: initial,
     touched: false,
     isValid: true,

@@ -5,7 +5,7 @@ import { AccessibleDialog } from '../components/AccessibleDialog';
 import { apiService } from '../services/api';
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
-import type { SessionData as ImportedSessionData, AppError } from '../types';
+import type { SessionData as ImportedSessionData, AppError, PredictionResult } from '../types';
 
 const log = Logger.create('ControlPanel');
 
@@ -281,7 +281,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 
     // Try prediction object first (DAM returns numeric strings 0-4)
     if (session.prediction) {
-      const prediction = session.prediction as any;
+      const prediction = session.prediction;
       const depValue = prediction.predictedScoreDepression || prediction.predicted_score_depression;
       const anxValue = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
       depressionCategory = mapDepressionScore(depValue);
@@ -406,7 +406,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 
       // Try prediction object first (DAM returns numeric strings 0-4)
       if (session.prediction) {
-        const prediction = session.prediction as any;
+        const prediction = session.prediction;
         const depValue = prediction.predictedScoreDepression || prediction.predicted_score_depression;
         const anxValue = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
         depressionCategory = mapDepressionScore(depValue);
@@ -465,7 +465,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   const hasDepressionCase = (session: ImportedSessionData): boolean => {
     // Check for any depression prediction category
     if (session.prediction) {
-      const prediction = session.prediction as any;
+      const prediction = session.prediction;
       const depressionCategory = prediction.predictedScoreDepression || prediction.predicted_score_depression;
       return !!depressionCategory;
     }
@@ -479,7 +479,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
   const hasAnxietyCase = (session: ImportedSessionData): boolean => {
     // Check for any anxiety prediction category
     if (session.prediction) {
-      const prediction = session.prediction as any;
+      const prediction = session.prediction;
       const anxietyCategory = prediction.predictedScoreAnxiety || prediction.predicted_score_anxiety;
       return !!anxietyCategory;
     }
@@ -609,7 +609,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
 
   completedSessions.forEach(session => {
     if (!session.prediction) return;
-    const prediction = session.prediction as any;
+    const prediction = session.prediction as PredictionResult & { provider?: string; Provider?: string };
 
     const provider = prediction.provider || prediction.Provider;
     const modelCategory = prediction.modelCategory || prediction.model_category;
@@ -1485,7 +1485,7 @@ export const ControlPanel: React.FC = () => {
     log.debug('Setting up auto-refresh', { intervalSeconds: refreshInterval / 1000 });
 
     const interval = setInterval(() => {
-      log.debug('Auto-refresh triggered', { loading });
+      log.debug('Auto-refresh triggered');
       // Remove loading check to ensure refresh happens
       loadAnalytics();
     }, refreshInterval);

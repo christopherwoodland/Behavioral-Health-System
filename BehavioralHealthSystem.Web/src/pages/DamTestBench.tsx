@@ -333,7 +333,7 @@ const DamTestBench: React.FC = () => {
     setError(null);
     setStatus('idle');
     setElapsedDisplay(null);
-  }, []);
+  }, [convertResult?.audioUrl]);
 
   const copyJson = useCallback(() => {
     if (result) navigator.clipboard.writeText(JSON.stringify(result, null, 2));

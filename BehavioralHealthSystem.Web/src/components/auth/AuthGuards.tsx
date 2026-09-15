@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth, AuthenticatedTemplate, UnauthenticatedTemplate } from '@/contexts/AuthContext';
+import { AuthenticatedTemplate, UnauthenticatedTemplate } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/useAuth';
 import { APP_ROLES, type UserRole } from '@/config/authConfig';
 import { Logger } from '@/utils/logger';
 
@@ -152,7 +153,7 @@ export const RequireRole: React.FC<RoleGuardProps> = ({
             Access Denied
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            You don't have permission to access this resource.
+            You don&apos;t have permission to access this resource.
           </p>
           <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
@@ -183,23 +184,6 @@ export const RequireAdmin: React.FC<AuthorizationProps> = (props) => (
 export const RequireControlPanelAccess: React.FC<AuthorizationProps> = (props) => (
   <RequireRole {...props} roles={[APP_ROLES.ADMIN, APP_ROLES.CONTROL_PANEL]} />
 );
-
-/**
- * Hook for conditional rendering based on roles
- */
-export const useRoleAccess = () => {
-  const { hasRole, hasAnyRole, isAdmin, canAccessControlPanel } = useAuth();
-
-  return {
-    hasRole,
-    hasAnyRole,
-    isAdmin,
-    canAccessControlPanel,
-    // Convenience methods
-    canAccessAdminOnly: () => isAdmin(),
-    hasControlPanelAccess: () => canAccessControlPanel(),
-  };
-};
 
 /**
  * Route guard component for protecting routes

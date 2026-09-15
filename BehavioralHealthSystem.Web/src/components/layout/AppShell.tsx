@@ -16,8 +16,8 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/useTheme';
+import { useAuth } from '@/contexts/useAuth';
 import { useKeyboardNavigation } from '@/hooks/accessibility';
 import { useHealthCheck } from '@/hooks/api';
 import { APP_ROLES } from '@/config/authConfig';

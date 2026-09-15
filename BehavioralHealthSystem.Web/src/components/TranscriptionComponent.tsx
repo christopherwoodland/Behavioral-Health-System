@@ -30,11 +30,6 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
   // Check if transcription is enabled
   const isTranscriptionEnabled = transcriptionService.isTranscriptionEnabled();
 
-  // Don't render if transcription is disabled
-  if (!isTranscriptionEnabled) {
-    return null;
-  }
-
   const handleTranscribe = useCallback(async () => {
     if (!audioUrl) {
       setError('No audio URL available for transcription');
@@ -85,7 +80,7 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
     try {
       await navigator.clipboard.writeText(transcription.text);
       announceToScreenReader('Transcription copied to clipboard');
-    } catch (err) {
+    } catch {
       announceToScreenReader('Failed to copy transcription');
     }
   }, [transcription?.text, announceToScreenReader]);
@@ -122,6 +117,11 @@ const TranscriptionComponent: React.FC<TranscriptionComponentProps> = ({
     if (confidence >= 0.6) return 'text-yellow-600 dark:text-yellow-400';
     return 'text-red-600 dark:text-red-400';
   };
+
+  // Hooks must run consistently even when transcription is disabled.
+  if (!isTranscriptionEnabled) {
+    return null;
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">

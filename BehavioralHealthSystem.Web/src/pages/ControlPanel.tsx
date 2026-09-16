@@ -5,6 +5,7 @@ import { AccessibleDialog } from '../components/AccessibleDialog';
 import { apiService } from '../services/api';
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
+import { getSessionConfidence } from '@/utils/sessionConfidence';
 import type { SessionData as ImportedSessionData, AppError, PredictionResult } from '../types';
 
 const log = Logger.create('ControlPanel');
@@ -104,7 +105,7 @@ interface AnalyticsData {
     totalSessions: number;
     successfulSessions: number;
     successRate: number;
-    avgConfidence: number;
+    avgConfidence: number | null;
     riskDistribution: {
       low: number;
       medium: number;
@@ -361,12 +362,12 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
     );
 
     const confidenceValues = successfulSessions
-      .map(s => s.analysisResults?.confidence)
-      .filter(c => c !== null && c !== undefined && typeof c === 'number');
+      .map(getSessionConfidence)
+      .filter((confidence): confidence is number => confidence !== null);
 
     const avgConfidence = confidenceValues.length > 0
       ? confidenceValues.reduce((sum, c) => sum + c!, 0) / confidenceValues.length
-      : 0;
+      : null;
 
     // Risk distribution for this user
     const userRiskDistribution = {
@@ -442,7 +443,7 @@ const aggregateSessionData = (allSessions: ImportedSessionData[]): AnalyticsData
       totalSessions: stats.totalSessions,
       successfulSessions: stats.successfulSessions,
       successRate,
-      avgConfidence: Math.round(avgConfidence * 100) / 100,
+      avgConfidence: avgConfidence === null ? null : Math.round(avgConfidence * 100) / 100,
       riskDistribution: userRiskDistribution,
       lastActivity,
       depressionScores: userDepressionScores,
@@ -1171,10 +1172,10 @@ const UserStatsTable: React.FC<{
   const avgSessionsPerUser = totalUsers > 0
     ? Math.round(userStats.reduce((sum, u) => sum + u.totalSessions, 0) / totalUsers * 10) / 10
     : 0;
-  const topPerformer = userStats.length > 0
-    ? userStats.reduce((best, current) =>
-        current.avgConfidence > best.avgConfidence ? current : best, userStats[0])
-    : null;
+  const topPerformer = userStats
+    .filter(user => user.avgConfidence !== null)
+    .reduce<(typeof userStats)[number] | null>((best, current) =>
+      best === null || current.avgConfidence! > best.avgConfidence! ? current : best, null);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 overflow-visible">
@@ -1196,7 +1197,7 @@ const UserStatsTable: React.FC<{
           </div>
           {topPerformer && (
             <div className="text-center">
-              <div className="font-semibold text-blue-600">{(topPerformer.avgConfidence * 100).toFixed(1)}%</div>
+              <div className="font-semibold text-blue-600">{(topPerformer.avgConfidence! * 100).toFixed(1)}%</div>
               <div className="text-gray-600 dark:text-gray-400">Highest Avg Confidence</div>
             </div>
           )}
@@ -1277,7 +1278,7 @@ const UserStatsTable: React.FC<{
                       </button>
                     </div>
                     <span className="text-xs font-normal text-gray-500 dark:text-gray-400 mt-1">
-                      (Analysis accuracy 0-100%)
+                      (Model confidence 0-100%)
                     </span>
                   </div>
                 </th>
@@ -1324,7 +1325,7 @@ const UserStatsTable: React.FC<{
                   </td>
                   <td className="py-3 px-2 text-center">
                     <div className="text-gray-900 dark:text-white font-medium">
-                      {(user.avgConfidence * 100).toFixed(1)}%
+                      {user.avgConfidence === null ? 'N/A' : `${(user.avgConfidence * 100).toFixed(1)}%`}
                     </div>
                   </td>
                   <td className="py-3 px-2 text-right">
@@ -1364,11 +1365,11 @@ const UserStatsTable: React.FC<{
               <div className="space-y-2">
                 <div>• Calculated from AI model confidence scores</div>
                 <div>• Averaged across all successful sessions per user</div>
-                <div>• Related to risk distribution/evaluation accuracy</div>
-                <div>• Higher values indicate more reliable assessments</div>
+                <div>• Uses the latest available extended, standard, or legacy analysis confidence</div>
+                <div>• Higher values indicate stronger model confidence, not clinical accuracy</div>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                Analysis accuracy range: 0-100%
+                Model confidence range: 0-100%; unavailable values are shown as N/A
               </div>
             </div>
       </AccessibleDialog>
@@ -1403,7 +1404,7 @@ const UserStatsTable: React.FC<{
                 <div>• <span className="inline-block w-2 h-2 bg-gray-400 rounded-full mr-1" aria-hidden="true"></span>Unknown: Risk level could not be determined</div>
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                Analysis accuracy: 0-100% (higher confidence = more reliable risk assessment)
+                Model confidence: 0-100% (not a measure of clinical accuracy)
               </div>
             </div>
       </AccessibleDialog>

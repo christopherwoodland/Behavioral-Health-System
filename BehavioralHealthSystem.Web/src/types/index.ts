@@ -1,5 +1,5 @@
 // Import ExtendedRiskAssessment from separate file
-import type { ExtendedRiskAssessment } from './extendedRiskAssessment';
+import type { ExtendedRiskAssessment, MultiConditionExtendedRiskAssessment } from './extendedRiskAssessment';
 
 // API Types
 export interface User {
@@ -205,6 +205,7 @@ export interface SessionData {
   };
   riskAssessment?: RiskAssessment;
   extendedRiskAssessment?: ExtendedRiskAssessment;
+  multiConditionAssessment?: MultiConditionExtendedRiskAssessment;
 }
 
 export interface RiskAssessment {

@@ -35,6 +35,7 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
   // For backwards compatibility with legacy schizophrenia format
   const schizo = !isMultiCondition ? (assessment as ExtendedRiskAssessment).schizophreniaAssessment : null;
   const criterionA = schizo?.criterionAEvaluation;
+  const schizoFunctionalImpairment = schizo?.functionalImpairment;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'disorders' | 'details'>('overview');
   const hasSufficientSafetyEvidence = assessment.evidenceSufficiency === 'Sufficient';
@@ -261,11 +262,11 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
 
                 <div className="flex flex-col gap-1 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
                   <span className="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">Criterion B Met</span>
-                  <span className={`text-2xl font-bold ${schizo.functionalImpairment.criterionBMet ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
-                    {schizo.functionalImpairment.criterionBMet ? 'Yes' : 'No'}
+                  <span className={`text-2xl font-bold ${schizoFunctionalImpairment?.criterionBMet ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                    {schizoFunctionalImpairment ? (schizoFunctionalImpairment.criterionBMet ? 'Yes' : 'No') : 'Unknown'}
                   </span>
                   <span className="text-sm text-gray-600 dark:text-gray-400">
-                    {schizo.functionalImpairment.impairmentLevel} impairment
+                    {schizoFunctionalImpairment ? `${schizoFunctionalImpairment.impairmentLevel} impairment` : 'Not available'}
                   </span>
                 </div>
 
@@ -368,36 +369,46 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                   DSM-5 Criterion B: Functional Impairment
                 </h3>
-                <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${
-                  schizo.functionalImpairment.criterionBMet
-                    ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
-                    : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                }`}>
-                  {schizo.functionalImpairment.criterionBMet ? 'Criteria Met' : 'Criteria Not Met'}
-                </span>
+                {schizoFunctionalImpairment && (
+                  <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${
+                    schizoFunctionalImpairment.criterionBMet
+                      ? 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                      : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                  }`}>
+                    {schizoFunctionalImpairment.criterionBMet ? 'Criteria Met' : 'Criteria Not Met'}
+                  </span>
+                )}
               </div>
 
-              <div className={`flex items-center gap-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${getImpairmentColor(schizo.functionalImpairment.impairmentLevel)}`}>
-                <span className="text-sm font-medium">Overall Impairment Level:</span>
-                <span className="text-lg font-bold">{schizo.functionalImpairment.impairmentLevel}</span>
-              </div>
+              {schizoFunctionalImpairment ? (
+                <>
+                  <div className={`flex items-center gap-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 ${getImpairmentColor(schizoFunctionalImpairment.impairmentLevel)}`}>
+                    <span className="text-sm font-medium">Overall Impairment Level:</span>
+                    <span className="text-lg font-bold">{schizoFunctionalImpairment.impairmentLevel}</span>
+                  </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Work/Occupational Functioning</h4>
-                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{schizo.functionalImpairment.workFunctioning}</p>
-                </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Work/Occupational Functioning</h4>
+                      <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{schizoFunctionalImpairment.workFunctioning}</p>
+                    </div>
 
-                <div className="space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Interpersonal Relations</h4>
-                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{schizo.functionalImpairment.interpersonalRelations}</p>
-                </div>
+                    <div className="space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Interpersonal Relations</h4>
+                      <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{schizoFunctionalImpairment.interpersonalRelations}</p>
+                    </div>
 
-                <div className="space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Self-Care</h4>
-                  <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{schizo.functionalImpairment.selfCare}</p>
-                </div>
-              </div>
+                    <div className="space-y-2 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Self-Care</h4>
+                      <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">{schizoFunctionalImpairment.selfCare}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Functional impairment was not available in this assessment.
+                </p>
+              )}
             </div>
 
                 {/* DSM-5 Criterion C - Duration */}
@@ -531,24 +542,32 @@ export const ExtendedRiskAssessmentDisplay: React.FC<ExtendedRiskAssessmentDispl
                   {/* Functional Impairment */}
                   <div className="space-y-3 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <h4 className="font-semibold text-gray-900 dark:text-white">Functional Impairment</h4>
-                    <div className={`flex items-center gap-2 p-3 rounded-lg ${getImpairmentColor(condition.functionalImpairment.impairmentLevel)}`}>
-                      <span className="text-sm font-medium">Overall Level:</span>
-                      <span className="text-lg font-bold">{condition.functionalImpairment.impairmentLevel}</span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Work: </span>
-                        <span className="text-gray-600 dark:text-gray-400">{condition.functionalImpairment.workFunctioning}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Relations: </span>
-                        <span className="text-gray-600 dark:text-gray-400">{condition.functionalImpairment.interpersonalRelations}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-900 dark:text-white">Self-Care: </span>
-                        <span className="text-gray-600 dark:text-gray-400">{condition.functionalImpairment.selfCare}</span>
-                      </div>
-                    </div>
+                    {condition.functionalImpairment ? (
+                      <>
+                        <div className={`flex items-center gap-2 p-3 rounded-lg ${getImpairmentColor(condition.functionalImpairment.impairmentLevel)}`}>
+                          <span className="text-sm font-medium">Overall Level:</span>
+                          <span className="text-lg font-bold">{condition.functionalImpairment.impairmentLevel}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                          <div>
+                            <span className="font-medium text-gray-900 dark:text-white">Work: </span>
+                            <span className="text-gray-600 dark:text-gray-400">{condition.functionalImpairment.workFunctioning}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-900 dark:text-white">Relations: </span>
+                            <span className="text-gray-600 dark:text-gray-400">{condition.functionalImpairment.interpersonalRelations}</span>
+                          </div>
+                          <div>
+                            <span className="font-medium text-gray-900 dark:text-white">Self-Care: </span>
+                            <span className="text-gray-600 dark:text-gray-400">{condition.functionalImpairment.selfCare}</span>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Functional impairment was not available in this assessment.
+                      </p>
+                    )}
                   </div>
 
                   {/* Differential Diagnosis */}

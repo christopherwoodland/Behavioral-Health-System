@@ -42,7 +42,7 @@ export interface SchizophreniaAssessment {
   confidenceScore: number; // 0.0-1.0
   assessmentSummary: string;
   criterionAEvaluation: CriterionAEvaluation;
-  functionalImpairment: FunctionalImpairmentAssessment;
+  functionalImpairment: FunctionalImpairmentAssessment | null;
   durationAssessment: string;
   differentialDiagnosis: string[];
   riskFactorsIdentified: string[];
@@ -225,7 +225,7 @@ export interface ConditionAssessmentResult {
   clinicalNotes: string[];
   differentialDiagnosis: string[];
   durationAssessment: string;
-  functionalImpairment: FunctionalImpairmentAssessment;
+  functionalImpairment: FunctionalImpairmentAssessment | null;
 }
 
 export interface MultiConditionExtendedRiskAssessment {

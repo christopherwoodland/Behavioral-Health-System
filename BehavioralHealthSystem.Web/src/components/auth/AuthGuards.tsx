@@ -28,7 +28,7 @@ export const LoginPrompt: React.FC = () => {
   const { login, isLoading, error } = useAuth();
 
   const handleLogin = () => {
-    login().catch(err => log.error('Login failed', err));
+    login().catch((err: unknown) => log.error('Login failed', err));
   };
 
   return (

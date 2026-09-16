@@ -38,7 +38,7 @@ export interface UserInfo {
 }
 
 // Authentication context interface
-interface AuthContextType {
+export interface AuthContextType {
   // User state
   user: UserInfo | null;
   isAuthenticated: boolean;
@@ -63,26 +63,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // Export the context so MockAuthProvider and the useAuth hook (see ./useAuth) can use it
 export { AuthContext };
 
+const getStringClaims = (value: unknown): string[] => {
+  if (typeof value === 'string') {
+    return [value];
+  }
+
+  return Array.isArray(value)
+    ? value.filter((claim): claim is string => typeof claim === 'string')
+    : [];
+};
+
 /**
  * Extract user roles from account info based on group membership or token claims
  */
 const extractUserRoles = (account: AccountInfo): string[] => {
-  const claims = account.idTokenClaims as Record<string, unknown>;
+  const claims = account.idTokenClaims as Record<string, unknown> | undefined;
   const roles: string[] = [];
 
   // Check for roles in token claims (preferred method)
-  if (claims?.[ROLE_CLAIMS.APP_ROLES]) {
-    const tokenRoles = Array.isArray(claims[ROLE_CLAIMS.APP_ROLES])
-      ? claims[ROLE_CLAIMS.APP_ROLES]
-      : [claims[ROLE_CLAIMS.APP_ROLES]];
-    roles.push(...tokenRoles);
-  }
+  const tokenRoles = getStringClaims(claims?.[ROLE_CLAIMS.APP_ROLES]);
+  roles.push(...tokenRoles);
 
   // Check for group-based roles (fallback)
-  if (claims?.[ROLE_CLAIMS.GROUPS]) {
-    const groups = Array.isArray(claims[ROLE_CLAIMS.GROUPS])
-      ? claims[ROLE_CLAIMS.GROUPS]
-      : [claims[ROLE_CLAIMS.GROUPS]];
+  const groups = getStringClaims(claims?.[ROLE_CLAIMS.GROUPS]);
+  if (groups.length > 0) {
 
     // Map group IDs to roles based on configuration
     groups.forEach((groupId: string) => {
@@ -122,7 +126,8 @@ const createUserInfo = (account: AccountInfo | null): UserInfo | null => {
 
   const roles = extractUserRoles(account);
   const primaryRole = getPrimaryRole(roles);
-  const claims = account.idTokenClaims as Record<string, unknown>;
+  const claims = account.idTokenClaims as Record<string, unknown> | undefined;
+  const preferredUsername = claims?.preferred_username;
 
   return {
     id: account.localAccountId || account.homeAccountId,
@@ -130,8 +135,8 @@ const createUserInfo = (account: AccountInfo | null): UserInfo | null => {
     name: account.name || account.username,
     roles,
     primaryRole,
-    groups: claims?.[ROLE_CLAIMS.GROUPS] || [],
-    preferredUsername: claims?.preferred_username,
+    groups: getStringClaims(claims?.[ROLE_CLAIMS.GROUPS]),
+    preferredUsername: typeof preferredUsername === 'string' ? preferredUsername : undefined,
     tenantId: account.tenantId,
   };
 };

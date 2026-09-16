@@ -71,7 +71,7 @@ param foundryProjectEndpoint string = 'https://cwoodland-0035-test-002-resource.
 param speechEndpoint string = 'https://bhs-transcription-eastus.cognitiveservices.azure.com/'
 
 @description('Comma-delimited browser origins allowed to call the Functions API.')
-param allowedOrigins string = 'http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,https://localhost:3000,https://localhost:5173,https://localhost:5174,https://localhost:5175,https://127.0.0.1:3000,https://127.0.0.1:5173,https://127.0.0.1:5174,https://127.0.0.1:5175'
+param allowedOrigins string = 'http://localhost:3000,http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,https://localhost:3000,https://localhost:5173,https://localhost:5174,https://localhost:5175,https://127.0.0.1:3000,https://127.0.0.1:5173,https://127.0.0.1:5174,https://127.0.0.1:5175,https://bhs-web.victorioussmoke-ce62b9bb.eastus.azurecontainerapps.io'
 
 var registryName = replace('${damNamePrefix}${uniqueString(subscription().id, resourceGroup().id)}', '-', '')
 var storageBlobUri = 'https://${storageAccountName}.blob.${az.environment().suffixes.storage}'

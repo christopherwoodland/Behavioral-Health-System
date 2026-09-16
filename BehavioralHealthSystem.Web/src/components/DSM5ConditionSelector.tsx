@@ -38,10 +38,6 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
     loadAvailableConditions();
   }, []);
 
-  useEffect(() => {
-    categorizeConditions();
-  }, [availableConditions, searchTerm, selectedCategory, categorizeConditions]);
-
   const loadAvailableConditions = async () => {
     try {
       setLoading(true);
@@ -108,6 +104,10 @@ export const DSM5ConditionSelector: React.FC<DSM5ConditionSelectorProps> = ({
       setExpandedCategories(new Set(categorized.map(c => c.category)));
     }
   }, [availableConditions, searchTerm, selectedCategory]);
+
+  useEffect(() => {
+    categorizeConditions();
+  }, [categorizeConditions]);
 
   const handleConditionToggle = (conditionId: string) => {
     if (disabled) return;

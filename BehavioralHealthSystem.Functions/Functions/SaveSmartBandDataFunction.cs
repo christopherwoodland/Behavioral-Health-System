@@ -38,7 +38,7 @@ public class SaveSmartBandDataFunction
     /// </summary>
     [Function("SaveSmartBandData")]
     public async Task<HttpResponseData> SaveSmartBandData(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "SaveSmartBandData")] HttpRequestData req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "SaveSmartBandData")] HttpRequestData req)
     {
         _logger.LogInformation("📊 SaveSmartBandData function triggered");
 

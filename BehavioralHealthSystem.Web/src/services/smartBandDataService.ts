@@ -6,6 +6,7 @@
 
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
+import { authenticatedApiFetch } from './api';
 
 const log = Logger.create('SmartBandData');
 
@@ -347,7 +348,7 @@ class SmartBandDataService {
 
       log.debug('Saving Smart Band data to:', { endpoint });
 
-      const response = await fetch(endpoint, {
+      const response = await authenticatedApiFetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

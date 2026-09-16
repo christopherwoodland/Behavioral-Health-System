@@ -8,6 +8,7 @@
 
 import { env } from '@/utils/env';
 import type { PredictionResult } from '@/types';
+import { authenticatedApiFetch } from './api';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ export async function submitToDam(
   formData.append('sessionId', sessionId);
   formData.append('file', file);
 
-  const response = await fetch(`${apiBaseUrl}/process-audio-upload`, {
+  const response = await authenticatedApiFetch(`${apiBaseUrl}/process-audio-upload`, {
     method: 'POST',
     body: formData,
   });

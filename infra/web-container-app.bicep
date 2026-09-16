@@ -16,7 +16,7 @@ param imageRepository string = 'bhs-web'
 param damNamePrefix string = 'bhs-dam'
 
 @description('Base URL of the deployed Functions API.')
-param apiBaseUrl string = 'https://bhs-functions.victorioussmoke-ce62b9bb.eastus.azurecontainerapps.io/api'
+param apiBaseUrl string = 'https://bhs-functions-easyauth.azurewebsites.net/api'
 
 @description('Microsoft Entra tenant ID.')
 param tenantId string = '16b3c013-d300-468d-ac64-7eda0820b6d3'

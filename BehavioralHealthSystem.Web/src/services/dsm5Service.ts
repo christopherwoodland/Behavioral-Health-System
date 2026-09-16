@@ -6,6 +6,7 @@
 import { config } from '@/config/constants';
 import { createAppError } from '@/utils';
 import { Logger } from '@/utils/logger';
+import { authenticatedApiFetch } from './api';
 import type {
   DSM5ConditionData,
   DSM5DataStatus,
@@ -32,7 +33,7 @@ class DSM5Service {
    */
   async getDataStatus(): Promise<DSM5DataStatus> {
     try {
-      const response = await fetch(`${this.baseUrl}/dsm5-admin/data-status`, {
+      const response = await authenticatedApiFetch(`${this.baseUrl}/dsm5-admin/data-status`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -88,7 +89,7 @@ class DSM5Service {
 
       const url = `${this.baseUrl}/dsm5-admin/conditions${params.toString() ? `?${params.toString()}` : ''}`;
 
-      const response = await fetch(url, {
+      const response = await authenticatedApiFetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -121,7 +122,7 @@ class DSM5Service {
    */
   async getConditionDetails(conditionId: string): Promise<DSM5ConditionData> {
     try {
-      const response = await fetch(`${this.baseUrl}/dsm5-admin/conditions/${encodeURIComponent(conditionId)}`, {
+      const response = await authenticatedApiFetch(`${this.baseUrl}/dsm5-admin/conditions/${encodeURIComponent(conditionId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -154,7 +155,7 @@ class DSM5Service {
    */
   async validateExtraction(request: DSM5ExtractionRequest): Promise<DSM5ExtractionResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/dsm5-admin/validate-extraction`, {
+      const response = await authenticatedApiFetch(`${this.baseUrl}/dsm5-admin/validate-extraction`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +189,7 @@ class DSM5Service {
    */
   async uploadData(request: DSM5DataUploadRequest): Promise<DSM5UploadResult> {
     try {
-      const response = await fetch(`${this.baseUrl}/dsm5-admin/upload-data`, {
+      const response = await authenticatedApiFetch(`${this.baseUrl}/dsm5-admin/upload-data`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

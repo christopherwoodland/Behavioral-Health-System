@@ -146,14 +146,23 @@ export const setApiAuthProvider = (authProvider: AuthHeaders) => {
  */
 export const getApiAuthHeaders = async (): Promise<Record<string, string>> => {
   if (_authProvider) {
-    try {
-      return await _authProvider.getAuthHeaders();
-    } catch (error) {
-      log.warn('Failed to get auth headers', { error });
-      return {};
-    }
+    return _authProvider.getAuthHeaders();
   }
   return {};
+};
+
+export const authenticatedApiFetch = async (
+  input: RequestInfo | URL,
+  init: RequestInit = {}
+): Promise<Response> => {
+  const headers = new Headers(init.headers);
+  const authHeaders = await getApiAuthHeaders();
+  Object.entries(authHeaders).forEach(([name, value]) => headers.set(name, value));
+
+  return fetch(input, {
+    ...init,
+    headers,
+  });
 };
 
 // API Service functions
@@ -286,7 +295,7 @@ export const apiService = {
   // Download audio from blob storage through backend (avoids CORS issues)
   async downloadAudioBlob(blobUrl: string): Promise<Blob> {
     const encodedUrl = encodeURIComponent(blobUrl);
-    const response = await fetch(`${config.api.baseUrl}/audio/download?url=${encodedUrl}`);
+    const response = await authenticatedApiFetch(`${config.api.baseUrl}/audio/download?url=${encodedUrl}`);
     if (!response.ok) {
       throw new Error(`Failed to download audio: ${response.statusText}`);
     }

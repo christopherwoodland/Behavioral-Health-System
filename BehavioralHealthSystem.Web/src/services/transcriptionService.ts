@@ -2,6 +2,7 @@ import { config } from '@/config/constants';
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
 import { convertAudioToWav } from './audio';
+import { authenticatedApiFetch } from './api';
 
 const log = Logger.create('Transcription');
 
@@ -77,7 +78,7 @@ class TranscriptionService {
 
       log.debug('Sending to transcription API', { size: blobToSend.size, type: contentType });
 
-      const response = await fetch(`${this.baseUrl}/transcribe-audio`, {
+      const response = await authenticatedApiFetch(`${this.baseUrl}/transcribe-audio`, {
         method: 'POST',
         headers: {
           'Content-Type': contentType,

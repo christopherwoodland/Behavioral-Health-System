@@ -56,12 +56,12 @@ export class AuthProvider {
           };
         } catch (popupError) {
           log.error('Interactive token acquisition failed', popupError);
-          return {};
+          throw popupError;
         }
       }
 
       log.warn('Failed to acquire access token', { error });
-      return {};
+      throw error;
     }
   }
 

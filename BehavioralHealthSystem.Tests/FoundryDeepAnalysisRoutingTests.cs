@@ -116,4 +116,63 @@ public class FoundryDeepAnalysisRoutingTests
         Assert.AreEqual("Insufficient", result.EvidenceSufficiency);
         Assert.AreEqual("High", result.ModelSignalRiskLevel);
     }
+
+        [TestMethod]
+        public async Task GenerateExtendedRiskAssessmentAsync_AcceptsStringEvidenceFromFoundryAgent()
+        {
+                var deepAgent = new Mock<IDeepAnalysisAgentService>();
+                deepAgent.SetupGet(service => service.IsEnabled).Returns(true);
+                deepAgent.SetupGet(service => service.ModelVersion).Returns("foundry-agent:bhs-deep-analysis@5");
+                deepAgent
+                        .Setup(service => service.GenerateAssessmentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                        .ReturnsAsync("""
+                                {
+                                    "overallRiskLevel": "Moderate",
+                                    "riskScore": 5,
+                                    "evidenceSufficiency": "Sufficient",
+                                    "summary": "Synthetic assessment",
+                                    "keyFactors": ["Reported symptom"],
+                                    "recommendations": ["Clinical follow-up"],
+                                    "immediateActions": [],
+                                    "followUpRecommendations": [],
+                                    "confidenceLevel": 0.6,
+                                    "conditionAssessments": [{
+                                        "conditionId": "test-condition",
+                                        "conditionName": "Test condition",
+                                        "criteriaEvaluations": [{
+                                            "criterionId": "A",
+                                            "evidence": "Single criterion evidence",
+                                            "subCriteriaEvaluations": [{
+                                                "subCriterionId": "A1",
+                                                "evidence": "Single sub-criterion evidence"
+                                            }]
+                                        }]
+                                    }]
+                                }
+                                """);
+
+                var service = new RiskAssessmentService(
+                        Mock.Of<ILogger<RiskAssessmentService>>(),
+                        Options.Create(new AzureOpenAIOptions()),
+                        Options.Create(new ExtendedAssessmentOpenAIOptions()),
+                        Options.Create(new FoundryQuickAnalysisOptions()),
+                        Options.Create(new FoundryDeepAnalysisOptions { Enabled = true }),
+                        Mock.Of<IQuickAnalysisAgentService>(),
+                        deepAgent.Object,
+                        Mock.Of<ISessionStorageService>(),
+                        Mock.Of<IDSM5DataService>());
+
+                var result = await service.GenerateExtendedRiskAssessmentAsync(new SessionData
+                {
+                        SessionId = "string-evidence-session",
+                        Transcription = "Synthetic reported symptom"
+                });
+
+                Assert.IsNotNull(result);
+                var criterion = result.ConditionAssessments!.Single().CriteriaEvaluations.Single();
+                CollectionAssert.AreEqual(new[] { "Single criterion evidence" }, criterion.Evidence);
+                CollectionAssert.AreEqual(
+                        new[] { "Single sub-criterion evidence" },
+                        criterion.SubCriteriaEvaluations.Single().Evidence);
+        }
 }

@@ -15,6 +15,7 @@ param(
     [string]$Server = "bhs-postgres-sql.postgres.database.azure.com",
     [string]$Database = "bhs_dev",
     [string]$RoleName = "bhs-functions",
+    [string]$ExistingOwnerRoleName,
     [string]$PrincipalId,
     [string]$ResourceGroup = "bhs",
     [string]$ContainerAppName = "bhs-functions"
@@ -25,6 +26,9 @@ $env:AZURE_CORE_ONLY_SHOW_ERRORS = "true"
 
 if ($RoleName -notmatch '^[A-Za-z0-9_-]+$') {
     throw "RoleName may contain only letters, numbers, underscores, and hyphens."
+}
+if (-not [string]::IsNullOrWhiteSpace($ExistingOwnerRoleName) -and $ExistingOwnerRoleName -notmatch '^[A-Za-z0-9_-]+$') {
+    throw "ExistingOwnerRoleName may contain only letters, numbers, underscores, and hyphens."
 }
 
 $psql = Get-Command psql -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
@@ -133,7 +137,8 @@ try {
         throw "Failed to map PostgreSQL role $RoleName to principal $PrincipalId."
     }
 
-    $ownershipSql = @'
+    if ([string]::IsNullOrWhiteSpace($ExistingOwnerRoleName)) {
+        $ownershipSql = @'
 DO $body$
 DECLARE
     database_object record;
@@ -164,14 +169,25 @@ END
 $body$;
 '@.Replace('__ROLE_NAME__', $RoleName)
 
-    $transferOwnership = Invoke-Psql `
-        -Connection "$connection dbname=$Database" `
-        -Arguments @("--set", "ON_ERROR_STOP=1", "--command", $ownershipSql)
-    if ($transferOwnership.ExitCode -ne 0) {
-        throw "Failed to transfer PostgreSQL application object ownership to role $RoleName."
+        $transferOwnership = Invoke-Psql `
+            -Connection "$connection dbname=$Database" `
+            -Arguments @("--set", "ON_ERROR_STOP=1", "--command", $ownershipSql)
+        if ($transferOwnership.ExitCode -ne 0) {
+            throw "Failed to transfer PostgreSQL application object ownership to role $RoleName."
+        }
+    }
+    else {
+        Write-Information "Preserving ownership under $ExistingOwnerRoleName for side-by-side rollback." -InformationAction Continue
     }
 
+    $ownerMembershipGrant = if ([string]::IsNullOrWhiteSpace($ExistingOwnerRoleName)) {
+        ""
+    }
+    else {
+        "GRANT `"$ExistingOwnerRoleName`" TO `"$RoleName`";"
+    }
     $grants = @"
+$ownerMembershipGrant
 GRANT CONNECT ON DATABASE "$Database" TO "$RoleName";
 GRANT USAGE, CREATE ON SCHEMA public TO "$RoleName";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "$RoleName";
@@ -188,6 +204,12 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO "$
         throw "Failed to grant application permissions to PostgreSQL role $RoleName."
     }
 
+    $ownershipCheck = if ([string]::IsNullOrWhiteSpace($ExistingOwnerRoleName)) {
+        "pg_get_userbyid(c.relowner) = '$RoleName' AND"
+    }
+    else {
+        ""
+    }
     $verifySql = @"
 SELECT COUNT(*)
 FROM pg_class c
@@ -195,8 +217,7 @@ JOIN pg_namespace n ON n.oid = c.relnamespace
 WHERE n.nspname = 'public'
   AND c.relkind IN ('r', 'p')
   AND NOT (
-        pg_get_userbyid(c.relowner) = '$RoleName'
-        AND
+        $ownershipCheck
     has_table_privilege('$RoleName', c.oid, 'SELECT')
     AND has_table_privilege('$RoleName', c.oid, 'INSERT')
     AND has_table_privilege('$RoleName', c.oid, 'UPDATE')
@@ -208,7 +229,22 @@ WHERE n.nspname = 'public'
         -Arguments @("--tuples-only", "--no-align", "--command", $verifySql)
     $missingTablePrivileges = ($permissionCheck.Output | Out-String).Trim()
     if ($permissionCheck.ExitCode -ne 0 -or $missingTablePrivileges -ne "0") {
-        throw "PostgreSQL role $RoleName is missing ownership or application privileges on $missingTablePrivileges public table(s)."
+        throw "PostgreSQL role $RoleName is missing required application access on $missingTablePrivileges public table(s)."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExistingOwnerRoleName)) {
+        $membershipCheck = Invoke-Psql `
+            -Connection "$connection dbname=$Database" `
+            -Arguments @(
+                "--tuples-only",
+                "--no-align",
+                "--command",
+                "SELECT pg_has_role('$RoleName', '$ExistingOwnerRoleName', 'MEMBER');"
+            )
+        $hasOwnerMembership = ($membershipCheck.Output | Out-String).Trim()
+        if ($membershipCheck.ExitCode -ne 0 -or $hasOwnerMembership -ne "t") {
+            throw "PostgreSQL role $RoleName does not inherit the existing owner role $ExistingOwnerRoleName."
+        }
     }
 
     Write-Information "PostgreSQL role $RoleName is configured for principal $PrincipalId." -InformationAction Continue

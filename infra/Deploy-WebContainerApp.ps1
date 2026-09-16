@@ -13,7 +13,7 @@ param(
     [string]$SubscriptionId = "6bf68138-6ea4-4272-a3db-78e737e132a6",
     [string]$ResourceGroup = "bhs",
     [string]$AppName = "bhs-web",
-    [string]$FunctionsAppName = "bhs-functions",
+    [string]$ApiBaseUrl = "https://bhs-functions-easyauth.azurewebsites.net/api",
     [string]$RegistryName = "bhsdam4hajt53n4i4pg",
     [string]$UiClientId = "16bd4645-402e-44ba-9c6f-414af87f7d6e",
     [string]$ImageTag = (Get-Date).ToUniversalTime().ToString("yyyyMMdd-HHmmss"),
@@ -63,7 +63,7 @@ try {
                 npm ci
                 if ($LASTEXITCODE -ne 0) { throw "npm ci failed." }
             }
-            npm run test:run
+            npm run test:run -- --maxWorkers=4 --testTimeout=15000
             if ($LASTEXITCODE -ne 0) { throw "Web tests failed." }
             npm run build
             if ($LASTEXITCODE -ne 0) { throw "Web build failed." }
@@ -85,7 +85,8 @@ try {
     $parameters = @(
         "appName=$AppName",
         "imageTag=$ImageTag",
-        "uiClientId=$UiClientId"
+        "uiClientId=$UiClientId",
+        "apiBaseUrl=$ApiBaseUrl"
     )
 
     Write-Information "Validating the web deployment..." -InformationAction Continue
@@ -115,21 +116,6 @@ try {
         throw "Unable to resolve the web Container App endpoint."
     }
     $webOrigin = "https://$($webApp.properties.configuration.ingress.fqdn)"
-
-    $functionsApp = az containerapp show --resource-group $ResourceGroup --name $FunctionsAppName --output json | ConvertFrom-Json
-    if ($LASTEXITCODE -ne 0) { throw "Unable to read the Functions Container App." }
-    $corsSetting = $functionsApp.properties.template.containers[0].env |
-        Where-Object { $_.name -eq "ALLOWED_ORIGINS" } |
-        Select-Object -First 1
-    $allowedOrigins = @($corsSetting.value -split "," | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    if ($allowedOrigins -notcontains $webOrigin) {
-        $allowedOrigins = @($allowedOrigins + $webOrigin | Select-Object -Unique)
-        Invoke-Az containerapp update `
-            --resource-group $ResourceGroup `
-            --name $FunctionsAppName `
-            --set-env-vars "ALLOWED_ORIGINS=$($allowedOrigins -join ',')" `
-            --output none
-    }
 
     $uiApp = az ad app show --id $UiClientId --output json | ConvertFrom-Json
     if ($LASTEXITCODE -ne 0) { throw "Unable to read the Entra SPA app registration." }
@@ -171,16 +157,16 @@ try {
 
     $runtimeConfig = Invoke-WebRequest -Uri "$webOrigin/config.js" -TimeoutSec 30
     $runtimeConfigContent = Get-ResponseText $runtimeConfig
-    if ($runtimeConfigContent -notmatch [regex]::Escape("https://bhs-functions.victorioussmoke-ce62b9bb.eastus.azurecontainerapps.io/api")) {
+    if ($runtimeConfigContent -notmatch [regex]::Escape($ApiBaseUrl)) {
         throw "The runtime configuration does not reference the expected Azure Functions API."
     }
     if ($runtimeConfigContent -match "VITE_AZURE_BLOB_SAS_URL|DAM_API_KEY|FUNCTIONS_API_KEY") {
         throw "The browser runtime configuration contains a forbidden secret-bearing setting."
     }
 
-    $functionsFqdn = $functionsApp.properties.configuration.ingress.fqdn
+    $functionsOrigin = ([uri]$ApiBaseUrl).GetLeftPart([System.UriPartial]::Authority)
     $preflight = Invoke-WebRequest `
-        -Uri "https://$functionsFqdn/api/health" `
+        -Uri "$functionsOrigin/api/health" `
         -Method Options `
         -Headers @{
             Origin = $webOrigin
@@ -192,7 +178,7 @@ try {
     }
 
     Write-Information "Deployment complete: $webOrigin" -InformationAction Continue
-    Write-Information "Functions API: https://$functionsFqdn/api" -InformationAction Continue
+    Write-Information "Functions API: $ApiBaseUrl" -InformationAction Continue
     Write-Information "Entra SPA redirect and exact-origin CORS verified." -InformationAction Continue
 }
 finally {

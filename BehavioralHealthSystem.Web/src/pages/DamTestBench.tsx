@@ -19,6 +19,7 @@ import {
   Download,
 } from 'lucide-react';
 import { config } from '@/config/constants';
+import { authenticatedApiFetch } from '@/services/api';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,7 +156,7 @@ const DamTestBench: React.FC = () => {
     setDamHealthLoading(true);
     setDamHealthError(null);
     try {
-      const res = await fetch(`${apiBaseUrl}/dam-health`, { method: 'GET' });
+      const res = await authenticatedApiFetch(`${apiBaseUrl}/dam-health`, { method: 'GET' });
       if (!res.ok) {
         // Try direct DAM endpoint (for local dev)
         const directRes = await fetch('http://localhost:8000/health', { method: 'GET' });
@@ -190,7 +191,7 @@ const DamTestBench: React.FC = () => {
       const formData = new FormData();
       formData.append('file', selectedFile!);
 
-      const res = await fetch(`${apiBaseUrl}/convert-audio`, {
+      const res = await authenticatedApiFetch(`${apiBaseUrl}/convert-audio`, {
         method: 'POST',
         body: formData,
         signal: abortRef.current.signal,
@@ -265,7 +266,7 @@ const DamTestBench: React.FC = () => {
         formData.append('sessionId', sessionId);
         formData.append('file', selectedFile!);
 
-        res = await fetch(`${apiBaseUrl}/process-audio-upload`, {
+        res = await authenticatedApiFetch(`${apiBaseUrl}/process-audio-upload`, {
           method: 'POST',
           body: formData,
           signal: abortRef.current.signal,
@@ -277,7 +278,7 @@ const DamTestBench: React.FC = () => {
             ? { userId, sessionId, ...(fileName ? { fileName } : {}) }
             : { userId, sessionId, ...(filePath ? { filePath } : {}) };
 
-        res = await fetch(`${apiBaseUrl}${endpoint}`, {
+        res = await authenticatedApiFetch(`${apiBaseUrl}${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),

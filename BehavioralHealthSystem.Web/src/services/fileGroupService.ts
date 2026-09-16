@@ -1,6 +1,7 @@
 import { createAppError } from '@/utils';
 import { config } from '@/config/constants';
 import { Logger } from '@/utils/logger';
+import { authenticatedApiFetch } from './api';
 
 const log = Logger.create('FileGroupService');
 import type {
@@ -51,7 +52,7 @@ class FileGroupApiClient {
         ...options.headers,
       };
 
-      const response = await fetch(url, {
+      const response = await authenticatedApiFetch(url, {
         ...options,
         headers: defaultHeaders,
       });

@@ -168,6 +168,7 @@ public class SymptomPresence
     /// Evidence supporting this assessment
     /// </summary>
     [JsonPropertyName("evidence")]
+    [JsonConverter(typeof(StringOrArrayJsonConverter))]
     public List<string> Evidence { get; set; } = new();
     
     /// <summary>

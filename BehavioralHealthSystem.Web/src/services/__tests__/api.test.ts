@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
-import { apiService } from '../api';
+import { apiService, authenticatedApiFetch, setApiAuthProvider } from '../api';
 
 /**
  * Tests for apiService.
@@ -351,5 +351,29 @@ describe('apiService', () => {
       // No double slashes
       expect(url).not.toContain('//api//');
     });
+  });
+});
+
+describe('authenticatedApiFetch', () => {
+  it('attaches the acquired API bearer token', async () => {
+    setApiAuthProvider({
+      getAuthHeaders: vi.fn().mockResolvedValue({ Authorization: 'Bearer api-token' }),
+    });
+    mockFetchSuccess({ success: true });
+
+    await authenticatedApiFetch(`${BASE_URL}/sessions`);
+
+    const [, options] = (global.fetch as Mock).mock.calls[0];
+    expect(new Headers(options.headers).get('Authorization')).toBe('Bearer api-token');
+  });
+
+  it('does not send an anonymous request when API token acquisition fails', async () => {
+    setApiAuthProvider({
+      getAuthHeaders: vi.fn().mockRejectedValue(new Error('API token unavailable')),
+    });
+
+    await expect(authenticatedApiFetch(`${BASE_URL}/sessions`))
+      .rejects.toThrow('API token unavailable');
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 });

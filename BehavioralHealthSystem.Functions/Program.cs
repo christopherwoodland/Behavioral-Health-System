@@ -53,6 +53,7 @@ var host = new HostBuilder()
     {
         // Add CORS middleware
         worker.UseMiddleware<BehavioralHealthSystem.Functions.Services.CorsMiddleware>();
+        worker.UseMiddleware<BehavioralHealthSystem.Functions.Services.EasyAuthAuthorizationMiddleware>();
     })
     .ConfigureServices((context, services) =>
     {
@@ -155,7 +156,6 @@ var host = new HostBuilder()
         });
 
         // Authentication & Authorization Services
-        services.AddSingleton<IEntraIdValidationService, EntraIdValidationService>();
         services.AddSingleton<IApiKeyValidationService, ApiKeyValidationService>();
 
         // Application Services

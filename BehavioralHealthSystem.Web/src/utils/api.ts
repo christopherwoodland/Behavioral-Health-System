@@ -4,6 +4,7 @@
  */
 
 import { env } from './env';
+import { authenticatedApiFetch } from '@/services/api';
 
 // Common API response types
 export interface ApiResponse<T = any> {
@@ -71,7 +72,7 @@ export const fetchWithConfig = async (
   const mergedConfig = { ...DEFAULT_CONFIG, ...config };
   const { timeout, retries, retryDelay, ...fetchConfig } = mergedConfig;
 
-  const operation = () => withTimeout(fetch(url, fetchConfig), timeout!);
+  const operation = () => withTimeout(authenticatedApiFetch(url, fetchConfig), timeout!);
 
   return withRetry(operation, retries!, retryDelay!);
 };

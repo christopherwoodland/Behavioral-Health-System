@@ -5,6 +5,7 @@
 
 import { env } from '@/utils/env';
 import { Logger } from '@/utils/logger';
+import { authenticatedApiFetch } from './api';
 
 const log = Logger.create('ChatTranscriptService');
 
@@ -230,7 +231,7 @@ class ChatTranscriptService {
         containerName: 'chat-transcripts'
       };
 
-      const response = await fetch(endpoint, {
+      const response = await authenticatedApiFetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

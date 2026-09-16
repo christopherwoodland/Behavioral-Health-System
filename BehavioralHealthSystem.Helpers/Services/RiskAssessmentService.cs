@@ -851,7 +851,7 @@ public class RiskAssessmentService : IRiskAssessmentService
                             promptBuilder.AppendLine("              \"severity\": 0-4,");
                             promptBuilder.AppendLine("              \"isPresent\": true|false,");
                             promptBuilder.AppendLine("              \"confidence\": 0.0-1.0,");
-                            promptBuilder.AppendLine("              \"evidence\": \"Evidence text\",");
+                            promptBuilder.AppendLine("              \"evidence\": [\"Evidence text\"],");
                             promptBuilder.AppendLine("              \"notes\": \"Additional notes\",");
                             promptBuilder.AppendLine("              \"observedExamples\": [\"example1\"]");
                             promptBuilder.AppendLine(isLastSub ? "            }" : "            },");

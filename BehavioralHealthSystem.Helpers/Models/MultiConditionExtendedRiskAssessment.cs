@@ -204,6 +204,7 @@ public class CriterionEvaluationResult
     /// Evidence supporting the criterion evaluation
     /// </summary>
     [JsonPropertyName("evidence")]
+    [JsonConverter(typeof(StringOrArrayJsonConverter))]
     public List<string> Evidence { get; set; } = new();
 
     /// <summary>
@@ -282,6 +283,7 @@ public class SubCriterionEvaluationResult
     /// Evidence supporting this evaluation
     /// </summary>
     [JsonPropertyName("evidence")]
+    [JsonConverter(typeof(StringOrArrayJsonConverter))]
     public List<string> Evidence { get; set; } = new();
 
     /// <summary>
@@ -300,6 +302,55 @@ public class SubCriterionEvaluationResult
 /// <summary>
 /// Request for multi-condition assessment
 /// </summary>
+public sealed class StringOrArrayJsonConverter : JsonConverter<List<string>>
+{
+    public override List<string> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+        {
+            var value = reader.GetString();
+            return string.IsNullOrWhiteSpace(value) ? new List<string>() : new List<string> { value };
+        }
+
+        if (reader.TokenType == JsonTokenType.Null)
+        {
+            return new List<string>();
+        }
+
+        if (reader.TokenType != JsonTokenType.StartArray)
+        {
+            throw new JsonException("Expected an evidence string or array.");
+        }
+
+        var values = new List<string>();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("Evidence arrays must contain only strings.");
+            }
+
+            var value = reader.GetString();
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                values.Add(value);
+            }
+        }
+
+        return values;
+    }
+
+    public override void Write(Utf8JsonWriter writer, List<string> value, JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
+        foreach (var item in value)
+        {
+            writer.WriteStringValue(item);
+        }
+        writer.WriteEndArray();
+    }
+}
+
 public class MultiConditionAssessmentRequest
 {
     /// <summary>

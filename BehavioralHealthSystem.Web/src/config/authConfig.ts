@@ -61,7 +61,6 @@ export const loginRequest: RedirectRequest = {
     'openid',
     'profile',
     'email',
-    'User.Read', // Microsoft Graph API scope for reading user profile
     // Include API scope here so consent is requested once at sign-in time.
     // This ensures the access token (which carries the `roles` claim) is
     // obtainable silently on subsequent calls without additional consent prompts.
@@ -89,7 +88,7 @@ export const apiRequest: PopupRequest = {
  * between applications by providing a "login_hint" property.
  */
 export const silentRequest: PopupRequest = {
-  scopes: ['openid', 'profile', 'email', 'User.Read'],
+  scopes: ['openid', 'profile', 'email'],
   loginHint: 'example@domain.com', // Used for silent SSO
 };
 

@@ -93,10 +93,10 @@ var authenticationEnvironment = concat(empty(entraClientId) ? [] : [
     name: 'ENTRA_CLIENT_ID'
     value: entraClientId
   }
-], empty(functionsApiKey) ? [] : [
+], [
   {
     name: 'FUNCTIONS_API_KEY'
-    secretRef: 'functions-api-key'
+    secretRef: empty(functionsApiKey) ? 'dam-api-key' : 'functions-api-key'
   }
 ])
 
@@ -356,7 +356,7 @@ resource app 'Microsoft.App/containerApps@2025-01-01' = {
             }
             {
               name: 'FFMPEG_USE_PIPE_MODE'
-              value: 'true'
+              value: 'false'
             }
           ], authenticationEnvironment)
           resources: {

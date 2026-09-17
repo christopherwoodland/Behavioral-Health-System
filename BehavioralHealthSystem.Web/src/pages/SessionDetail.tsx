@@ -461,8 +461,8 @@ const SessionDetail: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-center space-x-4">
           <button type="button"
             onClick={() => navigate('/sessions')}
             className="btn btn--secondary"
@@ -472,17 +472,17 @@ const SessionDetail: React.FC = () => {
             Back to Sessions
           </button>
 
-          <div>
+          <div className="min-w-0">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               Session Details
             </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-1">
+            <p className="text-gray-600 dark:text-gray-300 mt-1 [overflow-wrap:anywhere]">
               ID: {session.sessionId}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
           <button type="button"
             onClick={toggleRawJson}
             className="btn btn--secondary min-w-[100px] h-10 justify-center"
@@ -605,6 +605,29 @@ const SessionDetail: React.FC = () => {
                 {session.userId}
               </div>
             </div>
+
+            {session.analysisResults?.source && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Client
+                  </label>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {session.analysisResults.source === 'mico-avatar' ? 'MICO avatar' : session.analysisResults.source}
+                  </div>
+                </div>
+                {session.analysisResults.jobId && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      BHS Job ID
+                    </label>
+                    <div className="font-mono text-sm bg-gray-100 dark:bg-gray-700 px-3 py-2 rounded border break-all">
+                      {session.analysisResults.jobId}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {session.metadata_user_id && (
               <div>
@@ -975,7 +998,7 @@ const SessionDetail: React.FC = () => {
               <div>
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3 flex items-center">
                   <Brain className="w-5 h-5 mr-2" aria-hidden="true" />
-                  Mental Health Scores
+                  Screening Signals
                 </h3>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -984,7 +1007,7 @@ const SessionDetail: React.FC = () => {
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                          Depression Score
+                          Depression screening signal
                         </span>
                         <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
                       </div>
@@ -1006,7 +1029,7 @@ const SessionDetail: React.FC = () => {
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
-                          Anxiety Score
+                          Anxiety screening signal
                         </span>
                         <Heart className="w-4 h-4 text-purple-600 dark:text-purple-400" aria-hidden="true" />
                       </div>
@@ -1065,6 +1088,17 @@ const SessionDetail: React.FC = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {session.analysisResults?.error && (
+              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                <h3 className="text-sm font-medium text-red-900 dark:text-red-200 mb-1">
+                  Processing failure{session.analysisResults.failedStep ? `: ${session.analysisResults.failedStep}` : ''}
+                </h3>
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  {session.analysisResults.error}
+                </p>
               </div>
             )}
           </div>

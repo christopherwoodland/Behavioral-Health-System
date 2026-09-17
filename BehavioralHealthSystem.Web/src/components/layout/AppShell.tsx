@@ -50,6 +50,7 @@ export const AppShell: React.FC<AppShellProps> = ({ className = '' }) => {
     : isAuthenticated && isAdmin()
       ? navigationItems
       : [];
+  const hasNavigation = navItems.length > 0;
 
   const isActivePath = (path: string) =>
     path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
@@ -94,16 +95,18 @@ export const AppShell: React.FC<AppShellProps> = ({ className = '' }) => {
     <header className={className}>
       <div className="mindbridge-topbar">
         <div className="flex min-w-0 items-center gap-2">
-          <button
-            type="button"
-            className="mindbridge-icon-button md:hidden"
-            onClick={() => setIsMobileMenuOpen((open) => !open)}
-            onKeyDown={handleEnterSpace(() => setIsMobileMenuOpen((open) => !open))}
-            aria-label={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={isMobileMenuOpen}
-          >
-            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {hasNavigation && (
+            <button
+              type="button"
+              className="mindbridge-icon-button md:hidden"
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              onKeyDown={handleEnterSpace(() => setIsMobileMenuOpen((open) => !open))}
+              aria-label={isMobileMenuOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={isMobileMenuOpen}
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          )}
           <Link to="/" className="mindbridge-brand" aria-label="MindBridge - Go to overview">
             <img src="/mbv.svg" alt="" className="mindbridge-brand__mark" />
             <span>MindBridge</span>
@@ -172,16 +175,18 @@ export const AppShell: React.FC<AppShellProps> = ({ className = '' }) => {
         </div>
       </div>
 
-      <aside className="mindbridge-sidebar hidden md:block">
-        <div className="px-3 py-4">
-          <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Workspace
-          </p>
-          {navigation}
-        </div>
-      </aside>
+      {hasNavigation && (
+        <aside className="mindbridge-sidebar hidden md:block">
+          <div className="px-3 py-4">
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Workspace
+            </p>
+            {navigation}
+          </div>
+        </aside>
+      )}
 
-      {isMobileMenuOpen && (
+      {hasNavigation && isMobileMenuOpen && (
         <div className="mindbridge-mobile-nav md:hidden">
           <div className="p-3">{navigation}</div>
         </div>

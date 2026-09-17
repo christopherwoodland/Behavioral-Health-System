@@ -18,6 +18,8 @@
 # Local development runtime data
 .local/
 .copilot-azure/
+.vite/
+offline-models/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

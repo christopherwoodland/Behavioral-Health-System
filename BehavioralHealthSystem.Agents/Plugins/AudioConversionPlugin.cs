@@ -89,7 +89,19 @@ public class AudioConversionPlugin
         byte[] convertedData;
         if (usePipeMode)
         {
-            convertedData = await ConvertViaPipeAsync(audioData, inputExtension, _options.EnableSilenceRemoval, cancellationToken);
+            try
+            {
+                convertedData = await ConvertViaPipeAsync(audioData, inputExtension, _options.EnableSilenceRemoval, cancellationToken);
+            }
+            catch (IOException ex) when (!cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "[{PluginName}] Pipe conversion failed; retrying with temp-file mode.",
+                    nameof(AudioConversionPlugin));
+                usePipeMode = false;
+                convertedData = await ConvertViaTempFilesAsync(audioData, inputExtension, _options.EnableSilenceRemoval, cancellationToken);
+            }
         }
         else
         {

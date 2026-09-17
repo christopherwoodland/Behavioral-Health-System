@@ -20,6 +20,7 @@ public sealed class AudioJobFunctions
     private const int MaxFileNameLength = 255;
     private const string AgeHeaderName = "X-User-Age";
     private const string WeightKgHeaderName = "X-User-Weight-Kg";
+    private const string ClientSourceHeaderName = "X-BHS-Client-Source";
 
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -146,6 +147,12 @@ public sealed class AudioJobFunctions
             originalFileName!,
             ownerIdHash,
             idempotencyKey);
+        var clientSource = string.Equals(
+            GetHeaderValue(request, ClientSourceHeaderName),
+            "mico-avatar",
+            StringComparison.OrdinalIgnoreCase)
+            ? "mico-avatar"
+            : "audio-job-api";
         var cancellationToken = request.FunctionContext.CancellationToken;
 
         if (idempotencyKey is not null)
@@ -200,7 +207,7 @@ public sealed class AudioJobFunctions
                     ["ownerIdHash"] = ownerIdHash,
                     ["originalFileNameBase64"] = Convert.ToBase64String(Encoding.UTF8.GetBytes(originalFileName!)),
                     ["uploadedAt"] = DateTimeOffset.UtcNow.ToString("O"),
-                    ["source"] = "audio-job-api"
+                    ["source"] = clientSource
                 },
                 Conditions = new BlobRequestConditions { IfNoneMatch = ETag.All }
             };
@@ -227,6 +234,8 @@ public sealed class AudioJobFunctions
                 UserId = userId!,
                 SessionId = sessionId!,
                 FileName = storedFileName,
+                BlobUrl = blobClient.Uri.ToString(),
+                ClientSource = clientSource,
                 OwnerIdHash = ownerIdHash,
                 Age = age,
                 WeightKg = weightKg
@@ -443,7 +452,9 @@ public sealed class AudioJobFunctions
         if (metadata.RuntimeStatus != OrchestrationRuntimeStatus.Completed)
         {
             var status = MapStatus(metadata, null);
-            if (metadata.IsRunning || metadata.RuntimeStatus == OrchestrationRuntimeStatus.Suspended)
+            if (metadata.RuntimeStatus is OrchestrationRuntimeStatus.Pending
+                or OrchestrationRuntimeStatus.Running
+                or OrchestrationRuntimeStatus.Suspended)
             {
                 var pending = await CreateJsonResponseAsync(request, HttpStatusCode.Accepted, new
                 {

@@ -6,8 +6,13 @@
 # IDE files
 .vs/
 .vscode/
+.vite/
 *.user
 *.suo
+
+# Local development state
+.local/
+.copilot-azure/
 
 # Test results
 **/TestResults/
@@ -43,7 +48,13 @@ BehavioralHealthSystem.Web/
 # Band Service (separate)
 BehavioralHealthSystem.BandService/
 
+# Other independently built services and local model caches
+dam-server/
+offline-models/
+nupkg/
+
 # Infrastructure
+infra/
 infrastructure/
 
 # Scripts

@@ -196,6 +196,13 @@ export interface SessionData {
   updatedAt: string;
   status: string;
   analysisResults?: {
+    jobId?: string;
+    source?: string;
+    provider?: string;
+    sourceBlobPath?: string;
+    error?: string;
+    failedStep?: string;
+    processingElapsedMs?: number;
     depressionScore?: number;
     anxietyScore?: number;
     riskLevel: string;

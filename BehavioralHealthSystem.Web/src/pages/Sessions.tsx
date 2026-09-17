@@ -2,10 +2,9 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, Filter, ChevronDown, ChevronUp, Eye, Download, Trash2, RefreshCw, AlertCircle, CheckCircle, Clock, XCircle, ArrowUpDown } from 'lucide-react';
 import { useAccessibility } from '../hooks/useAccessibility';
-import { useAuth } from '../contexts/useAuth';
 import { apiService } from '../services/api';
 import { fileGroupService } from '../services/fileGroupService';
-import { getUserId, formatRelativeTime, formatDateTime, formatQuantizedScoreLabel } from '../utils';
+import { formatRelativeTime, formatDateTime, formatQuantizedScoreLabel } from '../utils';
 import { Logger } from '@/utils/logger';
 import type { SessionData, AppError } from '../types';
 
@@ -70,7 +69,6 @@ const getSeverityLevel = (category?: string): number => {
 };
 
 const Sessions: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState<SessionWithUI[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,20 +85,13 @@ const Sessions: React.FC = () => {
 
   const { announceToScreenReader } = useAccessibility();
 
-  // Get authenticated user ID for API calls (matches blob storage folder structure)
-  const getAuthenticatedUserId = useCallback((): string => {
-    // Use authenticated user ID if available, otherwise fall back to getUserId utility
-    return user?.id || getUserId();
-  }, [user?.id]);
-
   // Load sessions from API
   const loadSessions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const userId = getAuthenticatedUserId(); // Use authenticated user ID to match blob storage folder structure
-      const response = await apiService.getUserSessions(userId);
+      const response = await apiService.getAllSessions();
 
       // Transform session data to include computed UI fields
       const transformedSessions: SessionWithUI[] = await Promise.all(
@@ -170,6 +161,9 @@ const Sessions: React.FC = () => {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(session =>
         session.sessionId.toLowerCase().includes(searchLower) ||
+        session.userId.toLowerCase().includes(searchLower) ||
+        session.analysisResults?.jobId?.toLowerCase().includes(searchLower) ||
+        session.analysisResults?.source?.toLowerCase().includes(searchLower) ||
         session.fileName?.toLowerCase().includes(searchLower) ||
         session.groupName?.toLowerCase().includes(searchLower) ||
         statusConfig[session.status as keyof typeof statusConfig]?.label.toLowerCase().includes(searchLower)
@@ -487,7 +481,7 @@ const Sessions: React.FC = () => {
             Analysis Sessions
           </h1>
           <p className="text-gray-600 dark:text-gray-300 mt-1">
-            View and manage your audio analysis sessions
+            View and manage audio analysis sessions from every BHS client
           </p>
         </div>
 
@@ -663,11 +657,11 @@ const Sessions: React.FC = () => {
       {filteredAndSortedSessions.length > 0 ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Desktop Table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full" role="table" aria-label="Analysis sessions">
+          <div className="hidden xl:block overflow-x-auto">
+            <table className="w-full table-fixed" role="table" aria-label="Analysis sessions">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-10 px-3 py-3 text-left">
                     <input
                       type="checkbox"
                       checked={selectedSessions.size === filteredAndSortedSessions.length}
@@ -676,7 +670,7 @@ const Sessions: React.FC = () => {
                       aria-label="Select all sessions"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-[280px] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleColumnSort('session')}
@@ -687,7 +681,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('session')}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-[90px] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleColumnSort('group')}
@@ -698,7 +692,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('group')}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-[115px] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleColumnSort('status')}
@@ -709,7 +703,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('status')}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-[130px] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleColumnSort('depressionScore')}
@@ -720,7 +714,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('depressionScore')}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-[130px] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleColumnSort('anxietyScore')}
@@ -731,7 +725,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('anxietyScore')}
                     </button>
                   </th>
-                  <th className="px-6 py-3 text-left">
+                  <th className="w-[140px] px-3 py-3 text-left">
                     <button
                       type="button"
                       onClick={() => handleColumnSort('date')}
@@ -742,7 +736,7 @@ const Sessions: React.FC = () => {
                       {getSortIcon('date')}
                     </button>
                   </th>
-                  <th className="sticky right-0 z-20 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
+                  <th className="sticky right-0 z-20 w-[100px] px-3 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                     Actions
                   </th>
                 </tr>
@@ -753,7 +747,7 @@ const Sessions: React.FC = () => {
                     key={session.sessionId}
                     className="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <input
                         type="checkbox"
                         checked={selectedSessions.has(session.sessionId)}
@@ -762,20 +756,25 @@ const Sessions: React.FC = () => {
                         aria-label={`Select session ${session.sessionId}`}
                       />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white [overflow-wrap:anywhere]">
                           {session.fileName}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
                           ID: {session.sessionId.slice(-12)}
                         </div>
+                        {session.analysisResults?.source === 'mico-avatar' && (
+                          <div className="text-xs font-medium text-teal-700 dark:text-teal-300">
+                            MICO avatar
+                          </div>
+                        )}
                         <div className="text-xs text-gray-400 dark:text-gray-500">
                           {formatFileSize(session.fileSize || 0)}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <div className="text-sm">
                         {session.groupName ? (
                           <div>
@@ -793,10 +792,10 @@ const Sessions: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <StatusBadge status={session.status} />
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <div className="text-sm">
                         {session.depressionScore !== undefined && session.depressionScore !== null && session.depressionScore !== '' ? (
                           <span className="text-gray-900 dark:text-white font-medium">
@@ -807,7 +806,7 @@ const Sessions: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <div className="text-sm">
                         {session.anxietyScore !== undefined && session.anxietyScore !== null && session.anxietyScore !== '' ? (
                           <span className="text-gray-900 dark:text-white font-medium">
@@ -818,7 +817,7 @@ const Sessions: React.FC = () => {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4">
                       <div className="text-sm text-gray-900 dark:text-white">
                         {formatRelativeTime(session.uploadedAt)}
                       </div>
@@ -826,7 +825,7 @@ const Sessions: React.FC = () => {
                         {formatDateTime(session.uploadedAt)}
                       </div>
                     </td>
-                    <td className="sticky right-0 z-10 px-6 py-4 text-right bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50">
+                    <td className="sticky right-0 z-10 px-3 py-4 text-right bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-gray-700/50">
                       <div className="flex items-center justify-end gap-2">
                         <Link
                           to={`/sessions/${session.sessionId}`}
@@ -866,14 +865,14 @@ const Sessions: React.FC = () => {
           </div>
 
           {/* Mobile Cards */}
-          <div className="md:hidden space-y-4 p-4">
+          <div className="xl:hidden space-y-4 p-4">
             {filteredAndSortedSessions.map((session) => (
               <div
                 key={session.sessionId}
                 className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 items-start space-x-3">
                     <input
                       type="checkbox"
                       checked={selectedSessions.has(session.sessionId)}
@@ -881,8 +880,8 @@ const Sessions: React.FC = () => {
                       className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       aria-label={`Select session ${session.sessionId}`}
                     />
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white [overflow-wrap:anywhere]">
                         {session.fileName}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -891,6 +890,11 @@ const Sessions: React.FC = () => {
                       {session.groupName && (
                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                           Group: {session.groupName}
+                        </p>
+                      )}
+                      {session.analysisResults?.source === 'mico-avatar' && (
+                        <p className="text-xs font-medium text-teal-700 dark:text-teal-300 mt-1">
+                          MICO avatar
                         </p>
                       )}
                     </div>
@@ -914,10 +918,10 @@ const Sessions: React.FC = () => {
                   <span>{formatFileSize(session.fileSize || 0)}</span>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-200 dark:border-gray-600 sm:flex sm:items-center sm:justify-end">
                   <Link
                     to={`/sessions/${session.sessionId}`}
-                    className="btn btn--secondary text-xs"
+                    className="btn btn--secondary w-full justify-center text-xs sm:w-auto"
                     aria-label={`View details for session ${session.sessionId}`}
                   >
                     <Eye className="w-4 h-4 mr-1" aria-hidden="true" />
@@ -925,7 +929,7 @@ const Sessions: React.FC = () => {
                   </Link>
                   {session.status === 'succeeded' && (
                     <button type="button"
-                      className="btn btn--secondary text-xs"
+                      className="btn btn--secondary w-full justify-center text-xs sm:w-auto"
                       aria-label={`Download results for session ${session.sessionId}`}
                     >
                       <Download className="w-4 h-4 mr-1" aria-hidden="true" />
@@ -934,7 +938,7 @@ const Sessions: React.FC = () => {
                   )}
                   <button type="button"
                     onClick={() => handleRerunSession(session.sessionId)}
-                    className="btn btn--secondary text-xs"
+                    className="btn btn--secondary w-full justify-center text-xs sm:w-auto"
                     aria-label={`Re-run analysis for session ${session.sessionId}`}
                   >
                     <RefreshCw className="w-4 h-4 mr-1" aria-hidden="true" />
@@ -942,7 +946,7 @@ const Sessions: React.FC = () => {
                   </button>
                   <button type="button"
                     onClick={() => handleDeleteSession(session.sessionId)}
-                    className="btn btn--danger text-xs"
+                    className="btn btn--danger w-full justify-center text-xs sm:w-auto"
                     aria-label={`Delete session ${session.sessionId}`}
                   >
                     <Trash2 className="w-4 h-4 mr-1" aria-hidden="true" />

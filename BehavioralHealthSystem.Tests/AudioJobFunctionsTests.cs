@@ -11,6 +11,8 @@ using BehavioralHealthSystem.Agents.Interfaces;
 using BehavioralHealthSystem.Agents.Models;
 using BehavioralHealthSystem.Functions.Functions;
 using BehavioralHealthSystem.Functions.Services;
+using BehavioralHealthSystem.Models;
+using BehavioralHealthSystem.Services.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.DurableTask;
@@ -47,6 +49,9 @@ public class AudioJobFunctionsTests
         _containerClient
             .Setup(client => client.GetBlobClient(It.IsAny<string>()))
             .Returns(_blobClient.Object);
+        _blobClient
+            .SetupGet(client => client.Uri)
+            .Returns(new Uri("https://storage.example/audio-uploads/users/user-1/recording.wav"));
         _containerClient
             .Setup(client => client.CreateIfNotExistsAsync(
                 It.IsAny<PublicAccessType>(),
@@ -141,7 +146,8 @@ public class AudioJobFunctionsTests
         var request = CreateRequest(
             "http://localhost/api/audio-jobs?userId=user-1&sessionId=session-1&fileName=recording.wav",
             audio,
-            ("Idempotency-Key", "recording-1"));
+            ("Idempotency-Key", "recording-1"),
+            ("X-BHS-Client-Source", "mico-avatar"));
 
         var response = await _function.StartAudioProcessingJob(request, _durableClient.Object);
 
@@ -152,6 +158,7 @@ public class AudioJobFunctionsTests
         Assert.AreEqual(scheduledOptions.InstanceId, scheduledInput.JobId);
         Assert.AreEqual("user-1", scheduledInput.UserId);
         Assert.AreEqual("session-1", scheduledInput.SessionId);
+        Assert.AreEqual("mico-avatar", scheduledInput.ClientSource);
         Assert.IsFalse(string.IsNullOrWhiteSpace(scheduledInput.OwnerIdHash));
         StringAssert.EndsWith(scheduledInput.FileName, ".wav");
         Assert.AreEqual(ETag.All, capturedUploadOptions?.Conditions?.IfNoneMatch);
@@ -253,6 +260,37 @@ public class AudioJobFunctionsTests
                 It.IsAny<StartOrchestrationOptions>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [TestMethod]
+    public async Task GetAudioProcessingJobResult_Pending_ReturnsAccepted()
+    {
+        AuthorizeRequests();
+        const string jobId = "audio-pending";
+        SetupDurableMetadata(CreateMetadata(
+            jobId,
+            nameof(AudioProcessingJobOrchestrator),
+            OrchestrationRuntimeStatus.Pending,
+            new AudioProcessingJobInput
+            {
+                JobId = jobId,
+                UserId = "user-1",
+                SessionId = "session-1",
+                FileName = "stored.wav",
+                OwnerIdHash = CreateOwnerIdHash("api-key-user")
+            },
+            null));
+        var request = CreateRequest($"http://localhost/api/audio-jobs/{jobId}/result", Array.Empty<byte>());
+
+        var response = await _function.GetAudioProcessingJobResult(
+            request,
+            _durableClient.Object,
+            jobId);
+
+        Assert.AreEqual(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.AreEqual("3", response.Headers.GetValues("Retry-After").Single());
+        var responseJson = await ReadResponseBodyAsync(response);
+        Assert.AreEqual("queued", responseJson.RootElement.GetProperty("status").GetString());
     }
 
     [TestMethod]
@@ -442,6 +480,122 @@ public class AudioJobFunctionsTests
 
         Assert.AreSame(expected, result);
         pipeline.VerifyAll();
+    }
+
+    [TestMethod]
+    public async Task PersistAudioJobResultActivity_Success_UpsertsMicoSessionAndPreservesExistingData()
+    {
+        var existing = new SessionData
+        {
+            SessionId = "session-1",
+            UserId = "user-1",
+            Transcription = "Existing transcript",
+            CreatedAt = "2026-01-01T00:00:00.0000000Z"
+        };
+        SessionData? saved = null;
+        var storage = new Mock<ISessionStorageService>();
+        storage.Setup(service => service.GetSessionDataAsync("session-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        storage.Setup(service => service.SaveSessionDataAsync(It.IsAny<SessionData>(), It.IsAny<CancellationToken>()))
+            .Callback((SessionData session, CancellationToken _) => saved = session)
+            .ReturnsAsync(true);
+        var activity = new PersistAudioJobResultActivity(
+            storage.Object,
+            Mock.Of<ILogger<PersistAudioJobResultActivity>>());
+
+        await activity.Run(new PersistAudioJobResultInput
+        {
+            Job = new AudioProcessingJobInput
+            {
+                JobId = "audio-job-1",
+                UserId = "user-1",
+                SessionId = "session-1",
+                FileName = "stored.wav",
+                BlobUrl = "https://storage.example/audio-uploads/users/user-1/stored.wav",
+                ClientSource = "mico-avatar",
+                OwnerIdHash = CreateOwnerIdHash("api-key-user"),
+                Age = 35,
+                WeightKg = 70
+            },
+            Result = new AudioProcessingResult
+            {
+                Success = true,
+                UserId = "user-1",
+                SessionId = "session-1",
+                OriginalFileName = "recording.wav",
+                SourceBlobPath = "users/user-1/stored.wav",
+                Provider = "local-dam",
+                StartedAtUtc = DateTime.UtcNow.AddSeconds(-2),
+                CompletedAtUtc = DateTime.UtcNow,
+                PredictionResponse = new PredictionResponse
+                {
+                    PredictedScoreDepression = "0.42",
+                    PredictedScoreAnxiety = "0.73",
+                    Status = "succeeded",
+                    Provider = "local-dam"
+                }
+            }
+        });
+
+        Assert.IsNotNull(saved);
+        Assert.AreEqual("session-1", saved.SessionId);
+        Assert.AreEqual("user-1", saved.UserId);
+        Assert.AreEqual("Existing transcript", saved.Transcription);
+        Assert.AreEqual("succeeded", saved.Status);
+        Assert.AreEqual("audio-job-1", saved.AnalysisResults?.JobId);
+        Assert.AreEqual("mico-avatar", saved.AnalysisResults?.Source);
+        Assert.AreEqual(0.42, saved.AnalysisResults?.DepressionScore);
+        Assert.AreEqual(0.73, saved.AnalysisResults?.AnxietyScore);
+        Assert.AreEqual("0.42", saved.Prediction?.PredictedScoreDepression);
+        Assert.AreEqual(35, saved.UserMetadata?.Age);
+        Assert.AreEqual(154, saved.UserMetadata?.Weight);
+        storage.Verify(service => service.SaveSessionDataAsync(
+            It.Is<SessionData>(session => session.SessionId == "session-1"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [TestMethod]
+    public async Task PersistAudioJobResultActivity_Failure_CreatesAdminVisibleFailedSession()
+    {
+        SessionData? saved = null;
+        var storage = new Mock<ISessionStorageService>();
+        storage.Setup(service => service.GetSessionDataAsync("session-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SessionData?)null);
+        storage.Setup(service => service.SaveSessionDataAsync(It.IsAny<SessionData>(), It.IsAny<CancellationToken>()))
+            .Callback((SessionData session, CancellationToken _) => saved = session)
+            .ReturnsAsync(true);
+        var activity = new PersistAudioJobResultActivity(
+            storage.Object,
+            Mock.Of<ILogger<PersistAudioJobResultActivity>>());
+
+        await activity.Run(new PersistAudioJobResultInput
+        {
+            Job = new AudioProcessingJobInput
+            {
+                JobId = "audio-job-2",
+                UserId = "user-2",
+                SessionId = "session-2",
+                FileName = "stored.webm",
+                ClientSource = "mico-avatar",
+                OwnerIdHash = CreateOwnerIdHash("api-key-user")
+            },
+            Result = new AudioProcessingResult
+            {
+                Success = false,
+                UserId = "user-2",
+                SessionId = "session-2",
+                Error = "Prediction unavailable",
+                FailedStep = "predict",
+                CompletedAtUtc = DateTime.UtcNow
+            }
+        });
+
+        Assert.IsNotNull(saved);
+        Assert.AreEqual("failed", saved.Status);
+        Assert.AreEqual("audio-job-2", saved.AnalysisResults?.JobId);
+        Assert.AreEqual("mico-avatar", saved.AnalysisResults?.Source);
+        Assert.AreEqual("Prediction unavailable", saved.AnalysisResults?.Error);
+        Assert.AreEqual("predict", saved.AnalysisResults?.FailedStep);
     }
 
     private void AuthorizeRequests(string userId = "api-key-user")

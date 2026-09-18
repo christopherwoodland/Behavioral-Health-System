@@ -67,7 +67,7 @@ interface GroupAnalytics {
 // Filter interface
 interface PredictionFilters {
   dateRange: 'all' | 'week' | 'month' | 'quarter' | 'year';
-  scoreType: 'all' | 'depression' | 'anxiety' | 'overall';
+  scoreType: 'all' | 'depression' | 'anxiety';
   showTrends: boolean;
   groupFilter: 'all' | 'grouped' | 'ungrouped' | string; // 'all', 'grouped', 'ungrouped', or specific groupId
 }
@@ -164,7 +164,9 @@ const Predictions: React.FC = () => {
       const analytics: GroupAnalytics[] = [];
 
       for (const group of allGroups) {
-        const groupSessions = sessions.filter(s => s.groupId === group.groupId);
+        const groupSessions = sessions
+          .filter(s => s.groupId === group.groupId)
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
         if (groupSessions.length === 0) continue;
 
         // Get sessions with predictions
@@ -296,9 +298,15 @@ const Predictions: React.FC = () => {
     return filtered;
   }, [sessions, filters.dateRange, filters.groupFilter]);
 
+  const chronologicalSessions = useMemo(() => (
+    [...filteredSessions].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  ), [filteredSessions]);
+
+  const recentSessions = useMemo(() => [...chronologicalSessions].reverse().slice(0, 5), [chronologicalSessions]);
+
   // Prepare chart data
   const chartData = useMemo((): ChartDataPoint[] => {
-    return filteredSessions
+    return chronologicalSessions
       .map(session => {
         const depression = getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression');
         const anxiety = getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety');
@@ -311,9 +319,8 @@ const Predictions: React.FC = () => {
           overall: null, // No longer using deprecated predicted_score
           sessionId: session.sessionId
         };
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [filteredSessions, getScoreSeverity, getSessionScoreValue]);
+        });
+      }, [chronologicalSessions, getScoreSeverity, getSessionScoreValue]);
 
   // Calculate score distributions based on categorical data
   const scoreDistribution = useMemo((): Record<string, ScoreDistribution[]> => {
@@ -383,7 +390,7 @@ const Predictions: React.FC = () => {
     const trends: Record<string, TrendAnalysis> = {};
 
     // Analyze depression trend
-    const depressionScores = filteredSessions
+    const depressionScores = chronologicalSessions
       .map(session => getScoreSeverity(getSessionScoreValue(session, 'depression'), 'depression'))
       .filter((score): score is number => score !== null);
 
@@ -400,12 +407,12 @@ const Predictions: React.FC = () => {
       trends.depression = {
         direction: Math.abs(change) < 0.5 ? 'stable' : change < 0 ? 'improving' : 'worsening',
         change: Math.abs(change),
-        period: `${filteredSessions.length} sessions`
+        period: `${chronologicalSessions.length} sessions`
       };
     }
 
     // Analyze anxiety trend
-    const anxietyScores = filteredSessions
+    const anxietyScores = chronologicalSessions
       .map(session => getScoreSeverity(getSessionScoreValue(session, 'anxiety'), 'anxiety'))
       .filter((score): score is number => score !== null);
 
@@ -422,15 +429,12 @@ const Predictions: React.FC = () => {
       trends.anxiety = {
         direction: Math.abs(change) < 0.5 ? 'stable' : change < 0 ? 'improving' : 'worsening',
         change: Math.abs(change),
-        period: `${filteredSessions.length} sessions`
+        period: `${chronologicalSessions.length} sessions`
       };
     }
 
-    // Overall trend (placeholder)
-    trends.overall = { direction: 'stable', change: 0, period: 'coming soon' };
-
     return trends;
-  }, [filteredSessions, getScoreSeverity, getSessionScoreValue]);
+  }, [chronologicalSessions, getScoreSeverity, getSessionScoreValue]);
 
   // Calculate statistics
   const statistics = useMemo(() => {
@@ -478,15 +482,13 @@ const Predictions: React.FC = () => {
       stats.avgAnxiety = anxietyCounts[mostCommonAnxiety];
     }
 
-    stats.latestSession = filteredSessions.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )[0];
+    stats.latestSession = recentSessions[0];
 
     // Improvement rate will be calculated later - for now set to 0
     stats.improvementSessions = 0;
 
     return stats;
-  }, [filteredSessions, getSessionScoreValue, hasScoreValue]);
+  }, [filteredSessions, recentSessions, getSessionScoreValue, hasScoreValue]);
 
   // Handle filter changes
   const updateFilter = useCallback((key: keyof PredictionFilters, value: PredictionFilters[keyof PredictionFilters]) => {
@@ -794,7 +796,6 @@ const Predictions: React.FC = () => {
                 <option value="all">All Scores</option>
                 <option value="depression">Depression</option>
                 <option value="anxiety">Anxiety</option>
-                <option value="overall">Overall</option>
               </select>
             </div>
 
@@ -864,12 +865,12 @@ const Predictions: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {Object.entries(groupAnalytics).map(([groupId, analytics]) => {
-                  const group = groups.find(g => g.groupId === groupId);
+                {groupAnalytics.map((analytics) => {
+                  const group = groups.find(g => g.groupId === analytics.groupId);
                   if (!group) return null;
 
                   return (
-                    <div key={groupId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <div key={analytics.groupId} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                       <h3 className="font-medium text-gray-900 dark:text-white mb-3">
                         {group.groupName}
                       </h3>
@@ -1121,15 +1122,17 @@ const Predictions: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              {filteredSessions.slice(0, 5).map((session) => {
+              {recentSessions.map((session) => {
                 const prediction = session.prediction as Record<string, unknown> | undefined;
                 const provider = (prediction?.provider as string) || (prediction?.model as string) || null;
                 const modelCategory = (prediction?.modelCategory as string) || (prediction?.model_category as string) || null;
                 const isCalibrated = (prediction?.isCalibrated as boolean) ?? (prediction?.is_calibrated as boolean) ?? null;
+                const assessment = session.extendedRiskAssessment ?? session.riskAssessment;
 
                 return (
-                  <div key={session.sessionId} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <div className="flex-1">
+                  <div key={session.sessionId} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center space-x-3">
                         <div className={`w-2 h-2 rounded-full ${
                           session.status === 'succeeded' || session.status === 'completed' ? 'bg-green-500' :
@@ -1167,9 +1170,21 @@ const Predictions: React.FC = () => {
                           </div>
                         </div>
                       </div>
+                      {assessment?.summary && (
+                        <div className="mt-3 pl-5">
+                          <p className="text-sm text-gray-700 dark:text-gray-200 leading-6">
+                            {assessment.summary}
+                          </p>
+                          {assessment.keyFactors?.length > 0 && (
+                            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                              Key factors: {assessment.keyFactors.slice(0, 3).join('; ')}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-wrap items-center gap-4 lg:justify-end">
                       {hasScoreValue(getSessionScoreValue(session, 'depression')) && (
                         <div className="text-right">
                           <p className="text-xs text-gray-500 dark:text-gray-400">Depression</p>
@@ -1193,6 +1208,7 @@ const Predictions: React.FC = () => {
                       >
                         <Eye className="w-4 h-4" aria-hidden="true" />
                       </Link>
+                    </div>
                     </div>
                   </div>
                 );
